@@ -1,6 +1,6 @@
 {
   "@@locale": "pl",
-  "appTitle": "Conduit",
+  "appTitle": "Conduit · OWUI + Cline",
   "@appTitle": {
     "description": "Application name displayed in the app and OS UI."
   },

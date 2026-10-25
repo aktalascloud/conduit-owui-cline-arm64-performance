@@ -1,6 +1,6 @@
 {
   "@@locale": "nl",
-  "appTitle": "Conduit",
+  "appTitle": "Conduit · OWUI + Cline",
   "serverIncompatibleTitle": "Server niet ondersteund",
   "serverIncompatibleMessage": "Deze server draait Open WebUI {serverVersion}, wat nieuwer is dan deze app ondersteunt (tot {maxVersion}).",
   "serverIncompatibleResolution": "Om door te gaan, zet je je server terug naar {maxVersion} of eerder, of wacht je op een app-update die ondersteuning toevoegt.",

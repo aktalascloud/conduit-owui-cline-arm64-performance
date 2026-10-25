@@ -406,6 +406,14 @@ class ProfilePage extends ConsumerWidget {
     final appItems = <Widget>[
       _buildAccountOption(
         context,
+        key: const Key('cline-remote-entry'),
+        icon: UiUtils.platformIcon(ios: CupertinoIcons.desktopcomputer,
+          android: Icons.terminal_outlined),
+        title: l10n.clineRemoteTitle,
+        onTap: () => context.pushNamed(RouteNames.clineRemote),
+      ),
+      _buildAccountOption(
+        context,
         icon: UiUtils.platformIcon(
           ios: CupertinoIcons.paintbrush,
           android: Icons.palette_outlined,

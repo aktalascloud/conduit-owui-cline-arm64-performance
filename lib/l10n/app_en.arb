@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appTitle": "Conduit",
+  "appTitle": "Conduit · OWUI + Cline",
   "@appTitle": {
     "description": "Application name displayed in the app and OS UI."
   },
@@ -8827,5 +8827,25 @@
   "accountsAddressConfirmAction": "Check address",
   "@accountsAddressConfirmAction": {
     "description": "Confirms sending a saved account's session to a new address of an Open WebUI server, to check that it reaches the same server."
-  }
+  },
+  "clineRemoteTitle": "Remote Cline",
+  "clineRemoteDescription": "Connect to your PC through an encrypted SSH tunnel. Agent sessions and project files stay on the PC. Import the private connection document created there.",
+  "clineImportConnection": "Import connection",
+  "clineHost": "PC address or DNS name",
+  "clineSshPort": "SSH port",
+  "clineAccessSecret": "Tunnel access secret",
+  "clineHostKey": "Server key fingerprint (SHA256)",
+  "clineDashboardSecret": "Cline dashboard access secret",
+  "clineProjectPath": "Project folder on the PC (optional)",
+  "clineProjectHint": "This folder applies to new sessions. Existing sessions keep their own project. Tool approvals remain in Cline.",
+  "clineConnect": "Connect to Cline",
+  "clineForgetConnection": "Forget connection",
+  "clineInvalidProfile": "Invalid connection document or settings. Check the address, ports, secrets and server fingerprint.",
+  "clineStorageError": "Secure storage is unavailable. The connection was not saved in plaintext.",
+  "clineHostKeyMismatch": "The server key does not match. Connection blocked. Verify the fingerprint on your PC.",
+  "clineAuthenticationFailed": "Tunnel access was rejected. Check the private connection document.",
+  "clineLocalPortBusy": "The local connection port is busy. Close the previous Cline connection and try again.",
+  "clineNetworkError": "Cannot connect to the PC. Check its address, SSH port, firewall and router forwarding.",
+  "clineDisconnected": "The connection closed. Return and reconnect. No messages were resent automatically; agent sessions remain on the PC.",
+  "clinePasteConnection": "Paste connection"
 }

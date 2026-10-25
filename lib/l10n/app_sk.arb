@@ -1,6 +1,6 @@
 {
   "@@locale": "sk",
-  "appTitle": "Conduit",
+  "appTitle": "Conduit · OWUI + Cline",
   "serverIncompatibleTitle": "Server nie je podporovaný",
   "serverIncompatibleMessage": "Tento server používa Open WebUI {serverVersion}, čo je novšia verzia, než akú táto aplikácia podporuje (maximálne {maxVersion}).",
   "serverIncompatibleResolution": "Ak chcete pokračovať, znížte verziu servera na {maxVersion} alebo staršiu, alebo počkajte na aktualizáciu aplikácie, ktorá pridá podporu.",

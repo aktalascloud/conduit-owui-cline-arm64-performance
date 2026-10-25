@@ -1,6 +1,6 @@
 {
   "@@locale": "fr",
-  "appTitle": "Conduit",
+  "appTitle": "Conduit · OWUI + Cline",
   "serverIncompatibleTitle": "Serveur non pris en charge",
   "serverIncompatibleMessage": "Ce serveur exécute Open WebUI {serverVersion}, une version plus récente que celle prise en charge par cette application (jusqu'à {maxVersion}).",
   "serverIncompatibleResolution": "Pour continuer, rétrogradez votre serveur vers la version {maxVersion} ou une version antérieure, ou attendez une mise à jour de l'application qui ajoute la prise en charge.",

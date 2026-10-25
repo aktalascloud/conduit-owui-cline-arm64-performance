@@ -47,6 +47,7 @@ bool isHermesOnlyAppLocation(String location) =>
 bool _isAccountlessBackendLocation(String location) {
   return location == Routes.chat ||
       location == Routes.profile ||
+      location == Routes.clineRemote ||
       // The saved accounts are on the device: switching to one still
       // signed in needs no session on the active account.
       location == Routes.accounts ||
@@ -121,6 +122,7 @@ String? resolveRouteRedirect(String location, ProviderRead read) {
   );
   final isLocalBackendSetup =
       location == Routes.backendChooser ||
+      location == Routes.clineRemote ||
       isHermesSettingsLocation(location) ||
       isDirectConnectionsLocation(location);
 

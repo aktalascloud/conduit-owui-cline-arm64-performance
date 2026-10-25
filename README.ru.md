@@ -1,10 +1,14 @@
-# Conduit · ARM64
+# Conduit · OWUI + Cline · ARM64
 
-[English](README.md) · [Русский](README.ru.md) · [Исходный проект](https://github.com/cogwheel0/conduit) · [Релизы](https://github.com/aktalascloud/conduit-arm64-performance/releases/latest)
+[English](README.md) · [Русский](README.ru.md) · [Исходный проект](https://github.com/cogwheel0/conduit) · [Релизы](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest)
 
-Один подписанный ARM64 APK с дополненным русским интерфейсом и диалогами MCP/рабочих пространств.
+Неофициальный форк Conduit для OWUI + Cline: один подписанный ARM64 APK с дополненным русским интерфейсом и диалогами MCP/рабочих пространств.
 
-[Скачать APK](https://github.com/aktalascloud/conduit-arm64-performance/releases/latest/download/Conduit-arm64-v8a.apk). Постоянные ID/подпись сохраняют обновление приложения.
+[Скачать APK](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest). Постоянные ID/подпись сохраняют обновление приложения.
+
+## Удалённый Cline
+
+Настройки → «Удалённый Cline» → импорт закрытого JSON с ПК. Открываются сессии Cline; каталог для новых сессий задаётся отдельно. Подтверждения действий сохраняются. Нужны установленный Cline на ПК и SSH-шлюз. [Настройка и ограничения](remote/README.ru.md).
 
 ## Изменения
 

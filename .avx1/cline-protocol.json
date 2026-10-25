@@ -1,0 +1,5 @@
+{
+  "source": "https://raw.githubusercontent.com/cline/cline/40c5d99031fe1128189c5b52e40638d2b7787754/apps/cline-hub/src/server/sessions.ts",
+  "sha256_utf8_lf": "8f0e3cdb85c0ced1ff3bded8a881b04f71c92c6f973d41de28f9ade8a3a4761a",
+  "scope": "Workspace overrides apply only to new sessions; original sessions retain their own context. Approval frames are not modified."
+}

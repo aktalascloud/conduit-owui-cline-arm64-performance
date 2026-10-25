@@ -84,6 +84,12 @@ Future<AsyncValue<ServerConfig?>> _refreshing(ServerConfig server) async {
 }
 
 void main() {
+  test('Cline connection setup remains available without an OWUI account', () {
+    check(resolveRouteRedirect(Routes.clineRemote, _reader(
+      activeServer: const AsyncLoading(),
+      auth: AuthNavigationState.needsLogin,
+    ))).isNull();
+  });
   group('resolveRouteRedirect', () {
     test('reviewer mode pins the app to chat', () {
       final read = _reader(reviewerMode: true);

@@ -1,5 +1,5 @@
 name: conduit
-description: Open-source mobile client for Open-WebUI
+description: Unofficial OWUI + Cline mobile client with secure remote sessions
 version: 4.2.1+152
 publish_to: 'none'
 

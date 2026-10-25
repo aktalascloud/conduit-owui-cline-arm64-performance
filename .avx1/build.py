@@ -135,6 +135,13 @@ def build_conduit(package, manifest, channel):
     # Build tools and downloaded dependency code never receive the signing secrets.
     signing_material = os.environ.pop("CONDUIT_KEYSTORE_BASE64")
     password = os.environ.pop("CONDUIT_KEYSTORE_PASSWORD")
+    run('node', ROOT / '.avx1/test_cline_contract.mjs')
+    run(sys.executable, '-m', 'pip', 'install', '-r', ROOT / 'remote/requirements.txt')
+    run(sys.executable, '-m', 'pip', 'install', 'pip-audit==2.10.1')
+    run(sys.executable, '-m', 'pip_audit', '--strict', '-r', ROOT / 'remote/requirements.txt',
+        '--format', 'json', '--output', WORK / 'gateway-audit.json')
+    run(sys.executable, '-B', '-m', 'unittest', 'discover', '-s', ROOT / 'remote', '-q')
+    os.environ['CONDUIT_SSH_TEST_PYTHON'] = sys.executable
     os.environ['PUB_CACHE'] = str(WORK/'pub-cache')
     toolchains = json.loads((ROOT / ".avx1/toolchains.json").read_text("utf-8"))
     flutter_root = WORK / "flutter"
@@ -201,6 +208,11 @@ def build_conduit(package, manifest, channel):
     manifest["security"] = {"flutter_tests": "passed", "apk_signature": "verified",
                             "dependency_review": "outdated report; not a complete vulnerability audit"}
     manifest["application_id"] = "io.github.aktalascloud.conduit"
+    manifest['cline_integration'] = {'transport':'SSH to loopback Cline dashboard',
+        'host_key_verification':'mandatory Ed25519 SHA256 pin','gateway_security_tests':'passed',
+        'gateway_dependency_audit':'passed; no unresolved advisories',
+        'pinned_cline_protocol_contract':'passed','dart_ssh_interoperability':'included in passed Flutter suite',
+        'shell':False,'sftp':False,'arbitrary_tcp_forwarding':False,'automatic_command_replay':False}
     manifest["device_performance"] = "Not measured on a physical Android device"
 
 

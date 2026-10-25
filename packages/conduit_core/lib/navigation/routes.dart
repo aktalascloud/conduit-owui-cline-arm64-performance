@@ -18,6 +18,7 @@ class Routes {
   static const String ssoAuth = '/sso-auth';
   static const String proxyAuth = '/proxy-auth';
   static const String profile = '/profile';
+  static const String clineRemote = '/profile/cline-remote';
   static const String personalization = '/profile/personalization';
   static const String audioSettings = '/profile/audio';
   static const String voiceProviderSettings = '/profile/audio/voice-provider';
@@ -80,6 +81,7 @@ class RouteNames {
   static const String ssoAuth = 'sso-auth';
   static const String proxyAuth = 'proxy-auth';
   static const String profile = 'profile';
+  static const String clineRemote = 'cline-remote';
   static const String personalization = 'personalization';
   static const String audioSettings = 'audio-settings';
   static const String voiceProviderSettings = 'voice-provider-settings';

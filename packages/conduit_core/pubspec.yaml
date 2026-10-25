@@ -11,6 +11,7 @@ environment:
   sdk: ">=3.13.0 <4.0.0"
 
 dependencies:
+  dartssh2: 4.1.0
   # `QueryExecutor` is part of the DatabaseOpener port's signature. The core
   # owns the schema, so drift belongs here rather than in the front-ends.
   archive: ^4.0.9

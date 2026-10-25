@@ -1,10 +1,14 @@
-# Conduit · ARM64
+# Conduit · OWUI + Cline · ARM64
 
-[English](README.md) · [Русский](README.ru.md) · [Upstream](https://github.com/cogwheel0/conduit) · [Releases](https://github.com/aktalascloud/conduit-arm64-performance/releases/latest)
+[English](README.md) · [Русский](README.ru.md) · [Upstream](https://github.com/cogwheel0/conduit) · [Releases](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest)
 
-One signed ARM64 APK with extended Russian interface and MCP/workspace dialogs.
+Unofficial Conduit fork for OWUI + Cline: one signed ARM64 APK with extended Russian interface and MCP/workspace dialogs.
 
-[Download APK](https://github.com/aktalascloud/conduit-arm64-performance/releases/latest/download/Conduit-arm64-v8a.apk). Permanent fork ID/signature preserve upgrades.
+[Download APK](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest). Permanent fork ID/signature preserve upgrades.
+
+## Remote Cline
+
+Settings → Remote Cline → import the private connection JSON from your PC. Open Cline sessions and choose the folder for new sessions; tool approvals remain enabled. Requires separately installed Cline and the SSH gateway. [Setup and limitations](remote/README.md).
 
 ## Changes
 

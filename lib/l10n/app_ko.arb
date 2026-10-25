@@ -1,6 +1,6 @@
 {
   "@@locale": "ko",
-  "appTitle": "Conduit",
+  "appTitle": "Conduit · OWUI + Cline",
   "serverIncompatibleTitle": "지원되지 않는 서버",
   "serverIncompatibleMessage": "이 서버는 Open WebUI {serverVersion} 버전을 사용 중이며, 이는 이 앱이 지원하는 버전({maxVersion} 이하)보다 최신입니다.",
   "serverIncompatibleResolution": "계속하려면 서버를 {maxVersion} 이하 버전으로 다운그레이드하거나, 해당 버전을 지원하는 앱 업데이트를 기다리세요.",

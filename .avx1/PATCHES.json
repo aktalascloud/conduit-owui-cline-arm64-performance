@@ -42,5 +42,16 @@
     "source": "Reviewed open upstream PR #873; applied without its whitespace-only conflicts.",
     "url": "https://github.com/cogwheel0/conduit/pull/873",
     "upstream_head": "831301e86ac86e695af2c666559092e1204b92d6"
+  },
+  {
+    "id": "APK-009",
+    "description": "OWUI + Cline: private saved SSH profile, mandatory Ed25519 host-key pin, encrypted loopback dashboard transport, project context for new sessions, unchanged approval frames, bounded gateway without shell/SFTP/arbitrary forwarding.",
+    "source": "Local integration with the separately installed Cline CLI/Hub; no Cline credentials or binaries are bundled.",
+    "verification": [
+      "Python SSH allow/deny integration tests",
+      "Dart-to-Python SSH interoperability and changed-key rejection",
+      "Pinned actual Cline session/context contract and approval-frame tests",
+      "Russian and English UI"
+    ]
   }
 ]

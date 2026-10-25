@@ -169,3 +169,7 @@ GoogleService-Info.plist
 *.p12
 *.jks
 android/key.properties
+__pycache__/
+*.py[cod]
+remote/private/
+remote/.venv/
