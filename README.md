@@ -8,7 +8,7 @@ Unofficial Conduit fork for OWUI + Cline: one signed ARM64 APK with extended Rus
 
 ## Remote Cline
 
-First screen → Cline via SSH → import the private connection JSON from your PC. Open Cline sessions and choose the folder for new sessions; tool approvals remain enabled. Requires separately installed Cline and the SSH gateway. [Setup and limitations](remote/README.md).
+First screen → Cline via SSH → import the private connection JSON from your PC. Native Conduit chat includes session history, project folders, model selection, streaming Markdown, tool approvals, Stop and image/document attachments. Requires separately installed Cline and the SSH gateway. [Setup and limitations](remote/README.md).
 
 ## Changes
 
@@ -19,7 +19,7 @@ First screen → Cline via SSH → import the private connection JSON from your 
 
 ## Evidence
 
-Current verified APK: **94,257,855 bytes**; **5034 Flutter tests** pass. The first Android screen and Accounts include **Cline via SSH**. Image/document transfer, the pinned SSH gateway and the Cline session contract are tested. Phone/LLM speed is unmeasured. [Nine libraries, sources, actual flags and verification](.avx1/measurements/cline-remote-793d7402.json).
+Native Cline tests cover session routing, streaming, explicit approvals, uncertain sends, attachments, large text and small screens. A read-only SSH probe loaded real Cline history without sending an agent prompt. CI checks the complete Flutter suite and pinned Cline protocol. Phone/LLM speed is unmeasured. [Last published native-library measurements](.avx1/measurements/cline-remote-793d7402.json); each release identifies its exact source and checks.
 
 No LLM weights or personal configuration. The original 2.3 MB Silero VAD detector remains bundled with its verified MIT notice.
 

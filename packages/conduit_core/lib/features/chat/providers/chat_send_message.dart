@@ -11,6 +11,15 @@ Future<void> _sendMessageInternal(
   onAssistantPlaceholderCreated,
   ChatSendVoiceContext? voice,
 ]) async {
+  if (ref.read(preferredBackendProvider) == PreferredBackend.cline) {
+    final client=ref.read(clineBackendClientProvider);
+    if (client==null || !client.state.canSend) throw StateError('Cline is not ready. Open its native chat first.');
+    if ((attachments?.isNotEmpty ?? false) || isVoiceMode || voice!=null) {
+      throw StateError('Use the attachment controls in the native Cline chat.');
+    }
+    client.sendMessage(message);
+    return;
+  }
   final hermesSelectedAtStart = ref.read(selectedModelProvider) as Model?;
   if (hermesSelectedAtStart != null && isHermesModel(hermesSelectedAtStart)) {
     // Before anything below is captured: switching connections replaces the

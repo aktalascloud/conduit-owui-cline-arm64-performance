@@ -1,91 +1,71 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {readFileSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
-import {fileURLToPath} from 'node:url';
 import vm from 'node:vm';
 
-const root = new URL('../', import.meta.url);
-const pin = JSON.parse(readFileSync(new URL('.avx1/cline-protocol.json', root), 'utf8'));
-let source;
-if (process.argv[2]) source = readFileSync(process.argv[2], 'utf8');
-else {
-  const response = await fetch(pin.source);
-  if (!response.ok) throw new Error('Pinned Cline contract source is unavailable');
-  source = await response.text();
+const root=new URL('../',import.meta.url);
+const pin=JSON.parse(readFileSync(new URL('.avx1/cline-protocol.json',root),'utf8'));
+async function pinned(definition,local) {
+  let source;
+  if(local) source=readFileSync(local,'utf8');
+  else {
+    for(let attempt=0;attempt<3;attempt++) {
+      try {const r=await fetch(definition.source);if(!r.ok)throw new Error('Pinned source unavailable');source=await r.text();break;}
+      catch(error){if(attempt===2)throw error;await new Promise(r=>setTimeout(r,1000*(attempt+1)));}
+    }
+  }
+  source=source.replaceAll('\r\n','\n');
+  assert.equal(createHash('sha256').update(source).digest('hex'),definition.sha256_utf8_lf);
+  return source;
 }
-source = source.replaceAll('\r\n', '\n');
-assert.equal(createHash('sha256').update(source).digest('hex'), pin.sha256_utf8_lf);
-
-function sourceFunction(name) {
-  const expression = new RegExp(`export (?:async )?function ${name}\\(`);
-  const start = source.search(expression);
-  assert.ok(start >= 0, `Missing actual Cline function: ${name}`);
-  const rest = source.slice(start);
-  const end = rest.indexOf('\n}\n') + 2;
-  assert.ok(end > 1);
-  return stripTypeScriptTypes(rest.slice(0, end).replace(/^export /, ''));
+const source=await pinned(pin,process.argv[2]);
+const events=await pinned(pin.agent_events,process.argv[3]);
+await pinned(pin.webview_protocol,process.argv[4]);
+function actualFunction(source,name) {
+  const start=source.search(new RegExp(`(?:export )?(?:async )?function ${name}\\(`));
+  assert.ok(start>=0,`Missing Cline function: ${name}`);
+  const rest=source.slice(start);const end=rest.indexOf('\n}\n')+2;
+  assert.ok(end>1);return stripTypeScriptTypes(rest.slice(0,end).replace(/^export /,''));
 }
-const scope = {
-  providerSettingsManager: {getLastUsedProviderSettings: () => undefined},
-  process: {env: {}}, workspaceRoot: '/synthetic/default',
-};
+const scope={providerSettingsManager:{getLastUsedProviderSettings:()=>undefined},process:{env:{}},
+  workspaceRoot:'/synthetic/default',SessionSource:{WEB:'web'},frames:[]};
 vm.createContext(scope);
-vm.runInContext(sourceFunction('resolveLaunchContext') + '\nthis.resolve = resolveLaunchContext;', scope);
-const context = scope.resolve({}, {workspaceRoot: '/synthetic/project', cwd: '/synthetic/project',
-  providerId: 'synthetic-provider', modelId: 'synthetic-model'});
-assert.equal(context.workspaceRoot, '/synthetic/project');
+vm.runInContext(actualFunction(source,'resolveLaunchContext')+'\nthis.resolve=resolveLaunchContext;',scope);
+const context=scope.resolve({}, {workspaceRoot:'/synthetic/project',cwd:'/synthetic/project',provider:'local',model:'test-model'});
+assert.equal(context.workspaceRoot,'/synthetic/project');assert.equal(context.providerId,'local');
+vm.runInContext(actualFunction(source,'toRuntimeReasoningOptions')+'\n'+actualFunction(source,'buildSessionStartInput')+'\nthis.startInput=buildSessionStartInput;',scope);
+const input=scope.startInput(context,{mode:'plan',autoApproveTools:false,reasonLevel:'none'});
+assert.equal(input.toolPolicies['*'].autoApprove,false);
+assert.equal(input.config.mode,'plan');assert.equal(input.config.thinking,false);
 let sent;
-scope.createSession = () => { throw new Error('An existing session must not be replaced'); };
-vm.runInContext(sourceFunction('sendMessage') + '\nthis.send = sendMessage;', scope);
-await scope.send({cline: {send: async (input) => { sent = input; }}},
-  {selectedSessionId: 'synthetic-existing'}, 'same prompt',
-  {workspaceRoot: '/different', cwd: '/different', mode: 'plan'});
-assert.equal(sent.sessionId, 'synthetic-existing');
-assert.equal(sent.prompt, 'same prompt');
-assert.equal(sent.workspaceRoot, undefined);
+scope.createSession=()=>{throw new Error('Existing session must not be replaced');};
+vm.runInContext(actualFunction(source,'sendMessage')+'\nthis.send=sendMessage;',scope);
+await scope.send({cline:{send:async(value)=>{sent=value;}}},{selectedSessionId:'existing'},'literal prompt',
+  {mode:'plan',workspaceRoot:'/must-not-replace',provider:'other',model:'other'},
+  {userImages:['data:image/png;base64,c3ludGhldGlj']});
+assert.equal(sent.sessionId,'existing');assert.equal(sent.prompt,'literal prompt');
+assert.equal(sent.workspaceRoot,undefined);assert.equal(sent.providerId,undefined);assert.equal(sent.modelId,undefined);
+assert.equal(sent.mode,'plan');assert.equal(sent.userImages.length,1);
 
-const dart = readFileSync(new URL('lib/features/cline/views/cline_remote_page.dart', root), 'utf8');
-const start = dart.indexOf('\n(() => {');
-const end = dart.indexOf("\n'''", start);
-assert.ok(start >= 0 && end > start);
-const bootstrap = dart.slice(start, end).replaceAll('\\\\', '\\')
-  .replace('${jsonEncode(project)}', JSON.stringify('/synthetic/new-project'))
-  .replace('${jsonEncode(roomSecret)}', JSON.stringify('synthetic-room-not-a-real-credential'));
-class Socket {
-  constructor(url) { this.url = url; this.sent = []; }
-  send(value) { this.sent.push(value); }
-}
-const browser = {window: {WebSocket: Socket}, location: {host: '127.0.0.1:11280', href: 'http://127.0.0.1:11280/'}, URL, DOMException};
-vm.runInNewContext(bootstrap, browser);
-const socket = new browser.window.WebSocket('ws://127.0.0.1:11280/browser');
-assert.equal(new URL(socket.url).searchParams.get('roomSecret'), 'synthetic-room-not-a-real-credential');
-const approval = JSON.stringify({type: 'approval_response', approvalId: 'synthetic', approved: false});
-socket.send(approval);
-assert.equal(socket.sent.at(-1), approval);
-socket.send(JSON.stringify({type: 'send', prompt: 'unmodified text', config: {autoApproveTools: false}}));
-const frame = JSON.parse(socket.sent.at(-1));
-assert.equal(frame.prompt, 'unmodified text');
-assert.equal(frame.config.autoApproveTools, false);
-assert.equal(frame.config.workspaceRoot, '/synthetic/new-project');
-browser.window.__conduitPendingFiles = [{name:'example.pdf',path:'/synthetic/inbox/document.pdf',sha256:'0'.repeat(64),size:12},
-  {name:'example.png',path:'/synthetic/inbox/image.png',sha256:'1'.repeat(64),size:16,image:'data:image/png;base64,c3ludGhldGlj'}];
-socket.send(approval);
-assert.equal(socket.sent.at(-1), approval);
-assert.equal(browser.window.__conduitPendingFiles.length, 2, 'Approval must not consume files');
-socket.send(JSON.stringify({type:'send',prompt:'read these files',attachments:{userImages:['data:image/png;base64,b2xk']}}));
-const attachedFrame = JSON.parse(socket.sent.at(-1));
-assert.ok(attachedFrame.prompt.startsWith('read these files\n\n[User attachments:'));
-assert.ok(attachedFrame.prompt.includes('/synthetic/inbox/document.pdf'));
-assert.deepEqual(attachedFrame.attachments.userImages,['data:image/png;base64,b2xk','data:image/png;base64,c3ludGhldGlj']);
-assert.equal(browser.window.__conduitPendingFiles.length, 0);
-let attempts = 0;
-const originalSend = Socket.prototype.send;
-Socket.prototype.send = function(value) { attempts++; throw new Error('Synthetic transport failure'); };
-browser.window.__conduitPendingFiles = [{name:'example.txt',path:'/synthetic/inbox/file.txt',sha256:'0'.repeat(64),size:12}];
-assert.throws(() => socket.send(JSON.stringify({type: 'send', prompt: 'once'})));
-assert.equal(attempts, 1, 'A failed write must never replay the original agent command');
-assert.equal(browser.window.__conduitPendingFiles.length, 0, 'Uncertain writes must not replay files');
-Socket.prototype.send = originalSend;
-assert.throws(() => new browser.window.WebSocket('ws://foreign.example/browser'));
-console.log('CLINE_PINNED_SOURCE_PROJECT_CONTEXT_APPROVAL_AND_ORIGIN_CONTRACT_PASSED');
+scope.context={sendToSelectedPeers:(_id,frame)=>scope.frames.push(frame)};
+vm.runInContext(['agentEventText','sendChunkToSelectedPeers','forwardAgentEvent'].map(n=>actualFunction(events,n)).join('\n')+'\nthis.forward=forwardAgentEvent;',scope);
+for(const event of [
+  {type:'content_start',contentType:'text',text:'Before tool'},
+  {type:'content_start',contentType:'reasoning',reasoning:'Synthetic reasoning'},
+  {type:'content_start',contentType:'tool',toolCallId:'tool-1',toolName:'read_files',input:{path:'/synthetic/example.txt'}},
+  {type:'content_update',contentType:'tool',toolCallId:'tool-1',toolName:'read_files',update:'progress'},
+  {type:'content_end',contentType:'tool',toolCallId:'tool-1',toolName:'read_files',output:'result'},
+  {type:'content_start',contentType:'text',text:'After tool'},
+  {type:'done',reason:'stop',iterations:1,usage:{inputTokens:2,outputTokens:3}},
+  {type:'error',error:{message:'Recoverable synthetic notice'},recoverable:true},
+]) scope.forward(scope.context,'synthetic-session',event);
+assert.deepEqual(Array.from(scope.frames,f=>f.type),['assistant_delta','reasoning_delta','tool_event','tool_event','tool_event','assistant_delta','turn_done','error']);
+assert.equal(scope.frames[4].event.status,'completed');assert.equal(scope.frames.at(-1).recoverable,true);
+assert.deepEqual(JSON.parse(readFileSync(new URL('.avx1/cline-native-events.json',root),'utf8')),JSON.parse(JSON.stringify(scope.frames)));
+const workspace=new URL('.avx1-work/',root);mkdirSync(workspace,{recursive:true});
+writeFileSync(new URL('cline-native-events.json',workspace),JSON.stringify(scope.frames,null,2)+'\n');
+const dart=readFileSync(new URL('lib/features/cline/views/cline_remote_page.dart',root),'utf8');
+assert.ok(!dart.includes('InAppWebView')&&!dart.includes('ClineDashboardPage'),'Cline must use the native client');
+assert.ok(readFileSync(new URL('lib/features/cline/views/cline_workspace_page.dart',root),'utf8').includes('StreamingMarkdownWidget'));
+console.log('CLINE_NATIVE_CONTEXT_APPROVAL_AND_PINNED_EVENT_CONTRACT_PASSED');

@@ -1,0 +1,60 @@
+[
+  {
+    "type": "assistant_delta",
+    "text": "Before tool"
+  },
+  {
+    "type": "reasoning_delta",
+    "text": "Synthetic reasoning"
+  },
+  {
+    "type": "tool_event",
+    "text": "Running read_files...",
+    "event": {
+      "toolCallId": "tool-1",
+      "toolName": "read_files",
+      "status": "running",
+      "input": {
+        "path": "/synthetic/example.txt"
+      }
+    }
+  },
+  {
+    "type": "tool_event",
+    "text": "read_files updated",
+    "event": {
+      "toolCallId": "tool-1",
+      "toolName": "read_files",
+      "status": "running",
+      "output": "progress"
+    }
+  },
+  {
+    "type": "tool_event",
+    "text": "read_files completed",
+    "event": {
+      "toolCallId": "tool-1",
+      "toolName": "read_files",
+      "status": "completed",
+      "output": "result"
+    }
+  },
+  {
+    "type": "assistant_delta",
+    "text": "After tool"
+  },
+  {
+    "type": "turn_done",
+    "finishReason": "stop",
+    "iterations": 1,
+    "usage": {
+      "inputTokens": 2,
+      "outputTokens": 3
+    }
+  },
+  {
+    "type": "error",
+    "text": "Recoverable synthetic notice",
+    "recoverable": true
+  }
+]

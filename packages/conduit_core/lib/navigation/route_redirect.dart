@@ -106,6 +106,20 @@ String? resolveRouteRedirect(String location, ProviderRead read) {
   final activeServerAsync = read(activeServerProvider);
   final authState = read(authNavigationStateProvider);
   final preferredBackend = read(preferredBackendProvider);
+  // Cline owns native session/project/chat screens, not an OpenWebUI login.
+  if (preferredBackend == PreferredBackend.cline) {
+    if (location == Routes.splash || location == Routes.chat)
+      return Routes.clineWorkspace;
+    if (location == Routes.clineWorkspace ||
+        location == Routes.backendChooser ||
+        isAuthLocation(location) ||
+        _isAccountlessBackendLocation(location))
+      return null;
+    return Routes.clineWorkspace;
+  }
+  // An explicit Cline connection editor/workspace can always recover without
+  // changing the user's current OWUI, Hermes or Direct account.
+  if (location == Routes.clineWorkspace) return Routes.clineRemote;
   final hermesConfig = read(hermesConfigProvider);
   final hermesUsable = hermesConfig.isUsable;
   final hermesSecretsLoading = read(hermesSecretsLoadingProvider);

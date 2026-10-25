@@ -6,7 +6,7 @@ import '../persistence/preferences_store.dart';
 /// Which backend the user has onboarded against. Drives boot-deterministic
 /// routing so a Hermes-only install never bounces to the OpenWebUI server
 /// connection screen while async state (active server / Hermes secrets) loads.
-enum PreferredBackend { unset, owui, direct, hermes }
+enum PreferredBackend { unset, owui, direct, hermes, cline }
 
 /// Synchronous, persisted preferred-backend signal. Read by the router.
 ///
@@ -27,6 +27,7 @@ class PreferredBackendController extends Notifier<PreferredBackend> {
     'owui' => PreferredBackend.owui,
     'direct' => PreferredBackend.direct,
     'hermes' => PreferredBackend.hermes,
+    'cline' => PreferredBackend.cline,
     _ => PreferredBackend.unset,
   };
 }

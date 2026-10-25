@@ -63,5 +63,10 @@
     "id": "APK-011",
     "description": "Visible Cline via SSH entry on the initial backend chooser and Accounts screens, including native sheets. Opens without OWUI/Hermes login and returns with Android Back. Preserve distinct public NAT and local SSH ports.",
     "source": "Local fix following device feedback; Android/Russian onboarding widget and route tests."
+  },
+  {
+    "id": "APK-012",
+    "description": "Native Flutter Cline chat over pinned SSH and typed JSON: streamed Markdown, session/project navigation, new-chat model selection, Plan/Act, explicit tool approvals, Stop and attachments. Preserve existing context; never replay uncertain sends or route Cline uploads/voice into OWUI.",
+    "source": "Local replacement of the embedded dashboard after device feedback; pinned actual Cline session/event mapper, native widget/routing tests and read-only live history probe."
   }
 ]

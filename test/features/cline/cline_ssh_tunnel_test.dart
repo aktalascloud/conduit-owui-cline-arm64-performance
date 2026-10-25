@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:conduit_core/features/cline/models/cline_remote_profile.dart';
 import 'package:conduit_core/features/cline/services/cline_ssh_tunnel.dart';
+import 'package:conduit_core/features/cline/services/cline_native_client.dart';
 
 void main() {
   late Process fixture;
@@ -44,6 +45,36 @@ void main() {
         );
       } finally {
         http.close(force: true);
+        await tunnel.close();
+      }
+    },
+  );
+  test(
+    'native JSON uses the remote loopback Host and Origin over pinned SSH',
+    () async {
+      final tunnel = await ClineSshTunnel.connect(profile, localPort: 0);
+      final client = await ClineNativeClient.connect(tunnel);
+      try {
+        expect(client.state.sessions.single.id, 'fixture-session');
+        final hydrated = client.changes.firstWhere(
+          (state) =>
+              state.sessionId == 'fixture-session' && !state.loadingHistory,
+        );
+        client.openSession('fixture-session');
+        await hydrated.timeout(const Duration(seconds: 10));
+        expect(client.state.messages.single.text, 'Native fixture history');
+        client.configure(mode: 'plan');
+        final done = client.changes.firstWhere(
+          (state) =>
+              !state.busy &&
+              state.messages.any(
+                (message) => message.text == 'Native synthetic response',
+              ),
+        );
+        client.sendMessage('Synthetic fixture prompt only');
+        await done.timeout(const Duration(seconds: 10));
+      } finally {
+        await client.close();
         await tunnel.close();
       }
     },

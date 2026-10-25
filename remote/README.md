@@ -1,6 +1,6 @@
 # OWUI + Cline remote access
 
-Conduit opens the installed Cline Hub dashboard through an encrypted SSH tunnel. Cline, its providers, sessions and project files stay on the PC. The APK contains no Cline binary, provider credential or configured server address.
+Conduit connects to the installed Cline Hub JSON protocol through an encrypted SSH tunnel. Chat, history, project selection, model controls and tool approvals use native Flutter widgets and Conduit's Markdown renderer. Cline, its providers, sessions and project files stay on the PC. The APK contains no Cline binary, provider credential or configured server address.
 
 ## Windows
 
@@ -18,13 +18,13 @@ For public access, allow inbound TCP 2222 for the gateway interpreter and forwar
 
 Install the signed OWUI + Cline APK. In Conduit, open **Cline via SSH** on the first screen (also in Accounts/Settings), import the private `connection.json` from the PC, and connect. Transfer it privately; never publish it. Connection settings are saved only in secure device storage. The server fingerprint must match; there is no trust-all fallback.
 
-Open an existing session in the dashboard, or choose a PC project folder before starting a new session. Existing sessions keep their own folder. The dashboard uses its Cline UI; the native connection screen supports English and Russian. Sign in to model providers on the PC if needed.
+Open an existing session from the sidebar, or choose a PC project folder and model for a new chat. Existing sessions retain their model and folder; choose Plan or Act explicitly before sending. The native interface supports English and Russian. Sign in to model providers on the PC if needed. After a disconnect, reconnect and review session history before resending a message with an uncertain outcome.
 
 ## Scope and security
 
 - Shell, SFTP, reverse forwarding and arbitrary TCP destinations are rejected. Only the local Cline dashboard and one fixed upload RPC are reachable.
 - Host-key pinning, independent dashboard authentication, bounded connections/login attempts and no automatic command replay are enforced.
-- Cline's approvals remain enabled. An already running Desktop turn can retain its original approval owner; subsequent turns started from the dashboard use its approval prompts.
+- Cline's approvals remain enabled. An already running Desktop turn can retain its original approval owner; subsequent turns started from Conduit show native approval cards with full input inspection.
 - An SSH connection does **not** protect an internet connection from volumetric DDoS. Use an upstream protected service or private VPN when that is required.
 - A disconnected phone is not a request to replay a message. Read the session state before manually retrying uncertain actions.
 
@@ -32,6 +32,6 @@ Conduit remains GPL-3.0. Cline is separately installed under its own license; se
 
 ## Images and documents
 
-Use the paperclip to transfer a file through SSH into the private PC `user-uploads` inbox. Size and SHA256 are verified; identical uploads reuse the same content-addressed file. Limits: 64 MiB/file, 1 GiB/inbox, 4 attachments/message. Images up to 8 MiB also use the normal `userImages` field; other files are referenced by their PC path. Image understanding requires a vision-capable model. Cline reads documents with its normal tools and approval rules.
+Use the paperclip to transfer a file through SSH into the private PC `user-uploads` inbox. Size and SHA256 are verified; identical uploads reuse the same content-addressed file. Limits: 64 MiB/file, 1 GiB/inbox, 4 attachments/message. Images up to 6 MiB each also use the normal `userImages` field, within an aggregate 8 MiB encoded-image budget; larger files remain accessible by their PC path. Image understanding requires a vision-capable model. Cline reads documents with its normal tools and approval rules.
 
-Files attach only to the next message you send yourself. Clear pending attachments before sending if needed. Completed uploads are user data, never disposable cache. No shell, SFTP or arbitrary destination path is exposed. Desktop voice input is configured separately in Cline.
+Files attach only to the next message you send yourself. Clear pending attachments before sending if needed. Completed uploads are user data, never disposable cache. No shell, SFTP or arbitrary destination path is exposed. Phone voice input/calls are not implemented for this connection. Desktop voice input is configured separately in Cline.

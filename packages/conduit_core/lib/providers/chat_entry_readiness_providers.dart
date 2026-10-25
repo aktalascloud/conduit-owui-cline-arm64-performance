@@ -7,6 +7,7 @@ import 'package:conduit_core/features/direct_connections/providers/direct_connec
 import 'package:conduit_core/features/hermes/providers/hermes_providers.dart';
 import 'package:conduit_core/providers/app_providers.dart';
 import 'package:conduit_core/providers/backend_mode_providers.dart';
+import 'package:conduit_core/features/cline/providers/cline_backend_providers.dart';
 
 /// Whether the preferred backend is an accountless transport (Direct or
 /// Hermes) that is usable right now.
@@ -16,6 +17,8 @@ import 'package:conduit_core/providers/backend_mode_providers.dart';
 /// shortcut, or assistant launch never waits for a sign-in that cannot come.
 final accountlessPrimaryBackendUsableProvider = Provider<bool>((ref) {
   switch (ref.watch(preferredBackendProvider)) {
+    case PreferredBackend.cline:
+      return ref.watch(clineBackendReadyProvider);
     case PreferredBackend.direct:
       final profiles = ref.watch(effectiveDirectConnectionProfilesProvider);
       return !profiles.isLoading &&
@@ -35,6 +38,7 @@ final accountlessPrimaryBackendUsableProvider = Provider<bool>((ref) {
 /// True with an authenticated Open WebUI session, or when a usable accountless
 /// primary backend makes chat reachable without one.
 final chatEntryReadyProvider = Provider<bool>((ref) {
+  if (ref.watch(preferredBackendProvider)==PreferredBackend.cline) return ref.watch(clineBackendReadyProvider);
   if (ref.watch(authNavigationStateProvider) ==
       AuthNavigationState.authenticated) {
     return true;
@@ -62,7 +66,9 @@ Future<bool> waitForChatEntryReady(
   while (true) {
     if (!ref.mounted) return false;
     final ready = ref.read(chatEntryReadyProvider);
-    final hasModel = !requireModel || ref.read(selectedModelProvider) != null;
+    final hasModel = !requireModel || (ref.read(preferredBackendProvider)==PreferredBackend.cline
+      ? (ref.read(clineBackendClientProvider)?.state.canSend ?? false)
+      : ref.read(selectedModelProvider) != null);
     if (ready && hasModel) return true;
     if (!ready && !_chatEntryReadinessPending(ref)) return false;
     if (!DateTime.now().isBefore(deadline)) return false;
@@ -78,6 +84,6 @@ bool _chatEntryReadinessPending(Ref ref) {
     PreferredBackend.direct =>
       ref.read(effectiveDirectConnectionProfilesProvider).isLoading,
     PreferredBackend.hermes => ref.read(hermesSecretsLoadingProvider),
-    PreferredBackend.owui || PreferredBackend.unset => false,
+    PreferredBackend.owui || PreferredBackend.unset || PreferredBackend.cline => false,
   };
 }

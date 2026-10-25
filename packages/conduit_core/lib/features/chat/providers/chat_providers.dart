@@ -13,6 +13,9 @@
 /// privacy intact and keep every importer's path unchanged.
 library;
 
+import 'package:conduit_core/features/cline/providers/cline_backend_providers.dart';
+import 'package:conduit_core/providers/backend_mode_providers.dart';
+
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';

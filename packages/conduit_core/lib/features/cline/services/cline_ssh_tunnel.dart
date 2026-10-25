@@ -148,7 +148,10 @@ final class ClineSshTunnel {
     final hash = (await sha256.bind(file.openRead()).first).toString();
     final session = await _client!.execute('conduit-upload-v1');
     final lines = StreamIterator(
-      session.stdout.cast<List<int>>().transform(utf8.decoder).transform(const LineSplitter()),
+      session.stdout
+          .cast<List<int>>()
+          .transform(utf8.decoder)
+          .transform(const LineSplitter()),
     );
     unawaited(session.stderr.drain<void>());
     try {

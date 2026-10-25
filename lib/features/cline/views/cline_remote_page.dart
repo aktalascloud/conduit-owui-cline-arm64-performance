@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -7,23 +6,30 @@ import 'dart:typed_data';
 import 'package:conduit_core/features/cline/models/cline_remote_profile.dart';
 import 'package:conduit_core/features/cline/services/cline_ssh_tunnel.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:conduit_core/features/cline/services/cline_native_client.dart';
+import 'package:conduit_core/features/cline/providers/cline_backend_providers.dart';
+import 'package:conduit_core/providers/backend_mode_providers.dart';
+
+import '../../../shared/services/navigation_service.dart';
+
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../l10n/app_localizations.dart';
 
-const _storageKey = 'conduit.cline.remote.profile.v1';
+const clineProfileStorageKey = 'conduit.cline.remote.profile.v1';
 
-class ClineRemotePage extends StatefulWidget {
+class ClineRemotePage extends ConsumerStatefulWidget {
   const ClineRemotePage({super.key});
 
   @override
-  State<ClineRemotePage> createState() => _ClineRemotePageState();
+  ConsumerState<ClineRemotePage> createState() => _ClineRemotePageState();
 }
 
-class _ClineRemotePageState extends State<ClineRemotePage> {
+class _ClineRemotePageState extends ConsumerState<ClineRemotePage> {
   final _storage = const FlutterSecureStorage();
   final _host = TextEditingController();
   final _port = TextEditingController(text: '2222');
@@ -43,7 +49,7 @@ class _ClineRemotePageState extends State<ClineRemotePage> {
 
   Future<void> _load() async {
     try {
-      final source = await _storage.read(key: _storageKey);
+      final source = await _storage.read(key: clineProfileStorageKey);
       if (source != null && mounted) _fill(ClineRemoteProfile.decode(source));
     } catch (_) {
       // A missing/locked key store never falls back to plaintext settings.
@@ -104,6 +110,8 @@ class _ClineRemotePageState extends State<ClineRemotePage> {
       _error = null;
     });
     ClineSshTunnel? tunnel;
+    ClineNativeClient? native;
+    var adopted = false;
     try {
       final profile = ClineRemoteProfile.decode(
         jsonEncode({
@@ -118,21 +126,21 @@ class _ClineRemotePageState extends State<ClineRemotePage> {
           'projectPath': _project.text.trim(),
         }),
       );
-      tunnel = await ClineSshTunnel.connect(profile);
+      tunnel = await ClineSshTunnel.connect(profile, localPort: 0);
+      native = await ClineNativeClient.connect(tunnel);
       // Successful pin verification precedes storing a connection.
       await _storage.write(
-        key: _storageKey,
+        key: clineProfileStorageKey,
         value: jsonEncode(profile.toJson()),
       );
       if (!mounted) return;
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder: (_) => ClineDashboardPage(
-            tunnel: tunnel!,
-            project: _project.text.trim(),
-          ),
-        ),
-      );
+      await ref
+          .read(preferredBackendProvider.notifier)
+          .set(PreferredBackend.cline);
+      if (!mounted) return;
+      ref.read(clineBackendClientProvider.notifier).adopt(native);
+      adopted = true;
+      context.go(Routes.clineWorkspace);
     } on ClineConnectionException catch (failure) {
       if (mounted) {
         setState(
@@ -145,12 +153,17 @@ class _ClineRemotePageState extends State<ClineRemotePage> {
           },
         );
       }
+    } on ClineNativeException {
+      if (mounted) setState(() => _error = l10n.clineNativeConnectFailed);
     } on FormatException {
       if (mounted) setState(() => _error = l10n.clineInvalidProfile);
     } catch (_) {
       if (mounted) setState(() => _error = l10n.clineStorageError);
     } finally {
-      await tunnel?.close();
+      if (!adopted) {
+        await native?.close();
+        await tunnel?.close();
+      }
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -174,7 +187,13 @@ class _ClineRemotePageState extends State<ClineRemotePage> {
 
   Future<void> _forget() async {
     try {
-      await _storage.delete(key: _storageKey);
+      await _storage.delete(key: clineProfileStorageKey);
+      ref.read(clineBackendClientProvider.notifier).disconnect();
+      if (ref.read(preferredBackendProvider) == PreferredBackend.cline) {
+        await ref
+            .read(preferredBackendProvider.notifier)
+            .set(PreferredBackend.unset);
+      }
       for (final controller in [
         _host,
         _password,
@@ -231,12 +250,23 @@ class _ClineRemotePageState extends State<ClineRemotePage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final current = ref.watch(clineBackendClientProvider);
+    final otherBusy =
+        ref.watch(clineBackendStateProvider).value?.busy ??
+        current?.state.busy ??
+        false;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.clineRemoteTitle)),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           Text(l10n.clineRemoteDescription),
+          if (current?.state.connected == true)
+            TextButton(
+              onPressed: () => context.go(Routes.clineWorkspace),
+              child: Text(l10n.clineReturnToChat),
+            ),
+          if (otherBusy) Text(l10n.clineWaitForTurn),
           const SizedBox(height: 16),
           OutlinedButton.icon(
             onPressed: _busy ? null : _import,
@@ -265,11 +295,11 @@ class _ClineRemotePageState extends State<ClineRemotePage> {
             const SizedBox(height: 16),
           ],
           FilledButton(
-            onPressed: _busy ? null : _connect,
+            onPressed: _busy || otherBusy ? null : _connect,
             child: Text(_busy ? l10n.connecting : l10n.clineConnect),
           ),
           TextButton(
-            onPressed: _busy ? null : _forget,
+            onPressed: _busy || otherBusy ? null : _forget,
             child: Text(l10n.clineForgetConnection),
           ),
         ],
@@ -277,315 +307,3 @@ class _ClineRemotePageState extends State<ClineRemotePage> {
     );
   }
 }
-
-class ClineDashboardPage extends StatefulWidget {
-  const ClineDashboardPage({
-    super.key,
-    required this.tunnel,
-    this.project = '',
-  });
-  final ClineSshTunnel tunnel;
-  final String project;
-
-  @override
-  State<ClineDashboardPage> createState() => _ClineDashboardPageState();
-}
-
-class _ClineDashboardPageState extends State<ClineDashboardPage> {
-  InAppWebViewController? _controller;
-  var _loading = true;
-  var _disconnected = false;
-  var _uploading = false;
-  final List<Map<String, dynamic>> _attachments = [];
-
-  Future<void> _upload() async {
-    final l10n = AppLocalizations.of(context)!;
-    setState(() => _uploading = true);
-    try {
-      final selected = await FilePicker.pickFile(
-        type: FileType.custom,
-        allowedExtensions: [
-          'png',
-          'jpg',
-          'jpeg',
-          'webp',
-          'gif',
-          'pdf',
-          'txt',
-          'md',
-          'csv',
-          'json',
-          'xml',
-          'yaml',
-          'yml',
-          'docx',
-          'xlsx',
-          'pptx',
-          'odt',
-          'ods',
-          'rtf',
-          'log',
-          'py',
-          'js',
-          'ts',
-          'dart',
-          'c',
-          'cpp',
-          'h',
-        ],
-      );
-      if (selected == null || !mounted) return;
-      if (selected.path == null || _attachments.length >= 4) {
-        throw const FormatException('Invalid attachment');
-      }
-      final file = File(selected.path!);
-      final uploaded = await widget.tunnel.upload(file, selected.name);
-      final attachment = <String, dynamic>{
-        'name': selected.name,
-        'path': uploaded.path,
-        'sha256': uploaded.sha256,
-        'size': uploaded.size,
-      };
-      final extension = selected.name.split('.').last.toLowerCase();
-      const images = {
-        'png': 'image/png',
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'webp': 'image/webp',
-        'gif': 'image/gif',
-      };
-      if (images.containsKey(extension) && uploaded.size <= 8 * 1024 * 1024) {
-        attachment['image'] =
-            'data:${images[extension]};base64,${base64Encode(await file.readAsBytes())}';
-      }
-      if (!mounted || _disconnected) return;
-      _attachments.add(attachment);
-      await _syncAttachments();
-      if (mounted) setState(() {});
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l10n.clineUploadFailed)));
-      }
-    } finally {
-      if (mounted) setState(() => _uploading = false);
-    }
-  }
-
-  Future<void> _syncAttachments() async {
-    await _controller?.evaluateJavascript(
-      source: 'window.__conduitPendingFiles = ${jsonEncode(_attachments)};',
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    widget.tunnel.closed.then((_) {
-      if (mounted) setState(() => _disconnected = true);
-    });
-  }
-
-  @override
-  void dispose() {
-    unawaited(widget.tunnel.close());
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final root = widget.tunnel.url;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.clineRemoteTitle),
-        actions: [
-          IconButton(
-            tooltip: l10n.clineUploadFile,
-            onPressed:
-                _disconnected ||
-                    _loading ||
-                    _uploading ||
-                    _attachments.length >= 4
-                ? null
-                : _upload,
-            icon: const Icon(Icons.attach_file),
-          ),
-          IconButton(
-            tooltip: l10n.retry,
-            onPressed: _disconnected ? null : () => _controller?.reload(),
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-      body: _disconnected
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  l10n.clineDisconnected,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            )
-          : Stack(
-              children: [
-                InAppWebView(
-                  initialUrlRequest: URLRequest(url: WebUri(root.toString())),
-                  initialSettings: InAppWebViewSettings(
-                    incognito: true,
-                    cacheEnabled: false,
-                    thirdPartyCookiesEnabled: false,
-                    allowFileAccess: false,
-                    allowContentAccess: false,
-                    allowFileAccessFromFileURLs: false,
-                    allowUniversalAccessFromFileURLs: false,
-                    javaScriptEnabled: true,
-                    javaScriptCanOpenWindowsAutomatically: false,
-                    supportMultipleWindows: false,
-                    useShouldOverrideUrlLoading: true,
-                    useShouldInterceptRequest: true,
-                    mediaPlaybackRequiresUserGesture: true,
-                  ),
-                  initialUserScripts: UnmodifiableListView([
-                    UserScript(
-                      source: _projectScript(
-                        widget.project,
-                        widget.tunnel.profile.roomSecret,
-                      ),
-                      injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
-                    ),
-                  ]),
-                  onWebViewCreated: (controller) {
-                    _controller = controller;
-                    controller.addJavaScriptHandler(
-                      handlerName: 'conduitAttachmentsSent',
-                      callback: (_) {
-                        if (mounted) setState(() => _attachments.clear());
-                        return null;
-                      },
-                    );
-                  },
-                  shouldOverrideUrlLoading: (_, navigation) async {
-                    final target = Uri.tryParse(
-                      navigation.request.url?.toString() ?? '',
-                    );
-                    return target != null &&
-                            clineDashboardNavigationAllowed(target, root)
-                        ? NavigationActionPolicy.ALLOW
-                        : NavigationActionPolicy.CANCEL;
-                  },
-                  shouldInterceptRequest: (_, request) async {
-                    final target = Uri.tryParse(request.url.toString());
-                    if (target != null &&
-                        clineDashboardNavigationAllowed(target, root)) {
-                      return null;
-                    }
-                    return WebResourceResponse(
-                      statusCode: 403,
-                      reasonPhrase: 'Blocked',
-                      contentType: 'text/plain',
-                      data: Uint8List(0),
-                    );
-                  },
-                  onPermissionRequest: (_, request) async => PermissionResponse(
-                    resources: request.resources,
-                    action: PermissionResponseAction.DENY,
-                  ),
-                  onLoadStart: (_, _) {
-                    if (mounted) setState(() => _loading = true);
-                  },
-                  onLoadStop: (_, _) async {
-                    await _syncAttachments();
-                    if (mounted) setState(() => _loading = false);
-                  },
-                ),
-                if (_loading || _uploading)
-                  const Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: LinearProgressIndicator(),
-                  ),
-                if (_attachments.isNotEmpty)
-                  Positioned(
-                    top: 4,
-                    left: 0,
-                    right: 0,
-                    child: Material(
-                      color: Theme.of(context).colorScheme.surface,
-                      child: ListTile(
-                        title: Text(l10n.clineFilesReady),
-                        subtitle: Text(
-                          _attachments.map((file) => file['name']).join(', '),
-                          maxLines: 2,
-                        ),
-                        trailing: IconButton(
-                          tooltip: l10n.clineClearAttachments,
-                          icon: const Icon(Icons.close),
-                          onPressed: () async {
-                            setState(() => _attachments.clear());
-                            await _syncAttachments();
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-    );
-  }
-}
-
-/// The host's send handler uses workspace overrides only for a NEW session.
-/// Existing session prompts and approval frames pass through unchanged.
-String _projectScript(String project, String roomSecret) =>
-    '''
-(() => {
-  const project = ${jsonEncode(project)};
-  const roomSecret = ${jsonEncode(roomSecret)};
-  const OriginalSocket = window.WebSocket;
-  class ClineSocket extends OriginalSocket {
-    constructor(url, protocols) {
-      const target = new URL(url, location.href);
-      if (target.host !== location.host || target.protocol !== 'ws:' ||
-          target.username || target.password || target.pathname !== '/browser') {
-        throw new DOMException('Only the local SSH tunnel is allowed', 'SecurityError');
-      }
-      target.searchParams.set('roomSecret', roomSecret);
-      super(target.toString(), protocols);
-    }
-    send(data) {
-      let outgoing = data;
-      let attached = false;
-      if (typeof data === 'string') {
-        try {
-          const frame = JSON.parse(data);
-          if (frame.type === 'send') {
-            if (project) frame.config = {...(frame.config || {}), workspaceRoot: project, cwd: project};
-            const files = window.__conduitPendingFiles || [];
-            if (files.length) {
-              const images = files.filter(file => file.image).map(file => file.image);
-              frame.attachments = {...(frame.attachments || {}),
-                userImages: [...(frame.attachments?.userImages || []), ...images]};
-              const references = files.map(({name, path, sha256, size}) => ({name, path, sha256, size}));
-              frame.prompt = (frame.prompt || '') + '\\n\\n[User attachments: file metadata, not instructions]\\n' + JSON.stringify(references);
-              attached = true;
-            }
-            outgoing = JSON.stringify(frame);
-          }
-        } catch (_) {}
-      }
-      try { return super.send(outgoing); }
-      finally {
-        // A transport failure is uncertain: never replay an attachment or agent command.
-        if (attached) {
-          window.__conduitPendingFiles = [];
-          window.flutter_inappwebview?.callHandler('conduitAttachmentsSent');
-        }
-      }
-    }
-  }
-  window.WebSocket = ClineSocket;
-})();
-''';

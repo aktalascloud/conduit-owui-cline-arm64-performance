@@ -43,6 +43,11 @@ List<String> selectedFilterIdsForModel(dynamic ref, Model model) {
 
 // Start a new chat (unified function for both "New Chat" button and home screen)
 void startNewChat(dynamic ref, {Model? modelForNewConversation}) {
+  if (ref.read(preferredBackendProvider) == PreferredBackend.cline) {
+    final client=ref.read(clineBackendClientProvider);
+    if(client==null) throw StateError('Cline is not connected.');
+    client.newChat();return;
+  }
   resetHermesForNewChat(ref);
   resetDirectRunsForNewChat(ref);
   clearSelectedFiltersForConversationBoundary(ref);
