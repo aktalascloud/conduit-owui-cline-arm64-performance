@@ -8,7 +8,7 @@ Unofficial Conduit fork for OWUI + Cline: one signed ARM64 APK with extended Rus
 
 ## Remote Cline
 
-Settings → Remote Cline → import the private connection JSON from your PC. Open Cline sessions and choose the folder for new sessions; tool approvals remain enabled. Requires separately installed Cline and the SSH gateway. [Setup and limitations](remote/README.md).
+First screen → Cline via SSH → import the private connection JSON from your PC. Open Cline sessions and choose the folder for new sessions; tool approvals remain enabled. Requires separately installed Cline and the SSH gateway. [Setup and limitations](remote/README.md).
 
 ## Changes
 

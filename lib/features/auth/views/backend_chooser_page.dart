@@ -100,6 +100,16 @@ class BackendChooserPage extends ConsumerWidget {
                 onTap: () => context.go(Routes.serverConnection),
               ),
               UtilitySelectionRow(
+                key: const Key('choose-cline-ssh'),
+                leading: const Icon(Icons.computer_outlined),
+                title: l10n.clineRemoteTitle,
+                subtitle: l10n.clineChooserSubtitle,
+                selected: false,
+                showSelectionIndicator: false,
+                trailing: _chooserChevron(context),
+                onTap: () => context.push(Routes.clineRemote),
+              ),
+              UtilitySelectionRow(
                 leading: const _ProviderLogo(
                   assetName: 'assets/icons/hermes_agent.png',
                   kind: _ProviderLogoKind.hermes,

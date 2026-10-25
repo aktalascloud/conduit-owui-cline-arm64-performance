@@ -150,6 +150,8 @@ def validate_config(config: dict) -> dict:
     for key in ('ssh_port', 'dashboard_port'):
         if type(config[key]) is not int or not 1024 <= config[key] <= 65535:
             raise ValueError('Invalid gateway port')
+    if 'public_ssh_port' in config and (type(config['public_ssh_port']) is not int or not 1024 <= config['public_ssh_port'] <= 65535):
+        raise ValueError('Invalid public SSH port')
     if config['ssh_port'] == config['dashboard_port']:
         raise ValueError('The SSH and dashboard ports must differ')
     for key in ('password', 'room_secret'):
@@ -197,7 +199,7 @@ def prepare(directory: Path, cli: Path, workspace: Path, config_dir: Path,
 
 def client_profile(config: dict, host: str) -> dict:
     key = asyncssh.read_private_key(config['host_key_file'])
-    return {'schema':1,'name':'Cline Desktop','host':host,'sshPort':config['ssh_port'],
+    return {'schema':1,'name':'Cline Desktop','host':host,'sshPort':config.get('public_ssh_port',config['ssh_port']),
         'username':'cline','sshPassword':config['password'],
         'hostKeyFingerprint':key.get_fingerprint('sha256'),
         'dashboardPort':config['dashboard_port'],'roomSecret':config['room_secret'],

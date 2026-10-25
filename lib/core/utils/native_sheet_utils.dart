@@ -398,6 +398,15 @@ NativeSheetDetailConfig buildNativeAccountsDetail(
       NativeSheetSectionConfig(
         items: [
           NativeSheetItemConfig(
+            id: 'accounts-cline',
+            title: l10n.clineRemoteTitle,
+            subtitle: l10n.clineChooserSubtitle,
+            sfSymbol: 'desktopcomputer',
+            dismissOnSelect: true,
+            actionId: NativeSheetRoutes.clineRemote,
+            actionValue: true,
+          ),
+          NativeSheetItemConfig(
             id: 'accounts-hermes',
             title: l10n.hermesAgentSettingsTitle,
             sfSymbol: 'sparkles',

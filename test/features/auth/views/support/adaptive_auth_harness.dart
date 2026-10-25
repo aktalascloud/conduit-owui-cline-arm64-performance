@@ -10,6 +10,7 @@ import 'package:conduit_core/services/api_service.dart';
 import 'package:conduit_core/services/optimized_storage_service.dart';
 import 'package:conduit/features/auth/views/authentication_page.dart';
 import 'package:conduit/features/auth/views/backend_chooser_page.dart';
+import 'package:conduit/features/cline/views/cline_remote_page.dart';
 import 'package:conduit/features/auth/views/server_connection_page.dart';
 import 'package:conduit/features/direct_connections/views/direct_connection_editor_page.dart';
 import 'package:conduit_core/features/direct_connections/controllers/direct_connection_editor_draft.dart';
@@ -59,9 +60,8 @@ class AdaptiveAuthHarness {
     when(() => _storage.saveLocalUserAvatar(null)).thenAnswer((_) async {});
     when(() => _storage.getReviewerMode()).thenAnswer((_) async => false);
     if (savedServersError case final error?) {
-      when(
-        () => _storage.getOpenWebUiRegistryStrict(),
-      ).thenAnswer((_) async => throw error);
+      when(() => _storage.getOpenWebUiRegistryStrict())
+          .thenAnswer((_) async => throw error);
     }
     if (authActions != null) {
       // A sign-in attempt first saves the server it was opened for.
@@ -285,7 +285,7 @@ PlatformPccStatus _unavailableAppleStatus() => PlatformPccStatus(
 );
 
 class BackendOnboardingHarness {
-  BackendOnboardingHarness() {
+  BackendOnboardingHarness({this.platform = TargetPlatform.iOS}) {
     router = GoRouter(
       routes: [
         GoRoute(
@@ -298,6 +298,11 @@ class BackendOnboardingHarness {
           name: RouteNames.hermesSettings,
           builder: (_, state) =>
               HermesSettingsPage(isOnboarding: state.extra == true),
+        ),
+        GoRoute(
+          path: Routes.clineRemote,
+          name: RouteNames.clineRemote,
+          builder: (_, _) => const ClineRemotePage(),
         ),
         GoRoute(
           path: Routes.directConnections,
@@ -325,10 +330,11 @@ class BackendOnboardingHarness {
   }
 
   late final GoRouter router;
+  final TargetPlatform platform;
   bool _disposed = false;
 
-  Widget build({required String initialLocation}) {
-    PlatformUiCapabilities.debugPlatformOverride = TargetPlatform.iOS;
+  Widget build({required String initialLocation, Locale? locale}) {
+    PlatformUiCapabilities.debugPlatformOverride = platform;
     router.go(initialLocation);
     return ProviderScope(
       overrides: [
@@ -347,7 +353,8 @@ class BackendOnboardingHarness {
         ),
       ],
       child: MaterialApp.router(
-        theme: ThemeData(platform: TargetPlatform.iOS),
+        theme: ThemeData(platform: platform),
+        locale: locale,
         localizationsDelegates: conduitLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: router,

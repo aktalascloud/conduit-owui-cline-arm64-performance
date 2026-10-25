@@ -8828,7 +8828,7 @@
   "@accountsAddressConfirmAction": {
     "description": "Confirms sending a saved account's session to a new address of an Open WebUI server, to check that it reaches the same server."
   },
-  "clineRemoteTitle": "Remote Cline",
+  "clineRemoteTitle": "Cline via SSH",
   "clineRemoteDescription": "Connect to your PC through an encrypted SSH tunnel. Agent sessions and project files stay on the PC. Import the private connection document created there.",
   "clineImportConnection": "Import connection",
   "clineHost": "PC address or DNS name",
@@ -8851,5 +8851,6 @@
   "clineUploadFile": "Attach image or document",
   "clineUploadFailed": "Upload failed. Maximum: 64 MiB per file, 4 attachments per message. Check the connection and available inbox space.",
   "clineFilesReady": "Ready for your next message",
-  "clineClearAttachments": "Remove pending attachments"
+  "clineClearAttachments": "Remove pending attachments",
+  "clineChooserSubtitle": "PC agent sessions and projects; no Open WebUI or Hermes account required."
 }

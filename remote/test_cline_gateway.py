@@ -109,6 +109,13 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
         for i in range(2000):admission.failed(str(i))
         self.assertLessEqual(len(admission.failures),1024)
 
+    def test_nat_external_port_does_not_change_the_local_listener(self):
+        local=self.config['ssh_port']
+        self.config['public_ssh_port']=49123
+        gateway.validate_config(self.config)
+        self.assertEqual(gateway.client_profile(self.config,'host.example')['sshPort'],49123)
+        self.assertEqual(self.config['ssh_port'],local)
+
     def test_idle_logins_per_source_are_bounded(self):
         admission=gateway.Admission()
         self.assertTrue(admission.enter('synthetic-peer'))

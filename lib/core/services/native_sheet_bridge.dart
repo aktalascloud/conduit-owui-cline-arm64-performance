@@ -118,6 +118,7 @@ class NativeSheetRoutes {
   static const aiMemory = 'ai-memory';
   static const dataConnection = 'data-connection';
   static const hermes = 'hermes';
+  static const clineRemote = 'cline-remote';
   static const directConnections = 'open-direct-connections';
   static const personalConnections = 'open-personal-connections';
   static const scheduledTasks = 'open-scheduled-tasks';

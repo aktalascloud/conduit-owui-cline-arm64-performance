@@ -62,6 +62,24 @@ class ManageAccountsPage extends ConsumerWidget {
             settingsSectionGap,
           ],
         ),
+        InsetGroupedList(
+          key: const Key('accounts-cline'),
+          children: [
+            UtilityRow(
+              key: const Key('accounts-cline-open'),
+              title: l10n.clineRemoteTitle,
+              subtitle: l10n.clineChooserSubtitle,
+              leading: _RowGlyph(
+                UiUtils.platformIcon(
+                  ios: CupertinoIcons.desktopcomputer,
+                  android: Icons.computer_outlined,
+                ),
+              ),
+              onTap: () => context.push(Routes.clineRemote),
+            ),
+          ],
+        ),
+        settingsSectionGap,
         const _HermesCard(),
         settingsSectionGap,
         const _DirectCard(),

@@ -7909,7 +7909,7 @@
       }
     }
   },
-  "clineRemoteTitle": "Remote Cline",
+  "clineRemoteTitle": "Cline przez SSH",
   "clineRemoteDescription": "Connect to your PC through an encrypted SSH tunnel. Agent sessions and project files stay on the PC. Import the private connection document created there.",
   "clineImportConnection": "Import connection",
   "clineHost": "PC address or DNS name",
@@ -7932,5 +7932,6 @@
   "clineUploadFile": "Dołącz obraz lub dokument",
   "clineUploadFailed": "Przesyłanie nie powiodło się. Maksymalnie: 64 MiB na plik, 4 załączniki na wiadomość. Sprawdź połączenie i wolne miejsce.",
   "clineFilesReady": "Załączniki do następnej wiadomości",
-  "clineClearAttachments": "Usuń oczekujące załączniki"
+  "clineClearAttachments": "Usuń oczekujące załączniki",
+  "clineChooserSubtitle": "Sesje agenta i projekty na komputerze. Konto Open WebUI ani Hermes nie jest wymagane."
 }

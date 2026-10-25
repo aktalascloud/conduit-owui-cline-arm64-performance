@@ -53,5 +53,15 @@
       "Pinned actual Cline session/context contract and approval-frame tests",
       "Russian and English UI"
     ]
+  },
+  {
+    "id": "APK-010",
+    "description": "Transfer phone images/documents through one fixed SSH upload RPC with SHA256 verification, content-addressed deduplication, bounded inbox and no shell/SFTP/arbitrary destination paths. Files attach only to the next explicit user message.",
+    "source": "Local OWUI + Cline integration; approvals and text-provider selection remain unchanged."
+  },
+  {
+    "id": "APK-011",
+    "description": "Visible Cline via SSH entry on the initial backend chooser and Accounts screens, including native sheets. Opens without OWUI/Hermes login and returns with Android Back. Preserve distinct public NAT and local SSH ports.",
+    "source": "Local fix following device feedback; Android/Russian onboarding widget and route tests."
   }
 ]

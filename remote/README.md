@@ -16,7 +16,7 @@ For public access, allow inbound TCP 2222 for the gateway interpreter and forwar
 
 ## Android
 
-Install the signed OWUI + Cline APK. In Conduit, open **Settings → Remote Cline**, import the private `connection.json` from the PC, and connect. Transfer it privately; never publish it. Connection settings are saved only in secure device storage. The server fingerprint must match; there is no trust-all fallback.
+Install the signed OWUI + Cline APK. In Conduit, open **Cline via SSH** on the first screen (also in Accounts/Settings), import the private `connection.json` from the PC, and connect. Transfer it privately; never publish it. Connection settings are saved only in secure device storage. The server fingerprint must match; there is no trust-all fallback.
 
 Open an existing session in the dashboard, or choose a PC project folder before starting a new session. Existing sessions keep their own folder. The dashboard uses its Cline UI; the native connection screen supports English and Russian. Sign in to model providers on the PC if needed.
 
