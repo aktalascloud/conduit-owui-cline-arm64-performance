@@ -4,24 +4,7 @@
   "day": "20261025",
   "application_id": "io.github.aktalascloud.conduit",
   "apk_signing": [
-    "Verifies",
-    "Verified using v1 scheme (JAR signing): false",
-    "Verified using v2 scheme (APK Signature Scheme v2): true",
-    "Verified using v3 scheme (APK Signature Scheme v3): false",
-    "Verified using v3.1 scheme (APK Signature Scheme v3.1): false",
-    "Verified using v3.2 scheme (APK Signature Scheme v3.2): false",
-    "Verified using v4 scheme (APK Signature Scheme v4): false",
-    "Verified for SourceStamp: false",
-    "Number of signers: 1",
-    "V2 Signer: certificate DN: O=aktalascloud personal builds, CN=aktalascloud",
-    "V2 Signer: certificate SHA-256 digest: 12c0da8b808192992e78698e8fded0ebda3ca5a527f3d7e11bb19ddd6ae63b61",
-    "V2 Signer: certificate SHA-1 digest: 68b6b617a105b96753755d492cba286d5c0f4448",
-    "V2 Signer: certificate MD5 digest: a695f0f8497fe86e2f2a4bb803342781",
-    "V2 Signer: key algorithm: RSA",
-    "V2 Signer: key size (bits): 3072",
-    "V2 Signer: public key SHA-256 digest: e585478f48bf66b21df2cfc373ae1f50b3b4a74272761cc78c90e0b1b0fbb514",
-    "V2 Signer: public key SHA-1 digest: d337279e241491c7dc4754f71a667bc80e9cd04b",
-    "V2 Signer: public key MD5 digest: 57b8d5a88939f986d8e3c6c5a7b8afa6"
+    "V2 Signer: certificate SHA-256 digest: 12c0da8b808192992e78698e8fded0ebda3ca5a527f3d7e11bb19ddd6ae63b61"
   ],
   "optimization_scope": "Flutter release AOT, ARM64, R8/tree shaking; SQLite/dartjni/ONNX Runtime+JNI rebuilt with O3 ARMv8-A ThinLTO; remaining vendor libraries explicitly inventoried",
   "device_performance": "Not measured on a physical Android device",
@@ -54,10 +37,15 @@
     "libapp.so": {
       "kind": "source-built Dart AOT",
       "source": "Conduit release source commit",
-      "optimization": "Flutter release AOT, tree shaking, obfuscation; C/C++ O3 flags do not control Dart AOT"
+      "optimization": "Flutter release AOT, tree shaking, obfuscation; C/C++ O3 flags do not control Dart AOT",
+      "flutter_version": "3.47.8",
+      "flutter_source_commit": "737ba8f885dc774b53b442759999a312c9461e4e",
+      "packaged_sha256": "c0030d8505e8952e874e44d018eb4c766fbb02951e00137ab8248975e294469e",
+      "packaged_bytes": 34014088
     },
     "libdartjni.so": {
       "kind": "source-built",
+      "compiler": "Android (13989888, +pgo, +bolt, +lto, +mlgo, based on r563880c) clang version 21.0.0 (https://android.googlesource.com/toolchain/llvm-project 5e96669f06077099aa41290cdb4c5e6fa0f59349)",
       "compile_flags": [
         "-O3",
         "-DNDEBUG",
@@ -79,26 +67,61 @@
         "-Wl,-z,now",
         "-Wl,-z,noexecstack"
       ],
+      "sources": [
+        "dartjni.c",
+        "global_jni_env.c",
+        "dart_api_dl.c"
+      ],
+      "sha256_before_android_strip": "d6a8a614360710a1d4376cb9f15a99ac0541d31a3381645db4dd8645c8b268af",
+      "build_id": "6761efa3ab2e00569eaccd8c39dab7e417caa8e9",
       "version": "1.0.3",
       "source": "https://pub.dev/api/archives/jni-1.0.3.tar.gz",
-      "license": "BSD-3-Clause plus Apache-2.0 Android JNI definitions; notices retained"
+      "source_sha256": "f038e58b4dc2c9037f50e233175086337e0b305e356d28211bf55f21c504cbd3",
+      "license": "BSD-3-Clause plus Apache-2.0 Android JNI definitions; notices retained",
+      "checks": [
+        "AArch64 ELF",
+        "16 KiB pages"
+      ],
+      "packaged_sha256": "36c6a3469765acd46d2b45863ed5c0c1f6c648a47393f262d1844174fd2633bd",
+      "packaged_bytes": 132136,
+      "needed_libraries": [
+        "liblog.so",
+        "libdl.so",
+        "libc.so"
+      ]
     },
     "libdatastore_shared_counter.so": {
       "kind": "prebuilt",
       "version": "AndroidX Datastore 1.1.7",
       "source": "https://android.googlesource.com/platform/frameworks/support/",
-      "reason": "Pinned AndroidX AAR; exact release native source/build mapping not supplied by the Kotlin package"
+      "reason": "Pinned AndroidX AAR; exact release native source/build mapping not supplied by the Kotlin package",
+      "expected_packaged_sha256": "d3e48717c9aa147e0ab21063ba0e8e0211cabf8bf40b222640829519edbf58e1",
+      "packaged_sha256": "d3e48717c9aa147e0ab21063ba0e8e0211cabf8bf40b222640829519edbf58e1",
+      "packaged_bytes": 7112
     },
     "libflutter.so": {
       "kind": "prebuilt",
       "source": "Official engine from pinned Flutter SDK",
-      "reason": "Official Flutter 3.47.8 engine retained; the packaged binary must equal the hash-verified official artifact after NDK stripping. No C/C++ O3 claim."
+      "reason": "Official Flutter 3.47.8 engine retained; the packaged binary must equal the hash-verified official artifact after NDK stripping. No C/C++ O3 claim.",
+      "flutter_version": "3.47.8",
+      "flutter_source_commit": "737ba8f885dc774b53b442759999a312c9461e4e",
+      "engine_commit": "cf636b1dfb818dd6a3ff16e390e93b1a036969c8",
+      "official_artifact": "https://storage.googleapis.com/flutter_infra_release/flutter/cf636b1dfb818dd6a3ff16e390e93b1a036969c8/android-arm64-release/artifacts.zip",
+      "official_artifact_sha256": "977a76c68861eb29af4fd210673a62134680c3248c9fbd59f2eca92975a4d578",
+      "official_unstripped_sha256": "44f30b3530fe8f806fb71b1bd79124ae7537d10b66e13c3af2b6250223cf9931",
+      "expected_packaged_sha256": "30aafee9297a7cd3547449efdc72dd0e55d177d82a54c85f473919e20f2a760b",
+      "build_id": "098e04d6daaf320c80f3f9de5e686dab7165ba8a",
+      "packaged_sha256": "30aafee9297a7cd3547449efdc72dd0e55d177d82a54c85f473919e20f2a760b",
+      "packaged_bytes": 11763360
     },
     "libjingle_peerconnection_so.so": {
       "kind": "prebuilt",
       "version": "io.github.webrtc-sdk:android:150.7871.01",
       "source": "https://github.com/webrtc-sdk/android",
-      "reason": "Pinned WebRTC vendor build and JNI ABI retained; Chromium/depot_tools build is not the NDK-only pipeline"
+      "reason": "Pinned WebRTC vendor build and JNI ABI retained; Chromium/depot_tools build is not the NDK-only pipeline",
+      "expected_packaged_sha256": "7b299113fcd743de7dc5559686b21fc2681b2c8598347d8dc0743d2e004995ca",
+      "packaged_sha256": "7b299113fcd743de7dc5559686b21fc2681b2c8598347d8dc0743d2e004995ca",
+      "packaged_bytes": 12287312
     },
     "libonnxruntime.so": {
       "kind": "source-built",
@@ -126,7 +149,54 @@
         "-Wl,-z,now",
         "-Wl,-z,noexecstack"
       ],
-      "license": "MIT and upstream ThirdPartyNotices preserved"
+      "compiler_command_evidence": {
+        "core_translation_units_checked": 486,
+        "jni_translation_units_checked": 17,
+        "assembly_translation_units": 21,
+        "assembly_note": "Handwritten MLAS assembly produces native objects; LLVM bitcode ThinLTO does not apply to assembly.",
+        "compile_database_sha256": "05ff91c601d0719385906414ad22b86e8e00d7ed4221e824b05725625d50e0fb",
+        "effective_core_and_jni_optimization": "-O3 -flto=thin",
+        "fast_math": false,
+        "architecture_policy": "ARMv8-A generic code; optional upstream MLAS kernel flags and CPU feature dispatch are preserved, not forced on the whole library.",
+        "cpu_dispatch_source": "onnxruntime/core/mlas/lib/platform.cpp at the pinned ONNX commit",
+        "architecture_flags": [
+          "-march=armv8-a",
+          "-march=armv8.2-a+bf16",
+          "-march=armv8.2-a+dotprod",
+          "-march=armv8.2-a+fp16"
+        ]
+      },
+      "providers": [
+        "CPU",
+        "NNAPI",
+        "XNNPACK"
+      ],
+      "full_operator_build": true,
+      "checks": [
+        "original public API/JNI exports preserved",
+        "AArch64 ELF",
+        "16 KiB pages"
+      ],
+      "sha256_before_android_strip": "8b388eadf807d245646e2fe5be314c8e86dde15e6a11fb819a6b818fd2aafc62",
+      "build_id": "acad95c6e6960e5ea8f57adf2cb7f70c9cde06c8",
+      "license": "MIT and upstream ThirdPartyNotices preserved",
+      "third_party_sources": {
+        "Eigen": {
+          "repository": "https://github.com/eigen-mirror/eigen.git",
+          "commit": "1d8b82b0740839c0de7f1242a3585e3390ff5f33",
+          "upstream": "https://gitlab.com/libeigen/eigen",
+          "origin": "Exact commit pinned in ONNX Runtime v1.22.0 cmake/deps.txt; no archive checksum weakened",
+          "license": "MPL-2.0; exact source commit retained"
+        }
+      },
+      "packaged_sha256": "82f13b7a057496f89d0fd3ed8e8adfa164143a05b1a45f585971fb8a399347f2",
+      "packaged_bytes": 19141944,
+      "needed_libraries": [
+        "libdl.so",
+        "liblog.so",
+        "libm.so",
+        "libc.so"
+      ]
     },
     "libonnxruntime4j_jni.so": {
       "kind": "source-built",
@@ -154,16 +224,67 @@
         "-Wl,-z,now",
         "-Wl,-z,noexecstack"
       ],
-      "license": "MIT and upstream ThirdPartyNotices preserved"
+      "compiler_command_evidence": {
+        "core_translation_units_checked": 486,
+        "jni_translation_units_checked": 17,
+        "assembly_translation_units": 21,
+        "assembly_note": "Handwritten MLAS assembly produces native objects; LLVM bitcode ThinLTO does not apply to assembly.",
+        "compile_database_sha256": "05ff91c601d0719385906414ad22b86e8e00d7ed4221e824b05725625d50e0fb",
+        "effective_core_and_jni_optimization": "-O3 -flto=thin",
+        "fast_math": false,
+        "architecture_policy": "ARMv8-A generic code; optional upstream MLAS kernel flags and CPU feature dispatch are preserved, not forced on the whole library.",
+        "cpu_dispatch_source": "onnxruntime/core/mlas/lib/platform.cpp at the pinned ONNX commit",
+        "architecture_flags": [
+          "-march=armv8-a",
+          "-march=armv8.2-a+bf16",
+          "-march=armv8.2-a+dotprod",
+          "-march=armv8.2-a+fp16"
+        ]
+      },
+      "providers": [
+        "CPU",
+        "NNAPI",
+        "XNNPACK"
+      ],
+      "full_operator_build": true,
+      "checks": [
+        "original public API/JNI exports preserved",
+        "AArch64 ELF",
+        "16 KiB pages"
+      ],
+      "sha256_before_android_strip": "bdb5d81569cd0b1a7a97281dca3a473224959c88acd43e5eb412338edc4c0fd7",
+      "build_id": "ff76898ac12fb8428eb70a1cccfdf1c0ca07dc77",
+      "license": "MIT and upstream ThirdPartyNotices preserved",
+      "third_party_sources": {
+        "Eigen": {
+          "repository": "https://github.com/eigen-mirror/eigen.git",
+          "commit": "1d8b82b0740839c0de7f1242a3585e3390ff5f33",
+          "upstream": "https://gitlab.com/libeigen/eigen",
+          "origin": "Exact commit pinned in ONNX Runtime v1.22.0 cmake/deps.txt; no archive checksum weakened",
+          "license": "MPL-2.0; exact source commit retained"
+        }
+      },
+      "packaged_sha256": "6872c195370a0049b20f82e9f654cde519adf03fcb01e782a40bf153c72562bc",
+      "packaged_bytes": 80296,
+      "needed_libraries": [
+        "libonnxruntime.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ]
     },
     "libpdfium.so": {
       "kind": "prebuilt",
       "version": "chromium/7811",
       "source": "https://github.com/bblanchon/pdfium-binaries/releases/tag/chromium%2F7811",
-      "reason": "Pinned PDFium Chromium build retained; its GN/depot_tools toolchain is not the NDK-only pipeline"
+      "reason": "Pinned PDFium Chromium build retained; its GN/depot_tools toolchain is not the NDK-only pipeline",
+      "expected_packaged_sha256": "ef8c440d29e2a0820a65554487d23020bd88756ee2d6aad8f8fb59bab3b2eb14",
+      "packaged_sha256": "ef8c440d29e2a0820a65554487d23020bd88756ee2d6aad8f8fb59bab3b2eb14",
+      "packaged_bytes": 6386696
     },
     "libsqlite3.so": {
       "kind": "source-built",
+      "compiler": "Android (13989888, +pgo, +bolt, +lto, +mlgo, based on r563880c) clang version 21.0.0 (https://android.googlesource.com/toolchain/llvm-project 5e96669f06077099aa41290cdb4c5e6fa0f59349)",
       "compile_flags": [
         "-O3",
         "-DNDEBUG",
@@ -185,9 +306,31 @@
         "-Wl,-z,now",
         "-Wl,-z,noexecstack"
       ],
+      "sources": [
+        "sqlite3.c"
+      ],
+      "sha256_before_android_strip": "c85a77fc820df96f7f455e89f02657308224318ed5fb54c607cd669b531673f8",
+      "build_id": "0553cb8034f6b78780f49f46c687e9ae340a43b1",
       "version": "3.53.4",
       "source": "https://sqlite.org/2026/sqlite-amalgamation-3530400.zip",
-      "license": "Public domain; preserved amalgamation notice"
+      "source_sha256": "1e71ddf93849c6a6ecf58b827c0692073d2dd7ee40196158068f7b29f422e87d",
+      "source_id": "2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+      "license": "Public domain; preserved amalgamation notice",
+      "checks": [
+        "host SQL transactions/FTS5/JSON/integrity",
+        "AArch64 ELF",
+        "16 KiB pages"
+      ],
+      "packaged_sha256": "c55d732d62a9e6ad0c4922ec34e57d7f47fc97574e67a861ddff4d378047cb4e",
+      "packaged_bytes": 1756712,
+      "needed_libraries": [
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ]
     }
-  }
+  },
+  "native_baseline": "ARMv8-A",
+  "pgo": false,
+  "fast_math_requested": false
 }
