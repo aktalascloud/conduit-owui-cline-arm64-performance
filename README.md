@@ -15,7 +15,7 @@ One signed ARM64 APK with extended Russian interface and MCP/workspace dialogs.
 
 ## Evidence
 
-Previous measured APK (24 October 2026): **92,667,875 bytes**, **4.78% smaller** than official v4.2.1 ARM64. This is package size, not runtime speed. Phone performance is unmeasured. [All nine libraries, sources, flags and hashes](.avx1/measurements/native-release-316e124d.json).
+Current verified APK: **92,995,823 bytes**, **4.45% smaller** than official v4.2.1 ARM64. This measures package size, not speed. All **5029 Flutter tests** pass; phone performance is unmeasured. [Nine libraries, sources, flags and hashes](.avx1/measurements/native-release-b6c090d8.json).
 
 No LLM weights or personal configuration. The original 2.3 MB Silero VAD detector remains bundled with its verified MIT notice.
 

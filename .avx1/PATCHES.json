@@ -11,7 +11,7 @@
   },
   {
     "id": "APK-003",
-    "description": "Use stable Flutter 3.47.8 and latest stable Android SDK 37.2/build-tools 37.0.0; verify exact SDK pins, ARM64 ABI, persistent APK signature and 5004 Flutter tests.",
+    "description": "Use stable Flutter 3.47.8 and latest stable Android SDK 37.2/build-tools 37.0.0; verify exact SDK pins, ARM64 ABI, persistent APK signature and the complete Flutter test suite.",
     "source": "Official Flutter release manifest and Google Android SDK repository metadata."
   },
   {
