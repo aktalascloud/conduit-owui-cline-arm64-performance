@@ -7,7 +7,7 @@
   "description": "Conduit: one signed latest ARM64 APK, release AOT/R8, Open WebUI agent compatibility; extended Russian UI translation / дополненный перевод на русский.",
   "repository": "aktalascloud/conduit-arm64-performance",
   "channel": "latest",
-  "upstream_commit": "3f95de152283435ea60ce3d083c8e64aa0537736",
+  "upstream_commit": "2550086b17976230b67ead9820152f716bdf36e2",
   "stable_tag": "v4.2.1",
   "distribution": "single unified latest"
 }

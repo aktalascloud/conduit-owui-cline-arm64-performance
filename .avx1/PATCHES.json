@@ -23,5 +23,24 @@
     "id": "APK-005",
     "description": "Rebuild SQLite 3.53.4, dartjni 1.0.3 and ONNX Runtime/JNI 1.22.0 with NDK O3 ARMv8-A ThinLTO, preserving API/JNI exports and CPU/NNAPI/XNNPACK providers; record all native libraries and unchanged vendor builds.",
     "source": "Pinned corresponding sources and verified package/ABI provenance; .avx1/native-arm64.json."
+  },
+  {
+    "id": "APK-006",
+    "description": "Preserve model default filters on new chats, display MCP tool images and fix Direct/Hermes account selection and channel thread scrolling.",
+    "source": "Official upstream merge #870.",
+    "url": "https://github.com/cogwheel0/conduit/pull/870"
+  },
+  {
+    "id": "APK-007",
+    "description": "Recognize and play video attachments instead of treating them as images; preserve authenticated file origin handling.",
+    "source": "Official upstream merge #869.",
+    "url": "https://github.com/cogwheel0/conduit/pull/869"
+  },
+  {
+    "id": "APK-008",
+    "description": "Keep late server dictation when Stop overlaps transcription; retain tests for repeated Stop and detached call consumers.",
+    "source": "Reviewed open upstream PR #873; applied without its whitespace-only conflicts.",
+    "url": "https://github.com/cogwheel0/conduit/pull/873",
+    "upstream_head": "831301e86ac86e695af2c666559092e1204b92d6"
   }
 ]
