@@ -1,0 +1,232 @@
+{
+  "schema": 1,
+  "scope": "Native Conduit Cline UI and pinned SSH/JSON transport; not a phone or LLM speed benchmark",
+  "source_commit": "47026215f59dc6f367c109eab0a73ea1eeb95b94",
+  "ci": "https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/actions/runs/40198383776",
+  "release": "https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/tag/daily-20261025-47026215",
+  "apk": {
+    "bytes": 94389027,
+    "sha256": "7bee022c7d56fa7f07af372ecfec066e4033c8f24b5295eed752750197248e02",
+    "download_url": "https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/download/daily-20261025-47026215/Conduit-OWUI-Cline-arm64-v8a.apk",
+    "application_id": "io.github.aktalascloud.conduit",
+    "anonymous_download": "verified",
+    "permanent_signing_identity": "verified"
+  },
+  "tests": {
+    "flutter": 5058,
+    "restricted_gateway": 11,
+    "pinned_actual_cline_protocol": "passed",
+    "native_phone_widget_layout": "passed",
+    "dart_to_python_ssh_and_pin_rejection": "passed",
+    "gateway_dependency_audit": "no known vulnerabilities in the locked gateway requirements"
+  },
+  "read_only_live_probe": {
+    "history_messages": 110,
+    "agent_prompts_sent": 0,
+    "tool_approvals_sent": 0,
+    "webview_used": false
+  },
+  "native_arm64": {
+    "abi": "arm64-v8a",
+    "baseline": "ARMv8-A",
+    "pgo": false,
+    "fast_math_requested": false,
+    "source_built_native_libraries": [
+      "libdartjni.so",
+      "libonnxruntime.so",
+      "libonnxruntime4j_jni.so",
+      "libsqlite3.so"
+    ],
+    "physical_device_speedup_percent": null
+  },
+  "libraries": {
+    "libapp.so": {
+      "kind": "source-built Dart AOT",
+      "source": "Conduit release source commit",
+      "optimization": "Flutter release AOT, tree shaking, obfuscation; C/C++ O3 flags do not control Dart AOT",
+      "flutter_version": "3.47.8",
+      "flutter_source_commit": "737ba8f885dc774b53b442759999a312c9461e4e",
+      "packaged_sha256": "30676d24e1d177e349e4512c46f323be01b5a7c336d1b00e9b685c4d9b8df968",
+      "packaged_bytes": 34145160
+    },
+    "libdartjni.so": {
+      "kind": "source-built",
+      "compile_flags": [
+        "-O3",
+        "-DNDEBUG",
+        "-march=armv8-a",
+        "-flto=thin",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fno-fast-math",
+        "-fstack-protector-strong",
+        "-D_FORTIFY_SOURCE=2"
+      ],
+      "link_flags": [
+        "-flto=thin",
+        "-Wl,--lto-O3",
+        "-Wl,--gc-sections",
+        "-Wl,-z,max-page-size=16384",
+        "-Wl,--build-id=sha1",
+        "-Wl,-z,relro",
+        "-Wl,-z,now",
+        "-Wl,-z,noexecstack"
+      ],
+      "version": "1.0.3",
+      "source": "https://pub.dev/api/archives/jni-1.0.3.tar.gz",
+      "source_sha256": "f038e58b4dc2c9037f50e233175086337e0b305e356d28211bf55f21c504cbd3",
+      "license": "BSD-3-Clause plus Apache-2.0 Android JNI definitions; notices retained",
+      "checks": [
+        "AArch64 ELF",
+        "16 KiB pages"
+      ],
+      "packaged_sha256": "36c6a3469765acd46d2b45863ed5c0c1f6c648a47393f262d1844174fd2633bd",
+      "packaged_bytes": 132136
+    },
+    "libdatastore_shared_counter.so": {
+      "kind": "prebuilt",
+      "version": "AndroidX Datastore 1.1.7",
+      "source": "https://android.googlesource.com/platform/frameworks/support/",
+      "reason": "Pinned AndroidX AAR; exact release native source/build mapping not supplied by the Kotlin package",
+      "packaged_sha256": "d3e48717c9aa147e0ab21063ba0e8e0211cabf8bf40b222640829519edbf58e1",
+      "packaged_bytes": 7112
+    },
+    "libflutter.so": {
+      "kind": "prebuilt",
+      "source": "Official engine from pinned Flutter SDK",
+      "reason": "Official Flutter 3.47.8 engine retained; the packaged binary must equal the hash-verified official artifact after NDK stripping. No C/C++ O3 claim.",
+      "flutter_version": "3.47.8",
+      "flutter_source_commit": "737ba8f885dc774b53b442759999a312c9461e4e",
+      "engine_commit": "cf636b1dfb818dd6a3ff16e390e93b1a036969c8",
+      "packaged_sha256": "30aafee9297a7cd3547449efdc72dd0e55d177d82a54c85f473919e20f2a760b",
+      "packaged_bytes": 11763360
+    },
+    "libjingle_peerconnection_so.so": {
+      "kind": "prebuilt",
+      "version": "io.github.webrtc-sdk:android:150.7871.01",
+      "source": "https://github.com/webrtc-sdk/android",
+      "reason": "Pinned WebRTC vendor build and JNI ABI retained; Chromium/depot_tools build is not the NDK-only pipeline",
+      "packaged_sha256": "7b299113fcd743de7dc5559686b21fc2681b2c8598347d8dc0743d2e004995ca",
+      "packaged_bytes": 12287312
+    },
+    "libonnxruntime.so": {
+      "kind": "source-built",
+      "version": "1.22.0",
+      "source": "https://github.com/microsoft/onnxruntime.git",
+      "source_commit": "f217402897f40ebba457e2421bc0a4702771968e",
+      "compile_flags": [
+        "-O3",
+        "-DNDEBUG",
+        "-march=armv8-a",
+        "-flto=thin",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fno-fast-math",
+        "-fstack-protector-strong",
+        "-D_FORTIFY_SOURCE=2"
+      ],
+      "link_flags": [
+        "-flto=thin",
+        "-Wl,--lto-O3",
+        "-Wl,--gc-sections",
+        "-Wl,-z,max-page-size=16384",
+        "-Wl,--build-id=sha1",
+        "-Wl,-z,relro",
+        "-Wl,-z,now",
+        "-Wl,-z,noexecstack"
+      ],
+      "checks": [
+        "original public API/JNI exports preserved",
+        "AArch64 ELF",
+        "16 KiB pages"
+      ],
+      "license": "MIT and upstream ThirdPartyNotices preserved",
+      "packaged_sha256": "82f13b7a057496f89d0fd3ed8e8adfa164143a05b1a45f585971fb8a399347f2",
+      "packaged_bytes": 19141944
+    },
+    "libonnxruntime4j_jni.so": {
+      "kind": "source-built",
+      "version": "1.22.0",
+      "source": "https://github.com/microsoft/onnxruntime.git",
+      "source_commit": "f217402897f40ebba457e2421bc0a4702771968e",
+      "compile_flags": [
+        "-O3",
+        "-DNDEBUG",
+        "-march=armv8-a",
+        "-flto=thin",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fno-fast-math",
+        "-fstack-protector-strong",
+        "-D_FORTIFY_SOURCE=2"
+      ],
+      "link_flags": [
+        "-flto=thin",
+        "-Wl,--lto-O3",
+        "-Wl,--gc-sections",
+        "-Wl,-z,max-page-size=16384",
+        "-Wl,--build-id=sha1",
+        "-Wl,-z,relro",
+        "-Wl,-z,now",
+        "-Wl,-z,noexecstack"
+      ],
+      "checks": [
+        "original public API/JNI exports preserved",
+        "AArch64 ELF",
+        "16 KiB pages"
+      ],
+      "license": "MIT and upstream ThirdPartyNotices preserved",
+      "packaged_sha256": "6872c195370a0049b20f82e9f654cde519adf03fcb01e782a40bf153c72562bc",
+      "packaged_bytes": 80296
+    },
+    "libpdfium.so": {
+      "kind": "prebuilt",
+      "version": "chromium/7811",
+      "source": "https://github.com/bblanchon/pdfium-binaries/releases/tag/chromium%2F7811",
+      "reason": "Pinned PDFium Chromium build retained; its GN/depot_tools toolchain is not the NDK-only pipeline",
+      "packaged_sha256": "ef8c440d29e2a0820a65554487d23020bd88756ee2d6aad8f8fb59bab3b2eb14",
+      "packaged_bytes": 6386696
+    },
+    "libsqlite3.so": {
+      "kind": "source-built",
+      "compile_flags": [
+        "-O3",
+        "-DNDEBUG",
+        "-march=armv8-a",
+        "-flto=thin",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fno-fast-math",
+        "-fstack-protector-strong",
+        "-D_FORTIFY_SOURCE=2"
+      ],
+      "link_flags": [
+        "-flto=thin",
+        "-Wl,--lto-O3",
+        "-Wl,--gc-sections",
+        "-Wl,-z,max-page-size=16384",
+        "-Wl,--build-id=sha1",
+        "-Wl,-z,relro",
+        "-Wl,-z,now",
+        "-Wl,-z,noexecstack"
+      ],
+      "version": "3.53.4",
+      "source": "https://sqlite.org/2026/sqlite-amalgamation-3530400.zip",
+      "source_sha256": "1e71ddf93849c6a6ecf58b827c0692073d2dd7ee40196158068f7b29f422e87d",
+      "license": "Public domain; preserved amalgamation notice",
+      "checks": [
+        "host SQL transactions/FTS5/JSON/integrity",
+        "AArch64 ELF",
+        "16 KiB pages"
+      ],
+      "packaged_sha256": "c55d732d62a9e6ad0c4922ec34e57d7f47fc97574e67a861ddff4d378047cb4e",
+      "packaged_bytes": 1756712
+    }
+  },
+  "limits": [
+    "Existing Cline sessions retain their provider/model/project; choose Plan or Act explicitly.",
+    "No automatic resend or approval bypass.",
+    "Phone Cline voice/calls are not implemented.",
+    "Physical phone and LLM speed remain unmeasured."
+  ]
+}

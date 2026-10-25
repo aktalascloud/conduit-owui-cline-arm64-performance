@@ -19,7 +19,7 @@ First screen → Cline via SSH → import the private connection JSON from your 
 
 ## Evidence
 
-Native Cline tests cover session routing, streaming, explicit approvals, uncertain sends, attachments, large text and small screens. A read-only SSH probe loaded real Cline history without sending an agent prompt. CI checks the complete Flutter suite and pinned Cline protocol. Phone/LLM speed is unmeasured. [Last published native-library measurements](.avx1/measurements/cline-remote-793d7402.json); each release identifies its exact source and checks.
+Verified APK: **94,389,027 bytes**; **5058 Flutter tests** and **11 SSH gateway tests** pass. Native routing, streaming, explicit approvals, uncertain sends and small-screen layouts are tested. A read-only SSH probe loaded 110 real history messages without an agent prompt. Phone/LLM speed is unmeasured. [Nine libraries, actual flags, hashes and verification](.avx1/measurements/cline-native-47026215.json).
 
 No LLM weights or personal configuration. The original 2.3 MB Silero VAD detector remains bundled with its verified MIT notice.
 
