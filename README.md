@@ -4,7 +4,7 @@
 
 Unofficial Conduit fork for OWUI + Cline: one signed ARM64 APK with extended Russian interface and MCP/workspace dialogs.
 
-[Download APK](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest). Permanent fork ID/signature preserve upgrades.
+[Download APK](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest/download/Conduit-OWUI-Cline-arm64-v8a.apk). Permanent fork ID/signature preserve upgrades.
 
 ## Remote Cline
 
@@ -19,7 +19,7 @@ First screen → Cline via SSH → import the private connection JSON from your 
 
 ## Evidence
 
-Current verified APK: **92,995,823 bytes**, **4.45% smaller** than official v4.2.1 ARM64. This measures package size, not speed. All **5029 Flutter tests** pass; phone performance is unmeasured. [Nine libraries, sources, flags and hashes](.avx1/measurements/native-release-b6c090d8.json).
+Current verified APK: **94,257,855 bytes**; **5034 Flutter tests** pass. The first Android screen and Accounts include **Cline via SSH**. Image/document transfer, the pinned SSH gateway and the Cline session contract are tested. Phone/LLM speed is unmeasured. [Nine libraries, sources, actual flags and verification](.avx1/measurements/cline-remote-793d7402.json).
 
 No LLM weights or personal configuration. The original 2.3 MB Silero VAD detector remains bundled with its verified MIT notice.
 

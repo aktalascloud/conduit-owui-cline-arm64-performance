@@ -1,0 +1,193 @@
+{
+  "source_commit": "793d7402614939e96fd0b85db25f650525aa47f9",
+  "repository": "aktalascloud/conduit-owui-cline-arm64-performance",
+  "day": "20261025",
+  "application_id": "io.github.aktalascloud.conduit",
+  "apk_signing": [
+    "Verifies",
+    "Verified using v1 scheme (JAR signing): false",
+    "Verified using v2 scheme (APK Signature Scheme v2): true",
+    "Verified using v3 scheme (APK Signature Scheme v3): false",
+    "Verified using v3.1 scheme (APK Signature Scheme v3.1): false",
+    "Verified using v3.2 scheme (APK Signature Scheme v3.2): false",
+    "Verified using v4 scheme (APK Signature Scheme v4): false",
+    "Verified for SourceStamp: false",
+    "Number of signers: 1",
+    "V2 Signer: certificate DN: O=aktalascloud personal builds, CN=aktalascloud",
+    "V2 Signer: certificate SHA-256 digest: 12c0da8b808192992e78698e8fded0ebda3ca5a527f3d7e11bb19ddd6ae63b61",
+    "V2 Signer: certificate SHA-1 digest: 68b6b617a105b96753755d492cba286d5c0f4448",
+    "V2 Signer: certificate MD5 digest: a695f0f8497fe86e2f2a4bb803342781",
+    "V2 Signer: key algorithm: RSA",
+    "V2 Signer: key size (bits): 3072",
+    "V2 Signer: public key SHA-256 digest: e585478f48bf66b21df2cfc373ae1f50b3b4a74272761cc78c90e0b1b0fbb514",
+    "V2 Signer: public key SHA-1 digest: d337279e241491c7dc4754f71a667bc80e9cd04b",
+    "V2 Signer: public key MD5 digest: 57b8d5a88939f986d8e3c6c5a7b8afa6"
+  ],
+  "optimization_scope": "Flutter release AOT, ARM64, R8/tree shaking; SQLite/dartjni/ONNX Runtime+JNI rebuilt with O3 ARMv8-A ThinLTO; remaining vendor libraries explicitly inventoried",
+  "device_performance": "Not measured on a physical Android device",
+  "cline_integration": {
+    "transport": "SSH to loopback Cline dashboard",
+    "host_key_verification": "mandatory Ed25519 SHA256 pin",
+    "gateway_security_tests": "passed",
+    "gateway_dependency_audit": "passed; no unresolved advisories",
+    "pinned_cline_protocol_contract": "passed",
+    "dart_ssh_interoperability": "included in passed Flutter suite",
+    "shell": false,
+    "sftp": false,
+    "arbitrary_tcp_forwarding": false,
+    "automatic_command_replay": false,
+    "file_transfer": "fixed upload RPC; SHA256, 64 MiB/file, 1 GiB inbox, 4 attachments/message; user-triggered sends only"
+  },
+  "apk": {
+    "filename": "Conduit-OWUI-Cline-arm64-v8a.apk",
+    "size": 94257855,
+    "sha256": "6bbca65f6276023fa0b59c9a6115bdb456b07d5b6f302f67811eeb71ff323dc0"
+  },
+  "verification": {
+    "flutter_tests_passed": 5034,
+    "gateway_tests_passed": 11,
+    "standalone_android_russian_navigation": "passed",
+    "native_library_count": 9,
+    "physical_phone_performance": "not measured"
+  },
+  "native_libraries": {
+    "libapp.so": {
+      "kind": "source-built Dart AOT",
+      "source": "Conduit release source commit",
+      "optimization": "Flutter release AOT, tree shaking, obfuscation; C/C++ O3 flags do not control Dart AOT"
+    },
+    "libdartjni.so": {
+      "kind": "source-built",
+      "compile_flags": [
+        "-O3",
+        "-DNDEBUG",
+        "-march=armv8-a",
+        "-flto=thin",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fno-fast-math",
+        "-fstack-protector-strong",
+        "-D_FORTIFY_SOURCE=2"
+      ],
+      "link_flags": [
+        "-flto=thin",
+        "-Wl,--lto-O3",
+        "-Wl,--gc-sections",
+        "-Wl,-z,max-page-size=16384",
+        "-Wl,--build-id=sha1",
+        "-Wl,-z,relro",
+        "-Wl,-z,now",
+        "-Wl,-z,noexecstack"
+      ],
+      "version": "1.0.3",
+      "source": "https://pub.dev/api/archives/jni-1.0.3.tar.gz",
+      "license": "BSD-3-Clause plus Apache-2.0 Android JNI definitions; notices retained"
+    },
+    "libdatastore_shared_counter.so": {
+      "kind": "prebuilt",
+      "version": "AndroidX Datastore 1.1.7",
+      "source": "https://android.googlesource.com/platform/frameworks/support/",
+      "reason": "Pinned AndroidX AAR; exact release native source/build mapping not supplied by the Kotlin package"
+    },
+    "libflutter.so": {
+      "kind": "prebuilt",
+      "source": "Official engine from pinned Flutter SDK",
+      "reason": "Official Flutter 3.47.8 engine retained; the packaged binary must equal the hash-verified official artifact after NDK stripping. No C/C++ O3 claim."
+    },
+    "libjingle_peerconnection_so.so": {
+      "kind": "prebuilt",
+      "version": "io.github.webrtc-sdk:android:150.7871.01",
+      "source": "https://github.com/webrtc-sdk/android",
+      "reason": "Pinned WebRTC vendor build and JNI ABI retained; Chromium/depot_tools build is not the NDK-only pipeline"
+    },
+    "libonnxruntime.so": {
+      "kind": "source-built",
+      "version": "1.22.0",
+      "source": "https://github.com/microsoft/onnxruntime.git",
+      "source_commit": "f217402897f40ebba457e2421bc0a4702771968e",
+      "compile_flags": [
+        "-O3",
+        "-DNDEBUG",
+        "-march=armv8-a",
+        "-flto=thin",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fno-fast-math",
+        "-fstack-protector-strong",
+        "-D_FORTIFY_SOURCE=2"
+      ],
+      "link_flags": [
+        "-flto=thin",
+        "-Wl,--lto-O3",
+        "-Wl,--gc-sections",
+        "-Wl,-z,max-page-size=16384",
+        "-Wl,--build-id=sha1",
+        "-Wl,-z,relro",
+        "-Wl,-z,now",
+        "-Wl,-z,noexecstack"
+      ],
+      "license": "MIT and upstream ThirdPartyNotices preserved"
+    },
+    "libonnxruntime4j_jni.so": {
+      "kind": "source-built",
+      "version": "1.22.0",
+      "source": "https://github.com/microsoft/onnxruntime.git",
+      "source_commit": "f217402897f40ebba457e2421bc0a4702771968e",
+      "compile_flags": [
+        "-O3",
+        "-DNDEBUG",
+        "-march=armv8-a",
+        "-flto=thin",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fno-fast-math",
+        "-fstack-protector-strong",
+        "-D_FORTIFY_SOURCE=2"
+      ],
+      "link_flags": [
+        "-flto=thin",
+        "-Wl,--lto-O3",
+        "-Wl,--gc-sections",
+        "-Wl,-z,max-page-size=16384",
+        "-Wl,--build-id=sha1",
+        "-Wl,-z,relro",
+        "-Wl,-z,now",
+        "-Wl,-z,noexecstack"
+      ],
+      "license": "MIT and upstream ThirdPartyNotices preserved"
+    },
+    "libpdfium.so": {
+      "kind": "prebuilt",
+      "version": "chromium/7811",
+      "source": "https://github.com/bblanchon/pdfium-binaries/releases/tag/chromium%2F7811",
+      "reason": "Pinned PDFium Chromium build retained; its GN/depot_tools toolchain is not the NDK-only pipeline"
+    },
+    "libsqlite3.so": {
+      "kind": "source-built",
+      "compile_flags": [
+        "-O3",
+        "-DNDEBUG",
+        "-march=armv8-a",
+        "-flto=thin",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fno-fast-math",
+        "-fstack-protector-strong",
+        "-D_FORTIFY_SOURCE=2"
+      ],
+      "link_flags": [
+        "-flto=thin",
+        "-Wl,--lto-O3",
+        "-Wl,--gc-sections",
+        "-Wl,-z,max-page-size=16384",
+        "-Wl,--build-id=sha1",
+        "-Wl,-z,relro",
+        "-Wl,-z,now",
+        "-Wl,-z,noexecstack"
+      ],
+      "version": "3.53.4",
+      "source": "https://sqlite.org/2026/sqlite-amalgamation-3530400.zip",
+      "license": "Public domain; preserved amalgamation notice"
+    }
+  }
+}
