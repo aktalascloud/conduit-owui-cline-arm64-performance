@@ -1,5 +1,7 @@
 import asyncio
 import json
+import hashlib
+import struct
 from pathlib import Path
 import tempfile
 import unittest
@@ -48,9 +50,49 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
         async with await self.connect() as connection:
             for host,port in [('127.0.0.1',1),('example.com',443)]:
                 with self.assertRaises(asyncssh.ChannelOpenError):await connection.open_connection(host,port)
-            with self.assertRaises(asyncssh.ChannelOpenError):await connection.run('echo denied')
+            self.assertEqual((await connection.run('echo denied')).exit_status,126)
             with self.assertRaises(asyncssh.ChannelOpenError):await connection.start_sftp_client()
             with self.assertRaises(asyncssh.ChannelListenError):await connection.forward_remote_port('127.0.0.1',0,'127.0.0.1',80)
+
+    async def upload(self, connection, name, content, *, sha=None, extra=b''):
+        process=await connection.create_process('conduit-upload-v1',encoding=None)
+        header=json.dumps({'name':name,'size':len(content),'sha256':sha or hashlib.sha256(content).hexdigest()}).encode()
+        process.stdin.write(struct.pack('>I',len(header))+header)
+        first=json.loads(await process.stdout.readline())
+        if first['status']=='ready':
+            process.stdin.write(content+extra);process.stdin.write_eof()
+            first=json.loads(await process.stdout.readline())
+        await process.wait()
+        return first
+
+    async def test_document_upload_is_verified_and_deduplicated(self):
+        async with await self.connect() as connection:
+            content='Пример документа'.encode()
+            first=await self.upload(connection,'example.txt',content)
+            self.assertEqual(first['status'],'stored')
+            self.assertEqual(Path(first['path']).read_bytes(),content)
+            again=await self.upload(connection,'other-name.txt',content)
+            self.assertEqual(again['path'],first['path'])
+            self.assertEqual(len(list(Path(first['path']).parent.iterdir())),1)
+
+    async def test_upload_rejects_paths_executables_and_digest_mismatch(self):
+        async with await self.connect() as connection:
+            for name in ('../escape.txt','C:\\escape.txt','run.exe','file.ps1'):
+                self.assertEqual((await self.upload(connection,name,b'synthetic'))['status'],'rejected')
+            self.assertEqual((await self.upload(connection,'ok.txt',b'synthetic',sha='0'*64))['status'],'rejected')
+        self.assertEqual(list((Path(self.temp.name)/'user-uploads').glob('*')),[])
+
+    async def test_upload_rejects_extra_bytes_and_cleans_partial(self):
+        async with await self.connect() as connection:
+            self.assertEqual((await self.upload(connection,'ok.pdf',b'synthetic',extra=b'x'))['status'],'rejected')
+        self.assertEqual(list((Path(self.temp.name)/'user-uploads').glob('*')),[])
+
+    async def test_upload_rejects_oversized_declared_content_before_transfer(self):
+        async with await self.connect() as connection:
+            async with connection.create_process('conduit-upload-v1',encoding=None) as process:
+                header=json.dumps({'name':'ok.pdf','size':64*1024*1024+1,'sha256':'0'*64}).encode()
+                process.stdin.write(struct.pack('>I',len(header))+header)
+                self.assertEqual(json.loads(await process.stdout.readline())['status'],'rejected')
 
     async def test_preparation_reuses_identity_and_profile_matches_pin(self):
         root=Path(self.temp.name)

@@ -33,6 +33,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Secure pip bootstrap failed.' }
 & $python -m pip install --disable-pip-version-check -r (Join-Path $PSScriptRoot 'requirements.txt')
 if ($LASTEXITCODE -ne 0) { throw 'Gateway dependency installation failed.' }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'cline_gateway.py') -Destination $stateRoot
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'upload_rpc.py') -Destination $stateRoot
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'start-gateway.ps1') -Destination $stateRoot
 $initializer = @'
 import json,sys

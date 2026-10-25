@@ -8847,5 +8847,9 @@
   "clineLocalPortBusy": "The local connection port is busy. Close the previous Cline connection and try again.",
   "clineNetworkError": "Cannot connect to the PC. Check its address, SSH port, firewall and router forwarding.",
   "clineDisconnected": "The connection closed. Return and reconnect. No messages were resent automatically; agent sessions remain on the PC.",
-  "clinePasteConnection": "Paste connection"
+  "clinePasteConnection": "Paste connection",
+  "clineUploadFile": "Attach image or document",
+  "clineUploadFailed": "Upload failed. Maximum: 64 MiB per file, 4 attachments per message. Check the connection and available inbox space.",
+  "clineFilesReady": "Ready for your next message",
+  "clineClearAttachments": "Remove pending attachments"
 }

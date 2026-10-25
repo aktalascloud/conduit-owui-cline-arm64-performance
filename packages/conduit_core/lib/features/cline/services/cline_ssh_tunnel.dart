@@ -1,12 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
+import 'package:crypto/crypto.dart';
 
 import '../models/cline_remote_profile.dart';
 
 enum ClineConnectionFailure { hostKey, authentication, network, localPort }
+
+final class ClineUploadedFile {
+  const ClineUploadedFile(this.path, this.sha256, this.size);
+  final String path;
+  final String sha256;
+  final int size;
+}
 
 final class ClineConnectionException implements Exception {
   const ClineConnectionException(this.failure);
@@ -123,6 +132,59 @@ final class ClineSshTunnel {
         channel.destroy();
       }
       socket.destroy();
+    }
+  }
+
+  /// A fixed RPC; the server never executes the supplied filename as a command.
+  Future<ClineUploadedFile> upload(File file, String name) async {
+    final size = await file.length();
+    if (_closing ||
+        size <= 0 ||
+        size > 64 * 1024 * 1024 ||
+        name.length > 128 ||
+        name.contains(RegExp(r'[/\\:\x00\r\n]'))) {
+      throw const FormatException('Invalid upload');
+    }
+    final hash = (await sha256.bind(file.openRead()).first).toString();
+    final session = await _client!.execute('conduit-upload-v1');
+    final lines = StreamIterator(
+      session.stdout.cast<List<int>>().transform(utf8.decoder).transform(const LineSplitter()),
+    );
+    unawaited(session.stderr.drain<void>());
+    try {
+      final header = utf8.encode(
+        jsonEncode({'name': name, 'size': size, 'sha256': hash}),
+      );
+      final length = ByteData(4)..setUint32(0, header.length, Endian.big);
+      session.stdin.add(length.buffer.asUint8List());
+      session.stdin.add(Uint8List.fromList(header));
+      Future<Map<String, dynamic>> response() async {
+        if (!await lines.moveNext().timeout(const Duration(seconds: 60)) ||
+            lines.current.length > 8192) {
+          throw const FormatException('Invalid upload response');
+        }
+        return jsonDecode(lines.current) as Map<String, dynamic>;
+      }
+
+      var result = await response();
+      if (result['status'] == 'ready') {
+        await session.stdin.addStream(file.openRead().map(Uint8List.fromList));
+        await session.stdin.close();
+        result = await response();
+      }
+      if (result['status'] != 'stored' ||
+          result['sha256'] != hash ||
+          result['size'] != size ||
+          result['path'] is! String ||
+          !(result['path'] as String).startsWith(
+            RegExp(r'(?:[A-Za-z]:[\\/]|/)'),
+          )) {
+        throw const FormatException('Upload was not verified');
+      }
+      return ClineUploadedFile(result['path'] as String, hash, size);
+    } finally {
+      await lines.cancel();
+      session.close();
     }
   }
 

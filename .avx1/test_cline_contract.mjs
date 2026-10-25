@@ -49,7 +49,7 @@ const dart = readFileSync(new URL('lib/features/cline/views/cline_remote_page.da
 const start = dart.indexOf('\n(() => {');
 const end = dart.indexOf("\n'''", start);
 assert.ok(start >= 0 && end > start);
-const bootstrap = dart.slice(start, end)
+const bootstrap = dart.slice(start, end).replaceAll('\\\\', '\\')
   .replace('${jsonEncode(project)}', JSON.stringify('/synthetic/new-project'))
   .replace('${jsonEncode(roomSecret)}', JSON.stringify('synthetic-room-not-a-real-credential'));
 class Socket {
@@ -68,11 +68,24 @@ const frame = JSON.parse(socket.sent.at(-1));
 assert.equal(frame.prompt, 'unmodified text');
 assert.equal(frame.config.autoApproveTools, false);
 assert.equal(frame.config.workspaceRoot, '/synthetic/new-project');
+browser.window.__conduitPendingFiles = [{name:'example.pdf',path:'/synthetic/inbox/document.pdf',sha256:'0'.repeat(64),size:12},
+  {name:'example.png',path:'/synthetic/inbox/image.png',sha256:'1'.repeat(64),size:16,image:'data:image/png;base64,c3ludGhldGlj'}];
+socket.send(approval);
+assert.equal(socket.sent.at(-1), approval);
+assert.equal(browser.window.__conduitPendingFiles.length, 2, 'Approval must not consume files');
+socket.send(JSON.stringify({type:'send',prompt:'read these files',attachments:{userImages:['data:image/png;base64,b2xk']}}));
+const attachedFrame = JSON.parse(socket.sent.at(-1));
+assert.ok(attachedFrame.prompt.startsWith('read these files\n\n[User attachments:'));
+assert.ok(attachedFrame.prompt.includes('/synthetic/inbox/document.pdf'));
+assert.deepEqual(attachedFrame.attachments.userImages,['data:image/png;base64,b2xk','data:image/png;base64,c3ludGhldGlj']);
+assert.equal(browser.window.__conduitPendingFiles.length, 0);
 let attempts = 0;
 const originalSend = Socket.prototype.send;
 Socket.prototype.send = function(value) { attempts++; throw new Error('Synthetic transport failure'); };
+browser.window.__conduitPendingFiles = [{name:'example.txt',path:'/synthetic/inbox/file.txt',sha256:'0'.repeat(64),size:12}];
 assert.throws(() => socket.send(JSON.stringify({type: 'send', prompt: 'once'})));
 assert.equal(attempts, 1, 'A failed write must never replay the original agent command');
+assert.equal(browser.window.__conduitPendingFiles.length, 0, 'Uncertain writes must not replay files');
 Socket.prototype.send = originalSend;
 assert.throws(() => new browser.window.WebSocket('ws://foreign.example/browser'));
 console.log('CLINE_PINNED_SOURCE_PROJECT_CONTEXT_APPROVAL_AND_ORIGIN_CONTRACT_PASSED');

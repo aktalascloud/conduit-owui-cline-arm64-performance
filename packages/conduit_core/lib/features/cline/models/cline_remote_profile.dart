@@ -25,7 +25,8 @@ final class ClineRemoteProfile {
   static const maximumJsonBytes = 16384;
 
   factory ClineRemoteProfile.decode(String source) {
-    if (source.length > maximumJsonBytes || utf8.encode(source).length > maximumJsonBytes) {
+    if (source.length > maximumJsonBytes ||
+        utf8.encode(source).length > maximumJsonBytes) {
       throw const FormatException('Connection profile is too large');
     }
     final value = jsonDecode(source);

@@ -21,6 +21,7 @@ import threading
 import time
 
 import asyncssh
+from upload_rpc import UploadInbox
 
 
 def dashboard_lifetime_guard(process):
@@ -162,6 +163,7 @@ def validate_config(config: dict) -> dict:
 async def listen(config: dict, admission=None):
     validate_config(config)
     admission = admission or Admission()
+    inbox = UploadInbox(Path(config['host_key_file']).parent/'user-uploads')
     return await asyncssh.create_server(
         lambda: TunnelServer(config, admission), config['bind_host'], config['ssh_port'],
         server_host_keys=[config['host_key_file']],
@@ -169,6 +171,7 @@ async def listen(config: dict, admission=None):
         keepalive_count_max=3, kex_algs=['curve25519-sha256', 'curve25519-sha256@libssh.org'],
         encryption_algs=['chacha20-poly1305@openssh.com', 'aes256-gcm@openssh.com', 'aes128-gcm@openssh.com'],
         compression_algs=['none'], server_version='Conduit-Cline-Tunnel',
+        process_factory=inbox.handle, encoding=None, allow_pty=False,
     )
 
 

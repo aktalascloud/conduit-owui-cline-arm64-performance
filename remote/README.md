@@ -22,10 +22,16 @@ Open an existing session in the dashboard, or choose a PC project folder before 
 
 ## Scope and security
 
-- Shell, SFTP, reverse forwarding and arbitrary TCP destinations are rejected. Only the local Cline dashboard is reachable.
+- Shell, SFTP, reverse forwarding and arbitrary TCP destinations are rejected. Only the local Cline dashboard and one fixed upload RPC are reachable.
 - Host-key pinning, independent dashboard authentication, bounded connections/login attempts and no automatic command replay are enforced.
 - Cline's approvals remain enabled. An already running Desktop turn can retain its original approval owner; subsequent turns started from the dashboard use its approval prompts.
 - An SSH connection does **not** protect an internet connection from volumetric DDoS. Use an upstream protected service or private VPN when that is required.
 - A disconnected phone is not a request to replay a message. Read the session state before manually retrying uncertain actions.
 
 Conduit remains GPL-3.0. Cline is separately installed under its own license; see [Cline](https://github.com/cline/cline). Dart SSH dependencies retain their package notices; AsyncSSH is available under EPL-2.0 or GPL-2.0-or-later. Private configuration, keys and runtime data must stay outside the checkout and releases.
+
+## Images and documents
+
+Use the paperclip to transfer a file through SSH into the private PC `user-uploads` inbox. Size and SHA256 are verified; identical uploads reuse the same content-addressed file. Limits: 64 MiB/file, 1 GiB/inbox, 4 attachments/message. Images up to 8 MiB also use the normal `userImages` field; other files are referenced by their PC path. Image understanding requires a vision-capable model. Cline reads documents with its normal tools and approval rules.
+
+Files attach only to the next message you send yourself. Clear pending attachments before sending if needed. Completed uploads are user data, never disposable cache. No shell, SFTP or arbitrary destination path is exposed. Desktop voice input is configured separately in Cline.

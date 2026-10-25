@@ -212,7 +212,8 @@ def build_conduit(package, manifest, channel):
         'host_key_verification':'mandatory Ed25519 SHA256 pin','gateway_security_tests':'passed',
         'gateway_dependency_audit':'passed; no unresolved advisories',
         'pinned_cline_protocol_contract':'passed','dart_ssh_interoperability':'included in passed Flutter suite',
-        'shell':False,'sftp':False,'arbitrary_tcp_forwarding':False,'automatic_command_replay':False}
+        'shell':False,'sftp':False,'arbitrary_tcp_forwarding':False,'automatic_command_replay':False,
+        'file_transfer':'fixed upload RPC; SHA256, 64 MiB/file, 1 GiB inbox, 4 attachments/message; user-triggered sends only'}
     manifest["device_performance"] = "Not measured on a physical Android device"
 
 
