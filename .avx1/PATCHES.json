@@ -39,7 +39,7 @@
   {
     "id": "APK-008",
     "description": "Keep late server dictation when Stop overlaps transcription; retain tests for repeated Stop and detached call consumers.",
-    "source": "Reviewed open upstream PR #873; applied without its whitespace-only conflicts.",
+    "source": "Now included in official upstream #873, including stop/restart races; retain upstream regressions.",
     "url": "https://github.com/cogwheel0/conduit/pull/873",
     "upstream_head": "831301e86ac86e695af2c666559092e1204b92d6"
   },
@@ -68,5 +68,18 @@
     "id": "APK-012",
     "description": "Native Flutter Cline chat over pinned SSH and typed JSON: streamed Markdown, session/project navigation, new-chat model selection, Plan/Act, explicit tool approvals, Stop and attachments. Preserve existing context; never replay uncertain sends or route Cline uploads/voice into OWUI.",
     "source": "Local replacement of the embedded dashboard after device feedback; pinned actual Cline session/event mapper, native widget/routing tests and read-only live history probe."
+  },
+  {
+    "id": "APK-013",
+    "description": "Official Android assistant startup, unread state sync, tap-to-load video and attachment fixes; preserve native Cline routing and SSH safety.",
+    "source": "Official upstream #872, #874, #875, #876, #877 and #878.",
+    "urls": [
+      "https://github.com/cogwheel0/conduit/pull/872",
+      "https://github.com/cogwheel0/conduit/pull/874",
+      "https://github.com/cogwheel0/conduit/pull/875",
+      "https://github.com/cogwheel0/conduit/pull/876",
+      "https://github.com/cogwheel0/conduit/pull/877",
+      "https://github.com/cogwheel0/conduit/pull/878"
+    ]
   }
 ]
