@@ -21,6 +21,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/services/navigation_service.dart';
 import '../../../shared/theme/theme_extensions.dart';
+import '../../../shared/theme/color_tokens.dart' show withMinContrast;
 import '../../../shared/widgets/markdown/streaming_markdown_widget.dart';
 import 'cline_remote_page.dart';
 
@@ -373,6 +374,52 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
+  }
+
+  Widget _modeChip(
+    ClineNativeClient client,
+    ClineNativeState state,
+    String mode,
+  ) {
+    final palette = context.conduitTheme;
+    final selected = state.mode == mode;
+    final fill = selected
+        ? Color.alphaBlend(
+            palette.textPrimary.withValues(alpha: 0.08),
+            palette.cardBackground,
+          )
+        : palette.cardBackground;
+    final foreground = withMinContrast(palette.textPrimary, fill, 4.5);
+    final l = AppLocalizations.of(context)!;
+    return ChoiceChip(
+      key: ValueKey('cline-mode-' + mode),
+      label: Text(mode == 'plan' ? l.clinePlan : l.clineAct),
+      labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: foreground,
+        fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+      ),
+      backgroundColor: fill,
+      selectedColor: fill,
+      checkmarkColor: foreground,
+      showCheckmark: false,
+      side: BorderSide(
+        color: selected
+            ? palette.textPrimary.withValues(alpha: 0.35)
+            : palette.cardBorder,
+      ),
+      shape: const StadiumBorder(),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      selected: selected,
+      onSelected: state.busy
+          ? null
+          : (_) {
+              try {
+                client.configure(mode: mode);
+              } catch (error) {
+                _notice(error);
+              }
+            },
+    );
   }
 
   void _send(ClineNativeClient client, ClineNativeState state) {
@@ -853,23 +900,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                                 for (final mode in ['plan', 'act'])
                                   Padding(
                                     padding: const EdgeInsets.only(right: 6),
-                                    child: ChoiceChip(
-                                      label: Text(
-                                        mode == 'plan'
-                                            ? l.clinePlan
-                                            : l.clineAct,
-                                      ),
-                                      selected: state.mode == mode,
-                                      onSelected: state.busy
-                                          ? null
-                                          : (_) {
-                                              try {
-                                                client.configure(mode: mode);
-                                              } catch (e) {
-                                                _notice(e);
-                                              }
-                                            },
-                                    ),
+                                    child: _modeChip(client, state, mode),
                                   ),
                                 if (state.sessionId == null &&
                                     (state.models[state.provider]?.any(
@@ -973,6 +1004,11 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                                       decoration: InputDecoration(
                                         hintText: l.clineMessageHint,
                                         border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        disabledBorder: InputBorder.none,
+                                        filled: false,
+                                        isDense: true,
                                         contentPadding:
                                             const EdgeInsets.symmetric(
                                               vertical: 10,

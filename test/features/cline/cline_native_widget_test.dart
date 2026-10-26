@@ -3,6 +3,9 @@ import 'dart:convert';
 
 import 'package:conduit/features/cline/views/cline_workspace_page.dart';
 import 'package:conduit/l10n/app_localizations.dart';
+import 'package:conduit/shared/theme/app_theme.dart';
+import 'package:conduit/shared/theme/tweakcn_themes.dart';
+import 'package:conduit/shared/theme/color_tokens.dart' show contrastRatio;
 import 'package:conduit/l10n/conduit_localizations.dart';
 import 'package:conduit/shared/widgets/markdown/streaming_markdown_widget.dart';
 import 'package:conduit_core/features/cline/providers/cline_backend_providers.dart';
@@ -44,6 +47,7 @@ Future<void> _mount(
   _Wire wire,
   ClineNativeClient client, {
   double scale = 1,
+  ThemeData? theme,
 }) async {
   tester.view.physicalSize = const Size(400, 900);
   tester.view.devicePixelRatio = 1;
@@ -90,7 +94,7 @@ Future<void> _mount(
       ],
       child: MaterialApp(
         locale: const Locale('ru'),
-        theme: ThemeData(platform: TargetPlatform.android),
+        theme: theme ?? ThemeData(platform: TargetPlatform.android),
         localizationsDelegates: conduitLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
@@ -116,6 +120,41 @@ Future<void> _unmount(WidgetTester tester, ClineNativeClient client) async {
 }
 
 void main() {
+  for (final palette in TweakcnThemes.all) {
+    for (final brightness in Brightness.values) {
+      testWidgets(
+        'Cline mode contrast and input stay readable: ${palette.id} $brightness',
+        (tester) async {
+          final wire = _Wire();
+          final client = ClineNativeClient(wire, project: r'C:\Project');
+          final theme = brightness == Brightness.dark
+              ? AppTheme.dark(palette)
+              : AppTheme.light(palette);
+          await _mount(tester, wire, client, theme: theme);
+          final chip = tester.widget<ChoiceChip>(
+            find.byKey(const ValueKey('cline-mode-act')),
+          );
+          expect(chip.selected, isTrue);
+          expect(
+            contrastRatio(chip.labelStyle!.color!, chip.selectedColor!),
+            greaterThanOrEqualTo(4.5),
+          );
+          final input = tester.widget<TextField>(
+            find.byKey(const Key('cline-native-input')),
+          );
+          expect(input.decoration!.focusedBorder, InputBorder.none);
+          expect(input.decoration!.enabledBorder, InputBorder.none);
+          await tester.tap(find.byKey(const ValueKey('cline-mode-plan')));
+          await tester.pump(const Duration(milliseconds: 80));
+          expect(client.state.mode, 'plan');
+          expect(wire.sent.where((frame) => frame['type'] == 'send'), isEmpty);
+          expect(tester.takeException(), isNull);
+          await _unmount(tester, client);
+        },
+      );
+    }
+  }
+
   testWidgets(
     'native Cline composer renders streamed Markdown using Conduit widgets',
     (tester) async {

@@ -52,7 +52,10 @@ def select(changed, root, *, recipe_allowed=False):
         # Shared navigation/providers, native code, lockfiles, SDK and unknown files
         # can affect every backend. Never silently narrow their coverage.
         return 'full', [], [], 'shared or unclassified input changed: ' + path
-    targets = sorted(p for p in targets if (root / p).exists())
+    existing = {p for p in targets if (root / p).exists()}
+    targets = sorted(p for p in existing if not any(
+        parent != p and (root / parent).is_dir() and p.startswith(parent.rstrip('/') + '/')
+        for parent in existing))
     if not targets:
         return 'full', [], [], 'required smoke tests are missing'
     return 'targeted', targets, sorted(analysis), 'qualified unchanged shared inputs; affected feature suites plus backend smoke'

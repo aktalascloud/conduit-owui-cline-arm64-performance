@@ -86,5 +86,10 @@
     "id": "APK-014",
     "description": "Accept the qualified WebUI 0.12.4 API range while retaining the guard for newer unqualified versions; validate native API config/model/chat decoding against an isolated server without inference or writes.",
     "source": "Local compatibility maintenance after real Conduit SDK canary; scoped version/provider/widget regressions, unchanged coverage inherited from the 5097-test immutable baseline."
+  },
+  {
+    "id": "APK-015",
+    "description": "Cline-only visual polish: readable neutral Plan/Act pills on every light/dark palette and a single composer surface without a nested focused outline. Keep global themes and saved palette unchanged.",
+    "source": "Local device feedback; 14 native widget checks include all five palettes in both brightness modes, control behavior and keyboard/large-text layouts."
   }
 ]

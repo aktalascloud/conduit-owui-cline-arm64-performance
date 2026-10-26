@@ -57,6 +57,12 @@ class CheckSelection(unittest.TestCase):
         self.assertEqual(mode, 'targeted')
         self.assertEqual(len(tests), 2)
 
+    def test_feature_folder_does_not_run_its_changed_test_twice(self):
+        mode, tests, _, _ = select(['lib/features/cline/client.dart', 'test/features/cline/client_test.dart'], self.root)
+        self.assertEqual(mode, 'targeted')
+        self.assertIn('test/features/cline', tests)
+        self.assertNotIn('test/features/cline/client_test.dart', tests)
+
 
 if __name__ == '__main__':
     unittest.main()

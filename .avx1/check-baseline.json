@@ -3,5 +3,5 @@
   "full_flutter_tests": 5097,
   "verified_run_id": 40255024228,
   "reviewed_verification_only_recipe_sha256": "3b9b942f6d3d800a0a323ca87542fa714ee98b3101fae8a2b8c2893a9842c3df",
-  "scope": "Qualified full-suite source; subsequent changes limited to reviewed server-version compatibility gate and its targeted tests."
+  "scope": "Qualified full-suite baseline; subsequent reviewed changes are server-version compatibility and isolated Cline presentation with targeted regressions."
 }
