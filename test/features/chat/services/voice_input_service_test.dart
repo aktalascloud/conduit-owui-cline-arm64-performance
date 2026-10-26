@@ -9,6 +9,8 @@ import 'package:conduit_core/services/settings_service.dart';
 import 'package:conduit/features/chat/services/native_stt_service.dart';
 import 'package:conduit_core/features/chat/services/server_vad_recorder.dart';
 import 'package:conduit/features/chat/services/voice_input_service.dart';
+import 'package:dio/dio.dart'
+    show DioException, DioExceptionType, RequestOptions;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -432,6 +434,194 @@ void main() {
       await stopped;
 
       check(texts).deepEquals(['quick tap']);
+    });
+
+    test('leaves a listen started meanwhile to its own speech', () async {
+      final firstTexts = <String>[];
+      (await service.startListening()).listen(firstTexts.add);
+      await pumpEventQueue();
+      vad.endSpeech(speech);
+      await pumpEventQueue();
+      check(service.transcribing.value).isTrue();
+
+      final secondTexts = <String>[];
+      var secondDone = false;
+      final started = service.startListening().then(
+        (stream) =>
+            stream.listen(secondTexts.add, onDone: () => secondDone = true),
+      );
+      await pumpEventQueue();
+      reply.complete(const {'text': 'first take'});
+      await started;
+      await pumpEventQueue();
+
+      check(firstTexts).deepEquals(['first take']);
+      check(secondTexts).isEmpty();
+      check(secondDone).isFalse();
+      check(service.isListening).isTrue();
+    });
+
+    test('drops a start that a stop overtook while it waited', () async {
+      (await service.startListening()).listen((_) {});
+      await pumpEventQueue();
+      vad.endSpeech(speech);
+      await pumpEventQueue();
+
+      // A start queues behind the transcription, then its owner leaves.
+      final started = service.startListening();
+      await pumpEventQueue();
+      final stopped = service.stopListening();
+      await pumpEventQueue();
+      reply.complete(const {'text': 'first take'});
+      final second = await started;
+      await stopped;
+
+      check(await second.isEmpty).isTrue();
+      check(service.isListening).isFalse();
+    });
+
+    test('starts again after a stop cancelled a waiting start', () async {
+      (await service.startListening()).listen((_) {});
+      await pumpEventQueue();
+      vad.endSpeech(speech);
+      await pumpEventQueue();
+
+      final cancelled = service.startListening();
+      await pumpEventQueue();
+      final stopped = service.stopListening();
+      await pumpEventQueue();
+      var secondDone = false;
+      final restarted = service.startListening().then(
+        (stream) => stream.listen((_) {}, onDone: () => secondDone = true),
+      );
+      await pumpEventQueue();
+      reply.complete(const {'text': 'first take'});
+      check(await (await cancelled).isEmpty).isTrue();
+      await stopped;
+      await restarted;
+      await pumpEventQueue();
+
+      check(secondDone).isFalse();
+      check(service.isListening).isTrue();
+    });
+
+    test('drops a restart that a later stop overtook', () async {
+      (await service.startListening()).listen((_) {});
+      await pumpEventQueue();
+      vad.endSpeech(speech);
+      await pumpEventQueue();
+
+      final cancelled = service.startListening();
+      await pumpEventQueue();
+      final firstStop = service.stopListening();
+      await pumpEventQueue();
+      final restarted = service.startListening();
+      await pumpEventQueue();
+      // The screen that asked for the restart leaves before it opens.
+      final secondStop = service.stopListening();
+      await pumpEventQueue();
+      reply.complete(const {'text': 'first take'});
+      await cancelled;
+      await firstStop;
+      final stream = await restarted;
+      await secondStop;
+
+      check(await stream.isEmpty).isTrue();
+      check(service.isListening).isFalse();
+    });
+
+    test('keeps a listen started after a stop that is waiting', () async {
+      (await service.startListening()).listen((_) {});
+      await pumpEventQueue();
+      vad.endSpeech(speech);
+      await pumpEventQueue();
+
+      final stopped = service.stopListening();
+      await pumpEventQueue();
+      var secondDone = false;
+      final started = service.startListening().then(
+        (stream) => stream.listen((_) {}, onDone: () => secondDone = true),
+      );
+      await pumpEventQueue();
+      reply.complete(const {'text': 'first take'});
+      await stopped;
+      await started;
+      await pumpEventQueue();
+
+      check(secondDone).isFalse();
+      check(service.isListening).isTrue();
+    });
+
+    test('ends on an upload timeout and frees a waiting start', () async {
+      final errors = <Object>[];
+      var firstDone = false;
+      (await service.startListening()).listen(
+        (_) {},
+        onError: errors.add,
+        onDone: () => firstDone = true,
+      );
+      await pumpEventQueue();
+      vad.endSpeech(speech);
+      await pumpEventQueue();
+
+      var secondDone = false;
+      final started = service.startListening().then(
+        (stream) => stream.listen((_) {}, onDone: () => secondDone = true),
+      );
+      await pumpEventQueue();
+      reply.completeError(
+        DioException(
+          requestOptions: RequestOptions(path: '/api/v1/audio/transcriptions'),
+          type: DioExceptionType.sendTimeout,
+        ),
+      );
+      await started;
+      await pumpEventQueue();
+
+      // The failure reaches the listener, which ends "Transcribing…".
+      check(errors).length.equals(1);
+      check(firstDone).isTrue();
+      check(service.transcribing.value).isFalse();
+      check(secondDone).isFalse();
+      check(service.isListening).isTrue();
+    });
+
+    test('still restarts a listen that is running', () async {
+      var firstDone = false;
+      (await service.startListening()).listen(
+        (_) {},
+        onDone: () => firstDone = true,
+      );
+      await pumpEventQueue();
+
+      // The start's own stop of the running listen must not cancel it.
+      var secondDone = false;
+      (await service.startListening()).listen(
+        (_) {},
+        onDone: () => secondDone = true,
+      );
+      await pumpEventQueue();
+
+      check(firstDone).isTrue();
+      check(secondDone).isFalse();
+      check(service.isListening).isTrue();
+    });
+
+    test('still hands a held call recorder over to the device', () async {
+      (await service.beginListeningEvents()).listen((_) {});
+      await pumpEventQueue();
+      vad.endSpeech(speech);
+      await pumpEventQueue();
+      reply.complete(const {'text': 'over to you'});
+      await pumpEventQueue();
+      check(service.isHoldingServerRecorderForResponse).isTrue();
+
+      // Releasing the held recorder is the start's own stop.
+      service.updatePreference(SttPreference.deviceOnly);
+      await service.startListening();
+
+      check(service.isHoldingServerRecorderForResponse).isFalse();
+      check(service.isUsingNativeLocalStt).isTrue();
     });
 
     test('ends a call without waiting for a transcript it left', () async {
