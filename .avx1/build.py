@@ -215,6 +215,7 @@ def build_conduit(package, manifest, channel):
     manifest["application_id"] = "io.github.aktalascloud.conduit"
     manifest['cline_integration'] = {'transport':'pinned SSH and typed native Cline JSON',
         'ui':'native Flutter with Conduit Markdown','webview':False,'native_client_tests':'passed',
+        'native_client_tests_scope':('current full suite' if checks['mode']=='full' else 'current selected suite' if 'test/features/cline' in checks['tests'] else 'inherited from qualified '+checks['baseline_source']+'; Cline inputs unchanged'),
         'host_key_verification':'mandatory Ed25519 SHA256 pin','gateway_security_tests':'passed',
         'gateway_dependency_audit':'passed; no unresolved advisories',
         'pinned_cline_protocol_contract':'passed','dart_ssh_interoperability':'included in passed Flutter suite',
