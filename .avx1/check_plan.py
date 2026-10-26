@@ -15,12 +15,20 @@ def select(changed, root, *, recipe_allowed=False):
     targets = set(SMOKE)
     analysis = set()
     for path in changed:
+        if path in {'packages/conduit_core/lib/utils/server_version_compat.dart',
+                    'packages/conduit_core/test/utils/server_version_compat_test.dart'}:
+            targets.update(['packages/conduit_core/test/utils/server_version_compat_test.dart',
+                            'test/core/providers/server_incompatible_provider_test.dart',
+                            'test/shared/widgets/server_version_warning_card_test.dart'])
+            if (root / path).is_file():
+                analysis.add(path)
+            continue
         if path == '.avx1/build.py' and recipe_allowed:
             continue
         if path.startswith(('.avx1/measurements/', '.github/', 'docs/')) or path.endswith('.md'):
             continue
         if path.startswith('.avx1/'):
-            if Path(path).name in {'check_plan.py', 'test_check_plan.py', 'check-baseline.json', 'project.json'}:
+            if Path(path).name in {'check_plan.py', 'test_check_plan.py', 'check-baseline.json', 'project.json', 'PATCHES.json'}:
                 continue
             return 'full', [], [], 'native/toolchain or verification recipe changed: ' + path
         if path.endswith('.arb') and path.startswith('lib/l10n/'):

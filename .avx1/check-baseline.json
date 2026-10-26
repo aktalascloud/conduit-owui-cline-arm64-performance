@@ -1,7 +1,7 @@
 {
-  "source_commit": "47026215f59dc6f367c109eab0a73ea1eeb95b94",
-  "full_flutter_tests": 5058,
-  "verified_run_id": 40198383776,
+  "source_commit": "ee0510d79d113b8880db6ed61453a58d815c7c07",
+  "full_flutter_tests": 5097,
+  "verified_run_id": 40255024228,
   "reviewed_verification_only_recipe_sha256": "ecf3092ff140034aadd46a5034c2713cd04c8a5bcf75b11f90c9e6bd7cb0f057",
-  "scope": "The approved recipe difference selects verification; build/runtime/signing flags remain unchanged."
+  "scope": "Qualified full-suite source; subsequent changes limited to reviewed server-version compatibility gate and its targeted tests."
 }

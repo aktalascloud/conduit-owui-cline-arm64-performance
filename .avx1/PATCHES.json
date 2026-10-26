@@ -81,5 +81,10 @@
       "https://github.com/cogwheel0/conduit/pull/877",
       "https://github.com/cogwheel0/conduit/pull/878"
     ]
+  },
+  {
+    "id": "APK-014",
+    "description": "Accept the qualified WebUI 0.12.4 API range while retaining the guard for newer unqualified versions; validate native API config/model/chat decoding against an isolated server without inference or writes.",
+    "source": "Local compatibility maintenance after real Conduit SDK canary; scoped version/provider/widget regressions, unchanged coverage inherited from the 5097-test immutable baseline."
   }
 ]

@@ -25,9 +25,22 @@ class CheckSelection(unittest.TestCase):
 
     def test_changed_shared_or_unknown_inputs_force_full_suite(self):
         for path in ['pubspec.lock', 'packages/conduit_core/lib/providers/auth.dart',
+                     'packages/conduit_core/lib/utils/unknown.dart',
                      'android/app/build.gradle.kts', '.avx1/native_arm64.py', '.avx1/toolchains.json', 'unknown.file']:
             with self.subTest(path=path):
                 self.assertEqual(select([path], self.root)[0], 'full')
+
+    def test_version_gate_uses_specific_core_provider_and_widget_coverage(self):
+        for name in ['packages/conduit_core/test/utils/server_version_compat_test.dart',
+                     'test/core/providers/server_incompatible_provider_test.dart',
+                     'test/shared/widgets/server_version_warning_card_test.dart']:
+            p = self.root / name
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text('', encoding='utf-8')
+        mode, tests, _, _ = select(['packages/conduit_core/lib/utils/server_version_compat.dart'], self.root)
+        self.assertEqual(mode, 'targeted')
+        self.assertIn('test/shared/widgets/server_version_warning_card_test.dart', tests)
+        self.assertIn('packages/conduit_core/test/utils/server_version_compat_test.dart', tests)
 
     def test_missing_feature_suite_does_not_silently_skip_tests(self):
         self.assertEqual(select(['lib/features/new_feature/main.dart'], self.root)[0], 'full')
