@@ -170,8 +170,13 @@ def build_conduit(package, manifest, channel):
                 if pubspec.exists() and re.search(r"(?m)^  build_runner:", pubspec.read_text("utf-8")):
                     run(dart, "run", "build_runner", "build", "--delete-conflicting-outputs", cwd=folder)
     run(dart, "run", "build_runner", "build", "--delete-conflicting-outputs")
-    run(flutter, "analyze", "--no-fatal-infos", "--no-fatal-warnings")
-    run(flutter, "test")
+    from check_plan import plan as select_checks
+    run(sys.executable, ROOT / '.avx1/test_check_plan.py')
+    checks = select_checks(ROOT)
+    write_json(WORK / 'check-plan.json', checks)
+    run(flutter, "analyze", "--no-pub", "--no-fatal-infos", "--no-fatal-warnings", *checks['analysis'])
+    run(flutter, "test", "--no-pub", *checks['tests'])
+    manifest['check_scope'] = {**checks, 'selected_checks': 'passed'}
     outdated = run(flutter, "pub", "outdated", "--json", capture=True).stdout
     (WORK / "dependency-review.json").write_text(outdated, encoding="utf-8")
     key = WORK / "conduit-signing.p12"
@@ -205,7 +210,7 @@ def build_conduit(package, manifest, channel):
             raise RuntimeError(f"Unexpected APK architectures: {abis}")
     shutil.copy2(apk, package / f"conduit-{channel}-arm64-v8a.apk")
     manifest["optimization_scope"] = "Flutter release AOT, ARM64, R8/tree shaking; SQLite/dartjni/ONNX Runtime+JNI rebuilt with O3 ARMv8-A ThinLTO; remaining vendor libraries explicitly inventoried"
-    manifest["security"] = {"flutter_tests": "passed", "apk_signature": "verified",
+    manifest["security"] = {"flutter_tests": checks["mode"] + " checks passed", "apk_signature": "verified",
                             "dependency_review": "outdated report; not a complete vulnerability audit"}
     manifest["application_id"] = "io.github.aktalascloud.conduit"
     manifest['cline_integration'] = {'transport':'pinned SSH and typed native Cline JSON',
