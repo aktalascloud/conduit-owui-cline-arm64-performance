@@ -1074,10 +1074,12 @@
   "@chatSettingErrorRange": {
     "placeholders": {
       "min": {
-        "type": "String"
+        "type": "String",
+        "example": "0"
       },
       "max": {
-        "type": "String"
+        "type": "String",
+        "example": "2"
       }
     }
   },
@@ -1085,7 +1087,8 @@
   "@chatSettingErrorMinimum": {
     "placeholders": {
       "min": {
-        "type": "String"
+        "type": "String",
+        "example": "1"
       }
     }
   },
@@ -3191,7 +3194,8 @@
     "description": "Confirmation message shown before deleting an Open WebUI-synced direct connection.",
     "placeholders": {
       "name": {
-        "type": "String"
+        "type": "String",
+        "example": "Work provider"
       }
     }
   },
@@ -3395,7 +3399,8 @@
   "@markdownShowMoreLines": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "int",
+        "example": "12"
       }
     }
   },
@@ -3870,14 +3875,16 @@
   "@folderProjectMoveUp": {
     "placeholders": {
       "name": {
-        "type": "String"
+        "type": "String",
+        "example": "GPT-5"
       }
     }
   },
   "@folderProjectRemove": {
     "placeholders": {
       "name": {
-        "type": "String"
+        "type": "String",
+        "example": "GPT-5"
       }
     }
   },
@@ -4025,7 +4032,8 @@
   "@queuedDraftsCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "int",
+        "example": "2"
       }
     }
   },
@@ -5518,5 +5526,21 @@
   "chatHandoffPromptTitle": "Переключиться на {model}?",
   "chatHandoffPromptMessage": "Сервер предлагает продолжить в новом чате с {model}. Предложенное сообщение останется в поле ввода, пока вы его не отправите.",
   "chatHandoffStartNewChat": "Начать новый чат",
-  "chatHandoffStayHere": "Остаться здесь"
+  "chatHandoffStayHere": "Остаться здесь",
+  "@chatHandoffPromptTitle": {
+    "placeholders": {
+      "model": {
+        "type": "String",
+        "example": "Code Assistant"
+      }
+    }
+  },
+  "@chatHandoffPromptMessage": {
+    "placeholders": {
+      "model": {
+        "type": "String",
+        "example": "Code Assistant"
+      }
+    }
+  }
 }
