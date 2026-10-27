@@ -1,0 +1,11 @@
+{
+  "baseline_source": "21add09800e25d228d59bc72511419de35ea6b4e",
+  "ci_run": 40433734689,
+  "ci_url": "https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/actions/runs/40433734689",
+  "full_flutter_tests": 5224,
+  "qualified_archive_sha256": "70ab1264a7b0baf873601d7772de34b9929f0c67ee6ab04692adfda0ff93523b",
+  "signature": "Permanent fork identity verified",
+  "native_inventory": "Nine ARM64 libraries; source-built C/C++ flags and prebuilt components remain separately identified.",
+  "publication": "Baseline qualified without publication; final OWUI-search-state fix is checked separately.",
+  "phone_or_llm_speedup_percent": null
+}

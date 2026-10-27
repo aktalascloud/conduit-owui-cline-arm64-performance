@@ -1,7 +1,7 @@
 {
-  "source_commit": "ee0510d79d113b8880db6ed61453a58d815c7c07",
-  "full_flutter_tests": 5097,
-  "verified_run_id": 40255024228,
+  "source_commit": "21add09800e25d228d59bc72511419de35ea6b4e",
+  "full_flutter_tests": 5224,
+  "verified_run_id": 40433734689,
   "reviewed_verification_only_recipe_sha256": "3b9b942f6d3d800a0a323ca87542fa714ee98b3101fae8a2b8c2893a9842c3df",
-  "scope": "Qualified full-suite baseline; subsequent reviewed changes are server-version compatibility and isolated Cline presentation with targeted regressions."
+  "scope": "Qualified immutable 4.2.2 APK: full 5224-test Flutter suite, permanent signing identity and nine-library ARM64/ABI/16KiB gates passed. Subsequent narrow navigation changes use affected suites; shared/native/runtime changes still require broad coverage."
 }
