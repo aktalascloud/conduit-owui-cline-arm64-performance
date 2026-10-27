@@ -5512,5 +5512,11 @@
   "clineDeleteWarning": "Удалить эту сохранённую сессию на ПК? Файлы проекта не удаляются.",
   "clineForkSession": "Создать ветку сессии",
   "clineVoiceUnavailable": "Голосовые звонки для подключения Cline пока недоступны. Используйте нативный текстовый чат.",
-  "clineReturnToChat": "Вернуться в чат Cline"
+  "clineReturnToChat": "Вернуться в чат Cline",
+  "retryWithoutReasoningEffort": "Повторить без уровня рассуждения",
+  "reasoningEffortClearIncomplete": "Не удалось полностью сбросить уровень рассуждения — повтор выполняется без него.",
+  "chatHandoffPromptTitle": "Переключиться на {model}?",
+  "chatHandoffPromptMessage": "Сервер предлагает продолжить в новом чате с {model}. Предложенное сообщение останется в поле ввода, пока вы его не отправите.",
+  "chatHandoffStartNewChat": "Начать новый чат",
+  "chatHandoffStayHere": "Остаться здесь"
 }

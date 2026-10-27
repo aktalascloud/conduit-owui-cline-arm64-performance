@@ -42,6 +42,8 @@ import 'package:conduit_core/sync/sync_api_client.dart';
 import 'package:conduit_core/features/auth/providers/unified_auth_providers.dart';
 import 'package:conduit_core/features/chat/providers/chat_providers.dart';
 import 'package:conduit_core/features/chat/providers/context_attachments_provider.dart';
+import 'package:conduit_core/features/chat/providers/reasoning_effort_provider.dart'
+    show LocalReasoningEfforts, localReasoningEffortsProvider;
 import 'package:conduit_core/features/chat/services/request_completion_runner.dart';
 import 'package:conduit_core/features/chat/services/chat_draft_queue.dart';
 import 'package:conduit_core/features/chat/services/chat_transport_dispatch.dart';
@@ -268,6 +270,18 @@ class _FetchedConfig extends BackendConfigNotifier {
   @override
   Future<BackendConfig?> build() async =>
       (await api.getBackendConfig())?.copyWith(serverId: api.serverConfig.id);
+}
+
+/// A server config that has loaded.
+class _LoadedConfig extends BackendConfigNotifier {
+  @override
+  Future<BackendConfig?> build() async => const BackendConfig();
+}
+
+/// A server config that is still being fetched.
+class _LoadingConfig extends BackendConfigNotifier {
+  @override
+  Future<BackendConfig?> build() => Completer<BackendConfig?>().future;
 }
 
 /// A real [ApiService] whose HTTP layer is an in-memory server: it serves the
@@ -1103,6 +1117,8 @@ ProviderContainer _container({
   Model model = const Model(id: 'model-1', name: 'Model 1'),
   String? terminalId,
   bool webSearchAvailable = false,
+  PersonalConnectionsAccess personalConnections =
+      const PersonalConnectionsAccess.allowed(),
 }) {
   final container = ProviderContainer(
     overrides: [
@@ -1122,6 +1138,7 @@ ProviderContainer _container({
       selectedFilterIdsProvider.overrideWithValue(const <String>[]),
       selectedTerminalIdProvider.overrideWithValue(terminalId),
       syncEngineProvider.overrideWith(() => syncEngine),
+      personalConnectionsAccessProvider.overrideWithValue(personalConnections),
     ],
   );
   container.read(chatMessagesProvider.notifier).setMessages(messages);
@@ -1173,6 +1190,9 @@ void main() {
       List<String> toolIds = const <String>[],
       SocketService? socket,
       void Function()? onSend,
+      PersonalConnectionsAccess personalConnections =
+          const PersonalConnectionsAccess.allowed(),
+      BackendConfigNotifier Function()? config,
     }) async {
       const chatId = 'personal-connections-chat';
       const assistantId = 'personal-connections-assistant';
@@ -1191,8 +1211,17 @@ void main() {
         api: api,
         syncEngine: _PersistingSyncEngine(db, api),
         socket: socket,
+        personalConnections: personalConnections,
+        extraOverrides: [
+          if (config != null) backendConfigProvider.overrideWith(config),
+        ],
       );
       addTearDown(container.dispose);
+      if (config != null) {
+        // The app reads the config at sign-in, long before a turn runs.
+        container.read(backendConfigProvider);
+        await Future<void>.delayed(Duration.zero);
+      }
       final runnerProvider = Provider<RequestCompletionRunner>(
         (ref) => ChatRequestCompletionRunner(ref),
       );
@@ -1239,6 +1268,94 @@ void main() {
         check(alpha.authorizations).isEmpty();
       },
     );
+
+    test('nothing is sent or read while the server keeps them off', () async {
+      // Open WebUI 0.12.4 ignores personal servers while Direct Integrations
+      // is off, and Conduit would not run their tools.
+      final servers = <dynamic>[toolServer('alpha', alpha, key: 'alpha-key')];
+      final api = await runCompletion(
+        settings: <String, dynamic>{
+          'ui': <String, dynamic>{
+            'toolServers': servers,
+            'terminalServers': <dynamic>[
+              <String, dynamic>{
+                'url': beta.url,
+                'key': 'terminal-key',
+                'path': '/openapi.json',
+                'auth_type': 'bearer',
+                'enabled': true,
+                'config': <String, dynamic>{},
+              },
+            ],
+          },
+        },
+        toolIds: <String>[personalToolServerSelectionId(servers, 0)],
+        personalConnections: const PersonalConnectionsAccess.blocked(
+          PersonalConnectionsBlock.serverDisabled,
+        ),
+        config: _LoadedConfig.new,
+      );
+
+      check(api.submittedToolServers).isNull();
+      check(alpha.authorizations).isEmpty();
+      check(beta.authorizations).isEmpty();
+    });
+
+    test('a turn run before the config loads still sends them', () async {
+      // A queued turn replayed at launch can run before the config is in, so
+      // the refusal it reads then has not been decided.
+      final servers = <dynamic>[toolServer('alpha', alpha, key: 'alpha-key')];
+      final api = await runCompletion(
+        settings: <String, dynamic>{
+          'ui': <String, dynamic>{'toolServers': servers},
+        },
+        toolIds: <String>[personalToolServerSelectionId(servers, 0)],
+        personalConnections: const PersonalConnectionsAccess.blocked(
+          PersonalConnectionsBlock.serverDisabled,
+        ),
+        config: _LoadingConfig.new,
+      );
+
+      check(api.submittedToolServers!.single['url']).equals(alpha.url);
+      check(alpha.authorizations).deepEquals(<String?>['Bearer alpha-key']);
+    });
+
+    test('a typed message leaves them out and keeps the selection', () async {
+      const chatId = 'personal-connections-off-chat';
+      const assistantId = 'personal-connections-off-assistant';
+      await _seedChat(db, chatId, assistantId: assistantId);
+      final servers = <dynamic>[toolServer('alpha', alpha, key: 'alpha-key')];
+      final api = _GatedCompletionApi(Completer<void>()..complete())
+        ..settings = <String, dynamic>{
+          'ui': <String, dynamic>{'toolServers': servers},
+        };
+      final messages = <ChatMessage>[
+        _user('personal-connections-off-user', 'use my tools'),
+        _streamingAssistant(assistantId, ''),
+      ];
+      final container = _container(
+        db: db,
+        active: _conversation(chatId, messages, ChatStorageKind.openWebUi),
+        messages: messages,
+        api: api,
+        syncEngine: _PersistingSyncEngine(db, api),
+        personalConnections: const PersonalConnectionsAccess.blocked(
+          PersonalConnectionsBlock.serverDisabled,
+        ),
+        extraOverrides: [backendConfigProvider.overrideWith(_LoadedConfig.new)],
+      );
+      addTearDown(container.dispose);
+      await container.read(backendConfigProvider.future);
+      final selection = <String>[personalToolServerSelectionId(servers, 0)];
+      container.read(selectedToolIdsProvider.notifier).set(selection);
+
+      await sendMessageWithContainer(container, 'hello', null, selection);
+
+      check(api.submittedToolServers).isNull();
+      check(alpha.authorizations).isEmpty();
+      // It applies again once the server offers personal connections.
+      check(container.read(selectedToolIdsProvider)).deepEquals(selection);
+    });
 
     test('a selection of a server that is gone sends no server', () async {
       final before = <dynamic>[
@@ -1942,6 +2059,9 @@ void main() {
         selectedFilterIdsProvider.overrideWithValue(const <String>[]),
         selectedTerminalIdProvider.overrideWithValue(null),
         syncEngineProvider.overrideWith(() => syncEngineA),
+        personalConnectionsAccessProvider.overrideWithValue(
+          const PersonalConnectionsAccess.allowed(),
+        ),
       ]);
       final bSnapshot = _snapshot(bMessages);
       container
@@ -5303,6 +5423,7 @@ void main() {
     open({
       List<Model> available = const [duplicate],
       Map<String, dynamic>? storedParams,
+      Map<String, String> picks = const {},
       bool socketConnected = true,
       bool trackSignIn = false,
       _QuietSyncEngine Function(AppDatabase, _FanOutApi)? engine,
@@ -5338,6 +5459,13 @@ void main() {
         webSearchAvailable: webSearchAvailable,
         extraOverrides: [
           modelsProvider.overrideWith(() => _ListedModels(available)),
+          // The picker's own pick per model id, on the fan-out server.
+          localReasoningEffortsProvider.overrideWith(
+            () => _FixedEfforts({
+              for (final MapEntry(:key, :value) in picks.entries)
+                'openwebui:fan-out:$key': value,
+            }),
+          ),
           if (account != null) ..._signedInAs(account),
           if (trackSignIn)
             openWebUiAuthSessionEpochProvider.overrideWith(
@@ -6189,20 +6317,33 @@ void main() {
       ).isA<String>().contains('cannot compare');
     });
 
-    test('mixed reasoning-effort support is refused in either slot order '
-        'until the override is removed', () async {
+    test('a saved effort joins only the models that would be sent '
+        'it', () async {
+      // A model that does not advertise reasoning effort is sent only its own
+      // pick (issue #611), and the group shares one value, so it joins a
+      // saved effort only when it picked that same value. A model that
+      // explicitly refuses the parameter blocks the group in either order.
       const reasoning = Model(
         id: 'reasoner',
         name: 'Reasoner',
         supportedParameters: ['reasoning_effort'],
       );
       const plain = Model(id: 'plain', name: 'Plain');
+      const picked = Model(id: 'picked', name: 'Picked');
+      const refuser = Model(
+        id: 'refuser',
+        name: 'Refuser',
+        capabilities: <String, dynamic>{'reasoning_effort': false},
+      );
       final (:api, :socket, :container) = await open(
-        available: const [reasoning, plain],
+        available: const [reasoning, plain, picked, refuser],
         storedParams: {'reasoning_effort': 'high'},
+        picks: const {'picked': 'high'},
       );
 
       for (final order in [
+        const [reasoning, refuser],
+        const [refuser, reasoning],
         const [reasoning, plain],
         const [plain, reasoning],
       ]) {
@@ -6220,24 +6361,60 @@ void main() {
       check(container.read(chatMessagesProvider)).length.equals(1);
       check(api.requests).isEmpty();
 
-      await db.chatsDao.patchChatParamsWithOutbox(
-        chatId,
-        remove: const ['reasoning_effort'],
-        updatedAt: 9,
-      );
-      await db.delete(db.outboxDao.outboxOps).go();
-
-      await durableCompareSend(
+      // With its own matching pick the undeclared model is admitted, and the
+      // one shared request carries the saved value for both answers.
+      final handles = await durableCompareSend(
         container,
         'compare',
         null,
-        models: const [plain, reasoning],
+        models: const [picked, reasoning],
       );
       await replay(container);
       check(api.requests).length.equals(1);
-      check(api.requests.single.chatParams).isNotNull().not(
-        (it) => it.containsKey('reasoning_effort'),
+      final params = api.requests.single.chatParams;
+      check(params).isNotNull();
+      check(params!['reasoning_effort']).equals('high');
+      check(handles).length.equals(2);
+    });
+
+    test('an undeclared model\'s own pick counts among the picker '
+        'values', () async {
+      // With nothing saved on the chat the picker's values must wire the
+      // same way for every answer. An undeclared model sends its own pick,
+      // so it agrees with a reasoning model that picked the same value and
+      // conflicts with a model left on Automatic.
+      const reasoning = Model(
+        id: 'reasoner',
+        name: 'Reasoner',
+        supportedParameters: ['reasoning_effort'],
       );
+      const plain = Model(id: 'plain', name: 'Plain');
+      const picked = Model(id: 'picked', name: 'Picked');
+      final (:api, :socket, :container) = await open(
+        available: const [reasoning, plain, picked],
+        picks: const {'reasoner': 'high', 'picked': 'high'},
+      );
+
+      await check(
+        durableCompareSend(
+          container,
+          'compare',
+          null,
+          models: const [picked, plain],
+        ),
+      ).throws<ComparisonAdmissionException>(
+        (it) => it
+            .has((e) => e.reason, 'reason')
+            .equals(ComparisonAdmissionFailure.settingsConflict),
+      );
+
+      final handles = await durableCompareSend(
+        container,
+        'compare',
+        null,
+        models: const [picked, reasoning],
+      );
+      check(handles).length.equals(2);
     });
 
     test('a chat that is not on screen is driven headlessly: one request, '
@@ -8557,6 +8734,15 @@ class _ListedModels extends Models {
 
   @override
   Future<List<Model>> build() async => listed;
+}
+
+class _FixedEfforts extends LocalReasoningEfforts {
+  _FixedEfforts(this.efforts);
+
+  final Map<String, String> efforts;
+
+  @override
+  Map<String, String> build() => efforts;
 }
 
 /// An engine whose pull lands only the listed answers, as a server that has

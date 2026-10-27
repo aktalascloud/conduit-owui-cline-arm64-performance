@@ -3223,6 +3223,8 @@
   "reasoningEffortMaximum": "Massimo",
   "reasoningEffortNone": "Nessuno",
   "customReasoningEffort": "Custom effort",
+  "retryWithoutReasoningEffort": "Riprova senza Effort",
+  "reasoningEffortClearIncomplete": "Impossibile cancellare completamente l'Effort; questo tentativo continua senza.",
   "customReasoningEffortHint": "Enter a provider-supported effort",
   "proxyServerVerificationFailed": "Could not verify the Open WebUI server. The proxy session may have expired or be invalid. Please try again.",
   "proxyManualSignInRequired": "Authentication failed. Please try signing in manually.",
@@ -4250,5 +4252,9 @@
   "accountsRemoveAddressMessage": "Conduit smetterà di provare questo indirizzo. I tuoi account restano connessi.",
   "accountsAddressConfirmTitle": "Verificare questo indirizzo?",
   "accountsAddressConfirmMessage": "Per assicurarsi che {host} sia questo server, Conduit gli invia la sessione di un account salvato qui. Continua solo se ti fidi di questo indirizzo.",
-  "accountsAddressConfirmAction": "Verifica indirizzo"
+  "accountsAddressConfirmAction": "Verifica indirizzo",
+  "chatHandoffPromptTitle": "Passare a {model}?",
+  "chatHandoffPromptMessage": "Il tuo server suggerisce di continuare in una nuova chat con {model}. Un eventuale messaggio suggerito resta nel campo di testo finché non lo invii.",
+  "chatHandoffStartNewChat": "Inizia nuova chat",
+  "chatHandoffStayHere": "Resta qui"
 }

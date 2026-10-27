@@ -24,6 +24,7 @@ import 'package:conduit_core/features/channels/providers/channel_providers.dart'
 import 'package:conduit/features/navigation/providers/sidebar_providers.dart';
 import 'package:conduit_core/features/navigation/models/sidebar_navigation_model.dart';
 import 'package:conduit/features/navigation/widgets/chats_drawer.dart';
+import 'package:conduit/features/navigation/widgets/drawer_shell_page.dart';
 import 'package:conduit_core/features/navigation/providers/drawer_section_notifiers.dart';
 import 'package:conduit/features/navigation/widgets/sidebar_page.dart';
 import 'package:conduit_core/features/hermes/providers/hermes_providers.dart';
@@ -143,17 +144,32 @@ Widget sidebarTestBuildHarness({
   bool persistentTabletSidebar = false,
   double textScale = 1,
   bool disableAnimations = false,
+  // Builds the app's shell around [shellChat] instead, with the sidebar as
+  // its drawer.
+  Widget? shellChat,
 }) {
   final availableTerminalServers =
       terminalServers ?? sidebarTestDefaultTerminalServers();
   final router = GoRouter(
     initialLocation: '/chat',
     routes: [
-      GoRoute(
-        path: '/chat',
-        name: RouteNames.chat,
-        builder: (context, state) => const Scaffold(body: SidebarPage()),
-      ),
+      if (shellChat != null)
+        ShellRoute(
+          builder: (context, state, child) => DrawerShellPage(child: child),
+          routes: [
+            GoRoute(
+              path: '/chat',
+              name: RouteNames.chat,
+              builder: (context, state) => shellChat,
+            ),
+          ],
+        )
+      else
+        GoRoute(
+          path: '/chat',
+          name: RouteNames.chat,
+          builder: (context, state) => const Scaffold(body: SidebarPage()),
+        ),
       GoRoute(
         path: '/folder/:id',
         name: RouteNames.folder,
@@ -231,7 +247,12 @@ Widget sidebarTestBuildHarness({
       // ignore: scoped_providers_should_specify_dependencies
       modelsProvider.overrideWith(SidebarTestTestModels.new),
       // ignore: scoped_providers_should_specify_dependencies
-      foldersProvider.overrideWith(() => SidebarTestTestFolders(folders)),
+      foldersProvider.overrideWith(
+        () => SidebarTestTestFolders(
+          folders,
+          savedExpansions: controllers.savedFolderExpansions,
+        ),
+      ),
       // ignore: scoped_providers_should_specify_dependencies
       notesListProvider.overrideWith(
         () => SidebarTestTestNotesList(
@@ -444,6 +465,10 @@ class SidebarTestSidebarHarnessControllers {
   final SidebarTestTestSidebarActiveTab activeTabNotifier;
   int chatRefreshCalls = 0;
   int noteRefreshCalls = 0;
+
+  /// Folders the user opened or closed, with the choice, in the order the
+  /// sidebar asked for them to be kept on the server.
+  final savedFolderExpansions = <(String, bool)>[];
   Completer<void>? _pendingChatRefresh;
   Completer<void>? _pendingNoteRefresh;
 
@@ -722,12 +747,18 @@ class SidebarTestTestModels extends Models {
 }
 
 class SidebarTestTestFolders extends Folders {
-  SidebarTestTestFolders(this.folders);
+  SidebarTestTestFolders(this.folders, {required this.savedExpansions});
 
   final List<Folder> folders;
+  final List<(String, bool)> savedExpansions;
 
   @override
   Future<List<Folder>> build() async => folders;
+
+  @override
+  Future<void> saveFolderExpanded(String folderId, bool isExpanded) async {
+    savedExpansions.add((folderId, isExpanded));
+  }
 }
 
 class SidebarTestTestNotesList extends NotesList {
