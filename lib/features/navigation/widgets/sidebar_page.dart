@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:conduit_core/sync/sync_engine.dart';
+import 'package:conduit_core/features/navigation/models/sidebar_navigation_model.dart';
 
 import '../../../core/services/haptic_service.dart';
 import '../../../shared/theme/theme_extensions.dart';
@@ -58,6 +59,7 @@ void selectSidebarTab(BuildContext context, WidgetRef ref, int index) {
   }
 
   sidebarTabDescriptor(navigation.selectedTab).behavior.onDeselected(ref);
+  closeSidebarSearch(ref);
   ref.read(sidebarActiveTabProvider.notifier).set(selectedTab.id);
   selectedTab.behavior.onSelected(ref);
 }
@@ -391,12 +393,13 @@ class _SidebarPageState extends ConsumerState<SidebarPage> {
 
     final createAction = activeTab.createAction;
     return [
-      AdaptiveAppBarAction(
-        iosSymbol: 'magnifyingglass',
-        icon: Icons.search,
-        tintColor: defaultTint,
-        onPressed: () => openSidebarSearch(ref),
-      ),
+      if (activeTab.id != SidebarTabId.cline)
+        AdaptiveAppBarAction(
+          iosSymbol: 'magnifyingglass',
+          icon: Icons.search,
+          tintColor: defaultTint,
+          onPressed: () => openSidebarSearch(ref),
+        ),
       ...contextualActions,
       if (createAction != null)
         AdaptiveAppBarAction(

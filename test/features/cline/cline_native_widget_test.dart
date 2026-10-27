@@ -7,10 +7,13 @@ import 'package:conduit/shared/theme/app_theme.dart';
 import 'package:conduit/shared/theme/tweakcn_themes.dart';
 import 'package:conduit/shared/theme/color_tokens.dart' show contrastRatio;
 import 'package:conduit/l10n/conduit_localizations.dart';
+import 'package:conduit/features/navigation/widgets/sidebar_tab_registry.dart';
+import 'package:conduit_core/features/navigation/models/sidebar_navigation_model.dart';
 import 'package:conduit/shared/widgets/markdown/streaming_markdown_widget.dart';
 import 'package:conduit_core/features/cline/providers/cline_backend_providers.dart';
 import 'package:conduit_core/features/cline/services/cline_native_client.dart';
 import 'package:conduit_core/providers/backend_mode_providers.dart';
+import 'package:conduit_core/providers/app_providers.dart' show openWebUiAccountAvailableProvider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -40,6 +43,8 @@ class _Client extends ClineBackendClientController {
 class _Preferred extends PreferredBackendController {
   @override
   PreferredBackend build() => PreferredBackend.cline;
+  @override
+  Future<void> set(PreferredBackend backend) async => state = backend;
 }
 
 Future<void> _mount(
@@ -48,8 +53,10 @@ Future<void> _mount(
   ClineNativeClient client, {
   double scale = 1,
   ThemeData? theme,
+  ValueNotifier<bool>? active,
+  double width = 400,
 }) async {
-  tester.view.physicalSize = const Size(400, 900);
+  tester.view.physicalSize = Size(width, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -91,6 +98,7 @@ Future<void> _mount(
       overrides: [
         clineBackendClientProvider.overrideWith(() => _Client(client)),
         preferredBackendProvider.overrideWith(_Preferred.new),
+        openWebUiAccountAvailableProvider.overrideWithValue(false),
       ],
       child: MaterialApp(
         locale: const Locale('ru'),
@@ -102,7 +110,23 @@ Future<void> _mount(
               .copyWith(textScaler: TextScaler.linear(scale)),
           child: child!,
         ),
-        home: const ClineWorkspacePage(),
+        home: active == null
+            ? const ClineWorkspacePage()
+            : ValueListenableBuilder<bool>(
+                valueListenable: active,
+                builder: (_, visible, _) => Stack(
+                  children: [
+                    Offstage(
+                      offstage: !visible,
+                      child: ClineWorkspacePage(
+                        embedded: true,
+                        active: visible,
+                      ),
+                    ),
+                    if (!visible) const Scaffold(body: Text('OWUI')),
+                  ],
+                ),
+              ),
       ),
     ),
   );
@@ -120,6 +144,95 @@ Future<void> _unmount(WidgetTester tester, ClineNativeClient client) async {
 }
 
 void main() {
+  test(
+    'Cline is the fourth primary destination without hiding optional tabs',
+    () {
+      final tabs = visibleSidebarTabIds(
+        const SidebarTabAvailability(
+          hermesOnly: false,
+          hasOpenWebUi: true,
+          hermesEnabled: false,
+          notesEnabled: true,
+          terminalEnabled: true,
+          channelsEnabled: false,
+        ),
+      );
+      expect(tabs, [
+        SidebarTabId.chats,
+        SidebarTabId.notes,
+        SidebarTabId.terminal,
+        SidebarTabId.cline,
+      ]);
+      expect(
+        sidebarTabDescriptor(SidebarTabId.cline).materialIcon,
+        Icons.code_outlined,
+      );
+    },
+  );
+
+  test(
+    'switching the primary backend preserves the parallel SSH client',
+    () async {
+      final wire = _Wire();
+      final client = ClineNativeClient(wire, project: r'C:\Project');
+      final container = ProviderContainer(
+        overrides: [preferredBackendProvider.overrideWith(_Preferred.new)],
+      );
+      container.read(clineBackendClientProvider.notifier).adopt(client);
+      await container
+          .read(preferredBackendProvider.notifier)
+          .set(PreferredBackend.owui);
+      expect(container.read(clineBackendClientProvider), same(client));
+      expect(
+        wire.sent.where((m) => m['type'] == 'send' || m['type'] == 'approval'),
+        isEmpty,
+      );
+      container.read(clineBackendClientProvider.notifier).disconnect();
+      expect(container.read(clineBackendClientProvider), isNull);
+      container.dispose();
+      await client.close();
+    },
+  );
+
+  testWidgets(
+    'sidebar round trip preserves draft, client and approval without replay',
+    (tester) async {
+      final wire = _Wire();
+      final client = ClineNativeClient(wire, project: r'C:\Project');
+      final active = ValueNotifier(true);
+      addTearDown(active.dispose);
+      await _mount(
+        tester,
+        wire,
+        client,
+        active: active,
+        width: 320,
+        scale: 1.4,
+        theme: AppTheme.dark(TweakcnThemes.all.first),
+      );
+      await tester.enterText(
+        find.byKey(const Key('cline-native-input')),
+        'Unsent private draft',
+      );
+      final before = wire.sent.length;
+      active.value = false;
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(find.text('OWUI'), findsOneWidget);
+      active.value = true;
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('cline-native-input')))
+            .controller!
+            .text,
+        'Unsent private draft',
+      );
+      expect(wire.sent.length, before);
+      expect(find.byKey(const Key('cline-model-picker')), findsOneWidget);
+      expect(find.byKey(const Key('cline-project-picker')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
   for (final palette in TweakcnThemes.all) {
     for (final brightness in Brightness.values) {
       testWidgets(

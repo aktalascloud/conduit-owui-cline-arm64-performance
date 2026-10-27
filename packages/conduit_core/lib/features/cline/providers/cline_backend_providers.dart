@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:riverpod/riverpod.dart';
 
-import '../../../providers/backend_mode_providers.dart';
 import '../services/cline_native_client.dart';
 
 class ClineBackendClientController extends Notifier<ClineNativeClient?> {
@@ -12,9 +11,8 @@ class ClineBackendClientController extends Notifier<ClineNativeClient?> {
     ref.onDispose(() {
       unawaited(_owned?.close());
     });
-    ref.listen(preferredBackendProvider, (previous, next) {
-      if (next != PreferredBackend.cline && _owned != null) disconnect();
-    });
+    // Cline is also a parallel sidebar destination. Switching the primary
+    // backend must not close its SSH session or replay pending commands.
     return null;
   }
 

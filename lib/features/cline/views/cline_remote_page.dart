@@ -23,7 +23,8 @@ import '../../../l10n/app_localizations.dart';
 const clineProfileStorageKey = 'conduit.cline.remote.profile.v1';
 
 class ClineRemotePage extends ConsumerStatefulWidget {
-  const ClineRemotePage({super.key});
+  const ClineRemotePage({super.key, this.embedded = false});
+  final bool embedded;
 
   @override
   ConsumerState<ClineRemotePage> createState() => _ClineRemotePageState();
@@ -134,13 +135,19 @@ class _ClineRemotePageState extends ConsumerState<ClineRemotePage> {
         value: jsonEncode(profile.toJson()),
       );
       if (!mounted) return;
-      await ref
-          .read(preferredBackendProvider.notifier)
-          .set(PreferredBackend.cline);
+      if (!widget.embedded) {
+        await ref
+            .read(preferredBackendProvider.notifier)
+            .set(PreferredBackend.cline);
+      }
       if (!mounted) return;
       ref.read(clineBackendClientProvider.notifier).adopt(native);
       adopted = true;
-      context.go(Routes.clineWorkspace);
+      if (widget.embedded && context.canPop()) {
+        context.pop();
+      } else {
+        context.go(Routes.clineWorkspace);
+      }
     } on ClineConnectionException catch (failure) {
       if (mounted) {
         setState(
@@ -263,7 +270,13 @@ class _ClineRemotePageState extends ConsumerState<ClineRemotePage> {
           Text(l10n.clineRemoteDescription),
           if (current?.state.connected == true)
             TextButton(
-              onPressed: () => context.go(Routes.clineWorkspace),
+              onPressed: () {
+                if (widget.embedded && context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(Routes.clineWorkspace);
+                }
+              },
               child: Text(l10n.clineReturnToChat),
             ),
           if (otherBusy) Text(l10n.clineWaitForTurn),

@@ -4,6 +4,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../channels/widgets/channel_list_tab.dart';
 import '../../hermes/widgets/hermes_sessions_tab.dart';
 import '../../notes/widgets/notes_list_tab.dart';
+import '../../cline/views/cline_workspace_page.dart';
 import '../../terminal/widgets/terminal_tab.dart';
 import '../../terminal/controllers/terminal_sidebar_tab_behavior.dart';
 import '../controllers/sidebar_tab_behavior.dart';
@@ -82,6 +83,7 @@ String _hermesLabel(AppLocalizations l10n) => l10n.sidebarHermesTab;
 String _notesLabel(AppLocalizations l10n) => l10n.sidebarNotesTab;
 String _terminalLabel(AppLocalizations l10n) => l10n.sidebarTerminalTab;
 String _channelsLabel(AppLocalizations l10n) => l10n.sidebarChannelsTab;
+String _clineLabel(AppLocalizations l10n) => 'Cline';
 String _conversationSearchHint(AppLocalizations l10n) =>
     l10n.searchConversations;
 String _notesSearchHint(AppLocalizations l10n) => l10n.searchNotes;
@@ -108,6 +110,12 @@ Widget _channelsBody({
   required bool showBottomNavigation,
   required bool active,
 }) => const ChannelListTab();
+
+Widget _clineBody({required bool showBottomNavigation, required bool active}) =>
+    ClineWorkspacePage(embedded: true, active: active);
+
+bool _clineVisible(SidebarTabAvailability availability) =>
+    availability.hasOpenWebUi && !availability.hermesOnly;
 
 bool _chatsVisible(SidebarTabAvailability availability) =>
     !availability.hermesOnly;
@@ -182,6 +190,17 @@ const sidebarTabRegistry = <SidebarTabDescriptor>[
     selectedSfSymbol: 'terminal',
     isVisible: _terminalVisible,
     behavior: terminalSidebarTabBehavior,
+  ),
+  SidebarTabDescriptor(
+    id: SidebarTabId.cline,
+    labelBuilder: _clineLabel,
+    searchHintBuilder: _clineLabel,
+    bodyBuilder: _clineBody,
+    materialIcon: Icons.code_outlined,
+    selectedMaterialIcon: Icons.code,
+    sfSymbol: 'chevron.left.forwardslash.chevron.right',
+    selectedSfSymbol: 'chevron.left.forwardslash.chevron.right',
+    isVisible: _clineVisible,
   ),
   SidebarTabDescriptor(
     id: SidebarTabId.channels,

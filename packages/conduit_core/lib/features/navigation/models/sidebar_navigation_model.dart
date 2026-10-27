@@ -1,7 +1,7 @@
 import 'package:meta/meta.dart';
 
 /// Stable, persistence-safe identity for a sidebar destination.
-enum SidebarTabId { chats, hermes, terminal, notes, channels }
+enum SidebarTabId { chats, hermes, terminal, notes, channels, cline }
 
 /// Data-only capability snapshot used to decide which destinations exist.
 @immutable

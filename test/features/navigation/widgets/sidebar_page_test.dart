@@ -543,6 +543,7 @@ void main() {
         controllers: controllers,
         hermesEnabled: true,
         persistentTabletSidebar: true,
+        terminalServers: const [],
       ),
     );
     await tester.pump(const Duration(milliseconds: 500));
@@ -568,7 +569,8 @@ void main() {
 
     final controllers = SidebarTestSidebarHarnessControllers();
     await tester.pumpWidget(
-      sidebarTestBuildHarness(controllers: controllers, hermesEnabled: true),
+      sidebarTestBuildHarness(controllers: controllers, hermesEnabled: true,
+        terminalServers: const []),
     );
     await tester.pump(const Duration(milliseconds: 500));
 
@@ -579,7 +581,7 @@ void main() {
       'Chats',
       'Hermes',
       'Notes',
-      'Terminal',
+      'Cline',
       'Channels',
     ]);
     expect(tabBar.items[1].icon, isNull);

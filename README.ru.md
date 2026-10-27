@@ -12,6 +12,9 @@
 
 ## Изменения
 
+- Cline — четвёртая основная вкладка рядом с чатами, заметками и терминалом. Нативный чат использует общий стиль Conduit; переключение сохраняет SSH, черновики и вложения.
+- Upstream 4.2.2: завершение диктовки [#893](https://github.com/cogwheel0/conduit/pull/893), согласие на смену модели [#890](https://github.com/cogwheel0/conduit/pull/890), явный выбор reasoning [#871](https://github.com/cogwheel0/conduit/pull/871), кнопка «Назад» Android [#892](https://github.com/cogwheel0/conduit/pull/892).
+
 - Фильтры модели по умолчанию и изображения MCP [#870](https://github.com/cogwheel0/conduit/pull/870), видео в чате [#869](https://github.com/cogwheel0/conduit/pull/869), сохранение поздней транскрипции после остановки [#873](https://github.com/cogwheel0/conduit/pull/873).
 - SQLite 3.53.4, Dart JNI 1.0.3 и ONNX Runtime/JNI 1.22.0: исходники, ARMv8-A O3/ThinLTO.
 - Dart release AOT; остальные готовые библиотеки перечислены отдельно.

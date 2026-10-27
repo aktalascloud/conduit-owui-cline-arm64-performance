@@ -91,5 +91,21 @@
     "id": "APK-015",
     "description": "Cline-only visual polish: readable neutral Plan/Act pills on every light/dark palette and a single composer surface without a nested focused outline. Keep global themes and saved palette unchanged.",
     "source": "Local device feedback; 14 native widget checks include all five palettes in both brightness modes, control behavior and keyboard/large-text layouts."
+  },
+  {
+    "id": "APK-016",
+    "description": "Fourth primary Cline sidebar destination alongside Chats, Notes and Terminal. Keep independent SSH session, native chat drafts, attachment queue and scroll position while switching; no command replay. Cline-only theme-aware buttons, model/project pickers, Plan/Act icons and approval actions reuse Conduit shapes and colors.",
+    "source": "Local user-requested navigation and UI integration; targeted state/transport/contrast/narrow-screen regressions plus current upstream suite."
+  },
+  {
+    "id": "APK-017",
+    "description": "Official 4.2.2: preserve trailing dictation, explicit consent before function-driven model changes, opt-in reasoning effort and Android chat-list Back navigation.",
+    "source": "Official upstream #893, #890, #871 and #892; upstream regression tests retained.",
+    "urls": [
+      "https://github.com/cogwheel0/conduit/pull/893",
+      "https://github.com/cogwheel0/conduit/pull/890",
+      "https://github.com/cogwheel0/conduit/pull/871",
+      "https://github.com/cogwheel0/conduit/pull/892"
+    ]
   }
 ]

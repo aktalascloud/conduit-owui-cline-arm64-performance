@@ -12,6 +12,9 @@ First screen → Cline via SSH → import the private connection JSON from your 
 
 ## Changes
 
+- Cline is a fourth primary tab alongside Chats, Notes and Terminal. Its native chat reuses Conduit controls and light/dark colors; switching keeps SSH, drafts and attachments.
+- Upstream 4.2.2: trailing dictation [#893](https://github.com/cogwheel0/conduit/pull/893), model-change consent [#890](https://github.com/cogwheel0/conduit/pull/890), opt-in reasoning [#871](https://github.com/cogwheel0/conduit/pull/871), Android Back [#892](https://github.com/cogwheel0/conduit/pull/892).
+
 - Model default filters and MCP tool images [#870](https://github.com/cogwheel0/conduit/pull/870), inline video [#869](https://github.com/cogwheel0/conduit/pull/869), late server dictation after Stop [#873](https://github.com/cogwheel0/conduit/pull/873).
 - SQLite 3.53.4, Dart JNI 1.0.3 and ONNX Runtime/JNI 1.22.0: source-built ARMv8-A O3/ThinLTO.
 - Dart release AOT; other vendor binaries are identified separately.

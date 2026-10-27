@@ -22,23 +22,45 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/services/navigation_service.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/theme/color_tokens.dart' show withMinContrast;
+
+import 'package:conduit_core/providers/app_providers.dart'
+    show openWebUiAccountAvailableProvider;
+import 'package:conduit_core/features/navigation/models/sidebar_navigation_model.dart';
+import 'package:conduit_core/features/navigation/providers/sidebar_active_tab_provider.dart';
+
 import '../../../shared/widgets/markdown/streaming_markdown_widget.dart';
 import 'cline_remote_page.dart';
 
 /// Native Conduit chat, sessions and projects over the typed Cline transport.
 class ClineWorkspacePage extends ConsumerStatefulWidget {
-  const ClineWorkspacePage({super.key});
+  const ClineWorkspacePage({
+    super.key,
+    this.embedded = false,
+    this.active = true,
+  });
+  final bool embedded;
+  final bool active;
   @override
   ConsumerState<ClineWorkspacePage> createState() => _ClineWorkspacePageState();
 }
+
+/// Ephemeral UI memory, scoped to this app/provider container; never sent to OWUI.
+class ClineWorkspaceMemory {
+  final drafts = <String, String>{};
+  final files = <String, List<ClineAttachment>>{};
+  final offsets = <String, double>{};
+}
+
+final clineWorkspaceMemoryProvider = Provider((ref) => ClineWorkspaceMemory());
 
 class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
   final _storage = const FlutterSecureStorage();
   final _input = TextEditingController();
   final _scroll = ScrollController();
   final _scaffold = GlobalKey<ScaffoldState>();
-  final Map<String, String> _drafts = {};
-  final Map<String, List<ClineAttachment>> _files = {};
+  late final ClineWorkspaceMemory _memory;
+  late final Map<String, String> _drafts;
+  late final Map<String, List<ClineAttachment>> _files;
   String _draftKey = '';
   String? _connectError;
   bool _connecting = false, _uploading = false;
@@ -50,17 +72,44 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
   @override
   void initState() {
     super.initState();
+    _memory = ref.read(clineWorkspaceMemoryProvider);
+    _drafts = _memory.drafts;
+    _files = _memory.files;
     _scroll.addListener(() {
+      if (_scroll.hasClients && _draftKey.isNotEmpty) {
+        _memory.offsets[_draftKey] = _scroll.offset;
+      }
       if (_scroll.hasClients &&
           _scroll.position.userScrollDirection != ScrollDirection.idle)
         _followOutput = _scroll.position.extentAfter < 120;
     });
-    unawaited(_ensureConnected());
+    if (widget.active) unawaited(_ensureConnected());
+  }
+
+  @override
+  void didUpdateWidget(ClineWorkspacePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active && !_connecting) {
+      unawaited(_ensureConnected());
+    }
+  }
+
+  void _settings() => context.push(
+    widget.embedded ? '${Routes.clineRemote}?embedded=1' : Routes.clineRemote,
+  );
+
+  Future<void> _openOwui() async {
+    ref.read(sidebarActiveTabProvider.notifier).set(SidebarTabId.chats);
+    await ref
+        .read(preferredBackendProvider.notifier)
+        .set(PreferredBackend.owui);
+    if (mounted) context.go(Routes.chat);
   }
 
   @override
   void dispose() {
     _generation++;
+    if (_draftKey.isNotEmpty) _drafts[_draftKey] = _input.text;
     _input.dispose();
     _scroll.dispose();
     super.dispose();
@@ -103,7 +152,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
     try {
       final source = await _storage.read(key: clineProfileStorageKey);
       if (source == null) {
-        if (mounted) context.go(Routes.clineRemote);
+        if (mounted && !widget.embedded) context.go(Routes.clineRemote);
         return;
       }
       final profile = ClineRemoteProfile.decode(source);
@@ -119,7 +168,8 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
       native = await ClineNativeClient.connect(tunnel);
       if (!mounted ||
           epoch != _generation ||
-          ref.read(preferredBackendProvider) != PreferredBackend.cline) {
+          (!widget.embedded &&
+              ref.read(preferredBackendProvider) != PreferredBackend.cline)) {
         await native.close();
         return;
       }
@@ -394,6 +444,11 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
     return ChoiceChip(
       key: ValueKey('cline-mode-' + mode),
       label: Text(mode == 'plan' ? l.clinePlan : l.clineAct),
+      avatar: Icon(
+        mode == 'plan' ? Icons.account_tree_outlined : Icons.bolt_outlined,
+        size: 16,
+        color: foreground,
+      ),
       labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
         color: foreground,
         fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
@@ -471,6 +526,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
       if (yes != true) return;
     }
     ref.read(clineBackendClientProvider.notifier).disconnect();
+    if (widget.embedded) return;
     await ref
         .read(preferredBackendProvider.notifier)
         .set(PreferredBackend.unset);
@@ -536,6 +592,48 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.conduitTheme;
+    final theme = Theme.of(context);
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    );
+    final foreground = withMinContrast(
+      palette.textPrimary,
+      palette.cardBackground,
+      4.5,
+    );
+    return Theme(
+      data: theme.copyWith(
+        scaffoldBackgroundColor: palette.surfaceBackground,
+        appBarTheme: theme.appBarTheme.copyWith(
+          backgroundColor: palette.surfaceBackground,
+          foregroundColor: palette.textPrimary,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: foreground,
+            backgroundColor: palette.cardBackground,
+            side: BorderSide(color: palette.cardBorder),
+            shape: shape,
+            minimumSize: const Size(48, 44),
+          ),
+        ),
+        cardTheme: theme.cardTheme.copyWith(
+          color: palette.cardBackground,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: palette.cardBorder),
+          ),
+        ),
+      ),
+      child: Builder(builder: _buildWorkspace),
+    );
+  }
+
+  Widget _buildWorkspace(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final client = ref.watch(clineBackendClientProvider);
     if (client == null)
@@ -550,7 +648,8 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                 if (_connecting) const CircularProgressIndicator(),
                 const SizedBox(height: 16),
                 Text(
-                  _connectError ?? l.connecting,
+                  _connectError ??
+                      (_connecting ? l.connecting : l.clineConnectionSettings),
                   textAlign: TextAlign.center,
                 ),
                 if (!_connecting)
@@ -559,13 +658,14 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                     child: Text(l.retry),
                   ),
                 TextButton(
-                  onPressed: () => context.go(Routes.clineRemote),
+                  onPressed: _settings,
                   child: Text(l.clineConnectionSettings),
                 ),
-                TextButton(
-                  onPressed: () => _disconnect(null),
-                  child: Text(l.clineOtherBackends),
-                ),
+                if (!widget.embedded)
+                  TextButton(
+                    onPressed: () => _disconnect(null),
+                    child: Text(l.clineOtherBackends),
+                  ),
               ],
             ),
           ),
@@ -595,7 +695,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
         );
         if (_lastRender != signature) {
           _lastRender = signature;
-          if (_followOutput)
+          if (_followOutput && widget.active)
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && _scroll.hasClients)
                 _scroll.jumpTo(_scroll.position.maxScrollExtent);
@@ -604,7 +704,18 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
 
         if (_lastScope != state.sessionId) {
           _lastScope = state.sessionId;
-          _jumpToEnd();
+          final offset = _memory.offsets[_draftKey];
+          if (offset == null) {
+            _jumpToEnd();
+          } else {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _scroll.hasClients) {
+                _scroll.jumpTo(
+                  offset.clamp(0, _scroll.position.maxScrollExtent),
+                );
+              }
+            });
+          }
         }
         return Scaffold(
           key: _scaffold,
@@ -616,6 +727,13 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
               overflow: TextOverflow.ellipsis,
             ),
             actions: [
+              if (!widget.embedded &&
+                  ref.watch(openWebUiAccountAvailableProvider))
+                IconButton(
+                  tooltip: 'Open WebUI',
+                  onPressed: _openOwui,
+                  icon: const Icon(Icons.chat_bubble_outline),
+                ),
               IconButton(
                 tooltip: l.clineNewChat,
                 onPressed: state.busy ? null : () => _newChat(client),
@@ -623,7 +741,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
               ),
               PopupMenuButton<String>(
                 onSelected: (choice) {
-                  if (choice == 'settings') context.push(Routes.clineRemote);
+                  if (choice == 'settings') _settings();
                   if (choice == 'accounts') context.push(Routes.accounts);
                   if (choice == 'disconnect') unawaited(_disconnect(state));
                   if (choice == 'fork') {
@@ -861,7 +979,8 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                             Row(
                               children: [
                                 Expanded(
-                                  child: TextButton.icon(
+                                  child: OutlinedButton.icon(
+                                    key: const Key('cline-project-picker'),
                                     onPressed: state.busy
                                         ? null
                                         : () => _project(client, state),
@@ -876,12 +995,18 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                                     ),
                                   ),
                                 ),
+                                const SizedBox(width: 8),
                                 Flexible(
-                                  child: TextButton(
+                                  child: OutlinedButton.icon(
+                                    key: const Key('cline-model-picker'),
+                                    icon: const Icon(
+                                      Icons.smart_toy_outlined,
+                                      size: 17,
+                                    ),
                                     onPressed: state.busy
                                         ? null
                                         : () => _models(client, state),
-                                    child: Text(
+                                    label: Text(
                                       state.model.isEmpty
                                           ? l.clineModels
                                           : state.model,
@@ -1015,7 +1140,9 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                                               horizontal: 6,
                                             ),
                                       ),
-                                      onChanged: (_) => setState(() {}),
+                                      onChanged: (_) => setState(() {
+                                        _drafts[_draftKey] = _input.text;
+                                      }),
                                     ),
                                   ),
                                   if (state.busy)
@@ -1094,7 +1221,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
             alignment: WrapAlignment.end,
             spacing: 8,
             children: [
-              TextButton(
+              OutlinedButton(
                 key: ValueKey('cline-deny-' + approval.id),
                 onPressed: approval.responding
                     ? null

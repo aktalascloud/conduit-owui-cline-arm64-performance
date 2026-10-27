@@ -302,8 +302,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     GoRoute(
       path: Routes.clineRemote,
       name: RouteNames.clineRemote,
-      pageBuilder: (context, state) =>
-          _buildPlatformPage(state: state, child: const ClineRemotePage()),
+      pageBuilder: (context, state) => _buildPlatformPage(
+        state: state,
+        child: ClineRemotePage(
+          embedded: state.uri.queryParameters['embedded'] == '1',
+        ),
+      ),
     ),
     GoRoute(
       path: Routes.personalization,
