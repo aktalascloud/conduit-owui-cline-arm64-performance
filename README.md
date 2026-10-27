@@ -22,7 +22,7 @@ First screen → Cline via SSH → import the private connection JSON from your 
 
 ## Evidence
 
-Verified APK: **94,520,748 bytes**; **84 targeted Flutter checks**, with unchanged coverage inherited from the **5097-test baseline**. Cline uses readable neutral mode pills and one composer surface; global themes and saved palettes stay unchanged. A real read-only client checked WebUI 0.12.4 config/models/chats. Phone/LLM speed is unmeasured. [Sources, actual flags, hashes and check scope](.avx1/measurements/cline-ui-ca0a1146.json).
+Verified APK: **94,595,796 bytes**; **217 targeted Flutter checks** with unchanged coverage inherited from the qualified **5224-test full baseline**. Cline is loaded on first use; switching keeps its SSH session, draft, attachments and scroll position, plus the OWUI search state. Controls follow the selected Conduit light/dark palette. Signature, nine ARM64 libraries, ABI/exports and 16 KiB alignment are verified. Phone/LLM speed is unmeasured. [Exact source, hashes and check scope](.avx1/measurements/cline-navigation-12295ec9.json).
 
 No LLM weights or personal configuration. The original 2.3 MB Silero VAD detector remains bundled with its verified MIT notice.
 

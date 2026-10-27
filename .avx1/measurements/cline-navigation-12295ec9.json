@@ -1,0 +1,29 @@
+{
+  "source": "12295ec95007effdbea9bc091d3f7e7b6980aa4b",
+  "release_url": "https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/tag/daily-20261027-12295ec9",
+  "download_url": "https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/download/daily-20261027-12295ec9/Conduit-OWUI-Cline-arm64-v8a.apk",
+  "bytes": 94595796,
+  "sha256": "9736108fe92a168f78478fef79c737cdb5d7b8457da5f0a7697e0fd4e3194722",
+  "application_id": "io.github.aktalascloud.conduit",
+  "anonymous_download": "verified",
+  "ci_run": 40437322050,
+  "ci_url": "https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/actions/runs/40437322050",
+  "current_flutter_checks": {
+    "mode": "targeted",
+    "passed": 217,
+    "scope": [
+      "navigation feature suite",
+      "backend mode and readiness smoke"
+    ]
+  },
+  "inherited_coverage": {
+    "baseline_source": "21add09800e25d228d59bc72511419de35ea6b4e",
+    "ci_run": 40433734689,
+    "full_flutter_tests": 5224
+  },
+  "native_libraries": 9,
+  "permanent_signature": "verified",
+  "abi_exports_and_16kib": "verified",
+  "ui_scope": "Native Cline only: fourth sidebar tab, shared Conduit styling, lazy first mount, retained SSH/drafts/files/scroll and OWUI search state.",
+  "phone_or_llm_speedup_percent": null
+}
