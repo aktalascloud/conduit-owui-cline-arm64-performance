@@ -31,6 +31,26 @@ import 'package:conduit_core/features/navigation/providers/sidebar_active_tab_pr
 import '../../../shared/widgets/markdown/streaming_markdown_widget.dart';
 import 'cline_remote_page.dart';
 
+/// Avoid building an unused agent workspace at OWUI startup; once opened,
+/// retain it so switching tabs preserves its draft and SSH subscriptions.
+class ClineSidebarTab extends StatefulWidget {
+  const ClineSidebarTab({super.key, required this.active});
+  final bool active;
+  @override
+  State<ClineSidebarTab> createState() => _ClineSidebarTabState();
+}
+
+class _ClineSidebarTabState extends State<ClineSidebarTab> {
+  bool _visited = false;
+  @override
+  Widget build(BuildContext context) {
+    if (widget.active) _visited = true;
+    return _visited
+        ? ClineWorkspacePage(embedded: true, active: widget.active)
+        : const SizedBox.shrink();
+  }
+}
+
 /// Native Conduit chat, sessions and projects over the typed Cline transport.
 class ClineWorkspacePage extends ConsumerStatefulWidget {
   const ClineWorkspacePage({

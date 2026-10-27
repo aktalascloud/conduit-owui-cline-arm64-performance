@@ -112,7 +112,7 @@ Widget _channelsBody({
 }) => const ChannelListTab();
 
 Widget _clineBody({required bool showBottomNavigation, required bool active}) =>
-    ClineWorkspacePage(embedded: true, active: active);
+    ClineSidebarTab(active: active);
 
 bool _clineVisible(SidebarTabAvailability availability) =>
     availability.hasOpenWebUi && !availability.hermesOnly;

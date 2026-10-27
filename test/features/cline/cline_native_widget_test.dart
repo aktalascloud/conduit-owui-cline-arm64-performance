@@ -13,7 +13,8 @@ import 'package:conduit/shared/widgets/markdown/streaming_markdown_widget.dart';
 import 'package:conduit_core/features/cline/providers/cline_backend_providers.dart';
 import 'package:conduit_core/features/cline/services/cline_native_client.dart';
 import 'package:conduit_core/providers/backend_mode_providers.dart';
-import 'package:conduit_core/providers/app_providers.dart' show openWebUiAccountAvailableProvider;
+import 'package:conduit_core/providers/app_providers.dart'
+    show openWebUiAccountAvailableProvider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -118,10 +119,7 @@ Future<void> _mount(
                   children: [
                     Offstage(
                       offstage: !visible,
-                      child: ClineWorkspacePage(
-                        embedded: true,
-                        active: visible,
-                      ),
+                      child: ClineSidebarTab(active: visible),
                     ),
                     if (!visible) const Scaffold(body: Text('OWUI')),
                   ],
@@ -144,6 +142,26 @@ Future<void> _unmount(WidgetTester tester, ClineNativeClient client) async {
 }
 
 void main() {
+  testWidgets(
+    'Cline workspace stays unmounted until its first explicit tab selection',
+    (tester) async {
+      final wire = _Wire();
+      final client = ClineNativeClient(wire, project: r'C:\Project');
+      final active = ValueNotifier(false);
+      addTearDown(active.dispose);
+      await _mount(tester, wire, client, active: active);
+      expect(
+        find.byType(ClineWorkspacePage, skipOffstage: false),
+        findsNothing,
+      );
+      final count = wire.sent.length;
+      active.value = true;
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(find.byType(ClineWorkspacePage), findsOneWidget);
+      expect(wire.sent.length, count);
+      expect(tester.takeException(), isNull);
+    },
+  );
   test(
     'Cline is the fourth primary destination without hiding optional tabs',
     () {
