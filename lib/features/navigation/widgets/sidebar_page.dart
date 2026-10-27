@@ -59,7 +59,6 @@ void selectSidebarTab(BuildContext context, WidgetRef ref, int index) {
   }
 
   sidebarTabDescriptor(navigation.selectedTab).behavior.onDeselected(ref);
-  closeSidebarSearch(ref);
   ref.read(sidebarActiveTabProvider.notifier).set(selectedTab.id);
   selectedTab.behavior.onSelected(ref);
 }
@@ -499,7 +498,9 @@ class _SidebarPageState extends ConsumerState<SidebarPage> {
     );
 
     final conduitTheme = context.conduitTheme;
-    final isSearchExpanded = ref.watch(sidebarHeaderSearchExpandedProvider);
+    final isSearchExpanded =
+        ref.watch(sidebarHeaderSearchExpandedProvider) &&
+        navigation.selectedTab != SidebarTabId.cline;
     final useNativeIos26Chrome = PlatformInfo.isIOS26OrHigher();
     final composeNativeIos26Chrome = DrawerChromeCompositionScope.shouldCompose(
       context,

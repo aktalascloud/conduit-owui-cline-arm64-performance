@@ -30,6 +30,7 @@ import 'package:conduit/shared/widgets/adaptive_toolbar_components.dart';
 import 'package:conduit/shared/widgets/user_avatar.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -231,10 +232,10 @@ void main() {
           ),
         )
         .actions;
-    expect(
-      actions.take(2).map((action) => action.label),
-      ['All messages', 'Mentions only'],
-    );
+    expect(actions.take(2).map((action) => action.label), [
+      'All messages',
+      'Mentions only',
+    ]);
     // The current choice carries the check.
     expect(actions[1].materialIcon, Icons.check_rounded);
     expect(actions[0].materialIcon, isNot(Icons.check_rounded));
@@ -943,6 +944,38 @@ void main() {
     final appBar = tester.widget<AppBar>(find.byType(AppBar));
 
     expect(appBar.toolbarHeight, kTextTabBarHeight);
+  });
+
+  testWidgets('Cline round trip preserves the OWUI search and expanded state', (
+    tester,
+  ) async {
+    FlutterSecureStorage.setMockInitialValues({});
+    final controllers = SidebarTestSidebarHarnessControllers();
+    await tester.pumpWidget(sidebarTestBuildHarness(controllers: controllers));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(SidebarPage)),
+    );
+    container
+        .read(sidebarHeaderSearchExpandedProvider.notifier)
+        .setExpanded(true);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'saved OWUI query');
+    await tester.pumpAndSettle();
+    await tester.tap(sidebarTestBottomNavTabLabel('Cline'));
+    await tester.pumpAndSettle();
+    expect(
+      container.read(sidebarSearchFieldControllerProvider).text,
+      'saved OWUI query',
+    );
+    await tester.tap(sidebarTestBottomNavTabLabel('Chats'));
+    await tester.pumpAndSettle();
+    expect(container.read(sidebarHeaderSearchExpandedProvider), isTrue);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'saved OWUI query',
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('closing expanded search clears the active filter', (
