@@ -107,5 +107,10 @@
       "https://github.com/cogwheel0/conduit/pull/871",
       "https://github.com/cogwheel0/conduit/pull/892"
     ]
+  },
+  {
+    "id": "APK-018",
+    "description": "Compact native Cline chat only: one unified composer, single-row mode/model/project controls, model subtitle, inline message copy and overflow cues. Preserve SSH/session/draft/scroll/approval behavior and all global palettes.",
+    "source": "User-requested native UI refinement;18 focused widget tests across five palettes, both brightness modes, large text and keyboard. No phone-speed percentage claimed."
   }
 ]

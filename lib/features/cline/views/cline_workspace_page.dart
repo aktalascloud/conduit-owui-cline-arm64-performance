@@ -29,6 +29,7 @@ import 'package:conduit_core/features/navigation/models/sidebar_navigation_model
 import 'package:conduit_core/features/navigation/providers/sidebar_active_tab_provider.dart';
 
 import '../../../shared/widgets/markdown/streaming_markdown_widget.dart';
+import '../../../shared/widgets/horizontal_overflow_fade.dart';
 import 'cline_remote_page.dart';
 
 /// Avoid building an unused agent workspace at OWUI startup; once opened,
@@ -483,7 +484,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
             : palette.cardBorder,
       ),
       shape: const StadiumBorder(),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       selected: selected,
       onSelected: state.busy
           ? null
@@ -494,6 +495,66 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                 _notice(error);
               }
             },
+    );
+  }
+
+  Widget _composerControls(ClineNativeClient client, ClineNativeState state) {
+    final l = AppLocalizations.of(context)!;
+    final palette = context.conduitTheme;
+    final label = Theme.of(context).textTheme.labelMedium?.copyWith(
+      color: withMinContrast(palette.textPrimary, palette.inputBackground, 4.5),
+    );
+    return HorizontalOverflowFade(
+      child: SingleChildScrollView(
+        key: const Key('cline-composer-toolbar'),
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (final mode in ['plan', 'act'])
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: _modeChip(client, state, mode),
+              ),
+            const SizedBox(width: 4),
+            IconButton(
+              key: const Key('cline-model-picker'),
+              tooltip: state.model.isEmpty ? l.clineModels : state.model,
+              onPressed: state.busy ? null : () => _models(client, state),
+              icon: const Icon(Icons.smart_toy_outlined, size: 19),
+            ),
+            IconButton(
+              key: const Key('cline-project-picker'),
+              tooltip: state.project.isEmpty
+                  ? l.clineProjectPath
+                  : state.project,
+              onPressed: state.busy ? null : () => _project(client, state),
+              icon: const Icon(Icons.folder_outlined, size: 19),
+            ),
+            if (state.sessionId == null &&
+                (state.models[state.provider]?.any(
+                      (m) => m.id == state.model && m.reasoning,
+                    ) ??
+                    false))
+              DropdownButton<String>(
+                value: state.reasoning,
+                underline: const SizedBox.shrink(),
+                style: label,
+                onChanged: state.busy
+                    ? null
+                    : (value) {
+                        if (value != null) client.configure(reasoning: value);
+                      },
+                items: [
+                  for (final level in ['none', 'low', 'medium', 'high'])
+                    DropdownMenuItem(
+                      value: level,
+                      child: Text(_reasonLabel(l, level)),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -741,10 +802,32 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
           key: _scaffold,
           resizeToAvoidBottomInset: true,
           appBar: AppBar(
-            title: Text(
-              title.isEmpty ? 'Cline' : title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            toolbarHeight: 52,
+            title: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title.isEmpty ? 'Cline' : title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (state.model.isNotEmpty &&
+                    MediaQuery.textScalerOf(context).scale(1) <= 1.3)
+                  Text(
+                    state.model,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: withMinContrast(
+                        context.conduitTheme.textSecondary,
+                        context.conduitTheme.surfaceBackground,
+                        4.5,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             actions: [
               if (!widget.embedded &&
@@ -991,136 +1074,22 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                   child: SingleChildScrollView(
                     child: SafeArea(
                       top: false,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                      child: Container(
+                        margin: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+                        padding: const EdgeInsets.fromLTRB(6, 4, 6, 2),
+                        decoration: BoxDecoration(
+                          color: context.conduitTheme.inputBackground,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: context.conduitTheme.cardBorder,
+                          ),
+                        ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    key: const Key('cline-project-picker'),
-                                    onPressed: state.busy
-                                        ? null
-                                        : () => _project(client, state),
-                                    icon: const Icon(
-                                      Icons.folder_outlined,
-                                      size: 17,
-                                    ),
-                                    label: Text(
-                                      state.project,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Flexible(
-                                  child: OutlinedButton.icon(
-                                    key: const Key('cline-model-picker'),
-                                    icon: const Icon(
-                                      Icons.smart_toy_outlined,
-                                      size: 17,
-                                    ),
-                                    onPressed: state.busy
-                                        ? null
-                                        : () => _models(client, state),
-                                    label: Text(
-                                      state.model.isEmpty
-                                          ? l.clineModels
-                                          : state.model,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 4,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                for (final mode in ['plan', 'act'])
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 6),
-                                    child: _modeChip(client, state, mode),
-                                  ),
-                                if (state.sessionId == null &&
-                                    (state.models[state.provider]?.any(
-                                          (m) =>
-                                              m.id == state.model &&
-                                              m.reasoning,
-                                        ) ??
-                                        false))
-                                  DropdownButton<String>(
-                                    value: state.reasoning,
-                                    underline: const SizedBox.shrink(),
-                                    onChanged: state.busy
-                                        ? null
-                                        : (value) {
-                                            if (value != null)
-                                              client.configure(
-                                                reasoning: value,
-                                              );
-                                          },
-                                    items: [
-                                      for (final level in [
-                                        'none',
-                                        'low',
-                                        'medium',
-                                        'high',
-                                      ])
-                                        DropdownMenuItem(
-                                          value: level,
-                                          child: Text(_reasonLabel(l, level)),
-                                        ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                            if (state.status.isNotEmpty)
-                              Text(
-                                _clineStatus(l, state.status),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            if (state.mode.isEmpty)
-                              Text(
-                                l.clineChooseMode,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            if ((_files[_draftKey]?.isNotEmpty ?? false))
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: Wrap(
-                                  spacing: 6,
-                                  children: [
-                                    for (final file in _files[_draftKey]!)
-                                      InputChip(
-                                        label: Text(file.name),
-                                        avatar: Icon(
-                                          file.imageDataUrl != null
-                                              ? Icons.image_outlined
-                                              : Icons.description_outlined,
-                                          size: 18,
-                                        ),
-                                        onDeleted: () {
-                                          setState(
-                                            () =>
-                                                _files[_draftKey]!.remove(file),
-                                          );
-                                        },
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            if (_uploading) const LinearProgressIndicator(),
                             Container(
                               decoration: BoxDecoration(
-                                color: context.conduitTheme.inputBackground,
+                                color: Colors.transparent,
                                 borderRadius: BorderRadius.circular(22),
                               ),
                               padding: const EdgeInsets.symmetric(
@@ -1196,6 +1165,45 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                                 ],
                               ),
                             ),
+                            _composerControls(client, state),
+                            if (state.status.isNotEmpty)
+                              Text(
+                                _clineStatus(l, state.status),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            if (state.mode.isEmpty)
+                              Text(
+                                l.clineChooseMode,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            if ((_files[_draftKey]?.isNotEmpty ?? false))
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Wrap(
+                                  spacing: 6,
+                                  children: [
+                                    for (final file in _files[_draftKey]!)
+                                      InputChip(
+                                        label: Text(file.name),
+                                        avatar: Icon(
+                                          file.imageDataUrl != null
+                                              ? Icons.image_outlined
+                                              : Icons.description_outlined,
+                                          size: 18,
+                                        ),
+                                        onDeleted: () {
+                                          setState(
+                                            () =>
+                                                _files[_draftKey]!.remove(file),
+                                          );
+                                        },
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            if (_uploading) const LinearProgressIndicator(),
                           ],
                         ),
                       ),
@@ -1419,8 +1427,10 @@ class _ClineMessage extends StatelessWidget {
       alignment: user ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         key: ValueKey('cline-message-' + message.id),
-        margin: const EdgeInsets.only(bottom: 18),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: user
+            ? const EdgeInsets.fromLTRB(12, 0, 12, 10)
+            : const EdgeInsets.only(bottom: 2),
         constraints: const BoxConstraints(maxWidth: 900),
         decoration: user
             ? BoxDecoration(
@@ -1431,14 +1441,28 @@ class _ClineMessage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!user)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: Text(
-                  model.isEmpty ? 'Cline' : model,
-                  style: Theme.of(context).textTheme.labelMedium,
+            Row(
+              children: [
+                if (!user) ...[
+                  const Icon(Icons.auto_awesome_outlined, size: 15),
+                  const SizedBox(width: 6),
+                ],
+                Expanded(
+                  child: Text(
+                    user ? l.you : 'Cline',
+                    style: Theme.of(context).textTheme.labelMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
                 ),
-              ),
+                IconButton(
+                  tooltip: l.clineCopy,
+                  onPressed: () =>
+                      Clipboard.setData(ClipboardData(text: message.text)),
+                  icon: const Icon(Icons.copy_outlined, size: 16),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
             for (var i = 0; i < parts.length; i++)
               _part(context, l, parts[i], i),
             if (message.streaming)
@@ -1460,15 +1484,6 @@ class _ClineMessage extends StatelessWidget {
                 ].join('  '),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: IconButton(
-                tooltip: l.clineCopy,
-                onPressed: () =>
-                    Clipboard.setData(ClipboardData(text: message.text)),
-                icon: const Icon(Icons.copy_outlined, size: 17),
-              ),
-            ),
           ],
         ),
       ),

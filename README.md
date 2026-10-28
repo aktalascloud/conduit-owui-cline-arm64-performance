@@ -1,5 +1,7 @@
 # Conduit · OWUI + Cline · ARM64
 
+Cline chat: compact unified composer, inline message actions and one-row controls; existing SSH/session/approval state and global palettes are preserved.
+
 [English](README.md) · [Русский](README.ru.md) · [Upstream](https://github.com/cogwheel0/conduit) · [Releases](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest)
 
 Unofficial Conduit fork for OWUI + Cline: one signed ARM64 APK with extended Russian interface and MCP/workspace dialogs.
