@@ -3,6 +3,13 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {VRMLoaderPlugin, VRMUtils} from '@pixiv/three-vrm';
 
 const MAX = 25 * 1024 * 1024;
+// Standard TTS exposes playback events, not PCM. Keep that approximation
+// explicit instead of animating from the user's microphone or claiming visemes.
+export function mouthWeight(time,{speaking=false,level=0,metered=true}={}) {
+  if(!speaking)return 0;
+  if(metered)return Math.min(1,Math.max(0,Number(level)||0));
+  return .12+.42*Math.abs(Math.sin(time*9.4))*Math.abs(Math.cos(time*2.1));
+}
 export function readAvatar(data) {
   if (data.byteLength < 28 || data.byteLength > MAX) throw Error('Invalid avatar size');
   const v = new DataView(data), n = v.getUint32(12, true);
@@ -68,7 +75,7 @@ export async function createAvatar(canvas,data) {
   let elapsed=0,disposed=false,lastWidth=0,lastHeight=0;
   return {
     capabilities:{mouth:!!expressions?.getExpression('aa'),blink:!!expressions?.getExpression('blink')},
-    render(dt,{speaking=false,level=0,reducedMotion=false}={}) {
+    render(dt,{speaking=false,level=0,metered=true,reducedMotion=false}={}) {
       if(disposed)return;
       elapsed+=Math.min(.1,Math.max(0,dt));
       const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);
@@ -78,7 +85,7 @@ export async function createAvatar(canvas,data) {
       }
       const distance=height*.8/Math.tan(Math.PI/12)*Math.max(1,1/camera.aspect);
       camera.position.copy(center).add(new THREE.Vector3(0,0,distance));camera.lookAt(center);
-      expressions?.setValue('aa',speaking?Math.min(1,Math.max(0,Number(level)||0)):0);
+      expressions?.setValue('aa',mouthWeight(elapsed,{speaking,level,metered}));
       const blink=reducedMotion?0:Math.max(0,1-Math.abs((elapsed%4.6)-4.45)/.09);
       if(expressions?.getExpression('blink'))expressions.setValue('blink',blink);
       else{expressions?.setValue('blinkLeft',blink);expressions?.setValue('blinkRight',blink);}

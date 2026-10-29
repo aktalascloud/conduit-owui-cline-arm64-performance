@@ -158,6 +158,8 @@ class _ChatVoiceModeServiceLifecycleGate {
 }
 
 class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
+  /// Realtime supplies assistant PCM levels; Standard TTS supplies play events.
+  bool get hasAssistantOutputMeter => _realtime != null;
   static const int _maxEmptyTranscriptRestarts = 4;
   static const int _emptyTranscriptBaseDelayMs = 250;
   static const int _emptyTranscriptMaxDelayMs = 2000;

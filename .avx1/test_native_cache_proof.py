@@ -18,6 +18,7 @@ class ExactNativeCache(unittest.TestCase):
         (self.root/'.avx1/measurements').mkdir(parents=True)
         for name in ('native_arm64.py','native-arm64.json','toolchains.json'):
             shutil.copyfile(ROOT/'.avx1'/name, self.root/'.avx1'/name)
+        shutil.copyfile(ROOT/'pubspec.lock', self.root/'pubspec.lock')
         (self.build/'Release/compile_commands.json').write_text('[]')
         self.names = ('libonnxruntime.so','libonnxruntime4j_jni.so')
         for name in self.names: (self.build/'Release'/name).write_bytes(name.encode())
@@ -25,6 +26,7 @@ class ExactNativeCache(unittest.TestCase):
         self.proof = {'run_id':1,'source_commit':'a'*40,'compiler':'NDK Clang exact version',
             'policy_sha256':file_hash(self.root/'.avx1/native-arm64.json'),
             'toolchains_sha256':file_hash(self.root/'.avx1/toolchains.json'),
+            'lockfile_sha256':file_hash(self.root/'pubspec.lock'),
             'compilation_signature':compilation_signature(self.root/'.avx1/native_arm64.py'),
             'compile_database_sha256':file_hash(self.build/'Release/compile_commands.json'),
             'binaries':{n:file_hash(self.build/'Release'/n) for n in self.names}}
@@ -52,6 +54,9 @@ class ExactNativeCache(unittest.TestCase):
         self.assertEqual(self.verify(),'miss')
     def test_command_evidence_change_rejects(self):
         (self.build/'Release/compile_commands.json').write_text('[{}]')
+        self.assertEqual(self.verify(),'miss')
+    def test_dependency_lock_change_rejects(self):
+        (self.root/'pubspec.lock').write_text('changed dependency graph')
         self.assertEqual(self.verify(),'miss')
     def test_missing_or_incomplete_reference_rejects(self):
         self.proof['binaries'].pop(self.names[0]);self.save()

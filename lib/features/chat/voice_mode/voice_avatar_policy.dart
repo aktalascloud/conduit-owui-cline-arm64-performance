@@ -24,9 +24,11 @@ Map<String, Object> voiceAvatarSignals({
   required int intensity,
   required bool active,
   required bool reducedMotion,
+  bool outputMetered = true,
 }) => {
   'speaking': speaking && active,
   'level': speaking && active ? intensity.clamp(0, 10) / 10 : 0.0,
   'active': active,
   'reducedMotion': reducedMotion,
+  'metered': outputMetered,
 };

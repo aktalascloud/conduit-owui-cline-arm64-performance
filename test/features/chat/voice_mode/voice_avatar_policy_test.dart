@@ -54,6 +54,16 @@ void main() {
     expect(signal(true, -1, true)['level'], 0);
     expect(signal(true, 5, true)['level'], .5);
     expect(signal(true, 5, true)['reducedMotion'], isTrue);
+    expect(
+      voiceAvatarSignals(
+        speaking: true,
+        intensity: 0,
+        active: true,
+        reducedMotion: false,
+        outputMetered: false,
+      )['metered'],
+      isFalse,
+    );
   });
   test(
     'viewport cannot access network, files, storage or Native Messaging',

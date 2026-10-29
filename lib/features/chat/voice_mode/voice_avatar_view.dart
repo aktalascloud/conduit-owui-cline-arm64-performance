@@ -22,6 +22,7 @@ class VoiceAvatarView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!snapshot.isActive) return const SizedBox.shrink();
     final id = voiceAvatarFileId(ref.watch(selectedModelProvider));
     if (id == null) return const SizedBox.shrink();
     final api = ref.watch(apiServiceProvider);
@@ -31,6 +32,9 @@ class VoiceAvatarView extends ConsumerWidget {
       api: api,
       fileId: id,
       snapshot: snapshot,
+      outputMetered: ref
+          .read(chatVoiceModeControllerProvider.notifier)
+          .hasAssistantOutputMeter,
     );
   }
 }
@@ -41,10 +45,12 @@ class _AvatarViewport extends StatefulWidget {
     required this.api,
     required this.fileId,
     required this.snapshot,
+    required this.outputMetered,
   });
   final ApiService api;
   final String fileId;
   final ChatVoiceModeSnapshot snapshot;
+  final bool outputMetered;
 
   @override
   State<_AvatarViewport> createState() => _AvatarViewportState();
@@ -86,6 +92,7 @@ class _AvatarViewportState extends State<_AvatarViewport>
       intensity: s.intensity,
       active: _foreground && s.isActive && !s.isCollapsed,
       reducedMotion: MediaQuery.disableAnimationsOf(context),
+      outputMetered: widget.outputMetered,
     );
     try {
       await _controller?.evaluateJavascript(

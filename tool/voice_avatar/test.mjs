@@ -2,7 +2,17 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {readAvatar} from './renderer.js';
+import {readAvatar,mouthWeight} from './renderer.js';
+
+test('standard TTS animates only during actual playback; metered silence stays closed',()=>{
+ assert.equal(mouthWeight(1,{speaking:false,metered:false}),0);
+ assert.equal(mouthWeight(1,{speaking:true,metered:true,level:0}),0);
+ assert.equal(mouthWeight(1,{speaking:true,metered:true,level:.6}),.6);
+ const a=mouthWeight(1,{speaking:true,metered:false,level:0});
+ const b=mouthWeight(1.1,{speaking:true,metered:false,level:0});
+ assert.ok(a>0&&b>0&&a!==b);
+ assert.equal(mouthWeight(1,{speaking:false,metered:true,level:10}),0);
+});
 
 function fixture(change=()=>{}) {
  const bones=['hips','spine','head','leftUpperArm','rightUpperArm','leftLowerArm','rightLowerArm'];

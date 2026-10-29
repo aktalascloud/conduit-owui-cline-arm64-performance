@@ -13,5 +13,6 @@
     "libonnxruntime4j_jni.so": "bdb5d81569cd0b1a7a97281dca3a473224959c88acd43e5eb412338edc4c0fd7"
   },
   "also_qualified_apk_source": "73237e92505bec1da6ad61b84edb34a7830bfebc",
-  "also_qualified_apk_run": 40666979951
+  "also_qualified_apk_run": 40666979951,
+  "lockfile_sha256": "6184cbff0d285327854af0f7924b046d4a2421d6c1a04164dd2e88f177231f83"
 }

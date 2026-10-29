@@ -115,7 +115,7 @@
   },
   {
     "id": "VOICE-AVATAR-001",
-    "description": "Local offline VRM0/1 viewport in native OWUI voice calls. Authenticated bounded file download, embedded resource/texture budgets, assistant-only mouth level, blink, background disposal, blocked network/files/Native Messaging. Existing Cline chat and unavailable Cline voice unchanged. Personal avatar assets are not distributed.",
+    "description": "Local offline VRM0/1 viewport in native OWUI voice calls. Authenticated bounded file download, embedded resource/texture budgets, assistant-only animation: Standard TTS playback-state fallback and Realtime output level, blink, background disposal, blocked network/files/Native Messaging. Existing Cline chat and unavailable Cline voice unchanged. Personal avatar assets are not distributed.",
     "source": "local; Three.js0.186.1 and three-vrm3.5.5 MIT"
   }
 ]

@@ -43,6 +43,7 @@ def verify_cache(root, build, compiler):
         proof = json.loads(reference.read_text('utf-8'))
         exact = (proof['policy_sha256'] == file_hash(root/'.avx1/native-arm64.json') and
                  proof['toolchains_sha256'] == file_hash(root/'.avx1/toolchains.json') and
+                 proof['lockfile_sha256'] == file_hash(root/'pubspec.lock') and
                  proof['compilation_signature'] == compilation_signature(root/'.avx1/native_arm64.py') and
                  proof['compiler'] == compiler and
                  proof['compile_database_sha256'] == file_hash(build/'Release/compile_commands.json'))

@@ -14,7 +14,7 @@ First screen → Cline via SSH → import the private connection JSON from your 
 
 ## Changes
 
-OWUI voice calls display the model’s configured VRM0/1 avatar in a local offline 3D viewport. The native call controls remain available. Upload avatars in OWUI model settings; personal avatars are not bundled. Cline voice is not implemented.
+OWUI voice calls display the model’s configured VRM0/1 avatar in a local offline 3D viewport. The native call controls remain available. Standard TTS uses playback-state mouth animation; Realtime uses output levels when available. Upload avatars in OWUI model settings; personal avatars are not bundled. Cline voice is not implemented.
 
 - Cline is a fourth primary tab alongside Chats, Notes and Terminal. Its native chat reuses Conduit controls and light/dark colors; switching keeps SSH, drafts and attachments.
 - Upstream 4.2.2: trailing dictation [#893](https://github.com/cogwheel0/conduit/pull/893), model-change consent [#890](https://github.com/cogwheel0/conduit/pull/890), opt-in reasoning [#871](https://github.com/cogwheel0/conduit/pull/871), Android Back [#892](https://github.com/cogwheel0/conduit/pull/892).
