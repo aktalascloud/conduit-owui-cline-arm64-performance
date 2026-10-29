@@ -26,7 +26,7 @@ OWUI voice calls display the model’s configured VRM0/1 avatar in a local offli
 
 ## Evidence
 
-Verified APK: **94,595,796 bytes**; **217 targeted Flutter checks** with unchanged coverage inherited from the qualified **5224-test full baseline**. Cline is loaded on first use; switching keeps its SSH session, draft, attachments and scroll position, plus the OWUI search state. Controls follow the selected Conduit light/dark palette. Signature, nine ARM64 libraries, ABI/exports and 16 KiB alignment are verified. Phone/LLM speed is unmeasured. [Exact source, hashes and check scope](.avx1/measurements/cline-navigation-12295ec9.json).
+Verified APK: **94,790,427 bytes**. Offline VRM rendering, Standard-TTS playback-state animation and Realtime output levels are covered by targeted tests. CI passed the chat, Cline, navigation and backend-smoke suites; unchanged coverage is inherited from the qualified **5224-test baseline**. The permanent signature, nine ARM64 libraries, ABI/exports and 16 KiB alignment are verified. Phone/LLM speed is unmeasured. [Source, hashes and exact scope](.avx1/measurements/voice-avatars-b2addfde.json).
 
 No LLM weights or personal configuration. The original 2.3 MB Silero VAD detector remains bundled with its verified MIT notice.
 

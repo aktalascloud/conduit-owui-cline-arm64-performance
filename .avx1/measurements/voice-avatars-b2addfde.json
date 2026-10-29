@@ -1,0 +1,32 @@
+{
+  "source_commit": "b2addfde25550d5a64e8c6e2acfd8473c09126df",
+  "ci_run": 40828780529,
+  "release_url": "https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/tag/daily-20261029-b2addfde",
+  "apk_bytes": 94790427,
+  "apk_sha256": "17f609adb420fa41c48a0299cb0fb9df3c1802dc1f01abfe667843045d607072",
+  "checks": {
+    "flutter_scope": [
+      "test/core/providers/backend_mode_providers_test.dart",
+      "test/core/providers/chat_entry_readiness_providers_test.dart",
+      "test/features/chat",
+      "test/features/cline",
+      "test/features/navigation"
+    ],
+    "full_suite": "Not rerun; unchanged coverage inherited from qualified5224-test baseline21add098.",
+    "analysis": "No errors; existing style infos are non-fatal.",
+    "offline_renderer": "3 Node GLB/CSP/Standard-TTS regressions",
+    "native_cache": "8 exact-input/corruption/lockfile regressions; Python3.12/3.13 fingerprints agree",
+    "locale": "Russian keys/placeholders checked",
+    "native": "Permanent application ID/signature,9 ARM64 libraries, ABI/exports and16KiB gates passed"
+  },
+  "onnx_cache": {
+    "status": "reused",
+    "reference_run": 40821699974,
+    "reference_source": "11cae6e436e48b51fde41efdaaca015c63866d57",
+    "reference_sha256": "9e142637e50a5d234f6f5826824f1f7ffe1fe9b3a9cdb5c0e71668f35370bd36",
+    "scope": "Exact source/toolchain/flags/recipe/compiler/commands and both binary SHA256; ABI/exports/ELF/package gates still run"
+  },
+  "phone_or_llm_speedup_percent": null,
+  "physical_phone_runtime": "Not tested; desktop Chromium graphics and Flutter widgets qualified",
+  "personal_avatar_files": "Not distributed; configure through OWUI model settings."
+}
