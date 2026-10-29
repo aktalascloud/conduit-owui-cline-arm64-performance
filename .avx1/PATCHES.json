@@ -112,5 +112,10 @@
     "id": "APK-018",
     "description": "Compact native Cline chat only: one unified composer, single-row mode/model/project controls, model subtitle, inline message copy and overflow cues. Preserve SSH/session/draft/scroll/approval behavior and all global palettes.",
     "source": "User-requested native UI refinement;18 focused widget tests across five palettes, both brightness modes, large text and keyboard. No phone-speed percentage claimed."
+  },
+  {
+    "id": "VOICE-AVATAR-001",
+    "description": "Local offline VRM0/1 viewport in native OWUI voice calls. Authenticated bounded file download, embedded resource/texture budgets, assistant-only mouth level, blink, background disposal, blocked network/files/Native Messaging. Existing Cline chat and unavailable Cline voice unchanged. Personal avatar assets are not distributed.",
+    "source": "local; Three.js0.186.1 and three-vrm3.5.5 MIT"
   }
 ]

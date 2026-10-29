@@ -57,6 +57,17 @@ class CheckSelection(unittest.TestCase):
         self.assertEqual(mode, 'targeted')
         self.assertEqual(len(tests), 2)
 
+    def test_offline_avatar_assets_keep_voice_regressions(self):
+        p = self.root / 'test/features/chat/voice_mode/test.dart'
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text('')
+        mode, tests, _, _ = select(['assets/voice_avatar/viewer.html',
+            'tool/voice_avatar/renderer.js', 'pubspec.yaml'], self.root,
+            avatar_assets_only=True)
+        self.assertEqual(mode, 'targeted')
+        self.assertIn('test/features/chat/voice_mode', tests)
+        self.assertEqual(select(['pubspec.yaml'], self.root)[0], 'full')
+
     def test_feature_folder_does_not_run_its_changed_test_twice(self):
         mode, tests, _, _ = select(['lib/features/cline/client.dart', 'test/features/cline/client_test.dart'], self.root)
         self.assertEqual(mode, 'targeted')

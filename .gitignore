@@ -173,3 +173,4 @@ __pycache__/
 *.py[cod]
 remote/private/
 remote/.venv/
+tool/voice_avatar/node_modules/

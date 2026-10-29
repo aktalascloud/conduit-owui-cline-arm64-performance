@@ -11,6 +11,7 @@ import '../../../shared/utils/adaptive_glass.dart';
 import '../../../shared/utils/ui_utils.dart';
 import 'chat_voice_mode_controller.dart';
 import 'voice_mode_error_text.dart';
+import 'voice_avatar_view.dart';
 
 class ChatVoiceModeOverlay extends ConsumerWidget {
   const ChatVoiceModeOverlay({super.key, required this.bottomOffset});
@@ -154,6 +155,7 @@ class _ExpandedVoicePanel extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: Spacing.sm),
+            VoiceAvatarView(snapshot: snapshot),
             _VoiceText(snapshot: snapshot),
             if (snapshot.errorMessage != null) ...[
               const SizedBox(height: Spacing.xs),

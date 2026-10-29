@@ -1,0 +1,13 @@
+import {build} from 'esbuild';
+import {createHash} from 'node:crypto';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+const result=await build({entryPoints:['renderer.js'],bundle:true,minify:true,format:'iife',target:'chrome110',write:false,legalComments:'inline'});
+const js=result.outputFiles[0].text;
+const hash=createHash('sha256').update(js).digest('base64');
+const csp=`default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; img-src blob: data:; connect-src blob:; base-uri 'none'; form-action 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'`;
+const html=`<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}canvas{width:100%;height:100%;display:block}</style></head><body><canvas id="avatar" aria-label="Voice avatar"></canvas><script>${js.replaceAll('</script','<\\/script')}</script></body></html>`;
+mkdirSync('../../assets/voice_avatar',{recursive:true});
+writeFileSync('../../assets/voice_avatar/viewer.html',html);
+const notices=[['three','MIT'],['@pixiv/three-vrm','MIT']].map(([name])=>`## ${name}\n\n${readFileSync(`node_modules/${name}/LICENSE`,'utf8')}`).join('\n\n');
+writeFileSync('../../assets/voice_avatar/LICENSES.txt',notices+'\n');
+console.log('Offline avatar viewer:',Buffer.byteLength(html),'bytes');

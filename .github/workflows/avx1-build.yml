@@ -27,9 +27,18 @@ jobs:
         with:
           node-version: '22'
       - name: Reclaim unused hosted toolchains for native builds
+        # The avatar viewport is an offline, reproducibly bundled graphics asset.
         run: |
           test "$RUNNER_OS" = Linux
           sudo rm -rf -- /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+      - name: Verify offline avatar renderer and dependency advisories
+        working-directory: tool/voice_avatar
+        run: |
+          npm ci --ignore-scripts --no-fund --no-audit
+          npm audit --omit=dev --audit-level=high
+          npm run build
+          npm test
+          git diff --exit-code -- ../../assets/voice_avatar
       - name: Install native build tools
         run: python -m pip install 'cmake>=3.31,<4' ninja
       - name: Identify native source and toolchain cache

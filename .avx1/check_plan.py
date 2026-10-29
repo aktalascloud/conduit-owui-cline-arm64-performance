@@ -11,10 +11,15 @@ SMOKE = ['test/core/providers/backend_mode_providers_test.dart',
 DOC_SUFFIXES = ('.md', '.txt', '.png', '.jpg', '.svg')
 
 
-def select(changed, root, *, recipe_allowed=False):
+def select(changed, root, *, recipe_allowed=False, avatar_assets_only=False):
     targets = set(SMOKE)
     analysis = set()
     for path in changed:
+        if path == '.gitignore':
+            continue  # Privacy/package gates still run; no runtime code.
+        if path.startswith(('assets/voice_avatar/', 'tool/voice_avatar/')) or (path == 'pubspec.yaml' and avatar_assets_only):
+            targets.add('test/features/chat/voice_mode')
+            continue  # Offline JS build/audit/security checks are mandatory in CI.
         if path in {'packages/conduit_core/lib/utils/server_version_compat.dart',
                     'packages/conduit_core/test/utils/server_version_compat_test.dart'}:
             targets.update(['packages/conduit_core/test/utils/server_version_compat_test.dart',
@@ -78,7 +83,11 @@ def plan(root=ROOT):
         changed = git('diff', '--name-only', source, 'HEAD').splitlines()
         current_recipe = hashlib.sha256((root / '.avx1/build.py').read_bytes()).hexdigest()
         allowed = current_recipe == baseline.get('reviewed_verification_only_recipe_sha256')
-        mode, tests, analysis, reason = select(changed, root, recipe_allowed=allowed)
+        old_pubspec = git('show', source + ':pubspec.yaml')
+        current_pubspec = (root / 'pubspec.yaml').read_text('utf-8').strip()
+        asset_line = '    - assets/voice_avatar/\n'
+        asset_only = current_pubspec.count(asset_line) == 1 and current_pubspec.replace(asset_line, '', 1) == old_pubspec
+        mode, tests, analysis, reason = select(changed, root, recipe_allowed=allowed, avatar_assets_only=asset_only)
         return {'mode': mode, 'tests': tests, 'analysis': analysis, 'reason': reason,
                 'baseline_source': source, 'baseline_full_flutter_tests': baseline['full_flutter_tests'],
                 'source_commit': git('rev-parse', 'HEAD'), 'changed_paths': changed,

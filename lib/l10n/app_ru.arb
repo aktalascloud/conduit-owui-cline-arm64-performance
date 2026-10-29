@@ -5542,5 +5542,7 @@
         "example": "Code Assistant"
       }
     }
-  }
+  },
+  "voiceAvatar": "Голосовой аватар",
+  "voiceAvatarUnavailable": "Аватар недоступен. Голосовой звонок продолжается."
 }
