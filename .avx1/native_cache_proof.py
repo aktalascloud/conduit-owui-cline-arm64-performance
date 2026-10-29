@@ -18,13 +18,22 @@ def compilation_signature(path):
              and isinstance(n.args[0], ast.Constant) and n.args[0].value == 'python']
     if len(calls) != 1:
         raise ValueError('ONNX compilation entry point changed')
-    parts = [ast.dump(calls[0], include_attributes=False)]
+    # ast.dump changes its empty-field formatting between Python3.12/3.13.
+    # Encode semantic fields ourselves so maintenance/CI fingerprints agree.
+    def canonical(node):
+        if isinstance(node, ast.AST):
+            return {'type':type(node).__name__, 'fields':{
+                key:canonical(value) for key,value in ast.iter_fields(node)
+                if value is not None and value != []}}
+        if isinstance(node, list): return [canonical(value) for value in node]
+        return node
+    parts = [canonical(calls[0])]
     for name in ('toolchain', 'onnx_compile_evidence', 'verify_elf', 'symbols', 'build_id'):
-        parts.append(ast.dump(functions[name], include_attributes=False))
+        parts.append(canonical(functions[name]))
     for node in tree.body:
         if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id in ('FLAGS','LINK') for t in node.targets):
-            parts.append(ast.dump(node, include_attributes=False))
-    return hashlib.sha256('\n'.join(parts).encode()).hexdigest()
+            parts.append(canonical(node))
+    return hashlib.sha256(json.dumps(parts,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
 
 def verify_cache(root, build, compiler):

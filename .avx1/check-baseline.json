@@ -6,7 +6,7 @@
   "scope": "Qualified immutable 4.2.2 APK: full 5224-test Flutter suite, permanent signing identity and nine-library ARM64/ABI/16KiB gates passed. Subsequent narrow navigation changes use affected suites; shared/native/runtime changes still require broad coverage.",
   "reviewed_native_cache_files": {
     ".avx1/native_arm64.py": "bf706561df4cf7274c85bd7cbeb60d9f3a416d8288b5b34087bcb6fe95ed2a2f",
-    ".avx1/native_cache_proof.py": "d7e1d884243dde2826d49ad4c73c483dbfa599730bc3de971b5ed801de40cb29",
+    ".avx1/native_cache_proof.py": "4175b6ffdda5724268567f21c62af972557cad71eec2f6ffe7557c7990736ab0",
     ".avx1/test_native_cache_proof.py": "f30830be61344a739ebc95ea1a1eaf78bc8a112a9f0a1fd9f4e049c243bd3000"
   },
   "native_cache_scope": "Only exact ONNX binary/compiler/source-policy/toolchain/flags/recipe/compile-database hashes reuse; all ELF/API/JNI/16KiB/package gates remain. Unknown native changes select full coverage."
