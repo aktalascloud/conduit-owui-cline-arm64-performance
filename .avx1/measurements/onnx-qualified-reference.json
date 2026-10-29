@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "run_id": 40821699974,
+  "source_commit": "11cae6e436e48b51fde41efdaaca015c63866d57",
+  "qualification_scope": "Native compilation/flags/exports/AArch64/16KiB completed successfully; the separate Flutter candidate failed an onLoadStop return-type check. Not an APK qualification.",
+  "policy_sha256": "3d2070ea5202ff26f3ea094ec22ce9a3ef7807acee701cccebe6cd8700f5f694",
+  "toolchains_sha256": "52842762d4313e288c0f5e70c972ea25764ebd17b0f9ab7caa4e6d99db06d6e9",
+  "compilation_signature": "0770c1c71ced66b58890df65b2506ff123ebca291bb75b19f83339589f1f5d35",
+  "compiler": "Android (13989888, +pgo, +bolt, +lto, +mlgo, based on r563880c) clang version 21.0.0 (https://android.googlesource.com/toolchain/llvm-project 5e96669f06077099aa41290cdb4c5e6fa0f59349)",
+  "compile_database_sha256": "05ff91c601d0719385906414ad22b86e8e00d7ed4221e824b05725625d50e0fb",
+  "binaries": {
+    "libonnxruntime.so": "8b388eadf807d245646e2fe5be314c8e86dde15e6a11fb819a6b818fd2aafc62",
+    "libonnxruntime4j_jni.so": "bdb5d81569cd0b1a7a97281dca3a473224959c88acd43e5eb412338edc4c0fd7"
+  }
+}

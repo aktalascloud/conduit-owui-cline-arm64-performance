@@ -11,7 +11,7 @@ SMOKE = ['test/core/providers/backend_mode_providers_test.dart',
 DOC_SUFFIXES = ('.md', '.txt', '.png', '.jpg', '.svg')
 
 
-def select(changed, root, *, recipe_allowed=False, avatar_assets_only=False):
+def select(changed, root, *, recipe_allowed=False, avatar_assets_only=False, reviewed_native_cache=False):
     targets = set(SMOKE)
     analysis = set()
     for path in changed:
@@ -30,6 +30,8 @@ def select(changed, root, *, recipe_allowed=False, avatar_assets_only=False):
             continue
         if path == '.avx1/build.py' and recipe_allowed:
             continue
+        if path in ('.avx1/native_arm64.py', '.avx1/native_cache_proof.py', '.avx1/test_native_cache_proof.py') and reviewed_native_cache:
+            continue  # Exact binary cache only; unchanged native flags and all ABI gates.
         if path.startswith(('.avx1/measurements/', '.github/', 'docs/')) or path.endswith('.md'):
             continue
         if path.startswith('.avx1/'):
@@ -87,7 +89,12 @@ def plan(root=ROOT):
         current_pubspec = (root / 'pubspec.yaml').read_text('utf-8').strip()
         asset_line = '    - assets/voice_avatar/\n'
         asset_only = current_pubspec.count(asset_line) == 1 and current_pubspec.replace(asset_line, '', 1) == old_pubspec
-        mode, tests, analysis, reason = select(changed, root, recipe_allowed=allowed, avatar_assets_only=asset_only)
+        cache_files = baseline.get('reviewed_native_cache_files', {})
+        native_cache_allowed = bool(cache_files) and all(
+            (root / name).is_file() and hashlib.sha256((root / name).read_bytes()).hexdigest() == digest
+            for name, digest in cache_files.items())
+        mode, tests, analysis, reason = select(changed, root, recipe_allowed=allowed,
+            avatar_assets_only=asset_only, reviewed_native_cache=native_cache_allowed)
         return {'mode': mode, 'tests': tests, 'analysis': analysis, 'reason': reason,
                 'baseline_source': source, 'baseline_full_flutter_tests': baseline['full_flutter_tests'],
                 'source_commit': git('rev-parse', 'HEAD'), 'changed_paths': changed,

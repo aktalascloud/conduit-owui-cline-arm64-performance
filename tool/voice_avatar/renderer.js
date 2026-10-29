@@ -65,14 +65,17 @@ export async function createAvatar(canvas,data) {
   const height=Math.max(.4,head.y-hips.y), center=head.clone().add(new THREE.Vector3(0,-height*.18,0));
   const camera=new THREE.PerspectiveCamera(30,1,.01,50);
   const expressions=vrm.expressionManager;
-  let elapsed=0,disposed=false;
+  let elapsed=0,disposed=false,lastWidth=0,lastHeight=0;
   return {
     capabilities:{mouth:!!expressions?.getExpression('aa'),blink:!!expressions?.getExpression('blink')},
     render(dt,{speaking=false,level=0,reducedMotion=false}={}) {
       if(disposed)return;
       elapsed+=Math.min(.1,Math.max(0,dt));
       const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);
-      renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+      if(w!==lastWidth||h!==lastHeight){
+        lastWidth=w;lastHeight=h;renderer.setSize(w,h,false);
+        camera.aspect=w/h;camera.updateProjectionMatrix();
+      }
       const distance=height*.8/Math.tan(Math.PI/12)*Math.max(1,1/camera.aspect);
       camera.position.copy(center).add(new THREE.Vector3(0,0,distance));camera.lookAt(center);
       expressions?.setValue('aa',speaking?Math.min(1,Math.max(0,Number(level)||0)):0);

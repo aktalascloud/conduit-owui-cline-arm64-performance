@@ -161,7 +161,6 @@ def build_conduit(package, manifest, channel):
     run("git", "submodule", "update", "--init", "--recursive", "--depth", "1", "third_party/katex", "third_party/mermaid")
     run(flutter, "pub", "get", "--enforce-lockfile")
     from native_arm64 import prepare as prepare_native, inventory as native_inventory
-    native_receipt = prepare_native()
     # Workspace members must finish their code generation before the app.
     for parent in (ROOT / "packages", ROOT / "apps"):
         if parent.exists():
@@ -172,11 +171,13 @@ def build_conduit(package, manifest, channel):
     run(dart, "run", "build_runner", "build", "--delete-conflicting-outputs")
     from check_plan import plan as select_checks
     run(sys.executable, ROOT / '.avx1/test_check_plan.py')
+    run(sys.executable, ROOT / '.avx1/test_native_cache_proof.py')
     checks = select_checks(ROOT)
     write_json(WORK / 'check-plan.json', checks)
     run(flutter, "analyze", "--no-pub", "--no-fatal-infos", "--no-fatal-warnings", *checks['analysis'])
     run(flutter, "test", "--no-pub", *checks['tests'])
     manifest['check_scope'] = {**checks, 'selected_checks': 'passed'}
+    native_receipt = prepare_native()
     outdated = run(flutter, "pub", "outdated", "--json", capture=True).stdout
     (WORK / "dependency-review.json").write_text(outdated, encoding="utf-8")
     key = WORK / "conduit-signing.p12"

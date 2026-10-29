@@ -227,10 +227,14 @@ def onnx_native(receipt):
     if run('git','rev-parse','HEAD',cwd=eigen,capture=True).stdout.strip()!=eigen_pin['commit']:
         raise RuntimeError('Eigen source differs from the exact ONNX dependency commit')
     run('git','diff','--exit-code',cwd=eigen)
-    sdk,ndk,tools,_=toolchain()
+    sdk,ndk,tools,clang=toolchain()
     build=NATIVE/'ort-build'
     release_flags=' '.join([*FLAGS])
-    run('python',source/'tools/ci_build/build.py','--build_dir',build,'--config','Release','--android',
+    from native_cache_proof import verify_cache
+    cache = verify_cache(ROOT, build, run(clang,'--version',capture=True).stdout.splitlines()[0])
+    print('ONNX_NATIVE_CACHE='+json.dumps(cache),flush=True)
+    if cache['status'] != 'reused':
+      run('python',source/'tools/ci_build/build.py','--build_dir',build,'--config','Release','--android',
         '--android_abi','arm64-v8a','--android_api','24','--android_sdk_path',sdk,'--android_ndk_path',ndk,
         '--build_shared_lib','--build_java','--use_nnapi','--use_xnnpack','--enable_lto','--skip_tests',
         '--parallel','2','--cmake_generator','Ninja','--compile_no_warning_as_error',
@@ -260,7 +264,7 @@ def onnx_native(receipt):
         replacements['jni/arm64-v8a/'+name]=target.read_bytes()
         receipt[name]={'kind':'source-built','version':pin['version'],'source':pin['repository'],
                        'source_commit':pin['commit'],'compile_flags':FLAGS,'link_flags':LINK,
-                       'compiler_command_evidence':compiler_evidence,
+                       'compiler_command_evidence':compiler_evidence,'qualified_binary_cache':cache,
                        'providers':['CPU','NNAPI','XNNPACK'],'full_operator_build':True,
                        'checks':['original public API/JNI exports preserved','AArch64 ELF','16 KiB pages'],
                        'sha256_before_android_strip':sha256(target),'build_id':build_id(target,tools),

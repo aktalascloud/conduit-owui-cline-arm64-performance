@@ -196,10 +196,11 @@ class _AvatarViewportState extends State<_AvatarViewport>
                 onWebViewCreated: (c) => _controller = c,
                 onLoadStop: (c, _) {
                   _initialDocument = false;
-                  return _load(c);
+                  unawaited(_load(c));
                 },
                 shouldOverrideUrlLoading: (_, action) async {
-                  if (_initialDocument && action.isForMainFrame == true &&
+                  if (_initialDocument &&
+                      action.isForMainFrame == true &&
                       action.request.url?.toString() == '$voiceAvatarOrigin/') {
                     _initialDocument = false;
                     return NavigationActionPolicy.ALLOW;
