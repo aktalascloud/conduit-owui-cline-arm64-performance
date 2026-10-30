@@ -111,7 +111,9 @@ if(typeof window!=='undefined' && document.getElementById('avatar')) {
   window.conduitAvatar={
     append(part){if(dead||avatar||typeof part!=='string'||part.length>131072||(bytes+=part.length)>Math.ceil(MAX/3)*4)throw Error('Invalid transfer');chunks.push(part);},
     async load(){try{const raw=atob(chunks.join(''));chunks=[];const data=Uint8Array.from(raw,c=>c.charCodeAt(0)).buffer;
-      const loaded=await createAvatar(canvas,data);if(dead){loaded.dispose();return false;}avatar=loaded;resume();return {ok:true,...avatar.capabilities};
+      const loaded=await createAvatar(canvas,data);if(dead){loaded.dispose();return false;}avatar=loaded;
+      // Report readiness only after the first real WebGL draw succeeds.
+      avatar.render(0,{speaking:false,reducedMotion:true});resume();return {ok:true,...avatar.capabilities};
     }catch(_){chunks=[];return {ok:false};}},
     signal(value){signals={...signals,...value};stop();if(!signals.active)avatar?.render(0,{speaking:false,reducedMotion:true});else resume();},
     dispose(){dead=true;chunks=[];stop();avatar?.dispose();avatar=null;}

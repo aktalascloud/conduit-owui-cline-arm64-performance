@@ -22,7 +22,11 @@ class VoiceAvatarView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!snapshot.isActive) return const SizedBox.shrink();
+    // Native microphone/audio setup completes before the optional graphics
+    // platform view is mounted. The renderer never owns the voice session.
+    if (!snapshot.isActive || snapshot.phase == ChatVoiceModePhase.starting) {
+      return const SizedBox.shrink();
+    }
     final id = voiceAvatarFileId(ref.watch(selectedModelProvider));
     if (id == null) return const SizedBox.shrink();
     final api = ref.watch(apiServiceProvider);
@@ -107,6 +111,20 @@ class _AvatarViewportState extends State<_AvatarViewport>
     if (_initializing || _loaded || !mounted) return;
     _initializing = true;
     try {
+      // Android onLoadStop can precede the renderer's script initialization.
+      var ready = false;
+      for (var attempt = 0; attempt < 100 && mounted; attempt++) {
+        final value = await controller.evaluateJavascript(
+          source: 'typeof window.conduitAvatar?.append === "function"',
+        );
+        if (value == true || value == 'true') {
+          ready = true;
+          break;
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+      if (!ready || !mounted)
+        throw const FormatException('Avatar document unavailable');
       final data = await widget.api.getFileContent(
         widget.fileId,
         maxBytes: voiceAvatarMaxBytes,
@@ -133,7 +151,7 @@ class _AvatarViewportState extends State<_AvatarViewport>
         source: 'window.avatarLoadResult=null; void window.conduitAvatar.load().then(r=>window.avatarLoadResult=r);',
       );
       dynamic value;
-      for (var attempt = 0; attempt < 200 && mounted; attempt++) {
+      for (var attempt = 0; attempt < 600 && mounted; attempt++) {
         value = await controller.evaluateJavascript(
           source: 'window.avatarLoadResult',
         );
@@ -147,7 +165,10 @@ class _AvatarViewportState extends State<_AvatarViewport>
       if (value is! Map || value['ok'] != true) {
         throw const FormatException('Avatar renderer unavailable');
       }
-      setState(() => _loaded = true);
+      setState(() {
+        _loaded = true;
+        _failed = false;
+      });
       await _sync();
     } catch (_) {
       if (mounted) setState(() => _failed = true);
@@ -214,15 +235,28 @@ class _AvatarViewportState extends State<_AvatarViewport>
                   }
                   return NavigationActionPolicy.CANCEL;
                 },
-                shouldInterceptRequest: (_, request) async =>
-                    voiceAvatarResourceAllowed(request.url.uriValue)
-                    ? null
-                    : WebResourceResponse(
-                        statusCode: 403,
-                        reasonPhrase: 'Blocked',
-                        contentType: 'text/plain',
-                        data: Uint8List(0),
-                      ),
+                shouldInterceptRequest: (_, request) async {
+                  if (voiceAvatarDocumentAllowed(
+                    request.url.uriValue,
+                    isMainFrame: request.isForMainFrame == true,
+                  )) {
+                    return WebResourceResponse(
+                      statusCode: 200,
+                      reasonPhrase: 'OK',
+                      contentType: 'text/html',
+                      contentEncoding: 'utf-8',
+                      data: Uint8List.fromList(utf8.encode(html.data!)),
+                    );
+                  }
+                  return voiceAvatarResourceAllowed(request.url.uriValue)
+                      ? null
+                      : WebResourceResponse(
+                          statusCode: 403,
+                          reasonPhrase: 'Blocked',
+                          contentType: 'text/plain',
+                          data: Uint8List(0),
+                        );
+                },
                 onCreateWindow: (_, _) async => false,
                 onPermissionRequest: (_, _) async =>
                     PermissionResponse(action: PermissionResponseAction.DENY),
@@ -230,8 +264,16 @@ class _AvatarViewportState extends State<_AvatarViewport>
                   handledByClient: true,
                   filePaths: null,
                 ),
-                onReceivedError: (_, _, _) {
-                  if (mounted) setState(() => _failed = true);
+                onReceivedError: (_, request, _) {
+                  // A blocked favicon/subresource must not hide a healthy rig
+                  // or interrupt the independent native microphone/TTS path.
+                  if (mounted &&
+                      voiceAvatarLoadErrorIsFatal(
+                        request.url.uriValue,
+                        isMainFrame: request.isForMainFrame == true,
+                      )) {
+                    setState(() => _failed = true);
+                  }
                 },
               ),
             );

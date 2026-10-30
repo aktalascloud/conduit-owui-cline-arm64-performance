@@ -4,6 +4,36 @@ import 'package:conduit_core/models/model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('only the bundled main document may be served; resource errors are not fatal', () {
+    final document = Uri.parse('$voiceAvatarOrigin/');
+    expect(voiceAvatarDocumentAllowed(document, isMainFrame: true), isTrue);
+    expect(voiceAvatarDocumentAllowed(document, isMainFrame: false), isFalse);
+    for (final url in [
+      'https://example.com/',
+      '$voiceAvatarOrigin/key',
+      '$voiceAvatarOrigin/?url=file:///private',
+    ]) {
+      expect(
+        voiceAvatarDocumentAllowed(Uri.parse(url), isMainFrame: true),
+        isFalse,
+      );
+    }
+    expect(
+      voiceAvatarLoadErrorIsFatal(
+        Uri.parse('$voiceAvatarOrigin/favicon.ico'),
+        isMainFrame: false,
+      ),
+      isFalse,
+    );
+    expect(
+      voiceAvatarLoadErrorIsFatal(
+        Uri.parse('blob:$voiceAvatarOrigin/texture'),
+        isMainFrame: false,
+      ),
+      isFalse,
+    );
+    expect(voiceAvatarLoadErrorIsFatal(document, isMainFrame: true), isTrue);
+  });
   const id = '97abe420-cbc2-4f30-a00c-7940119d7d4f';
   test('uses the selected model avatar, never a provider URL', () {
     final model = Model.fromJson({

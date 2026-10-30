@@ -117,5 +117,10 @@
     "id": "VOICE-AVATAR-001",
     "description": "Local offline VRM0/1 viewport in native OWUI voice calls. Authenticated bounded file download, embedded resource/texture budgets, assistant-only animation: Standard TTS playback-state fallback and Realtime output level, blink, background disposal, blocked network/files/Native Messaging. Existing Cline chat and unavailable Cline voice unchanged. Personal avatar assets are not distributed.",
     "source": "local; Three.js0.186.1 and three-vrm3.5.5 MIT"
+  },
+  {
+    "id": "VOICE-AVATAR-002",
+    "description": "Android offline document served from bundled HTML; ignore non-main-frame blocked resource errors; await renderer bootstrap and the first real WebGL frame. Start graphics only after native audio initialization. Stock microphone/STT/TTS/filter routing, voice selection and audio settings unchanged.",
+    "source": "User-reported Android avatar/voice regression; document-origin/resource-isolation and native voice lifecycle regressions. No physical-phone claim from desktop Chromium."
   }
 ]

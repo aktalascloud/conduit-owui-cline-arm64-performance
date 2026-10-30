@@ -19,6 +19,13 @@ String? voiceAvatarFileId(Model? model) {
 
 bool voiceAvatarResourceAllowed(Uri? uri) => uri?.scheme == 'blob';
 
+/// The one synthetic document is served from bundled bytes, never the network.
+bool voiceAvatarDocumentAllowed(Uri? uri, {required bool isMainFrame}) =>
+    isMainFrame && uri?.toString() == '$voiceAvatarOrigin/';
+
+bool voiceAvatarLoadErrorIsFatal(Uri? uri, {required bool isMainFrame}) =>
+    voiceAvatarDocumentAllowed(uri, isMainFrame: isMainFrame);
+
 Map<String, Object> voiceAvatarSignals({
   required bool speaking,
   required int intensity,
