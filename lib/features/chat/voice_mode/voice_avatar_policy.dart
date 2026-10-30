@@ -1,7 +1,9 @@
 import 'package:conduit_core/models/model.dart';
 
 const voiceAvatarMaxBytes = 25 * 1024 * 1024;
-const voiceAvatarOrigin = 'https://conduit-avatar.invalid';
+const voiceAvatarOrigin = 'https://appassets.androidplatform.net';
+const voiceAvatarDocumentUrl =
+    '$voiceAvatarOrigin/assets/flutter_assets/assets/voice_avatar/viewer.html';
 
 /// Only model-owned file IDs are accepted, never provider-supplied URLs.
 String? voiceAvatarFileId(Model? model) {
@@ -21,7 +23,7 @@ bool voiceAvatarResourceAllowed(Uri? uri) => uri?.scheme == 'blob';
 
 /// The one synthetic document is served from bundled bytes, never the network.
 bool voiceAvatarDocumentAllowed(Uri? uri, {required bool isMainFrame}) =>
-    isMainFrame && uri?.toString() == '$voiceAvatarOrigin/';
+    isMainFrame && uri?.toString() == voiceAvatarDocumentUrl;
 
 bool voiceAvatarLoadErrorIsFatal(Uri? uri, {required bool isMainFrame}) =>
     voiceAvatarDocumentAllowed(uri, isMainFrame: isMainFrame);

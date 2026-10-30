@@ -122,5 +122,10 @@
     "id": "VOICE-AVATAR-002",
     "description": "Android offline document served from bundled HTML; ignore non-main-frame blocked resource errors; await renderer bootstrap and the first real WebGL frame. Start graphics only after native audio initialization. Stock microphone/STT/TTS/filter routing, voice selection and audio settings unchanged.",
     "source": "User-reported Android avatar/voice regression; document-origin/resource-isolation and native voice lifecycle regressions. No physical-phone claim from desktop Chromium."
+  },
+  {
+    "id": "VOICE-AVATAR-003",
+    "description": "Android starts the packaged viewer through the native AndroidX WebViewAssetLoader at its HTTPS appassets origin; no synthetic network document or one-shot navigation flag. Keep strict CSP, blocked external network/files, no JS bridge and native audio ownership. Show bounded ASSET/BOOT/FETCH/TRANSFER/RENDER codes without tokens, model bytes or raw error text.",
+    "source": "User confirmed prior3e4f0727 still failed; actual APK contains the correct asset/CSP, but no VRM content request reaches the backend. Native plugin source inspected, real asset-origin/CSP Chromium flow and all3 personal rigs passed; phone confirmation remains required."
   }
 ]

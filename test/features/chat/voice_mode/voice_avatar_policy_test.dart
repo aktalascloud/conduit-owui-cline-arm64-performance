@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('only the bundled main document may be served; resource errors are not fatal', () {
-    final document = Uri.parse('$voiceAvatarOrigin/');
+    final document = Uri.parse(voiceAvatarDocumentUrl);
     expect(voiceAvatarDocumentAllowed(document, isMainFrame: true), isTrue);
     expect(voiceAvatarDocumentAllowed(document, isMainFrame: false), isFalse);
     for (final url in [
@@ -114,6 +114,8 @@ void main() {
       );
       final s = voiceAvatarWebViewSettings();
       expect(s.blockNetworkLoads, isTrue);
+      expect(s.webViewAssetLoader?.domain, 'appassets.androidplatform.net');
+      expect(s.webViewAssetLoader?.pathHandlers?.single.path, '/assets/');
       expect(s.allowFileAccess, isFalse);
       expect(s.allowContentAccess, isFalse);
       expect(s.javaScriptBridgeEnabled, isFalse);

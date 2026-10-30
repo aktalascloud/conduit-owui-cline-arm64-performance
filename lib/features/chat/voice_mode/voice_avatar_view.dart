@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:conduit_core/providers/app_providers.dart';
 import 'package:conduit_core/services/api_service.dart';
@@ -67,7 +68,7 @@ class _AvatarViewportState extends State<_AvatarViewport>
   InAppWebViewController? _controller;
   bool _loaded = false, _failed = false, _initializing = false;
   bool _foreground = true;
-  bool _initialDocument = true;
+  String _failureCode = 'DOC';
 
   @override
   void initState() {
@@ -111,6 +112,7 @@ class _AvatarViewportState extends State<_AvatarViewport>
     if (_initializing || _loaded || !mounted) return;
     _initializing = true;
     try {
+      _failureCode = 'BOOT';
       // Android onLoadStop can precede the renderer's script initialization.
       var ready = false;
       for (var attempt = 0; attempt < 100 && mounted; attempt++) {
@@ -125,6 +127,7 @@ class _AvatarViewportState extends State<_AvatarViewport>
       }
       if (!ready || !mounted)
         throw const FormatException('Avatar document unavailable');
+      _failureCode = 'FETCH';
       final data = await widget.api.getFileContent(
         widget.fileId,
         maxBytes: voiceAvatarMaxBytes,
@@ -137,6 +140,7 @@ class _AvatarViewportState extends State<_AvatarViewport>
           !RegExp(r'^[A-Za-z0-9+/]*={0,2}$').hasMatch(data)) {
         throw const FormatException('Invalid avatar data');
       }
+      _failureCode = 'TRANSFER';
       for (var start = 0; start < data.length; start += 131072) {
         if (!mounted || _cancel.isCancelled) return;
         final end = (start + 131072).clamp(0, data.length);
@@ -145,6 +149,7 @@ class _AvatarViewportState extends State<_AvatarViewport>
               'window.conduitAvatar.append(${jsonEncode(data.substring(start, end))});',
         );
       }
+      _failureCode = 'RENDER';
       // Android's asynchronous-result helper uses a Native Messaging bridge.
       // Keep that bridge disabled and read a bounded graphics-only result.
       await controller.evaluateJavascript(
@@ -170,8 +175,12 @@ class _AvatarViewportState extends State<_AvatarViewport>
         _failed = false;
       });
       await _sync();
-    } catch (_) {
+    } catch (error) {
+      if (error is DioException && error.response?.statusCode != null)
+        _failureCode = 'FETCH-${error.response!.statusCode}';
       if (mounted) setState(() => _failed = true);
+    } finally {
+      _initializing = false;
     }
   }
 
@@ -194,7 +203,7 @@ class _AvatarViewportState extends State<_AvatarViewport>
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Text(
-          l10n.voiceAvatarUnavailable,
+          '${l10n.voiceAvatarUnavailable} [$_failureCode]',
           style: TextStyle(color: context.conduitTheme.textSecondary),
         ),
       );
@@ -212,25 +221,30 @@ class _AvatarViewportState extends State<_AvatarViewport>
         child: FutureBuilder<String>(
           future: _html,
           builder: (context, html) {
-            if (html.hasError) return Text(l10n.voiceAvatarUnavailable);
+            if (html.hasError)
+              return Text('${l10n.voiceAvatarUnavailable} [ASSET]');
             if (!html.hasData) return const SizedBox.shrink();
             return IgnorePointer(
               child: InAppWebView(
-                initialData: InAppWebViewInitialData(
-                  data: html.data!,
-                  baseUrl: WebUri('$voiceAvatarOrigin/'),
-                ),
+                initialUrlRequest: Platform.isAndroid
+                    ? URLRequest(url: WebUri(voiceAvatarDocumentUrl))
+                    : null,
+                initialData: Platform.isAndroid
+                    ? null
+                    : InAppWebViewInitialData(
+                        data: html.data!,
+                        baseUrl: WebUri(voiceAvatarDocumentUrl),
+                      ),
                 initialSettings: voiceAvatarWebViewSettings(),
                 onWebViewCreated: (c) => _controller = c,
                 onLoadStop: (c, _) {
-                  _initialDocument = false;
                   unawaited(_load(c));
                 },
                 shouldOverrideUrlLoading: (_, action) async {
-                  if (_initialDocument &&
-                      action.isForMainFrame == true &&
-                      action.request.url?.toString() == '$voiceAvatarOrigin/') {
-                    _initialDocument = false;
+                  if (voiceAvatarDocumentAllowed(
+                    action.request.url?.uriValue,
+                    isMainFrame: action.isForMainFrame == true,
+                  )) {
                     return NavigationActionPolicy.ALLOW;
                   }
                   return NavigationActionPolicy.CANCEL;
@@ -286,6 +300,10 @@ class _AvatarViewportState extends State<_AvatarViewport>
 
 InAppWebViewSettings voiceAvatarWebViewSettings() => InAppWebViewSettings(
   javaScriptEnabled: true,
+  webViewAssetLoader: WebViewAssetLoader(
+    domain: 'appassets.androidplatform.net',
+    pathHandlers: [AssetsPathHandler(path: '/assets/')],
+  ),
   transparentBackground: true,
   javaScriptCanOpenWindowsAutomatically: false,
   supportMultipleWindows: false,
