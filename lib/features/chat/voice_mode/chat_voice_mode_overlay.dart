@@ -4,6 +4,7 @@ import 'package:conduit/shared/widgets/platform_ui/platform_ui.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:conduit_core/providers/app_providers.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/theme/theme_extensions.dart';
@@ -12,6 +13,10 @@ import '../../../shared/utils/ui_utils.dart';
 import 'chat_voice_mode_controller.dart';
 import 'voice_mode_error_text.dart';
 import 'voice_avatar_view.dart';
+import 'voice_avatar_policy.dart';
+
+bool voiceAvatarHasRoom(double availableHeight, double textScale) =>
+    availableHeight >= 360 * textScale.clamp(1.0, 1.6);
 
 class ChatVoiceModeOverlay extends ConsumerWidget {
   const ChatVoiceModeOverlay({super.key, required this.bottomOffset});
@@ -38,10 +43,26 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
     }
 
     final bottom = bottomOffset + Spacing.sm;
+    final hasAvatar =
+        snapshot.isActive &&
+        snapshot.phase != ChatVoiceModePhase.starting &&
+        voiceAvatarFileId(ref.watch(selectedModelProvider)) != null;
+    final media = MediaQuery.of(context);
+    final available =
+        media.size.height -
+        media.viewInsets.bottom -
+        media.padding.vertical -
+        bottom -
+        kToolbarHeight;
+    final compact =
+        snapshot.isCollapsed ||
+        (hasAvatar &&
+            !voiceAvatarHasRoom(available, media.textScaler.scale(1)));
     return Positioned(
       left: Spacing.inputPadding,
       right: Spacing.inputPadding,
       bottom: bottom,
+      top: hasAvatar && !compact ? Spacing.sm : null,
       child: AnimatedSize(
         key: const ValueKey('voice-mode-surface-size'),
         duration: context.motionDuration(const Duration(milliseconds: 180)),
@@ -56,7 +77,8 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
           layoutBuilder: (currentChild, previousChildren) {
             return Stack(
               alignment: Alignment.bottomCenter,
-              children: <Widget>[...previousChildren, ?currentChild],
+              // Compact positioning is unbounded; discard the outgoing flex panel.
+              children: <Widget>[if (!compact) ...previousChildren, ?currentChild],
             );
           },
           transitionBuilder: (child, animation) {
@@ -79,7 +101,7 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
               ),
             );
           },
-          child: snapshot.isCollapsed
+          child: compact
               ? _CollapsedVoicePill(
                   key: const ValueKey('voice-mode-collapsed'),
                   snapshot: snapshot,
@@ -87,6 +109,7 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
               : _ExpandedVoicePanel(
                   key: const ValueKey('voice-mode-expanded'),
                   snapshot: snapshot,
+                  hasAvatar: hasAvatar,
                 ),
         ),
       ),
@@ -95,9 +118,14 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
 }
 
 class _ExpandedVoicePanel extends ConsumerWidget {
-  const _ExpandedVoicePanel({super.key, required this.snapshot});
+  const _ExpandedVoicePanel({
+    super.key,
+    required this.snapshot,
+    required this.hasAvatar,
+  });
 
   final ChatVoiceModeSnapshot snapshot;
+  final bool hasAvatar;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -108,7 +136,7 @@ class _ExpandedVoicePanel extends ConsumerWidget {
     return DecoratedBox(
       key: const ValueKey('voice-overlay-expanded'),
       decoration: BoxDecoration(
-        color: theme.cardBackground.withValues(alpha: 0.96),
+        color: theme.cardBackground.withValues(alpha: 1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: theme.cardBorder),
         boxShadow: ConduitShadows.messageBubble(context),
@@ -116,7 +144,7 @@ class _ExpandedVoicePanel extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.all(Spacing.md),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: hasAvatar ? MainAxisSize.max : MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -155,7 +183,12 @@ class _ExpandedVoicePanel extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: Spacing.sm),
-            VoiceAvatarView(snapshot: snapshot),
+            if (hasAvatar)
+              Expanded(
+                child: VoiceAvatarView(snapshot: snapshot, fillAvailable: true),
+              )
+            else
+              VoiceAvatarView(snapshot: snapshot),
             _VoiceText(snapshot: snapshot),
             if (snapshot.errorMessage != null) ...[
               const SizedBox(height: Spacing.xs),

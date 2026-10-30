@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io' show Platform;
 
 import 'package:conduit_core/providers/app_providers.dart';
+import 'package:conduit_core/features/auth/providers/unified_auth_providers.dart';
 import 'package:conduit_core/services/api_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
@@ -14,12 +15,18 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import 'chat_voice_mode_controller.dart';
 import 'voice_avatar_policy.dart';
+import 'voice_avatar_cache.dart';
 
 /// A local graphics viewport only. Chat, audio, permissions and API auth remain
 /// native. The isolated document receives model bytes and numeric signals only.
 class VoiceAvatarView extends ConsumerWidget {
-  const VoiceAvatarView({super.key, required this.snapshot});
+  const VoiceAvatarView({
+    super.key,
+    required this.snapshot,
+    this.fillAvailable = false,
+  });
   final ChatVoiceModeSnapshot snapshot;
+  final bool fillAvailable;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,11 +39,15 @@ class VoiceAvatarView extends ConsumerWidget {
     if (id == null) return const SizedBox.shrink();
     final api = ref.watch(apiServiceProvider);
     if (api == null) return const SizedBox.shrink();
+    final userId = ref.watch(currentUserProvider2)?.id;
+    if (userId == null) return const SizedBox.shrink();
     return _AvatarViewport(
-      key: ValueKey((api, id)),
+      key: ValueKey((api, userId, id)),
       api: api,
+      userId: userId,
       fileId: id,
       snapshot: snapshot,
+      fillAvailable: fillAvailable,
       outputMetered: ref
           .read(chatVoiceModeControllerProvider.notifier)
           .hasAssistantOutputMeter,
@@ -48,13 +59,17 @@ class _AvatarViewport extends StatefulWidget {
   const _AvatarViewport({
     super.key,
     required this.api,
+    required this.userId,
     required this.fileId,
     required this.snapshot,
+    required this.fillAvailable,
     required this.outputMetered,
   });
   final ApiService api;
+  final String userId;
   final String fileId;
   final ChatVoiceModeSnapshot snapshot;
+  final bool fillAvailable;
   final bool outputMetered;
 
   @override
@@ -128,11 +143,23 @@ class _AvatarViewportState extends State<_AvatarViewport>
       if (!ready || !mounted)
         throw const FormatException('Avatar document unavailable');
       _failureCode = 'FETCH';
-      final data = await widget.api.getFileContent(
+      final auth = widget.api.captureAuthSnapshot();
+      // Recheck current access, but never redownload an unchanged VRM body.
+      await widget.api.getFileInfo(
         widget.fileId,
-        maxBytes: voiceAvatarMaxBytes,
-        authSnapshot: widget.api.captureAuthSnapshot(),
+        authSnapshot: auth,
         cancelToken: _cancel,
+      );
+      final data = await VoiceAvatarCache().load(
+        server: widget.api.baseUrl,
+        userId: widget.userId,
+        fileId: widget.fileId,
+        download: () => widget.api.getFileContent(
+          widget.fileId,
+          maxBytes: voiceAvatarMaxBytes,
+          authSnapshot: auth,
+          cancelToken: _cancel,
+        ),
       );
       if (!mounted) return;
       // Never send the API client, token, cookies or resource URLs to JS.
@@ -214,7 +241,9 @@ class _AvatarViewportState extends State<_AvatarViewport>
         MediaQuery.viewInsetsOf(context).bottom;
     final height = (room * .27).clamp(96.0, 230.0);
     return SizedBox(
-      height: height,
+      key: const ValueKey('voice-avatar-viewport'),
+      height: widget.fillAvailable ? null : height,
+      width: double.infinity,
       child: Semantics(
         label: l10n.voiceAvatar,
         image: true,

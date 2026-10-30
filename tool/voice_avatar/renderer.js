@@ -1,12 +1,17 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {VRMLoaderPlugin, VRMUtils} from '@pixiv/three-vrm';
+import {boundedBitmapLoader} from './texture-loader.js';
 
 const MAX = 25 * 1024 * 1024;
 // Match phone density without exceeding a 2 MP drawing buffer or GPU limits.
 export function renderPixelRatio(dpr, width, height, maxDimension=4096) {
   const w=Math.max(1,Number(width)||1),h=Math.max(1,Number(height)||1);
   return Math.min(Math.max(1,Number(dpr)||1),3,Math.sqrt(2_000_000/(w*h)),maxDimension/w,maxDimension/h);
+}
+export function fullBodyDistance(width,height,depth,aspect,fov=30) {
+  const tangent=Math.tan(fov*Math.PI/360);
+  return Math.max(height/(2*tangent),width/(2*tangent*Math.max(.1,aspect)))*1.08+depth/2;
 }
 // Standard TTS exposes playback events, not PCM. Keep that approximation
 // explicit instead of animating from the user's microphone or claiming visemes.
@@ -47,16 +52,21 @@ export function readAvatar(data) {
 
 export async function createAvatar(canvas,data) {
   const {json:j,start}=readAvatar(data);
-  let pixels=0;
+  let pixels=0;const images=[];
   for(const im of j.images??[]) {
     const b=j.bufferViews[im.bufferView];
-    const bmp=await createImageBitmap(new Blob([data.slice(start+(b.byteOffset??0),start+(b.byteOffset??0)+b.byteLength)],{type:im.mimeType}));
-    const invalid=bmp.width>4096 || bmp.height>4096 || (pixels+=bmp.width*bmp.height)>32*1024*1024;
+    const bytes=new Uint8Array(data,start+(b.byteOffset??0),b.byteLength);
+    const bmp=await createImageBitmap(new Blob([bytes],{type:im.mimeType}));
+    images.push({data:bytes,width:bmp.width,height:bmp.height});
+    const invalid=bmp.width>8192 || bmp.height>8192 || (pixels+=bmp.width*bmp.height)>128*1024*1024;
     bmp.close(); if(invalid) throw Error('Avatar texture budget exceeded');
   }
   const manager=new THREE.LoadingManager();
   manager.setURLModifier(u=>{if(!u.startsWith('blob:'))throw Error('External resources blocked');return u;});
-  const loader=new GLTFLoader(manager); loader.register(p=>new VRMLoaderPlugin(p));
+  const loader=new GLTFLoader(manager); loader.register(p=>{
+    Object.assign(p,{textureLoader:boundedBitmapLoader(images)});
+    return new VRMLoaderPlugin(p);
+  });
   const gltf=await loader.parseAsync(data,''); const vrm=gltf.userData.vrm;
   if(!vrm){VRMUtils.deepDispose(gltf.scene);throw Error('Unsupported VRM');}
   VRMUtils.rotateVRM0(vrm);
@@ -75,10 +85,16 @@ export async function createAvatar(canvas,data) {
   const mirror=vrm.meta.metaVersion==='0'?-1:1;
   if(bone('leftUpperArm'))bone('leftUpperArm').rotation.z=-1.35*mirror;
   if(bone('rightUpperArm'))bone('rightUpperArm').rotation.z=1.35*mirror;
+  if(bone('hips'))bone('hips').rotation.z=.035*mirror;
+  if(bone('spine'))bone('spine').rotation.z=-.02*mirror;
+  if(bone('leftLowerArm'))bone('leftLowerArm').rotation.x=-.08;
+  if(bone('rightLowerArm'))bone('rightLowerArm').rotation.x=-.12;
   vrm.update(0);vrm.scene.updateMatrixWorld(true);
-  const head=bone('head')?.getWorldPosition(new THREE.Vector3())??new THREE.Vector3(0,1.5,0);
-  const hips=bone('hips')?.getWorldPosition(new THREE.Vector3())??new THREE.Vector3(0,.8,0);
-  const height=Math.max(.4,head.y-hips.y), center=head.clone().add(new THREE.Vector3(0,-height*.12,0));
+  const bounds=new THREE.Box3().setFromObject(vrm.scene,true);
+  const size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
+  if(![size.x,size.y,size.z,center.x,center.y,center.z].every(Number.isFinite)||size.y<=0) {
+    VRMUtils.deepDispose(vrm.scene);renderer.dispose();throw Error('Invalid avatar bounds');
+  }
   const camera=new THREE.PerspectiveCamera(30,1,.01,50);
   const expressions=vrm.expressionManager;
   let elapsed=0,disposed=false,lastWidth=0,lastHeight=0,lastRatio=0;
@@ -93,7 +109,8 @@ export async function createAvatar(canvas,data) {
         lastWidth=w;lastHeight=h;lastRatio=ratio;renderer.setPixelRatio(ratio);renderer.setSize(w,h,false);
         camera.aspect=w/h;camera.updateProjectionMatrix();
       }
-      const distance=height*.55/Math.tan(Math.PI/12)*Math.max(1,1/camera.aspect);
+      const distance=fullBodyDistance(size.x,size.y,size.z,camera.aspect,camera.fov);
+      camera.far=Math.max(50,distance+size.z+size.y);camera.updateProjectionMatrix();
       camera.position.copy(center).add(new THREE.Vector3(0,0,distance));camera.lookAt(center);
       expressions?.setValue('aa',mouthWeight(elapsed,{speaking,level,metered}));
       const blink=reducedMotion?0:Math.max(0,1-Math.abs((elapsed%4.6)-4.45)/.09);

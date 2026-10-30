@@ -136,5 +136,14 @@
       "Offline CSP/security tests",
       "Three real rig/expression renders at device scale3:1080x1200 buffer; no physical-phone performance claim"
     ]
+  },
+  {
+    "id": "VOICE-AVATAR-005",
+    "description": "Full-body adaptive voice panel; bounded high-resolution VRM texture loading; private 100 MiB server/account/file cache with SHA256 validation and authenticated metadata checks. Stock audio unchanged.",
+    "verification": [
+      "12 targeted cache/policy/overlay tests",
+      "Real Chromium avatar-loader import and full-body WebGL fixture",
+      "ARM64 release AOT; existing 8 native libraries reused; signature/16KiB checks"
+    ]
   }
 ]

@@ -31,3 +31,5 @@ Verified APK: **94,790,427 bytes**. Offline VRM rendering, Standard-TTS playback
 No LLM weights or personal configuration. The original 2.3 MB Silero VAD detector remains bundled with its verified MIT notice.
 
 Original licenses/notices and source history are preserved. Exact corresponding source is linked from each release. Credentials, logs, LLM weights and private filter/bridge code stay outside the public packages.
+
+Avatar update: full-body Conduit voice view and a private 100 MiB VRM cache; avatars stay on your OWUI server, never inside the APK. New uploads: 20 MiB, source textures up to 8K; display memory is bounded. Existing audio routing is preserved.

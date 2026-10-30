@@ -2,7 +2,25 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {readAvatar,mouthWeight,renderPixelRatio} from './renderer.js';
+import {readAvatar,mouthWeight,renderPixelRatio,fullBodyDistance} from './renderer.js';
+import {textureResizePlan,boundedBitmapLoader} from './texture-loader.js';
+
+test('full-body framing fits head, feet and width on tall and wide viewports',()=>{
+ for(const aspect of [.45,.7,1,2]) {
+  const distance=fullBodyDistance(.8,1.85,.4,aspect);
+  const visibleHalfHeight=(distance-.2)*Math.tan(Math.PI/12);
+  assert.ok(visibleHalfHeight>1.85/2);assert.ok(visibleHalfHeight*aspect>.8/2);
+ }
+});
+
+test('large source textures fit a bounded GPU budget without upscaling',async()=>{
+ const sizes=[{width:8192,height:8192},{width:4096,height:4096}];
+ const plans=textureResizePlan(sizes);
+ assert.ok(plans.reduce((n,p)=>n+p.width*p.height,0)<=32*1024*1024);
+ assert.ok(plans.every(p=>p.width<=4096&&p.height<=4096));
+ assert.deepEqual(textureResizePlan([{width:128,height:256}]),[{width:128,height:256}]);
+ await new Promise(resolve=>boundedBitmapLoader([]).load('https://example.invalid',()=>assert.fail('Remote image loaded'),null,error=>{assert.match(error.message,/blocked/);resolve();}));
+});
 
 test('phone density stays sharp within bounded GPU buffer dimensions',()=>{
  assert.equal(renderPixelRatio(3,360,230),3);
