@@ -2,8 +2,13 @@ import 'package:conduit/features/chat/voice_mode/voice_avatar_policy.dart';
 import 'package:conduit/features/chat/voice_mode/voice_avatar_view.dart';
 import 'package:conduit_core/models/model.dart';
 import 'package:flutter_test/flutter_test.dart';
+// Exercise the Android implementation already pinned by flutter_inappwebview.
+// ignore: depend_on_referenced_packages
+import 'package:flutter_inappwebview_android/flutter_inappwebview_android.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(AndroidInAppWebViewPlatform.registerWith);
   test('only the bundled main document may be served; resource errors are not fatal', () {
     final document = Uri.parse(voiceAvatarDocumentUrl);
     expect(voiceAvatarDocumentAllowed(document, isMainFrame: true), isTrue);
