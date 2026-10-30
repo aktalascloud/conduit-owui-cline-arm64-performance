@@ -2,7 +2,18 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {readAvatar,mouthWeight} from './renderer.js';
+import {readAvatar,mouthWeight,renderPixelRatio} from './renderer.js';
+
+test('phone density stays sharp within bounded GPU buffer dimensions',()=>{
+ assert.equal(renderPixelRatio(3,360,230),3);
+ assert.equal(renderPixelRatio(4,360,230),3);
+ assert.equal(renderPixelRatio(1,360,230),1);
+ assert.equal(renderPixelRatio(undefined,360,230),1);
+ for(const [w,h,max] of [[2000,1500,4096],[5000,100,2048],[360,230,1024]]) {
+  const r=renderPixelRatio(4,w,h,max);
+  assert.ok(w*h*r*r<=2_000_001);assert.ok(w*r<=max);assert.ok(h*r<=max);
+ }
+});
 
 test('standard TTS animates only during actual playback; metered silence stays closed',()=>{
  assert.equal(mouthWeight(1,{speaking:false,metered:false}),0);

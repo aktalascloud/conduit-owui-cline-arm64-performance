@@ -3,6 +3,11 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {VRMLoaderPlugin, VRMUtils} from '@pixiv/three-vrm';
 
 const MAX = 25 * 1024 * 1024;
+// Match phone density without exceeding a 2 MP drawing buffer or GPU limits.
+export function renderPixelRatio(dpr, width, height, maxDimension=4096) {
+  const w=Math.max(1,Number(width)||1),h=Math.max(1,Number(height)||1);
+  return Math.min(Math.max(1,Number(dpr)||1),3,Math.sqrt(2_000_000/(w*h)),maxDimension/w,maxDimension/h);
+}
 // Standard TTS exposes playback events, not PCM. Keep that approximation
 // explicit instead of animating from the user's microphone or claiming visemes.
 export function mouthWeight(time,{speaking=false,level=0,metered=true}={}) {
@@ -58,7 +63,11 @@ export async function createAvatar(canvas,data) {
   let renderer;
   try{renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,powerPreference:'low-power'});}
   catch(e){VRMUtils.deepDispose(vrm.scene);throw e;}
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+  const anisotropy=Math.max(1,Math.min(4,renderer.capabilities.getMaxAnisotropy()));
+  vrm.scene.traverse(object=>{
+    for(const material of (Array.isArray(object.material)?object.material:[object.material]))
+      if(material?.map)material.map.anisotropy=anisotropy;
+  });
   renderer.setClearColor(0,0); renderer.outputColorSpace=THREE.SRGBColorSpace;
   const scene=new THREE.Scene();scene.add(vrm.scene,new THREE.HemisphereLight(0xffffff,0x9ca3af,2));
   const light=new THREE.DirectionalLight(0xffffff,2.2);light.position.set(-1,2,3);scene.add(light);
@@ -69,21 +78,22 @@ export async function createAvatar(canvas,data) {
   vrm.update(0);vrm.scene.updateMatrixWorld(true);
   const head=bone('head')?.getWorldPosition(new THREE.Vector3())??new THREE.Vector3(0,1.5,0);
   const hips=bone('hips')?.getWorldPosition(new THREE.Vector3())??new THREE.Vector3(0,.8,0);
-  const height=Math.max(.4,head.y-hips.y), center=head.clone().add(new THREE.Vector3(0,-height*.18,0));
+  const height=Math.max(.4,head.y-hips.y), center=head.clone().add(new THREE.Vector3(0,-height*.12,0));
   const camera=new THREE.PerspectiveCamera(30,1,.01,50);
   const expressions=vrm.expressionManager;
-  let elapsed=0,disposed=false,lastWidth=0,lastHeight=0;
+  let elapsed=0,disposed=false,lastWidth=0,lastHeight=0,lastRatio=0;
   return {
     capabilities:{mouth:!!expressions?.getExpression('aa'),blink:!!expressions?.getExpression('blink')},
     render(dt,{speaking=false,level=0,metered=true,reducedMotion=false}={}) {
       if(disposed)return;
       elapsed+=Math.min(.1,Math.max(0,dt));
       const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);
-      if(w!==lastWidth||h!==lastHeight){
-        lastWidth=w;lastHeight=h;renderer.setSize(w,h,false);
+      const ratio=renderPixelRatio(window.devicePixelRatio,w,h,renderer.capabilities.maxTextureSize);
+      if(w!==lastWidth||h!==lastHeight||ratio!==lastRatio){
+        lastWidth=w;lastHeight=h;lastRatio=ratio;renderer.setPixelRatio(ratio);renderer.setSize(w,h,false);
         camera.aspect=w/h;camera.updateProjectionMatrix();
       }
-      const distance=height*.8/Math.tan(Math.PI/12)*Math.max(1,1/camera.aspect);
+      const distance=height*.55/Math.tan(Math.PI/12)*Math.max(1,1/camera.aspect);
       camera.position.copy(center).add(new THREE.Vector3(0,0,distance));camera.lookAt(center);
       expressions?.setValue('aa',mouthWeight(elapsed,{speaking,level,metered}));
       const blink=reducedMotion?0:Math.max(0,1-Math.abs((elapsed%4.6)-4.45)/.09);

@@ -127,5 +127,14 @@
     "id": "VOICE-AVATAR-003",
     "description": "Android starts the packaged viewer through the native AndroidX WebViewAssetLoader at its HTTPS appassets origin; no synthetic network document or one-shot navigation flag. Keep strict CSP, blocked external network/files, no JS bridge and native audio ownership. Show bounded ASSET/BOOT/FETCH/TRANSFER/RENDER codes without tokens, model bytes or raw error text.",
     "source": "User confirmed prior3e4f0727 still failed; actual APK contains the correct asset/CSP, but no VRM content request reaches the backend. Native plugin source inspected, real asset-origin/CSP Chromium flow and all3 personal rigs passed; phone confirmation remains required."
+  },
+  {
+    "id": "VOICE-AVATAR-004",
+    "description": "Sharper phone avatars: up to native3x device pixel ratio, bounded2MP/GPU dimensions; up to4x anisotropy and closer portrait framing. Native asset-loader security,30fps and stock audio remain. Personal outfit assets are server-side and are not distributed in this APK.",
+    "verification": [
+      "Pixel-budget/density regression",
+      "Offline CSP/security tests",
+      "Three real rig/expression renders at device scale3:1080x1200 buffer; no physical-phone performance claim"
+    ]
   }
 ]
