@@ -6,6 +6,7 @@ import 'package:conduit/l10n/app_localizations.dart';
 import 'package:conduit/shared/theme/app_theme.dart';
 import 'package:conduit/shared/theme/tweakcn_themes.dart';
 import 'package:conduit/shared/theme/color_tokens.dart' show contrastRatio;
+import 'package:conduit/shared/theme/theme_extensions.dart';
 import 'package:conduit/l10n/conduit_localizations.dart';
 import 'package:conduit/features/navigation/widgets/sidebar_tab_registry.dart';
 import 'package:conduit_core/features/navigation/models/sidebar_navigation_model.dart';
@@ -142,6 +143,34 @@ Future<void> _unmount(WidgetTester tester, ClineNativeClient client) async {
 }
 
 void main() {
+  testWidgets('disconnect reports reconnecting and never replays the draft', (
+    tester,
+  ) async {
+    final wire = _Wire();
+    final client = ClineNativeClient(wire, project: r'C:\Project');
+    await _mount(tester, wire, client);
+    await tester.enterText(
+      find.byKey(const Key('cline-native-input')),
+      'unsent fixture',
+    );
+    final before = wire.sent.where((f) => f['type'] == 'send').length;
+    unawaited(wire.close());
+    await tester.pump(const Duration(milliseconds: 80));
+    await tester.pump();
+    expect(find.text('Переподключение…'), findsOneWidget);
+    expect(wire.sent.where((f) => f['type'] == 'send').length, before);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('cline-native-input')))
+          .controller!
+          .text,
+      'unsent fixture',
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    unawaited(client.close());
+    await tester.pump();
+    await tester.pump();
+  });
   testWidgets(
     'Cline workspace stays unmounted until its first explicit tab selection',
     (tester) async {
@@ -262,12 +291,20 @@ void main() {
               ? AppTheme.dark(palette)
               : AppTheme.light(palette);
           await _mount(tester, wire, client, theme: theme);
-          final chip = tester.widget<ChoiceChip>(
-            find.byKey(const ValueKey('cline-mode-act')),
-          );
-          expect(chip.selected, isTrue);
+          expect(find.byKey(const ValueKey('cline-mode-act')), findsNothing);
+          expect(find.byKey(const ValueKey('cline-mode-plan')), findsNothing);
+          final labelFinder = find
+              .descendant(
+                of: find.byKey(const Key('cline-model-picker')),
+                matching: find.byType(Text),
+              )
+              .first;
+          final label = tester.widget<Text>(labelFinder);
           expect(
-            contrastRatio(chip.labelStyle!.color!, chip.selectedColor!),
+            contrastRatio(
+              label.style!.color!,
+              tester.element(labelFinder).conduitTheme.inputBackground,
+            ),
             greaterThanOrEqualTo(4.5),
           );
           final input = tester.widget<TextField>(
@@ -275,9 +312,7 @@ void main() {
           );
           expect(input.decoration!.focusedBorder, InputBorder.none);
           expect(input.decoration!.enabledBorder, InputBorder.none);
-          await tester.tap(find.byKey(const ValueKey('cline-mode-plan')));
-          await tester.pump(const Duration(milliseconds: 80));
-          expect(client.state.mode, 'plan');
+          expect(client.state.mode, 'act');
           expect(wire.sent.where((frame) => frame['type'] == 'send'), isEmpty);
           expect(tester.takeException(), isNull);
           await _unmount(tester, client);

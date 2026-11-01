@@ -89,6 +89,10 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
   String? _lastScope;
   bool _followOutput = true;
   int? _lastRender;
+  Timer? _retryTimer;
+  int _retryAttempt = 0;
+  bool _manualDisconnect = false;
+  String? _restoreSession, _restoreUncertain, _restoreIdentity;
 
   @override
   void initState() {
@@ -96,6 +100,24 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
     _memory = ref.read(clineWorkspaceMemoryProvider);
     _drafts = _memory.drafts;
     _files = _memory.files;
+    ref.listenManual(clineBackendStateProvider, (previous, next) {
+      final state = next.value;
+      if (state == null) return;
+      if (!state.connected || (!state.hubConnected && !_connecting)) {
+        _scheduleReconnect();
+      } else if (state.hubConnected) {
+        _retryTimer?.cancel();
+        _retryTimer = null;
+        _retryAttempt = 0;
+        if (!state.busy && !state.loadingHistory && state.mode != 'act') {
+          try {
+            ref.read(clineBackendClientProvider)?.configure(mode: 'act');
+          } on ClineNativeException {
+            /* A simultaneous history update will notify again. */
+          }
+        }
+      }
+    });
     _scroll.addListener(() {
       if (_scroll.hasClients && _draftKey.isNotEmpty) {
         _memory.offsets[_draftKey] = _scroll.offset;
@@ -111,7 +133,14 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
   void didUpdateWidget(ClineWorkspacePage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.active && !oldWidget.active && !_connecting) {
-      unawaited(_ensureConnected());
+      if (ref.read(clineBackendClientProvider)?.state.connected == false) {
+        _scheduleReconnect();
+      } else {
+        unawaited(_ensureConnected());
+      }
+    } else if (!widget.active) {
+      _retryTimer?.cancel();
+      _retryTimer = null;
     }
   }
 
@@ -129,6 +158,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
 
   @override
   void dispose() {
+    _retryTimer?.cancel();
     _generation++;
     if (_draftKey.isNotEmpty) _drafts[_draftKey] = _input.text;
     _input.dispose();
@@ -154,14 +184,23 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
   }
 
   Future<void> _ensureConnected({bool reconnect = false}) async {
+    if (_connecting) return;
+    _manualDisconnect = false;
     final epoch = ++_generation;
     if (!reconnect && ref.read(clineBackendClientProvider) != null) return;
     final old = ref.read(clineBackendClientProvider);
-    final restore = old?.state.sessionId;
-    final uncertain = old?.state.uncertainPrompt;
+    if (old != null) {
+      _restoreSession = old.state.sessionId;
+      _restoreUncertain = old.state.uncertainPrompt;
+      _restoreIdentity = old.identity;
+    }
+    var restore = _restoreSession;
+    var uncertain = _restoreUncertain;
     if (reconnect) {
       ref.read(clineBackendClientProvider.notifier).disconnect();
       await old?.close();
+      uncertain = old?.state.uncertainPrompt ?? uncertain;
+      _restoreUncertain = uncertain;
     }
     if (mounted)
       setState(() {
@@ -187,6 +226,10 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
       }
       tunnel = await ClineSshTunnel.connect(profile, localPort: 0);
       native = await ClineNativeClient.connect(tunnel);
+      if (_restoreIdentity != null && native.identity != _restoreIdentity) {
+        restore = uncertain = null;
+        _restoreSession = _restoreUncertain = _restoreIdentity = null;
+      }
       if (!mounted ||
           epoch != _generation ||
           (!widget.embedded &&
@@ -206,9 +249,14 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
       }
       native = null;
       tunnel = null;
-    } catch (_) {
+    } catch (error) {
       await native?.close();
       await tunnel?.close();
+      final terminalFailure =
+          error is ClineConnectionException &&
+          (error.failure == ClineConnectionFailure.hostKey ||
+              error.failure == ClineConnectionFailure.authentication);
+      if (terminalFailure) _manualDisconnect = true;
       if (mounted)
         setState(
           () =>
@@ -217,7 +265,33 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
         );
     } finally {
       if (mounted && epoch == _generation) setState(() => _connecting = false);
+      final current = ref.read(clineBackendClientProvider)?.state;
+      if (_connectError != null ||
+          (current != null && (!current.connected || !current.hubConnected)))
+        _scheduleReconnect();
     }
+  }
+
+  void _scheduleReconnect() {
+    if (!mounted || !widget.active || _manualDisconnect || _retryTimer != null)
+      return;
+    final seconds = (1 << _retryAttempt.clamp(0, 5)).clamp(1, 30);
+    if (_retryAttempt++ == 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.clineReconnecting),
+            ),
+          );
+      });
+    }
+    _retryTimer = Timer(Duration(seconds: seconds), () {
+      _retryTimer = null;
+      if (mounted && widget.active && !_manualDisconnect) {
+        unawaited(_ensureConnected(reconnect: true));
+      }
+    });
   }
 
   void _notice(Object error) {
@@ -447,57 +521,6 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
     }
   }
 
-  Widget _modeChip(
-    ClineNativeClient client,
-    ClineNativeState state,
-    String mode,
-  ) {
-    final palette = context.conduitTheme;
-    final selected = state.mode == mode;
-    final fill = selected
-        ? Color.alphaBlend(
-            palette.textPrimary.withValues(alpha: 0.08),
-            palette.cardBackground,
-          )
-        : palette.cardBackground;
-    final foreground = withMinContrast(palette.textPrimary, fill, 4.5);
-    final l = AppLocalizations.of(context)!;
-    return ChoiceChip(
-      key: ValueKey('cline-mode-' + mode),
-      label: Text(mode == 'plan' ? l.clinePlan : l.clineAct),
-      avatar: Icon(
-        mode == 'plan' ? Icons.account_tree_outlined : Icons.bolt_outlined,
-        size: 16,
-        color: foreground,
-      ),
-      labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
-        color: foreground,
-        fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-      ),
-      backgroundColor: fill,
-      selectedColor: fill,
-      checkmarkColor: foreground,
-      showCheckmark: false,
-      side: BorderSide(
-        color: selected
-            ? palette.textPrimary.withValues(alpha: 0.35)
-            : palette.cardBorder,
-      ),
-      shape: const StadiumBorder(),
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      selected: selected,
-      onSelected: state.busy
-          ? null
-          : (_) {
-              try {
-                client.configure(mode: mode);
-              } catch (error) {
-                _notice(error);
-              }
-            },
-    );
-  }
-
   Widget _composerControls(ClineNativeClient client, ClineNativeState state) {
     final l = AppLocalizations.of(context)!;
     final palette = context.conduitTheme;
@@ -510,17 +533,36 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            for (final mode in ['plan', 'act'])
-              Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: _modeChip(client, state, mode),
-              ),
-            const SizedBox(width: 4),
+            IconButton(
+              key: const Key('cline-native-attach'),
+              tooltip: l.clineUploadFile,
+              onPressed: !state.connected || _uploading
+                  ? null
+                  : () => _upload(client, state),
+              icon: const Icon(Icons.add),
+            ),
+
             IconButton(
               key: const Key('cline-model-picker'),
               tooltip: state.model.isEmpty ? l.clineModels : state.model,
               onPressed: state.busy ? null : () => _models(client, state),
-              icon: const Icon(Icons.smart_toy_outlined, size: 19),
+              icon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.smart_toy_outlined, size: 18),
+                  const SizedBox(width: 6),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 160),
+                    child: Text(
+                      state.model.isEmpty ? l.clineModels : state.model,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: label,
+                    ),
+                  ),
+                  const Icon(Icons.expand_more, size: 16),
+                ],
+              ),
             ),
             IconButton(
               key: const Key('cline-project-picker'),
@@ -562,6 +604,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
     final files = _files[_draftKey] ?? [];
     if (_input.text.trim().isEmpty && files.isEmpty) return;
     try {
+      client.configure(mode: 'act');
       client.sendMessage(_input.text, attachments: files);
       _drafts[_draftKey] = '';
       _input.clear();
@@ -606,6 +649,9 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
       );
       if (yes != true) return;
     }
+    _manualDisconnect = true;
+    _retryTimer?.cancel();
+    _retryTimer = null;
     ref.read(clineBackendClientProvider.notifier).disconnect();
     if (widget.embedded) return;
     await ref
@@ -1079,7 +1125,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                         padding: const EdgeInsets.fromLTRB(6, 4, 6, 2),
                         decoration: BoxDecoration(
                           color: context.conduitTheme.inputBackground,
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: context.conduitTheme.cardBorder,
                           ),
@@ -1099,19 +1145,11 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  IconButton(
-                                    key: const Key('cline-native-attach'),
-                                    tooltip: l.clineUploadFile,
-                                    onPressed: !state.connected || _uploading
-                                        ? null
-                                        : () => _upload(client, state),
-                                    icon: const Icon(Icons.add),
-                                  ),
                                   Expanded(
                                     child: TextField(
                                       key: const Key('cline-native-input'),
                                       controller: _input,
-                                      minLines: 1,
+                                      minLines: 2,
                                       maxLines: 6,
                                       enabled: state.connected,
                                       style: AppTypography.chatMessageStyle,
@@ -1165,17 +1203,16 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                                 ],
                               ),
                             ),
+                            Divider(
+                              height: 1,
+                              color: context.conduitTheme.cardBorder,
+                            ),
                             _composerControls(client, state),
                             if (state.status.isNotEmpty)
                               Text(
                                 _clineStatus(l, state.status),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            if (state.mode.isEmpty)
-                              Text(
-                                l.clineChooseMode,
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             if ((_files[_draftKey]?.isNotEmpty ?? false))

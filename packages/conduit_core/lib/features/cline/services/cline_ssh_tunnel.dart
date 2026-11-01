@@ -52,6 +52,8 @@ final class ClineSshTunnel {
         profile.sshPort,
         timeout: const Duration(seconds: 15),
       );
+      // SSHClient observes the transport stream; drain the sink's separate error future too.
+      socket.done.ignore();
       final client = SSHClient(
         socket,
         username: 'cline',
@@ -106,6 +108,8 @@ final class ClineSshTunnel {
   }
 
   Future<void> _forward(Socket socket) async {
+    // A reset while closing a forwarded socket must not escape the guarded pipes.
+    socket.done.ignore();
     if (_closing || _sockets.length >= 32) {
       socket.destroy();
       return;

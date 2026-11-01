@@ -1,35 +1,22 @@
-# Conduit · OWUI + Cline · ARM64
+# Conduit OWUI + Cline ARM64
 
-Cline chat: compact unified composer, inline message actions and one-row controls; existing SSH/session/approval state and global palettes are preserved.
+Unofficial fork with reviewed agent/MCP fixes and extended Russian UI. One latest APK.
 
-[English](README.md) · [Русский](README.ru.md) · [Upstream](https://github.com/cogwheel0/conduit) · [Releases](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest)
+[Upstream](https://github.com/cogwheel0/conduit) · [Release](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Patches](.avx1/PATCHES.json)
 
-Unofficial Conduit fork for OWUI + Cline: one signed ARM64 APK with extended Russian interface and MCP/workspace dialogs.
+## Build
 
-[Download APK](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest/download/Conduit-OWUI-Cline-arm64-v8a.apk). Permanent fork ID/signature preserve upgrades.
+Requires Python3.12+, Git and GitHub CLI for CI. No LLM, model weights or Codex dependency.
 
-## Remote Cline
+```cmd
+Build.cmd status
+Build.cmd build
+```
 
-First screen → Cline via SSH → import the private connection JSON from your PC. Native Conduit chat includes session history, project folders, model selection, streaming Markdown, tool approvals, Stop and image/document attachments. Requires separately installed Cline and the SSH gateway. [Setup and limitations](remote/README.md).
+`build` verifies the clean published commit and dispatches the pinned workflow. For a prepared local compiler/SDK environment: `Build.cmd local`. Dependencies, flags, tests and license gates are in `.avx1/`; lockfiles and source history are retained. Signing keys stay outside the repository.
 
-## Changes
+## Run and verify
 
-OWUI voice calls display the model’s configured VRM0/1 avatar in a local offline 3D viewport. The native call controls remain available. Standard TTS uses playback-state mouth animation; Realtime uses output levels when available. Upload avatars in OWUI model settings; personal avatars are not bundled. Cline voice is not implemented.
+Use the single release package. Keep user data separate from source. Settings, endpoints and model selection are runtime configuration, not build requirements. Ivy Bridge: AVX/F16C, O3 and verified LTO, without AVX2/FMA/PGO/fast-math. Android: ARM64 release AOT; source-built and prebuilt libraries are identified in the package manifest.
 
-- Cline is a fourth primary tab alongside Chats, Notes and Terminal. Its native chat reuses Conduit controls and light/dark colors; switching keeps SSH, drafts and attachments.
-- Upstream 4.2.2: trailing dictation [#893](https://github.com/cogwheel0/conduit/pull/893), model-change consent [#890](https://github.com/cogwheel0/conduit/pull/890), opt-in reasoning [#871](https://github.com/cogwheel0/conduit/pull/871), Android Back [#892](https://github.com/cogwheel0/conduit/pull/892).
-
-- Model default filters and MCP tool images [#870](https://github.com/cogwheel0/conduit/pull/870), inline video [#869](https://github.com/cogwheel0/conduit/pull/869), late server dictation after Stop [#873](https://github.com/cogwheel0/conduit/pull/873).
-- SQLite 3.53.4, Dart JNI 1.0.3 and ONNX Runtime/JNI 1.22.0: source-built ARMv8-A O3/ThinLTO.
-- Dart release AOT; other vendor binaries are identified separately.
-- ABI/exports, APK signature, 16 KiB ELF/ZIP alignment and native license notices are checked. [Full patch list](.avx1/PATCHES.json).
-
-## Evidence
-
-Verified APK: **94,790,427 bytes**. Offline VRM rendering, Standard-TTS playback-state animation and Realtime output levels are covered by targeted tests. CI passed the chat, Cline, navigation and backend-smoke suites; unchanged coverage is inherited from the qualified **5224-test baseline**. The permanent signature, nine ARM64 libraries, ABI/exports and 16 KiB alignment are verified. Phone/LLM speed is unmeasured. [Source, hashes and exact scope](.avx1/measurements/voice-avatars-b2addfde.json).
-
-No LLM weights or personal configuration. The original 2.3 MB Silero VAD detector remains bundled with its verified MIT notice.
-
-Original licenses/notices and source history are preserved. Exact corresponding source is linked from each release. Credentials, logs, LLM weights and private filter/bridge code stay outside the public packages.
-
-Avatar update: full-body Conduit voice view and a private 100 MiB VRM cache; avatars stay on your OWUI server, never inside the APK. New uploads: 20 MiB, source textures up to 8K; display memory is bounded. Existing audio routing is preserved.
+Current checks and measurements: [.avx1/measurements/latest.json](.avx1/measurements/latest.json). CPU microbenchmarks are not LLM tokens/s. Original licenses and notices apply.

@@ -597,20 +597,26 @@ class _SidebarPageState extends ConsumerState<SidebarPage> {
           }
 
           return AdaptiveScaffold(
-            appBar: AdaptiveAppBar(
-              useNativeToolbar: true,
-              leading: adaptiveAppBarLeading,
-              actions: appBarActions,
-              appBar: _sidebarMaterialAppBar(
-                context: context,
-                leading: appBarLeading,
-                actions: appBarActions,
-                isSearchExpanded: isSearchExpanded,
-                toolbarWidth: toolbarWidth,
-              ),
-            ),
+            appBar: navigation.selectedTab == SidebarTabId.cline
+                ? null
+                : AdaptiveAppBar(
+                    useNativeToolbar: true,
+                    leading: adaptiveAppBarLeading,
+                    actions: appBarActions,
+                    appBar: _sidebarMaterialAppBar(
+                      context: context,
+                      leading: appBarLeading,
+                      actions: appBarActions,
+                      isSearchExpanded: isSearchExpanded,
+                      toolbarWidth: toolbarWidth,
+                    ),
+                  ),
             bottomNavigationBar: bottomNavigationBar,
-            body: sidebarBody,
+            body: SafeArea(
+              top: navigation.selectedTab == SidebarTabId.cline,
+              bottom: false,
+              child: sidebarBody,
+            ),
           );
         },
       ),

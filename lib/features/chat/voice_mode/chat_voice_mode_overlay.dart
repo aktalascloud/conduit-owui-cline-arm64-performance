@@ -78,7 +78,10 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
             return Stack(
               alignment: Alignment.bottomCenter,
               // Compact positioning is unbounded; discard the outgoing flex panel.
-              children: <Widget>[if (!compact) ...previousChildren, ?currentChild],
+              children: <Widget>[
+                if (!compact) ...previousChildren,
+                ?currentChild,
+              ],
             );
           },
           transitionBuilder: (child, animation) {
@@ -105,6 +108,29 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
               ? _CollapsedVoicePill(
                   key: const ValueKey('voice-mode-collapsed'),
                   snapshot: snapshot,
+                )
+              : hasAvatar
+              ? LayoutBuilder(
+                  builder: (context, bounds) {
+                    final height = bounds.maxHeight.clamp(
+                      0.0,
+                      media.size.height * .64,
+                    );
+                    return Align(
+                      alignment: Alignment.bottomCenter,
+                      child:
+                          voiceAvatarHasRoom(height, media.textScaler.scale(1))
+                          ? SizedBox(
+                              height: height,
+                              width: double.infinity,
+                              child: _ExpandedVoicePanel(
+                                snapshot: snapshot,
+                                hasAvatar: true,
+                              ),
+                            )
+                          : _CollapsedVoicePill(snapshot: snapshot),
+                    );
+                  },
                 )
               : _ExpandedVoicePanel(
                   key: const ValueKey('voice-mode-expanded'),

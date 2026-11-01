@@ -15,6 +15,14 @@ def select(changed, root, *, recipe_allowed=False, avatar_assets_only=False, rev
     targets = set(SMOKE)
     analysis = set()
     for path in changed:
+        if path in {'Build.cmd', '.avx1/portable_build.py'}:
+            continue  # Entry points only; pinned build recipe and package gates remain unchanged.
+        if path in {'lib/features/chat/widgets/chat_timeline_viewport.dart',
+                    'lib/shared/widgets/markdown/renderer/chunked_block_column.dart',
+                    'lib/shared/widgets/markdown/streaming_markdown_widget.dart'}:
+            targets.update(['test/features/chat/widgets', 'test/shared/widgets/markdown', 'test/features/cline'])
+            analysis.add(path)
+            continue
         if path == '.gitignore':
             continue  # Privacy/package gates still run; no runtime code.
         if path.startswith(('assets/voice_avatar/', 'tool/voice_avatar/')) or (path == 'pubspec.yaml' and avatar_assets_only):

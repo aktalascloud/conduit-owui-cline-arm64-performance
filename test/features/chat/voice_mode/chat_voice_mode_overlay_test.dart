@@ -24,7 +24,7 @@ void main() {
     ]);
     addTearDown(container.dispose);
     await tester.pumpWidget(_buildActiveHarness(container));
-    expect(tester.getSize(find.byKey(const ValueKey('voice-overlay-expanded'))).height,greaterThan(650));
+    expect(tester.getSize(find.byKey(const ValueKey('voice-overlay-expanded'))).height,inInclusiveRange(360, 560));
     expect(tester.takeException(),isNull);
     await tester.pumpWidget(_buildActiveHarness(container,keyboard:600));
     await tester.pumpAndSettle();

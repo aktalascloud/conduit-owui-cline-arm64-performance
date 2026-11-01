@@ -145,5 +145,13 @@
       "Real Chromium avatar-loader import and full-body WebGL fixture",
       "ARM64 release AOT; existing 8 native libraries reused; signature/16KiB checks"
     ]
+  },
+  {
+    "id": "APK-015",
+    "description": "PR914 long-chat scrollbar stability; adaptive voice panel; compact Act-only Cline composer, one header and automatic pinned-SSH reconnect with backoff, retained drafts/history and no command replay. Drain independent socket completion errors on Windows.",
+    "urls": [
+      "https://github.com/cogwheel0/conduit/pull/914"
+    ],
+    "verification": "Targeted regressions plus exact-source package/privacy/security/startup gates; final CI receipt records actual scope."
   }
 ]

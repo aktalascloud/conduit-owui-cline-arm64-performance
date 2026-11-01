@@ -10543,5 +10543,9 @@
     "description": "Cancel button that keeps the user in the current chat instead of following the Open WebUI server's suggestion."
   },
   "voiceAvatar": "Voice avatar",
-  "voiceAvatarUnavailable": "Avatar unavailable. The voice call continues."
+  "voiceAvatarUnavailable": "Avatar unavailable. The voice call continues.",
+  "clineReconnecting": "Reconnecting…",
+  "@clineReconnecting": {
+    "description": "One notice while restoring an existing SSH connection; commands are never replayed."
+  }
 }
