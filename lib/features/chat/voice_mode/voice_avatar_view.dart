@@ -16,6 +16,7 @@ import '../../../shared/theme/theme_extensions.dart';
 import 'chat_voice_mode_controller.dart';
 import 'voice_avatar_policy.dart';
 import 'voice_avatar_cache.dart';
+import 'voice_avatar_binding.dart';
 
 /// A local graphics viewport only. Chat, audio, permissions and API auth remain
 /// native. The isolated document receives model bytes and numeric signals only.
@@ -35,14 +36,15 @@ class VoiceAvatarView extends ConsumerWidget {
     if (!snapshot.isActive || snapshot.phase == ChatVoiceModePhase.starting) {
       return const SizedBox.shrink();
     }
-    final id = voiceAvatarFileId(ref.watch(selectedModelProvider));
-    if (id == null) return const SizedBox.shrink();
+    final binding = ref.watch(voiceAvatarBindingProvider).asData?.value;
+    if (binding == null) return const SizedBox.shrink();
+    final id = binding.fileId;
     final api = ref.watch(apiServiceProvider);
     if (api == null) return const SizedBox.shrink();
     final userId = ref.watch(currentUserProvider2)?.id;
     if (userId == null) return const SizedBox.shrink();
     return _AvatarViewport(
-      key: ValueKey((api, userId, id)),
+      key: ValueKey((api, userId, id, binding.revision)),
       api: api,
       userId: userId,
       fileId: id,
@@ -145,15 +147,22 @@ class _AvatarViewportState extends State<_AvatarViewport>
       _failureCode = 'FETCH';
       final auth = widget.api.captureAuthSnapshot();
       // Recheck current access, but never redownload an unchanged VRM body.
-      await widget.api.getFileInfo(
+      final info = await widget.api.getFileInfo(
         widget.fileId,
         authSnapshot: auth,
         cancelToken: _cancel,
       );
+      final meta = info['meta'];
+      final hash = meta is Map ? meta['file_hash'] : info['hash'];
+      final expectedHash =
+          hash is String && RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(hash)
+          ? hash.toLowerCase()
+          : null;
       final data = await VoiceAvatarCache().load(
         server: widget.api.baseUrl,
         userId: widget.userId,
         fileId: widget.fileId,
+        expectedSha256: expectedHash,
         download: () => widget.api.getFileContent(
           widget.fileId,
           maxBytes: voiceAvatarMaxBytes,

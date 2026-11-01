@@ -496,19 +496,29 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
               icon: const Icon(Icons.add),
             ),
 
-            IconButton(
+            TextButton(
               key: const Key('cline-model-picker'),
-              tooltip: state.model.isEmpty ? l.clineModels : state.model,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                padding: const EdgeInsets.symmetric(horizontal: Spacing.sm),
+              ),
               onPressed: state.busy ? null : () => _models(client, state),
-              icon: Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.smart_toy_outlined, size: 18),
                   const SizedBox(width: 6),
                   ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 160),
+                    constraints: BoxConstraints(
+                      maxWidth: (MediaQuery.sizeOf(context).width * .48).clamp(
+                        110.0,
+                        320.0,
+                      ),
+                    ),
                     child: Text(
-                      state.model.isEmpty ? l.clineModels : state.model,
+                      (state.model.isEmpty
+                          ? l.clineModels
+                          : _clineModelLabel(state)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: label,
@@ -796,7 +806,13 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
           key: _scaffold,
           resizeToAvoidBottomInset: true,
           appBar: AppBar(
-            toolbarHeight: 52,
+            toolbarHeight:
+                56 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.5),
+            backgroundColor: context.conduitTheme.surfaceBackground,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            titleSpacing: 0,
             title: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -810,7 +826,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                 if (state.model.isNotEmpty &&
                     MediaQuery.textScalerOf(context).scale(1) <= 1.3)
                   Text(
-                    state.model,
+                    _clineModelLabel(state),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -1048,11 +1064,17 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                                 },
                                 child: ListView.builder(
                                   controller: _scroll,
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    12,
-                                    16,
-                                    16,
+                                  padding: EdgeInsets.fromLTRB(
+                                    ((viewport.maxWidth - 880) / 2).clamp(
+                                      Spacing.md,
+                                      double.infinity,
+                                    ),
+                                    Spacing.md,
+                                    ((viewport.maxWidth - 880) / 2).clamp(
+                                      Spacing.md,
+                                      double.infinity,
+                                    ),
+                                    Spacing.sm,
                                   ),
                                   itemCount: state.messages.length,
                                   itemBuilder: (context, index) =>
@@ -1086,11 +1108,19 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                     child: SafeArea(
                       top: false,
                       child: Container(
-                        margin: const EdgeInsets.fromLTRB(12, 6, 12, 10),
-                        padding: const EdgeInsets.fromLTRB(6, 4, 6, 2),
+                        constraints: const BoxConstraints(maxWidth: 900),
+                        margin: const EdgeInsets.fromLTRB(
+                          Spacing.md,
+                          Spacing.sm,
+                          Spacing.md,
+                          Spacing.sm,
+                        ),
+                        padding: const EdgeInsets.all(Spacing.sm),
                         decoration: BoxDecoration(
                           color: context.conduitTheme.inputBackground,
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(
+                            AppBorderRadius.lg,
+                          ),
                           border: Border.all(
                             color: context.conduitTheme.cardBorder,
                           ),
@@ -1098,14 +1128,10 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.transparent,
-                                borderRadius: BorderRadius.circular(22),
-                              ),
+                            Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 4,
+                                horizontal: Spacing.xs,
+                                vertical: Spacing.xs,
                               ),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -1114,8 +1140,13 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                                     child: TextField(
                                       key: const Key('cline-native-input'),
                                       controller: _input,
-                                      minLines: 2,
-                                      maxLines: 6,
+                                      minLines: 1,
+                                      maxLines:
+                                          MediaQuery.viewInsetsOf(context)
+                                                  .bottom >
+                                              0
+                                          ? 4
+                                          : 6,
                                       enabled: state.connected,
                                       style: AppTypography.chatMessageStyle,
                                       decoration: InputDecoration(
@@ -1140,6 +1171,14 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                                   if (state.busy)
                                     IconButton.filled(
                                       key: const Key('cline-native-stop'),
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .errorContainer,
+                                        foregroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .onErrorContainer,
+                                      ),
                                       tooltip: l.clineStop,
                                       onPressed: () {
                                         try {
@@ -1174,11 +1213,19 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                             ),
                             _composerControls(client, state),
                             if (state.status.isNotEmpty)
-                              Text(
-                                _clineStatus(l, state.status),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall,
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  Spacing.sm,
+                                  Spacing.xs,
+                                  Spacing.sm,
+                                  Spacing.xs,
+                                ),
+                                child: Text(
+                                  _clineStatus(l, state.status),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
                               ),
                             if ((_files[_draftKey]?.isNotEmpty ?? false))
                               Align(
@@ -1430,7 +1477,7 @@ class _ClineMessage extends StatelessWidget {
       alignment: user ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         key: ValueKey('cline-message-' + message.id),
-        margin: const EdgeInsets.only(bottom: 14),
+        margin: const EdgeInsets.only(bottom: Spacing.md),
         padding: user
             ? const EdgeInsets.fromLTRB(12, 0, 12, 10)
             : const EdgeInsets.only(bottom: 2),
@@ -1438,7 +1485,9 @@ class _ClineMessage extends StatelessWidget {
         decoration: user
             ? BoxDecoration(
                 color: context.conduitTheme.inputBackground,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(
+                  AppBorderRadius.messageBubble,
+                ),
               )
             : null,
         child: Column(
@@ -1597,4 +1646,12 @@ class _ClineMessage extends StatelessWidget {
       ),
     );
   }
+}
+
+String _clineModelLabel(ClineNativeState state) {
+  final name = state.models[state.provider]
+      ?.where((m) => m.id == state.model)
+      .firstOrNull
+      ?.name;
+  return name == null || name.trim().isEmpty ? state.model : name;
 }

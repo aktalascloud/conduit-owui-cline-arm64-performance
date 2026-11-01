@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
+
 import 'package:conduit/features/chat/voice_mode/voice_avatar_cache.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -53,6 +55,31 @@ void main() {
       expect(files.length, 4);
     },
   );
+  test(
+    'changed server hash redownloads the same file ID exactly once',
+    () async {
+      var downloads = 0;
+      var body = data;
+      Future<String> load() => cache.load(
+        server: 'a',
+        userId: 'u',
+        fileId: 'same',
+        expectedSha256: sha256.convert(base64Decode(body)).toString(),
+        download: () async {
+          downloads++;
+          return body;
+        },
+      );
+      await load();
+      final changed = base64Decode(data);
+      changed[changed.length - 1] ^= 1;
+      body = base64Encode(changed);
+      expect(await load(), body);
+      await load();
+      expect(downloads, 2);
+    },
+  );
+
   test(
     'corrupt body is fetched again; invalid download is not stored',
     () async {

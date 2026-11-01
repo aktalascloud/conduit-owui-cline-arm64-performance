@@ -1,5 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+
+import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
 
 import 'package:conduit/features/cline/views/cline_workspace_page.dart';
 import 'package:conduit/l10n/app_localizations.dart';
@@ -110,7 +116,10 @@ Future<void> _mount(
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context)
               .copyWith(textScaler: TextScaler.linear(scale)),
-          child: child!,
+          child: RepaintBoundary(
+            key: const Key('cline-preview-boundary'),
+            child: child!,
+          ),
         ),
         home: active == null
             ? const ClineWorkspacePage()
@@ -143,6 +152,63 @@ Future<void> _unmount(WidgetTester tester, ClineNativeClient client) async {
 }
 
 void main() {
+  if (Platform.environment['CONDUIT_UI_PREVIEW'] case final String output) {
+    testWidgets('preview compact themed chat', (tester) async {
+      await tester.runAsync(() async {
+        for (final entry in {
+          'Roboto': Platform.environment['CONDUIT_UI_FONT'],
+          'MaterialIcons': Platform.environment['CONDUIT_UI_ICONS'],
+        }.entries) {
+          if (entry.value == null) continue;
+          final loader = FontLoader(entry.key)
+            ..addFont(
+              File(entry.value!).readAsBytes().then(ByteData.sublistView),
+            );
+          await loader.load();
+        }
+      });
+      final wire = _Wire();
+      final client = ClineNativeClient(wire, project: r'C:\Project');
+      await _mount(
+        tester,
+        wire,
+        client,
+        theme: AppTheme.dark(TweakcnThemes.t3Chat),
+      );
+      client.openSession('existing');
+      wire.receive({
+        'type': 'session_hydrated',
+        'sessionId': 'existing',
+        'status': 'completed',
+        'providerId': 'local',
+        'modelId': 'test-model',
+        'messages': [
+          {
+            'role': 'user',
+            'text': 'Проверь проект и предложи небольшие улучшения.',
+          },
+          {
+            'role': 'assistant',
+            'text': '### Что я предлагаю\n\nУпростить навигацию и сохранить привычный стиль приложения.\n\n- Компактное поле ввода\n- Чёткие основные действия\n- Удобные отступы на узком экране\n\nГотова продолжать, когда выберете задачу.',
+          },
+        ],
+      });
+      await tester.pumpAndSettle();
+      final boundary = tester.renderObject<RenderRepaintBoundary>(
+        find.byKey(const Key('cline-preview-boundary')),
+      );
+      await tester.runAsync(() async {
+        final image = await boundary.toImage(pixelRatio: 1);
+        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+        await File(output).writeAsBytes(bytes!.buffer.asUint8List());
+        image.dispose();
+      });
+      await tester.pumpWidget(const SizedBox.shrink());
+      unawaited(client.close());
+      await tester.pump();
+    });
+  }
+
   testWidgets(
     'opening history follows final layout and user scroll cancels follow',
     (tester) async {
@@ -160,7 +226,7 @@ void main() {
           for (var i = 0; i < 45; i++)
             {
               'role': 'assistant',
-              'content': 'Message $i\n\n' + ('long line of content ' * 20),
+              'text': 'Message $i\n\n' + ('long line of content ' * 20),
             },
         ],
       });
@@ -182,8 +248,14 @@ void main() {
       expect(scroll.offset, closeTo(offset, 2));
       await tester.tap(find.byKey(const Key('cline-model-picker')));
       await tester.pumpAndSettle();
-    expect(wire.sent.any((frame) => frame['type'] == 'loadModels' && frame['providerId'] == 'local'), isTrue);
-      expect(find.text('Test model'), findsOneWidget);
+      expect(
+        wire.sent.any(
+          (frame) =>
+              frame['type'] == 'loadModels' && frame['providerId'] == 'local',
+        ),
+        isTrue,
+      );
+      expect(find.widgetWithText(ListTile, 'Test model'), findsOneWidget);
       expect(find.textContaining('Папка и модель'), findsNothing);
       await _unmount(tester, client);
     },

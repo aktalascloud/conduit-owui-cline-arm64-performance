@@ -19,6 +19,7 @@ class VoiceAvatarCache {
     required String server,
     required String userId,
     required String fileId,
+    String? expectedSha256,
     required Future<String> Function() download,
   }) async {
     final key = sha256.convert(
@@ -37,7 +38,9 @@ class VoiceAvatarCache {
             final bytes = Uint8List.sublistView(stored, 65);
             if (utf8.decode(stored.sublist(0, 64)) ==
                     sha256.convert(bytes).toString() &&
-                _valid(bytes)) {
+                _valid(bytes) &&
+                (expectedSha256 == null ||
+                    sha256.convert(bytes).toString() == expectedSha256)) {
               await file.setLastModified(DateTime.now());
               return base64Encode(bytes);
             }
@@ -51,6 +54,10 @@ class VoiceAvatarCache {
     final data = await download();
     final bytes = base64Decode(data);
     if (!_valid(bytes)) throw const FormatException('Invalid avatar data');
+    if (expectedSha256 != null &&
+        sha256.convert(bytes).toString() != expectedSha256) {
+      throw const FormatException('Avatar changed during download');
+    }
     if (root != null && file != null) {
       final temporary = File(
         '${file.path}.${DateTime.now().microsecondsSinceEpoch}.tmp',

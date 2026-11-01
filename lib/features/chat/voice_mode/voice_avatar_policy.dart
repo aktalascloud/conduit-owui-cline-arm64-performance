@@ -7,7 +7,10 @@ const voiceAvatarDocumentUrl =
 
 /// Only model-owned file IDs are accepted, never provider-supplied URLs.
 String? voiceAvatarFileId(Model? model) {
-  final metadata = model?.metadata;
+  return voiceAvatarIdFromMetadata(model?.metadata);
+}
+
+String? voiceAvatarIdFromMetadata(Map? metadata) {
   final info = metadata?['info'];
   final meta = info is Map ? info['meta'] : metadata?['meta'];
   final avatar = meta is Map ? meta['voice_avatar'] : null;

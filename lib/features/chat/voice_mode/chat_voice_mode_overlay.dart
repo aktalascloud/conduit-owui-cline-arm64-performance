@@ -4,7 +4,6 @@ import 'package:conduit/shared/widgets/platform_ui/platform_ui.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:conduit_core/providers/app_providers.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/theme/theme_extensions.dart';
@@ -13,7 +12,7 @@ import '../../../shared/utils/ui_utils.dart';
 import 'chat_voice_mode_controller.dart';
 import 'voice_mode_error_text.dart';
 import 'voice_avatar_view.dart';
-import 'voice_avatar_policy.dart';
+import 'voice_avatar_binding.dart';
 
 bool voiceAvatarHasRoom(double availableHeight, double textScale) =>
     availableHeight >= 360 * textScale.clamp(1.0, 1.6);
@@ -46,7 +45,7 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
     final hasAvatar =
         snapshot.isActive &&
         snapshot.phase != ChatVoiceModePhase.starting &&
-        voiceAvatarFileId(ref.watch(selectedModelProvider)) != null;
+        ref.watch(voiceAvatarBindingProvider).asData?.value != null;
     final media = MediaQuery.of(context);
     final available =
         media.size.height -

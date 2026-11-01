@@ -163,5 +163,10 @@
     "id": "APK-VOICE-CLINE-1101",
     "description": "Restore model selection in existing idle Cline sessions through an owned SDK adapter; remove folder controls; follow final chat layout without fighting user scroll; prioritize voice hang-up over blocked work.",
     "source": "Local fixes with targeted model/protocol/widget/lifecycle regressions; existing native optimizations unchanged."
+  },
+  {
+    "id": "APK-AVATAR-REFRESH-UI",
+    "description": "Refresh current avatar binding from the server on call/resume and during foreground calls; validate cache against server SHA256; use compact responsive Cline components with common Conduit theme tokens.",
+    "verification": "Targeted cache/binding/lifecycle/voice-overlay and Cline palette/narrow-screen tests; widget preview reviewed, physical phone pending."
   }
 ]

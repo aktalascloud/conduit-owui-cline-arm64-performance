@@ -1,5 +1,6 @@
 import 'package:conduit/features/chat/voice_mode/chat_voice_mode_overlay.dart';
 import 'package:conduit/features/chat/voice_mode/chat_voice_mode_controller.dart';
+import 'package:conduit/features/chat/voice_mode/voice_avatar_binding.dart';
 import 'package:conduit/l10n/app_localizations.dart';
 import 'package:conduit/l10n/conduit_localizations.dart';
 import 'package:conduit/shared/theme/app_theme.dart';
@@ -29,6 +30,12 @@ void main() {
         overrides: [
           selectedModelProvider.overrideWithValue(model),
           apiServiceProvider.overrideWithValue(null),
+          voiceAvatarBindingProvider.overrideWith(
+            (ref) => Stream.value((
+              fileId: '97abe420-cbc2-4f30-a00c-7940119d7d4f',
+              revision: 'fixture',
+            )),
+          ),
           chatVoiceModeControllerProvider.overrideWith(
             () => _TestVoiceModeController(
               const ChatVoiceModeSnapshot(phase: ChatVoiceModePhase.listening),
@@ -38,6 +45,7 @@ void main() {
       );
       addTearDown(container.dispose);
       await tester.pumpWidget(_buildActiveHarness(container));
+      await tester.pumpAndSettle();
       expect(
         tester
             .getSize(find.byKey(const ValueKey('voice-overlay-expanded')))
