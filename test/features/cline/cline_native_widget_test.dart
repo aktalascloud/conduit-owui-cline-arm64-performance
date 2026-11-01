@@ -143,6 +143,16 @@ Future<void> _unmount(WidgetTester tester, ClineNativeClient client) async {
 }
 
 void main() {
+  testWidgets('unavailable restored selection is explained in Russian, not as a raw code', (tester) async {
+    final wire = _Wire();
+    final client = ClineNativeClient(wire, project: r'C:\Project');
+    await _mount(tester, wire, client);
+    wire.receive({'type':'error','text':'selectionUnavailable'});
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(find.text('Прежняя модель или провайдер недоступны. Выберите модель; автоматической подмены не было.'), findsOneWidget);
+    expect(find.text('selectionUnavailable'), findsNothing);
+    await _unmount(tester, client);
+  });
   testWidgets('disconnect reports reconnecting and never replays the draft', (
     tester,
   ) async {
