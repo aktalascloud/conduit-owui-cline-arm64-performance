@@ -158,5 +158,10 @@
     "id": "APK-016",
     "description": "Reconnect also retains explicit new-chat project/provider/model/reasoning before any session exists; scope is bound to the account identity. Do not attach an unrelated last session or replay an uncertain send.",
     "verification": "Real native-client configuration regressions: changed defaults, account separation and no send/approval frames."
+  },
+  {
+    "id": "APK-VOICE-CLINE-1101",
+    "description": "Restore model selection in existing idle Cline sessions through an owned SDK adapter; remove folder controls; follow final chat layout without fighting user scroll; prioritize voice hang-up over blocked work.",
+    "source": "Local fixes with targeted model/protocol/widget/lifecycle regressions; existing native optimizations unchanged."
   }
 ]

@@ -218,9 +218,16 @@ async def run(config: dict, state: Path):
     environment = dict(os.environ, ROOM_SECRET=config['room_secret'], HOST='127.0.0.1',
         PUBLIC_URL=f"http://127.0.0.1:{config['dashboard_port']}")
     flags = (subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP) if os.name == 'nt' else 0
-    process = subprocess.Popen([str(cli),'hub','dashboard','--no-open','--host','127.0.0.1',
-        '--port',str(config['dashboard_port']),'--cwd',config['workspace_root'],
-        '--config',config['cline_config_dir']],env=environment,stdout=subprocess.DEVNULL,
+    adapter = Path(__file__).with_name('conduit-dashboard.exe')
+    if adapter.is_file():
+        environment.update(CLINE_DIR=config['cline_config_dir'], WORKSPACE_ROOT=config['workspace_root'],
+            CLINE_HUB_DASHBOARD_PORT=str(config['dashboard_port']))
+        dashboard_command = [str(adapter)]
+    else:
+        dashboard_command = [str(cli),'hub','dashboard','--no-open','--host','127.0.0.1',
+            '--port',str(config['dashboard_port']),'--cwd',config['workspace_root'],
+            '--config',config['cline_config_dir']]
+    process = subprocess.Popen(dashboard_command,env=environment,stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,creationflags=flags)
     diagnostics=[]
     def read_diagnostics():

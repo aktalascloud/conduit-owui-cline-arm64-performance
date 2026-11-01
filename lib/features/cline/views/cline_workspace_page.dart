@@ -123,9 +123,6 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
       if (_scroll.hasClients && _draftKey.isNotEmpty) {
         _memory.offsets[_draftKey] = _scroll.offset;
       }
-      if (_scroll.hasClients &&
-          _scroll.position.userScrollDirection != ScrollDirection.idle)
-        _followOutput = _scroll.position.extentAfter < 120;
     });
     if (widget.active) unawaited(_ensureConnected());
   }
@@ -338,67 +335,8 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
     }
   }
 
-  Future<void> _project(ClineNativeClient client, ClineNativeState s) async {
-    final l = AppLocalizations.of(context)!;
-    final input = TextEditingController(text: s.project);
-    final path = await showDialog<String>(
-      context: context,
-      builder: (dialog) => AlertDialog(
-        title: Text(l.clineProjects),
-        content: SizedBox(
-          width: 420,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final project in s.projects)
-                  ListTile(
-                    leading: const Icon(Icons.folder_outlined),
-                    title: Text(project, maxLines: 2),
-                    onTap: () => Navigator.pop(dialog, project),
-                  ),
-                TextField(
-                  controller: input,
-                  autocorrect: false,
-                  decoration: InputDecoration(labelText: l.clineProjectPath),
-                ),
-                const SizedBox(height: 8),
-                Text(l.clineProjectHint),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialog),
-            child: Text(l.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialog, input.text.trim()),
-            child: Text(l.clineUseProject),
-          ),
-        ],
-      ),
-    );
-    input.dispose();
-    if (path == null || !mounted) return;
-    if (!(RegExp(r'^[A-Za-z]:[\\/]').hasMatch(path) ||
-            path.startsWith('/') ||
-            path.startsWith(r'\\')) ||
-        path.contains('\n') ||
-        path.contains('\x00')) {
-      _notice(const ClineNativeException('existingContext'));
-      return;
-    }
-    _newChat(client, project: path);
-  }
-
   Future<void> _models(ClineNativeClient client, ClineNativeState s) async {
     final l = AppLocalizations.of(context)!;
-    if (s.sessionId != null) {
-      _notice(const ClineNativeException('existingContext'));
-      return;
-    }
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -419,7 +357,9 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
-                  for (final provider in state.providers)
+                  for (final provider in state.providers.where(
+                    (p) => state.sessionId == null || p.id == state.provider,
+                  ))
                     ExpansionTile(
                       title: Text(provider.name),
                       initiallyExpanded: provider.id == state.provider,
@@ -447,17 +387,19 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                                   ? Icons.radio_button_checked
                                   : Icons.radio_button_off,
                             ),
-                            onTap: () {
-                              try {
-                                client.configure(
-                                  provider: provider.id,
-                                  model: model.id,
-                                );
-                                Navigator.pop(sheet);
-                              } catch (e) {
-                                _notice(e);
-                              }
-                            },
+                            onTap: state.busy
+                                ? null
+                                : () async {
+                                    try {
+                                      await client.selectModel(
+                                        provider: provider.id,
+                                        model: model.id,
+                                      );
+                                      if (sheet.mounted) Navigator.pop(sheet);
+                                    } catch (e) {
+                                      _notice(e);
+                                    }
+                                  },
                           ),
                       ],
                     ),
@@ -570,14 +512,6 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                 ],
               ),
             ),
-            IconButton(
-              key: const Key('cline-project-picker'),
-              tooltip: state.project.isEmpty
-                  ? l.clineProjectPath
-                  : state.project,
-              onPressed: state.busy ? null : () => _project(client, state),
-              icon: const Icon(Icons.folder_outlined, size: 19),
-            ),
             if (state.sessionId == null &&
                 (state.models[state.provider]?.any(
                       (m) => m.id == state.model && m.reasoning,
@@ -622,14 +556,20 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
     }
   }
 
-  void _jumpToEnd() {
+  bool _followingFrame = false;
+  void _jumpToEnd({bool force = true}) {
+    if (force) _followOutput = true;
+    if (_followingFrame || !_followOutput) return;
+    _followingFrame = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _scroll.hasClients)
-        _scroll.animateTo(
-          _scroll.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-        );
+      _followingFrame = false;
+      if (mounted &&
+          widget.active &&
+          _followOutput &&
+          _scroll.hasClients &&
+          _scroll.position.extentAfter > .5) {
+        _scroll.jumpTo(_scroll.position.maxScrollExtent);
+      }
     });
   }
 
@@ -828,11 +768,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
         );
         if (_lastRender != signature) {
           _lastRender = signature;
-          if (_followOutput && widget.active)
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && _scroll.hasClients)
-                _scroll.jumpTo(_scroll.position.maxScrollExtent);
-            });
+          if (_followOutput && widget.active) _jumpToEnd(force: false);
         }
 
         if (_lastScope != state.sessionId) {
@@ -949,17 +885,6 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                         : () {
                             Navigator.pop(context);
                             _newChat(client);
-                          },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.folder_outlined),
-                    title: Text(l.clineProjects),
-                    subtitle: Text(state.project, maxLines: 2),
-                    onTap: state.busy
-                        ? null
-                        : () {
-                            Navigator.pop(context);
-                            unawaited(_project(client, state));
                           },
                   ),
                   const Divider(),
@@ -1095,14 +1020,42 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
                             ),
                           ),
                         )
-                      : ListView.builder(
-                          controller: _scroll,
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                          itemCount: state.messages.length,
-                          itemBuilder: (context, index) => _ClineMessage(
-                            message: state.messages[index],
-                            model: state.model,
-                          ),
+                      : NotificationListener<ScrollNotification>(
+                          onNotification: (event) {
+                            if (event.depth != 0) return false;
+                            if (event is ScrollStartNotification &&
+                                event.dragDetails != null) {
+                              _followOutput = false;
+                            } else if (event is UserScrollNotification) {
+                              _followOutput =
+                                  event.direction == ScrollDirection.idle &&
+                                  event.metrics.extentAfter < 120;
+                            }
+                            return false;
+                          },
+                          child:
+                              NotificationListener<ScrollMetricsNotification>(
+                                onNotification: (event) {
+                                  if (event.depth == 0)
+                                    _jumpToEnd(force: false);
+                                  return false;
+                                },
+                                child: ListView.builder(
+                                  controller: _scroll,
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    12,
+                                    16,
+                                    16,
+                                  ),
+                                  itemCount: state.messages.length,
+                                  itemBuilder: (context, index) =>
+                                      _ClineMessage(
+                                        message: state.messages[index],
+                                        model: state.model,
+                                      ),
+                                ),
+                              ),
                         ),
                 ),
                 if (state.approvals.isNotEmpty)

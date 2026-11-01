@@ -351,8 +351,10 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
     bool cancellationRequested() =>
         _disposed || stopGenerationAtRequest != _stopRequestGeneration;
 
+    final pendingStop = _stopFuture;
     var result = ChatVoiceModeStartResult.failed;
     await _enqueue(() async {
+      await pendingStop;
       if (cancellationRequested()) {
         result = ChatVoiceModeStartResult.cancelled;
         return;
@@ -797,9 +799,16 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
   bool get isWaitingForStartReadiness =>
       _pendingStartReadinessCancellation != null;
 
-  Future<void> stop() {
+  Future<void>? _stopFuture;
+  Future<void> stop() => _requestStop(endCallKit: true);
+
+  Future<void> _requestStop({required bool endCallKit}) {
     _cancelStart();
-    return _enqueue(() => _stopInternal(endCallKit: true));
+    // Hanging up must not wait behind recording/transcription or TTS work.
+    return _stopFuture ??= _stopInternal(endCallKit: endCallKit)
+        .whenComplete(() {
+          _stopFuture = null;
+        });
   }
 
   /// Stops a start under way before it goes further. A realtime voice still
@@ -828,17 +837,19 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
         return;
       }
 
+      final token = _token;
       final wasAwaitingAssistant = _awaitingAssistant;
       _pausedDuringSpeech = state.phase == ChatVoiceModePhase.speaking;
       _pausedDuringAssistantTurn = wasAwaitingAssistant;
       await _cancelListening();
+      if (!_isCurrent(token)) return;
       await _audioSessionCoordinator?.endResponseWaitCapture();
-      if (_disposed) return;
+      if (!_isCurrent(token)) return;
       if (wasAwaitingAssistant) {
         await _textToSpeech!.pause();
       }
 
-      if (_disposed) return;
+      if (!_isCurrent(token)) return;
 
       state = state.copyWith(phase: ChatVoiceModePhase.paused);
     });
@@ -870,7 +881,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
       if (_pausedDuringSpeech) {
         _pausedDuringSpeech = false;
         await _textToSpeech!.resume();
-        if (_disposed) return;
+        if (!_isCurrent(token)) return;
         state = state.copyWith(phase: ChatVoiceModePhase.speaking);
         return;
       }
@@ -983,12 +994,13 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
 
   Future<void> toggleSpeakerphone() {
     return _enqueue(() async {
+      final token = _token;
       if (!state.isActive) return;
       final coordinator = _audioSessionCoordinator;
       if (coordinator == null) return;
       final enabled = !state.isSpeakerphoneEnabled;
       final applied = await coordinator.setSpeakerphoneEnabled(enabled);
-      if (_disposed) return;
+      if (!_isCurrent(token)) return;
       // A route the platform refused leaves audio where it was, so the button
       // stays where it was too rather than promising a route nobody is hearing.
       // That holds both ways: the coordinator reads the route back on and off
@@ -1002,6 +1014,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
 
   Future<void> cancelSpeaking() {
     return _enqueue(() async {
+      final token = _token;
       final realtime = _realtime;
       if (realtime != null) {
         realtime.interrupt();
@@ -1011,7 +1024,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
       if (tts == null) return;
       await tts.stopStreamingTts();
       await tts.stop();
-      if (_disposed) return;
+      if (!_isCurrent(token)) return;
       _streamingTtsStarted = false;
       _assistantFinalized = true;
       if (state.isActive && !state.isMuted) {
@@ -1094,7 +1107,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
         if (endedCallId == callId) {
           _stoppingFromCallKit = true;
           _cancelStart();
-          unawaited(_enqueue(() => _stopInternal(endCallKit: false)));
+          unawaited(_requestStop(endCallKit: false));
         }
       case VoiceCallKitMuteToggled(callId: final mutedCallId, :final isMuted):
         if (mutedCallId == callId && isMuted != state.isMuted) {

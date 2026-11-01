@@ -11,31 +11,60 @@ import 'package:conduit_core/models/model.dart';
 import 'package:conduit_core/providers/app_providers.dart';
 
 void main() {
-  testWidgets('avatar panel uses available height and compacts for the keyboard', (tester) async {
-    tester.view.physicalSize=const Size(402,874);
-    tester.view.devicePixelRatio=1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final model = Model.fromJson({'id':'fixture','name':'Fixture','meta':{'voice_avatar':{'file_id':'97abe420-cbc2-4f30-a00c-7940119d7d4f'}}});
-    final container=ProviderContainer(overrides:[
-      selectedModelProvider.overrideWithValue(model),
-      apiServiceProvider.overrideWithValue(null),
-      chatVoiceModeControllerProvider.overrideWith(()=>_TestVoiceModeController(const ChatVoiceModeSnapshot(phase:ChatVoiceModePhase.listening))),
-    ]);
-    addTearDown(container.dispose);
-    await tester.pumpWidget(_buildActiveHarness(container));
-    expect(tester.getSize(find.byKey(const ValueKey('voice-overlay-expanded'))).height,inInclusiveRange(360, 560));
-    expect(tester.takeException(),isNull);
-    await tester.pumpWidget(_buildActiveHarness(container,keyboard:600));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('voice-mode-collapsed')),findsOneWidget);
-    expect(tester.takeException(),isNull);
-  });
+  testWidgets(
+    'avatar panel uses available height and compacts for the keyboard',
+    (tester) async {
+      tester.view.physicalSize = const Size(402, 874);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final model = Model.fromJson({
+        'id': 'fixture',
+        'name': 'Fixture',
+        'meta': {
+          'voice_avatar': {'file_id': '97abe420-cbc2-4f30-a00c-7940119d7d4f'},
+        },
+      });
+      final container = ProviderContainer(
+        overrides: [
+          selectedModelProvider.overrideWithValue(model),
+          apiServiceProvider.overrideWithValue(null),
+          chatVoiceModeControllerProvider.overrideWith(
+            () => _TestVoiceModeController(
+              const ChatVoiceModeSnapshot(phase: ChatVoiceModePhase.listening),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(_buildActiveHarness(container));
+      expect(
+        tester
+            .getSize(find.byKey(const ValueKey('voice-overlay-expanded')))
+            .height,
+        inInclusiveRange(360, 560),
+      );
+      expect(tester.takeException(), isNull);
+      final controller = container.read(
+        chatVoiceModeControllerProvider.notifier,
+      ) as _TestVoiceModeController;
+      await tester.tap(find.byIcon(Icons.call_end_rounded));
+      await tester.pump();
+      expect(controller.stopCalls, 1);
+      await tester.pumpWidget(_buildActiveHarness(container, keyboard: 600));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('voice-mode-collapsed')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  test('large text requires enough space for avatar and native controls',(){
-    expect(voiceAvatarHasRoom(700,1),isTrue);
-    expect(voiceAvatarHasRoom(300,1),isFalse);
-    expect(voiceAvatarHasRoom(500,2),isFalse);
+  test('large text requires enough space for avatar and native controls', () {
+    expect(voiceAvatarHasRoom(700, 1), isTrue);
+    expect(voiceAvatarHasRoom(300, 1), isFalse);
+    expect(voiceAvatarHasRoom(500, 2), isFalse);
   });
   testWidgets('inactive overlay does not collapse a loose Stack', (
     tester,
@@ -230,7 +259,11 @@ Widget _buildActiveHarness(
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: MediaQuery(
-          data: MediaQueryData(size:const Size(402,874),viewInsets:EdgeInsets.only(bottom:keyboard),disableAnimations: disableAnimations),
+          data: MediaQueryData(
+            size: const Size(402, 874),
+            viewInsets: EdgeInsets.only(bottom: keyboard),
+            disableAnimations: disableAnimations,
+          ),
           child: const SizedBox(
             width: 402,
             height: 874,
@@ -251,6 +284,11 @@ class _TestVoiceModeController extends ChatVoiceModeController {
   _TestVoiceModeController(this.initialState);
 
   final ChatVoiceModeSnapshot initialState;
+  int stopCalls = 0;
+  @override
+  Future<void> stop() async {
+    stopCalls++;
+  }
 
   @override
   ChatVoiceModeSnapshot build() => initialState;

@@ -174,3 +174,4 @@ __pycache__/
 remote/private/
 remote/.venv/
 tool/voice_avatar/node_modules/
+.bun-cache/

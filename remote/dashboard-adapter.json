@@ -1,0 +1,8 @@
+{
+  "source": "https://github.com/cline/cline",
+  "reviewed_local_fork_commit": "9522a646b057acece1c3e0c8a0cefa7ba6244878",
+  "license": "Apache-2.0",
+  "command": "conduit_set_session_model",
+  "scope": "Selected idle session, same provider, unchanged ID, history and workspace; no prompt or automatic approvals.",
+  "target": "bun-windows-x64-baseline"
+}

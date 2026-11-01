@@ -83,6 +83,52 @@ void main() {
     makeNativeReady(wire);
   });
   tearDown(() async => client.close());
+  test(
+    'existing model changes only after acknowledged same-session update',
+    () async {
+      client.openSession('existing');
+      wire.receive({
+        'type': 'session_hydrated',
+        'sessionId': 'existing',
+        'providerId': 'local',
+        'modelId': 'test-model',
+        'status': 'completed',
+        'messages': [
+          {'role': 'user', 'content': 'kept'},
+        ],
+      });
+      wire.receive({
+        'type': 'models',
+        'providerId': 'local',
+        'models': [
+          {'id': 'test-model'},
+          {'id': 'second'},
+        ],
+      });
+      final history = client.state.messages;
+      final change = client.selectModel(provider: 'local', model: 'second');
+      expect(client.state.model, 'test-model');
+      final request = wire.sent.last;
+      expect(request['command'], 'conduit_set_session_model');
+      wire.receive({
+        'type': 'desktopCommandResult',
+        'id': request['id'],
+        'ok': true,
+        'result': {
+          'sessionId': 'existing',
+          'provider': 'local',
+          'model': 'second',
+        },
+      });
+      await change;
+      expect(client.state.model, 'second');
+      expect(client.state.sessionId, 'existing');
+      expect(client.state.project, r'C:\Existing');
+      expect(client.state.messages, history);
+      expect(wire.sent.where((f) => f['type'] == 'send'), isEmpty);
+    },
+  );
+
   test('frames produced by the pinned real Cline event mapper are rendered natively', () {
     client.sendMessage('Synthetic stream');
     final frames = jsonDecode(

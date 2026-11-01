@@ -143,16 +143,69 @@ Future<void> _unmount(WidgetTester tester, ClineNativeClient client) async {
 }
 
 void main() {
-  testWidgets('unavailable restored selection is explained in Russian, not as a raw code', (tester) async {
-    final wire = _Wire();
-    final client = ClineNativeClient(wire, project: r'C:\Project');
-    await _mount(tester, wire, client);
-    wire.receive({'type':'error','text':'selectionUnavailable'});
-    await tester.pump(const Duration(milliseconds: 80));
-    expect(find.text('Прежняя модель или провайдер недоступны. Выберите модель; автоматической подмены не было.'), findsOneWidget);
-    expect(find.text('selectionUnavailable'), findsNothing);
-    await _unmount(tester, client);
-  });
+  testWidgets(
+    'opening history follows final layout and user scroll cancels follow',
+    (tester) async {
+      final wire = _Wire();
+      final client = ClineNativeClient(wire, project: r'C:\Project');
+      await _mount(tester, wire, client);
+      client.openSession('existing');
+      wire.receive({
+        'type': 'session_hydrated',
+        'sessionId': 'existing',
+        'status': 'completed',
+        'providerId': 'local',
+        'modelId': 'test-model',
+        'messages': [
+          for (var i = 0; i < 45; i++)
+            {
+              'role': 'assistant',
+              'content': 'Message $i\n\n' + ('long line of content ' * 20),
+            },
+        ],
+      });
+      await tester.pumpAndSettle();
+      final list = find
+          .byWidgetPredicate((w) => w is ListView && w.controller != null)
+          .first;
+      final scroll = tester.widget<ListView>(list).controller!;
+      expect(scroll.position.extentAfter, lessThan(2));
+      await tester.drag(list, const Offset(0, 450));
+      await tester.pumpAndSettle();
+      final offset = scroll.offset;
+      wire.receive({
+        'type': 'assistant_delta',
+        'text': 'additional streamed response ' * 15,
+      });
+      wire.receive({'type': 'turn_done'});
+      await tester.pumpAndSettle();
+      expect(scroll.offset, closeTo(offset, 2));
+      await tester.tap(find.byKey(const Key('cline-model-picker')));
+      await tester.pumpAndSettle();
+      expect(find.text('Test model'), findsOneWidget);
+      expect(find.textContaining('Папка и модель'), findsNothing);
+      await _unmount(tester, client);
+    },
+  );
+
+  testWidgets(
+    'unavailable restored selection is explained in Russian, not as a raw code',
+    (tester) async {
+      final wire = _Wire();
+      final client = ClineNativeClient(wire, project: r'C:\Project');
+      await _mount(tester, wire, client);
+      wire.receive({'type': 'error', 'text': 'selectionUnavailable'});
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(
+        find.text(
+          'Прежняя модель или провайдер недоступны. Выберите модель; автоматической подмены не было.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('selectionUnavailable'), findsNothing);
+      await _unmount(tester, client);
+    },
+  );
   testWidgets('disconnect reports reconnecting and never replays the draft', (
     tester,
   ) async {
@@ -286,7 +339,7 @@ void main() {
       );
       expect(wire.sent.length, before);
       expect(find.byKey(const Key('cline-model-picker')), findsOneWidget);
-      expect(find.byKey(const Key('cline-project-picker')), findsOneWidget);
+      expect(find.byKey(const Key('cline-project-picker')), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
@@ -403,7 +456,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pumpAndSettle();
     expect(find.text('Saved session'), findsOneWidget);
-    expect(find.text('Проекты на ПК'), findsOneWidget);
+    expect(find.text('Проекты на ПК'), findsNothing);
     expect(tester.takeException(), isNull);
     await _unmount(tester, client);
   });

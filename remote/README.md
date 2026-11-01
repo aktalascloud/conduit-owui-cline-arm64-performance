@@ -18,7 +18,9 @@ For public access, allow inbound TCP 2222 for the gateway interpreter and forwar
 
 Install the signed OWUI + Cline APK. In Conduit, open **Cline via SSH** on the first screen (also in Accounts/Settings), import the private `connection.json` from the PC, and connect. Transfer it privately; never publish it. Connection settings are saved only in secure device storage. The server fingerprint must match; there is no trust-all fallback.
 
-Open an existing session from the sidebar, or choose a PC project folder and model for a new chat. Existing sessions retain their model and folder; choose Plan or Act explicitly before sending. The native interface supports English and Russian. Sign in to model providers on the PC if needed. After a disconnect, reconnect and review session history before resending a message with an uncertain outcome.
+Open a session from the sidebar or start a new chat. The workspace stays on the PC; the composer uses Act. Change models within the current provider while preserving the session ID and history. A different provider requires a new chat to keep credentials separate. Reconnection restores history without replaying uncertain messages.
+
+The optional `conduit-dashboard.exe` adapter goes beside `cline_gateway.py`. Build it with `bun run remote/build_dashboard_adapter.ts CLINE_SOURCE OUTPUT_EXE` from a reviewed, dependency-installed Cline checkout. It uses the public SDK and resumes dormant sessions with the same ID, without a prompt or automatic approvals. The installed Cline files remain unchanged. The executable targets Windows x64 baseline. Cline sources retain their [Apache-2.0 license](https://github.com/cline/cline/blob/main/LICENSE).
 
 ## Scope and security
 

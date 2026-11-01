@@ -135,7 +135,7 @@ final class ClineNativeClient {
       _busy = false,
       _loadingHistory = false,
       _closed = false;
-  bool _newTurn = false, _resetting = false;
+  bool _newTurn = false, _resetting = false, _selectingModel = false;
   bool _selectionBlocked = false;
   String? _sessionId,
       _awaitedSession,
@@ -161,7 +161,7 @@ final class ClineNativeClient {
   ClineNativeState get state => ClineNativeState(
     connected: _connected,
     hubConnected: _hubConnected,
-    busy: _busy,
+    busy: _busy || _selectingModel,
     loadingHistory: _loadingHistory || _resetting,
     sessionId: _sessionId,
     project: _project,
@@ -521,6 +521,44 @@ final class ClineNativeClient {
     _notify(immediate: true);
   }
 
+  Future<void> selectModel({
+    required String provider,
+    required String model,
+  }) async {
+    if (_busy || _loadingHistory || _resetting || _selectingModel)
+      throw const ClineNativeException('busy');
+    if (!_providers.any((p) => p.id == provider) ||
+        !(_models[provider]?.any((m) => m.id == model) ?? false)) {
+      throw const ClineNativeException('selectionUnavailable');
+    }
+    if (_sessionId == null) {
+      configure(provider: provider, model: model);
+      return;
+    }
+    _selectingModel = true;
+    _notify(immediate: true);
+    try {
+      final session = _sessionId;
+      final result = clineObject(
+        await request(
+          'conduit_set_session_model',
+          args: {'sessionId': session, 'provider': provider, 'model': model},
+        ),
+      );
+      if (session != _sessionId ||
+          result['sessionId'] != session ||
+          result['provider'] != provider ||
+          result['model'] != model) {
+        throw const ClineNativeException('request');
+      }
+      _provider = provider;
+      _model = model;
+    } finally {
+      _selectingModel = false;
+      _notify(immediate: true);
+    }
+  }
+
   void configure({
     String? provider,
     String? model,
@@ -704,6 +742,7 @@ final class ClineNativeClient {
 
   Future<Object?> request(String command, {Map<String, dynamic>? args}) async {
     if (!{
+      'conduit_set_session_model',
       'get_process_context',
       'list_cli_sessions',
       'search_sessions',
