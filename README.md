@@ -1,12 +1,16 @@
 # Conduit OWUI + Cline ARM64
 
+[Русский](README.ru.md)
+
 Unofficial fork with reviewed agent/MCP fixes and extended Russian UI. One latest APK.
 
 [Upstream](https://github.com/cogwheel0/conduit) · [Release](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Patches](.avx1/PATCHES.json)
 
+Native Cline chat uses Conduit themes, responsive spacing and an Act-only composer. Avatar bindings refresh from the server; the private 100 MiB cache checks server SHA256 and downloads changed VRMs. Personal avatars stay on the server.
+
 ## Build
 
-Requires Python3.12+, Git and GitHub CLI for CI. No LLM, model weights or Codex dependency.
+Requires Python 3.12+, Git and GitHub CLI for CI. No LLM, model weights or Codex dependency.
 
 ```cmd
 Build.cmd status
@@ -17,7 +21,7 @@ Build.cmd build
 
 ## Run and verify
 
-Use the single release package. Keep user data separate from source. Settings, endpoints and model selection are runtime configuration, not build requirements. Ivy Bridge: AVX/F16C, O3 and verified LTO, without AVX2/FMA/PGO/fast-math. Android: ARM64 release AOT; source-built and prebuilt libraries are identified in the package manifest.
+Install the single signed ARM64 APK. Keep user data separate from source. Android release AOT and native-library provenance/flags are recorded in the manifest. Phone FPS has not been measured.
 
 Current checks and measurements: [.avx1/measurements/latest.json](.avx1/measurements/latest.json). CPU microbenchmarks are not LLM tokens/s. Original licenses and notices apply.
 
