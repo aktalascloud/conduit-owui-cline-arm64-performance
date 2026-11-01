@@ -168,5 +168,10 @@
     "id": "APK-AVATAR-REFRESH-UI",
     "description": "Refresh current avatar binding from the server on call/resume and during foreground calls; validate cache against server SHA256; use compact responsive Cline components with common Conduit theme tokens.",
     "verification": "Targeted cache/binding/lifecycle/voice-overlay and Cline palette/narrow-screen tests; widget preview reviewed, physical phone pending."
+  },
+  {
+    "id": "APK-LIVE-AVATAR-CONTROLS",
+    "description": "Native bounded rotation/pinch/pan/wheel gestures and accessible zoom/reset buttons during voice calls. One-way graphics-only numeric commands; call-end remains outside the gesture region.",
+    "verification": "Native gesture/hang-up hit-test regression, 7 renderer/CSP/resource tests, Russian labels; physical phone confirmation pending."
   }
 ]

@@ -5546,5 +5546,8 @@
   "voiceAvatar": "Голосовой аватар",
   "voiceAvatarUnavailable": "Аватар недоступен. Голосовой звонок продолжается.",
   "clineReconnecting": "Переподключение…",
-  "clineSelectionUnavailable": "Прежняя модель или провайдер недоступны. Выберите модель; автоматической подмены не было."
+  "clineSelectionUnavailable": "Прежняя модель или провайдер недоступны. Выберите модель; автоматической подмены не было.",
+  "voiceAvatarZoomIn": "Увеличить",
+  "voiceAvatarZoomOut": "Уменьшить",
+  "voiceAvatarResetView": "Сбросить ракурс"
 }

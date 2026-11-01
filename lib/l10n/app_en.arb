@@ -10551,5 +10551,8 @@
   "clineSelectionUnavailable": "The previous model or provider is unavailable. Choose a model; no default was substituted.",
   "@clineSelectionUnavailable": {
     "description": "Reconnect preserved an explicit model choice which is no longer in the server catalog; sending stays blocked."
-  }
+  },
+  "voiceAvatarZoomIn": "Zoom in",
+  "voiceAvatarZoomOut": "Zoom out",
+  "voiceAvatarResetView": "Reset view"
 }

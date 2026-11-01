@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {readAvatar,mouthWeight,renderPixelRatio,fullBodyDistance} from './renderer.js';
+import {readAvatar,mouthWeight,renderPixelRatio,fullBodyDistance,updateAvatarView} from './renderer.js';
 import {textureResizePlan,boundedBitmapLoader} from './texture-loader.js';
 
 test('full-body framing fits head, feet and width on tall and wide viewports',()=>{
@@ -74,4 +74,14 @@ test('offline bundle has a matching CSP hash and no credential or network bridge
  assert.ok(html.includes("frame-src 'none'"));
  assert.ok(!html.includes('unsafe-eval'));
  assert.ok(!js.includes('callHandler('));
+});
+
+test('manual avatar view rotates, pans, bounds zoom and resets without audio changes',()=>{
+ const view={yaw:0,pitch:0,zoom:1,panX:0,panY:0};
+ updateAvatarView(view,{dx:40,dy:20,scale:.5,panX:10,panY:10},400,2);
+ assert.notEqual(view.yaw,0);assert.notEqual(view.pitch,0);assert.equal(view.zoom,.5);assert.notEqual(view.panX,0);
+ for(let i=0;i<30;i++)updateAvatarView(view,{scale:.5,dy:2048},400,2);
+ assert.equal(view.zoom,.3);assert.ok(view.pitch<=1.3);
+ updateAvatarView(view,{dx:NaN,scale:Infinity},400,2);assert.ok(Object.values(view).every(Number.isFinite));
+ updateAvatarView(view,{reset:true});assert.deepEqual(view,{yaw:0,pitch:0,zoom:1,panX:0,panY:0});
 });

@@ -50,6 +50,19 @@ export function readAvatar(data) {
   return {json:j,start:n+28};
 }
 
+export function updateAvatarView(view, command, height=1, distance=1) {
+  if(!command || typeof command!=='object')return;
+  if(command.reset===true){Object.assign(view,{yaw:0,pitch:0,zoom:1,panX:0,panY:0});return;}
+  const bounded=(value,min,max,fallback=0)=>Number.isFinite(value)?Math.max(min,Math.min(max,value)):fallback;
+  const radians=2*Math.PI/Math.max(1,height);
+  view.yaw=(view.yaw-bounded(command.dx,-2048,2048)*radians)%(2*Math.PI);
+  view.pitch=bounded(view.pitch+bounded(command.dy,-2048,2048)*radians,-1.3,1.3);
+  view.zoom=bounded(view.zoom*bounded(command.scale,.5,2,1),.3,3,1);
+  const pixel=2*distance*view.zoom*Math.tan(Math.PI/12)/Math.max(1,height);
+  view.panX=bounded(view.panX-bounded(command.panX,-2048,2048)*pixel,-2*distance,2*distance);
+  view.panY=bounded(view.panY+bounded(command.panY,-2048,2048)*pixel,-2*distance,2*distance);
+}
+
 export async function createAvatar(canvas,data) {
   const {json:j,start}=readAvatar(data);
   let pixels=0;const images=[];
@@ -97,8 +110,10 @@ export async function createAvatar(canvas,data) {
   }
   const camera=new THREE.PerspectiveCamera(30,1,.01,50);
   const expressions=vrm.expressionManager;
+  const view={yaw:0,pitch:0,zoom:1,panX:0,panY:0};
   let elapsed=0,disposed=false,lastWidth=0,lastHeight=0,lastRatio=0;
   return {
+    view(command){updateAvatarView(view,command,canvas.clientHeight,fullBodyDistance(size.x,size.y,size.z,camera.aspect,camera.fov));},
     capabilities:{mouth:!!expressions?.getExpression('aa'),blink:!!expressions?.getExpression('blink')},
     render(dt,{speaking=false,level=0,metered=true,reducedMotion=false}={}) {
       if(disposed)return;
@@ -110,8 +125,9 @@ export async function createAvatar(canvas,data) {
         camera.aspect=w/h;camera.updateProjectionMatrix();
       }
       const distance=fullBodyDistance(size.x,size.y,size.z,camera.aspect,camera.fov);
-      camera.far=Math.max(50,distance+size.z+size.y);camera.updateProjectionMatrix();
-      camera.position.copy(center).add(new THREE.Vector3(0,0,distance));camera.lookAt(center);
+      camera.far=Math.max(50,distance*view.zoom+size.z+size.y);camera.updateProjectionMatrix();
+      camera.position.setFromSphericalCoords(distance*view.zoom,Math.PI/2-view.pitch,view.yaw).add(center);
+      camera.lookAt(center);camera.translateX(view.panX);camera.translateY(view.panY);
       expressions?.setValue('aa',mouthWeight(elapsed,{speaking,level,metered}));
       const blink=reducedMotion?0:Math.max(0,1-Math.abs((elapsed%4.6)-4.45)/.09);
       if(expressions?.getExpression('blink'))expressions.setValue('blink',blink);
@@ -142,6 +158,7 @@ if(typeof window!=='undefined' && document.getElementById('avatar')) {
       // Report readiness only after the first real WebGL draw succeeds.
       avatar.render(0,{speaking:false,reducedMotion:true});resume();return {ok:true,...avatar.capabilities};
     }catch(_){chunks=[];return {ok:false};}},
+    view(command){if(!dead)avatar?.view(command);},
     signal(value){signals={...signals,...value};stop();if(!signals.active)avatar?.render(0,{speaking:false,reducedMotion:true});else resume();},
     dispose(){dead=true;chunks=[];stop();avatar?.dispose();avatar=null;}
   };

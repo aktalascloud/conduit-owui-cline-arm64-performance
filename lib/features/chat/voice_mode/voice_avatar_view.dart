@@ -17,6 +17,7 @@ import 'chat_voice_mode_controller.dart';
 import 'voice_avatar_policy.dart';
 import 'voice_avatar_cache.dart';
 import 'voice_avatar_binding.dart';
+import 'voice_avatar_interaction.dart';
 
 /// A local graphics viewport only. Chat, audio, permissions and API auth remain
 /// native. The isolated document receives model bytes and numeric signals only.
@@ -254,6 +255,8 @@ class _AvatarViewportState extends State<_AvatarViewport>
       height: widget.fillAvailable ? null : height,
       width: double.infinity,
       child: Semantics(
+        container: true,
+        explicitChildNodes: true,
         label: l10n.voiceAvatar,
         image: true,
         child: FutureBuilder<String>(
@@ -262,71 +265,84 @@ class _AvatarViewportState extends State<_AvatarViewport>
             if (html.hasError)
               return Text('${l10n.voiceAvatarUnavailable} [ASSET]');
             if (!html.hasData) return const SizedBox.shrink();
-            return IgnorePointer(
-              child: InAppWebView(
-                initialUrlRequest: Platform.isAndroid
-                    ? URLRequest(url: WebUri(voiceAvatarDocumentUrl))
-                    : null,
-                initialData: Platform.isAndroid
-                    ? null
-                    : InAppWebViewInitialData(
-                        data: html.data!,
-                        baseUrl: WebUri(voiceAvatarDocumentUrl),
-                      ),
-                initialSettings: voiceAvatarWebViewSettings(),
-                onWebViewCreated: (c) => _controller = c,
-                onLoadStop: (c, _) {
-                  unawaited(_load(c));
-                },
-                shouldOverrideUrlLoading: (_, action) async {
-                  if (voiceAvatarDocumentAllowed(
-                    action.request.url?.uriValue,
-                    isMainFrame: action.isForMainFrame == true,
-                  )) {
-                    return NavigationActionPolicy.ALLOW;
-                  }
-                  return NavigationActionPolicy.CANCEL;
-                },
-                shouldInterceptRequest: (_, request) async {
-                  if (voiceAvatarDocumentAllowed(
-                    request.url.uriValue,
-                    isMainFrame: request.isForMainFrame == true,
-                  )) {
-                    return WebResourceResponse(
-                      statusCode: 200,
-                      reasonPhrase: 'OK',
-                      contentType: 'text/html',
-                      contentEncoding: 'utf-8',
-                      data: Uint8List.fromList(utf8.encode(html.data!)),
-                    );
-                  }
-                  return voiceAvatarResourceAllowed(request.url.uriValue)
+            return VoiceAvatarInteraction(
+              enabled: _loaded,
+              onView: (command) {
+                unawaited(
+                  _controller
+                      ?.evaluateJavascript(
+                        source:
+                            'window.conduitAvatar?.view(${jsonEncode(command)});',
+                      )
+                      .then<void>((_) {}, onError: (Object _) {}),
+                );
+              },
+              child: IgnorePointer(
+                child: InAppWebView(
+                  initialUrlRequest: Platform.isAndroid
+                      ? URLRequest(url: WebUri(voiceAvatarDocumentUrl))
+                      : null,
+                  initialData: Platform.isAndroid
                       ? null
-                      : WebResourceResponse(
-                          statusCode: 403,
-                          reasonPhrase: 'Blocked',
-                          contentType: 'text/plain',
-                          data: Uint8List(0),
-                        );
-                },
-                onCreateWindow: (_, _) async => false,
-                onPermissionRequest: (_, _) async =>
-                    PermissionResponse(action: PermissionResponseAction.DENY),
-                onShowFileChooser: (_, _) async => ShowFileChooserResponse(
-                  handledByClient: true,
-                  filePaths: null,
+                      : InAppWebViewInitialData(
+                          data: html.data!,
+                          baseUrl: WebUri(voiceAvatarDocumentUrl),
+                        ),
+                  initialSettings: voiceAvatarWebViewSettings(),
+                  onWebViewCreated: (c) => _controller = c,
+                  onLoadStop: (c, _) {
+                    unawaited(_load(c));
+                  },
+                  shouldOverrideUrlLoading: (_, action) async {
+                    if (voiceAvatarDocumentAllowed(
+                      action.request.url?.uriValue,
+                      isMainFrame: action.isForMainFrame == true,
+                    )) {
+                      return NavigationActionPolicy.ALLOW;
+                    }
+                    return NavigationActionPolicy.CANCEL;
+                  },
+                  shouldInterceptRequest: (_, request) async {
+                    if (voiceAvatarDocumentAllowed(
+                      request.url.uriValue,
+                      isMainFrame: request.isForMainFrame == true,
+                    )) {
+                      return WebResourceResponse(
+                        statusCode: 200,
+                        reasonPhrase: 'OK',
+                        contentType: 'text/html',
+                        contentEncoding: 'utf-8',
+                        data: Uint8List.fromList(utf8.encode(html.data!)),
+                      );
+                    }
+                    return voiceAvatarResourceAllowed(request.url.uriValue)
+                        ? null
+                        : WebResourceResponse(
+                            statusCode: 403,
+                            reasonPhrase: 'Blocked',
+                            contentType: 'text/plain',
+                            data: Uint8List(0),
+                          );
+                  },
+                  onCreateWindow: (_, _) async => false,
+                  onPermissionRequest: (_, _) async =>
+                      PermissionResponse(action: PermissionResponseAction.DENY),
+                  onShowFileChooser: (_, _) async => ShowFileChooserResponse(
+                    handledByClient: true,
+                    filePaths: null,
+                  ),
+                  onReceivedError: (_, request, _) {
+                    // A blocked favicon/subresource must not hide a healthy rig
+                    // or interrupt the independent native microphone/TTS path.
+                    if (mounted &&
+                        voiceAvatarLoadErrorIsFatal(
+                          request.url.uriValue,
+                          isMainFrame: request.isForMainFrame == true,
+                        )) {
+                      setState(() => _failed = true);
+                    }
+                  },
                 ),
-                onReceivedError: (_, request, _) {
-                  // A blocked favicon/subresource must not hide a healthy rig
-                  // or interrupt the independent native microphone/TTS path.
-                  if (mounted &&
-                      voiceAvatarLoadErrorIsFatal(
-                        request.url.uriValue,
-                        isMainFrame: request.isForMainFrame == true,
-                      )) {
-                    setState(() => _failed = true);
-                  }
-                },
               ),
             );
           },
