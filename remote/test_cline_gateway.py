@@ -5,12 +5,24 @@ import struct
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import asyncssh
 import cline_gateway as gateway
 
 
 class GatewayTests(unittest.IsolatedAsyncioTestCase):
+    def test_adapter_uses_installed_cli_for_hub_startup(self):
+        config = {'workspace_root': 'fixture-workspace', 'cline_config_dir': 'fixture-profile'}
+        with patch.object(gateway.subprocess, 'run') as run:
+            run.return_value.returncode = 0
+            gateway.ensure_adapter_hub('fixture-cli', config, {'CLINE_DIR': 'fixture-profile'}, 0)
+            self.assertEqual(run.call_args.args[0], ['fixture-cli', 'hub', 'ensure', '--cwd', 'fixture-workspace', '--config', 'fixture-profile'])
+            self.assertNotIn('shell', run.call_args.kwargs)
+            run.return_value.returncode = 1
+            with self.assertRaises(RuntimeError):
+                gateway.ensure_adapter_hub('fixture-cli', config, {}, 0)
+
     async def asyncSetUp(self):
         self.temp=tempfile.TemporaryDirectory()
         root=Path(self.temp.name)

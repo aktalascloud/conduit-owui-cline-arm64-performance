@@ -206,6 +206,17 @@ def client_profile(config: dict, host: str) -> dict:
         'projectPath':config.get('workspace_root','')}
 
 
+def ensure_adapter_hub(cli, config, environment, flags):
+    # The standalone adapter is not a CLI daemon entry point. Let the installed
+    # CLI discover/start its own shared Hub before attaching the adapter.
+    result = subprocess.run([str(cli), 'hub', 'ensure', '--cwd', config['workspace_root'],
+        '--config', config['cline_config_dir']], env=environment,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60,
+        creationflags=flags)
+    if result.returncode:
+        raise RuntimeError('Installed Cline Hub readiness failed; no existing application was stopped')
+
+
 async def run(config: dict, state: Path):
     validate_config(config)
     cli = Path(config['cline_cli'])
@@ -222,6 +233,7 @@ async def run(config: dict, state: Path):
     if adapter.is_file():
         environment.update(CLINE_DIR=config['cline_config_dir'], WORKSPACE_ROOT=config['workspace_root'],
             CLINE_HUB_DASHBOARD_PORT=str(config['dashboard_port']))
+        ensure_adapter_hub(cli, config, environment, flags)
         dashboard_command = [str(adapter)]
     else:
         dashboard_command = [str(cli),'hub','dashboard','--no-open','--host','127.0.0.1',
