@@ -1335,6 +1335,7 @@ String _preview(Object? value) {
 
 String _errorText(AppLocalizations l, String value) => switch (value) {
   'offline' || 'connection' => l.clineNetworkError,
+  'selectionUnavailable' => l.clineSelectionUnavailable,
   'payload' => l.clinePayloadLimit,
   'protocol' => l.clineProtocolError,
   _ => value,
