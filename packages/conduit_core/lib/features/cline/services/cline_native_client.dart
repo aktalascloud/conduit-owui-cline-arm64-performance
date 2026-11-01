@@ -46,8 +46,10 @@ final class ClineNativeState {
     this.status = '',
     this.error,
     this.uncertainPrompt,
+    this.selectionBlocked = false,
   });
   final bool connected, hubConnected, busy, loadingHistory;
+  final bool selectionBlocked;
   final String? sessionId, error, uncertainPrompt;
   final String project, provider, model, mode, reasoning, status;
   final List<ClineSession> sessions;
@@ -60,12 +62,43 @@ final class ClineNativeState {
       hubConnected &&
       !busy &&
       !loadingHistory &&
+      (sessionId != null || !selectionBlocked) &&
+      error != 'selectionUnavailable' &&
       uncertainPrompt == null &&
       {'act', 'plan'}.contains(mode) &&
       (sessionId != null || (provider.isNotEmpty && model.isNotEmpty));
   List<String> get projects =>
       ({project, ...sessions.map((s) => s.project)}..remove('')).toList()
         ..sort();
+}
+
+/// Keep explicit new-chat choices across a transport reconnect, never across accounts.
+final class ClineDraftSelection {
+  ClineDraftSelection._(
+    this.identity,
+    this.project,
+    this.provider,
+    this.model,
+    this.reasoning,
+  );
+  final String identity, project, provider, model, reasoning;
+
+  static ClineDraftSelection? capture(ClineNativeClient client) {
+    final state = client.state;
+    return state.sessionId == null
+        ? ClineDraftSelection._(
+            client.identity,
+            state.project,
+            state.provider,
+            state.model,
+            state.reasoning,
+          )
+        : null;
+  }
+
+  bool restore(ClineNativeClient client) {
+    return client._restoreDraftChoice(this);
+  }
 }
 
 /// Typed Cline JSON client. It never renders HTML or replays a user command.
@@ -103,6 +136,7 @@ final class ClineNativeClient {
       _loadingHistory = false,
       _closed = false;
   bool _newTurn = false, _resetting = false;
+  bool _selectionBlocked = false;
   String? _sessionId,
       _awaitedSession,
       _assistantId,
@@ -138,6 +172,7 @@ final class ClineNativeClient {
     status: _status,
     error: _error,
     uncertainPrompt: _uncertainPrompt,
+    selectionBlocked: _selectionBlocked,
     sessions: List.unmodifiable(_sessions),
     providers: List.unmodifiable(_providers),
     models: Map.unmodifiable(_models),
@@ -248,6 +283,10 @@ final class ClineNativeClient {
                 .map(ClineModel.fromJson)
                 .where((m) => m.id.isNotEmpty),
           );
+          if (id == _provider && _selectionAvailable) {
+            _selectionBlocked = false;
+            if (_error == 'selectionUnavailable') _error = null;
+          }
         case 'sessions':
           _sessions =
               clineObjects(frame['sessions'])
@@ -507,7 +546,37 @@ final class ClineNativeClient {
     if (reasoning != null &&
         {'none', 'low', 'medium', 'high'}.contains(reasoning))
       _reasoning = reasoning;
+    if (_selectionAvailable) {
+      _selectionBlocked = false;
+      if (_error == 'selectionUnavailable') _error = null;
+    }
     _notify(immediate: true);
+  }
+
+  bool get _selectionAvailable =>
+      _providers.any((p) => p.id == _provider) &&
+      (_models[_provider]?.any((m) => m.id == _model) ?? false);
+
+  bool _restoreDraftChoice(ClineDraftSelection choice) {
+    if (identity != choice.identity ||
+        _sessionId != null ||
+        _busy ||
+        _loadingHistory ||
+        _resetting)
+      return false;
+    _project = choice.project;
+    _provider = choice.provider;
+    _model = choice.model;
+    _reasoning = choice.reasoning;
+    _mode = 'act';
+    // Missing choices stay visible but blocked; never substitute a server default.
+    _error = _selectionAvailable ? null : 'selectionUnavailable';
+    _selectionBlocked = !_selectionAvailable;
+    if (_providers.any((p) => p.id == _provider) &&
+        !_models.containsKey(_provider))
+      requestModels(_provider);
+    _notify(immediate: true);
+    return true;
   }
 
   void sendMessage(

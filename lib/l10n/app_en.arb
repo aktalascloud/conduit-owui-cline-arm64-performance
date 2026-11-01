@@ -10449,7 +10449,7 @@
   "clineAuthenticationFailed": "Tunnel access was rejected. Check the private connection document.",
   "clineLocalPortBusy": "The local connection port is busy. Close the previous Cline connection and try again.",
   "clineNetworkError": "Cannot connect to the PC. Check its address, SSH port, firewall and router forwarding.",
-  "clineDisconnected": "The connection closed. Return and reconnect. No messages were resent automatically; agent sessions remain on the PC.",
+  "clineDisconnected": "Connection lost. Reconnecting automatically; no commands are replayed.",
   "clinePasteConnection": "Paste connection",
   "clineUploadFile": "Attach image or document",
   "clineUploadFailed": "Upload failed. Maximum: 64 MiB per file, 4 attachments per message. Check the connection and available inbox space.",
@@ -10472,7 +10472,7 @@
   "clineConnectionSettings": "Connection settings",
   "clineOtherBackends": "Accounts and backends",
   "clineDismiss": "Dismiss",
-  "clineUncertainResult": "The previous send has an unknown outcome. Reconnect and check the PC history before sending it again. Nothing is replayed automatically.",
+  "clineUncertainResult": "Check the restored session history before sending this uncertain message again. Reconnection never repeats a command.",
   "clineRestoreDraft": "Restore draft",
   "clineHistoryChecked": "History checked",
   "clineNativeWelcome": "Choose a session from the sidebar or start a new chat in your PC project.",
@@ -10547,5 +10547,9 @@
   "clineReconnecting": "Reconnecting…",
   "@clineReconnecting": {
     "description": "One notice while restoring an existing SSH connection; commands are never replayed."
+  },
+  "clineSelectionUnavailable": "The previous model or provider is unavailable. Choose a model; no default was substituted.",
+  "@clineSelectionUnavailable": {
+    "description": "Reconnect preserved an explicit model choice which is no longer in the server catalog; sending stays blocked."
   }
 }

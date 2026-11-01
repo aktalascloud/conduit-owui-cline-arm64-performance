@@ -153,5 +153,10 @@
       "https://github.com/cogwheel0/conduit/pull/914"
     ],
     "verification": "Targeted regressions plus exact-source package/privacy/security/startup gates; final CI receipt records actual scope."
+  },
+  {
+    "id": "APK-016",
+    "description": "Reconnect also retains explicit new-chat project/provider/model/reasoning before any session exists; scope is bound to the account identity. Do not attach an unrelated last session or replay an uncertain send.",
+    "verification": "Real native-client configuration regressions: changed defaults, account separation and no send/approval frames."
   }
 ]

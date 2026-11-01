@@ -93,6 +93,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
   int _retryAttempt = 0;
   bool _manualDisconnect = false;
   String? _restoreSession, _restoreUncertain, _restoreIdentity;
+  ClineDraftSelection? _restoreDraftSelection;
 
   @override
   void initState() {
@@ -193,6 +194,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
       _restoreSession = old.state.sessionId;
       _restoreUncertain = old.state.uncertainPrompt;
       _restoreIdentity = old.identity;
+      _restoreDraftSelection = ClineDraftSelection.capture(old);
     }
     var restore = _restoreSession;
     var uncertain = _restoreUncertain;
@@ -229,6 +231,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
       if (_restoreIdentity != null && native.identity != _restoreIdentity) {
         restore = uncertain = null;
         _restoreSession = _restoreUncertain = _restoreIdentity = null;
+        _restoreDraftSelection = null;
       }
       if (!mounted ||
           epoch != _generation ||
@@ -241,7 +244,9 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
       ref.read(clineBackendClientProvider.notifier).adopt(native);
       if (restore != null && native.state.sessions.any((s) => s.id == restore))
         native.openSession(restore);
-      else {
+      else if (_restoreDraftSelection != null) {
+        _restoreDraftSelection!.restore(native);
+      } else {
         if (mounted &&
             last != null &&
             native.state.sessions.any((s) => s.id == last))
@@ -302,6 +307,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
       'busy' => l.clineWaitForTurn,
       'existingContext' => l.clineExistingContext,
       'payload' => l.clinePayloadLimit,
+      'selectionUnavailable' => l.clineSelectionUnavailable,
       'fileChanged' => l.clineFileChanged,
       _ => l.clineNetworkError,
     };
