@@ -209,8 +209,8 @@ def client_profile(config: dict, host: str) -> dict:
 def ensure_adapter_hub(cli, config, environment, flags):
     # The standalone adapter is not a CLI daemon entry point. Let the installed
     # CLI discover/start its own shared Hub before attaching the adapter.
-    result = subprocess.run([str(cli), 'hub', 'ensure', '--cwd', config['workspace_root'],
-        '--config', config['cline_config_dir']], env=environment,
+    result = subprocess.run([str(cli), 'hub', 'ensure', '--cwd', config['workspace_root']],
+        env={**environment, 'CLINE_DIR': config['cline_config_dir']},
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60,
         creationflags=flags)
     if result.returncode:

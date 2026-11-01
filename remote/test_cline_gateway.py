@@ -17,7 +17,8 @@ class GatewayTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(gateway.subprocess, 'run') as run:
             run.return_value.returncode = 0
             gateway.ensure_adapter_hub('fixture-cli', config, {'CLINE_DIR': 'fixture-profile'}, 0)
-            self.assertEqual(run.call_args.args[0], ['fixture-cli', 'hub', 'ensure', '--cwd', 'fixture-workspace', '--config', 'fixture-profile'])
+            self.assertEqual(run.call_args.args[0], ['fixture-cli', 'hub', 'ensure', '--cwd', 'fixture-workspace'])
+            self.assertEqual(run.call_args.kwargs['env']['CLINE_DIR'], 'fixture-profile')
             self.assertNotIn('shell', run.call_args.kwargs)
             run.return_value.returncode = 1
             with self.assertRaises(RuntimeError):
