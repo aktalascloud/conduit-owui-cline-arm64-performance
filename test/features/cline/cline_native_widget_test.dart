@@ -182,6 +182,7 @@ void main() {
       expect(scroll.offset, closeTo(offset, 2));
       await tester.tap(find.byKey(const Key('cline-model-picker')));
       await tester.pumpAndSettle();
+    expect(wire.sent.any((frame) => frame['type'] == 'loadModels' && frame['providerId'] == 'local'), isTrue);
       expect(find.text('Test model'), findsOneWidget);
       expect(find.textContaining('Папка и модель'), findsNothing);
       await _unmount(tester, client);

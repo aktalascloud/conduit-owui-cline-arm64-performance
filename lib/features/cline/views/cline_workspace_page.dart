@@ -337,6 +337,7 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
 
   Future<void> _models(ClineNativeClient client, ClineNativeState s) async {
     final l = AppLocalizations.of(context)!;
+    if (s.provider.isNotEmpty) client.requestModels(s.provider);
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
