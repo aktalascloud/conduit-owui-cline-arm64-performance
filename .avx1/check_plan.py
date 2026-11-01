@@ -42,7 +42,7 @@ def select(changed, root, *, recipe_allowed=False, avatar_assets_only=False, rev
             continue  # Exact binary cache only; unchanged native flags and all ABI gates.
         if path.startswith(('.avx1/measurements/', '.github/', 'docs/')) or path.endswith('.md'):
             continue
-        if path.startswith('remote/') and Path(path).suffix in {'.py','.ts','.cmd','.ps1'}:
+        if path.startswith('remote/') and Path(path).suffix in {'.py','.ts','.cmd','.ps1','.json'}:
             continue  # Separate gateway tests; not part of the Android executable.
         if path.startswith('packages/conduit_core/test/features/chat/voice_mode/'):
             targets.add('packages/conduit_core/test/features/chat/voice_mode')
