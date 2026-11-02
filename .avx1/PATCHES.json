@@ -195,5 +195,22 @@
     "upstream_head": "110c3101290a04ecadbdcb4444611bc33127a1c7",
     "queue_compatibility": "Keep stored createChatContentHash unchanged. Pull crash-heal can compare the recorded local snapshot plus projected body before atomically claiming a pending create; inFlight/parked queues stay excluded. No schema migration and no replay of a recovered create. Transient projection digests are reused only for active pending sequence/hash pairs, pruned on queue changes and freshly revalidated before a claim; changed queued snapshot hashes invalidate the memo.",
     "verification": "112 projection/API,37 push-sync,78 pull/remap and117 outbox/DAO tests passed across named groups; changed-file Dart analysis clean. These are selected core groups, not the complete Flutter/workspace suite. Stock update_chat_by_id may re-derive display content on changed output; canonical egress is not a claim of permanent server-side HTML removal."
+  },
+  {
+    "id": "APK-WITHDRAW-914",
+    "description": "Remove the earlier PR914 experimental timeline/Markdown patch after its author closed914 and918 for failed performance acceptance and an unresolved preparation-gate issue. The exact inverse patch restores3 production files to upstream0f5c598a; other fork features and data formats are preserved. This is a withdrawal, not a new scrolling acceleration or scrollbar correctness claim.",
+    "urls": [
+      "https://github.com/cogwheel0/conduit/pull/914",
+      "https://github.com/cogwheel0/conduit/pull/918"
+    ],
+    "withdrawn_head": "ff7f54a298e6e8f46f72da01af82ba2d990d6406",
+    "prior_candidate": "afa3f0f59b123ac7027f29205337e221c519f9dc",
+    "verification": "167 stock timeline/Markdown cases pass and changed-source analysis is clean after materializing exact pinned Mermaid/KaTeX submodules. Original withdrawn fixture retained in prior Git history and maintenance evidence; its160-paragraph case still fails the completed-extent invariant on both synthetic iOS/Android variants against upstream behavior. No real-device or frame-time acceptance.",
+    "known_limitation": "Upstream long-chat provisional extent/scrollbar instability remains open. Do not hide that failure behind stock-suite success or reintroduce an unaccepted estimate cache as a speed fix."
+  },
+  {
+    "id": "APK-LOCALE-FIXTURE-QUALIFICATION",
+    "description": "Complete the7 missing Polish labels for existing avatar/Cline controls. Keep Hermes refresh/switch assertions unchanged while limiting its real HTTP fixture to its owned loopback port and closing clients plus pending connection tasks before teardown. Production auth timeouts and account behavior are unchanged.",
+    "verification": "32 combined Polish/Hermes/SSH cases pass with the pinned test Python;3 platform-lint cases pass with the actual Dart SDK binary on PATH. A broader local Windows run initially had5241 passes/16 failures; remaining Windows filesystem/privilege differences require the mandatory Ubuntu CI full suite, not suppressed assertions."
   }
 ]

@@ -62,7 +62,6 @@ void main() {
   });
   tearDown(PreferencesStore.debugReset);
 
-
   testWidgets('lists connections, switches on tap, and opens the editor', (
     tester,
   ) async {
@@ -185,11 +184,12 @@ void main() {
     check(saved.nameSource).equals(HermesConnectionNameSource.user);
     // Saving another connection leaves the runtime on the active one.
     check(container.read(hermesConfigProvider).connectionId).equals(_home);
-    check(
-      await secrets.read(key: 'hermes_api_key_v1:$_work'),
-    ).equals('work-key');
+    check(await secrets.read(key: 'hermes_api_key_v1:$_work'))
+        .equals('work-key');
 
-    await tester.tap(find.byKey(const ValueKey<String>('hermes-use-connection')));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('hermes-use-connection')),
+    );
     await tester.pumpAndSettle();
     check(container.read(hermesConfigProvider).connectionId).equals(_work);
     expect(
@@ -273,9 +273,8 @@ void main() {
 
     await tester.tap(find.text('Test connection'));
     await tester.pumpAndSettle();
-    check(
-      gateway.probed.single.desktopCredentials?.nativeTokens?.refreshToken,
-    ).equals('refresh-1');
+    check(gateway.probed.single.desktopCredentials?.nativeTokens?.refreshToken)
+        .equals('refresh-1');
   });
 
   testWidgets('switching waits for the token refresh its editor started', (
@@ -286,9 +285,12 @@ void main() {
     addTearDown(tester.view.reset);
     // The binding blocks real HTTP; the refresh must really be in flight.
     final blockedHttp = HttpOverrides.current;
-    HttpOverrides.global = _RealHttpOverrides();
+    final realHttp = _RealHttpOverrides();
+    HttpOverrides.global = realHttp;
+    addTearDown(realHttp.closeClients);
     addTearDown(() => HttpOverrides.global = blockedHttp);
     final gateway = (await tester.runAsync(_RotatingGateway.start))!;
+    realHttp.allowedPort = Uri.parse(gateway.baseUrl).port;
     addTearDown(gateway.close);
     // Hermes stays off, so no live client refreshes the tokens itself.
     PreferencesStore.debugOverride(
@@ -374,9 +376,8 @@ void main() {
     check(active.connectionId).equals(_work);
     // The switch picked up the replacement tokens; the spent ones would
     // sign the connection out at its next refresh.
-    check(
-      active.desktopCredentials?.nativeTokens?.refreshToken,
-    ).equals('refresh-1');
+    check(active.desktopCredentials?.nativeTokens?.refreshToken)
+        .equals('refresh-1');
     final stored = HermesDesktopCredentials.fromJson(
       jsonDecode(
         (await secrets.read(key: 'hermes_desktop_credentials_v1:$_work'))!,
@@ -384,8 +385,10 @@ void main() {
     );
     check(stored.nativeTokens?.refreshToken).equals('refresh-1');
 
-    // The editor lists the now active connection's profiles again; closing
-    // the gateway ends that request with the test.
+    // Dispose the editor/client before its real loopback server. This keeps
+    // a reconnect to the closed fixture from leaking fake connect timers.
+    await tester.pumpWidget(const SizedBox.shrink());
+    realHttp.closeClients();
     await tester.runAsync(gateway.close);
     for (var i = 0; i < 5; i++) {
       await settleIo();
@@ -400,9 +403,12 @@ void main() {
     addTearDown(tester.view.reset);
     // The binding blocks real HTTP; the refresh must really be in flight.
     final blockedHttp = HttpOverrides.current;
-    HttpOverrides.global = _RealHttpOverrides();
+    final realHttp = _RealHttpOverrides();
+    HttpOverrides.global = realHttp;
+    addTearDown(realHttp.closeClients);
     addTearDown(() => HttpOverrides.global = blockedHttp);
     final gateway = (await tester.runAsync(_RotatingGateway.start))!;
+    realHttp.allowedPort = Uri.parse(gateway.baseUrl).port;
     addTearDown(gateway.close);
     PreferencesStore.debugOverride(
       InMemoryKeyValueStore(<String, Object?>{
@@ -487,9 +493,9 @@ void main() {
       final stored = await secrets.read(
         key: 'hermes_desktop_credentials_v1:$_work',
       );
-      return HermesDesktopCredentials.fromJson(
-        jsonDecode(stored!),
-      ).nativeTokens?.refreshToken;
+      return HermesDesktopCredentials.fromJson(jsonDecode(stored!))
+          .nativeTokens
+          ?.refreshToken;
     }
 
     for (var i = 0; i < 100 && await storedRefreshToken() != 'refresh-1'; i++) {
@@ -622,9 +628,9 @@ void main() {
     // The edited connection stops being active, and reading its stored
     // baseline fails (reads of Hermes secrets retry once).
     flaky.failures = 2;
-    await container.read(hermesConfigProvider.notifier).setActiveConnection(
-      _work,
-    );
+    await container
+        .read(hermesConfigProvider.notifier)
+        .setActiveConnection(_work);
     await tester.pumpAndSettle();
     expect(retry, findsOneWidget);
     check(save().onPressed).isNull();
@@ -700,9 +706,8 @@ void main() {
 
     check(container.read(hermesConnectionsProvider)).isEmpty();
     // With nothing left, a Hermes-only install goes back to the chooser.
-    check(
-      container.read(preferredBackendProvider),
-    ).equals(PreferredBackend.unset);
+    check(container.read(preferredBackendProvider))
+        .equals(PreferredBackend.unset);
     check(tester.takeException()).isNull();
   });
 
@@ -802,7 +807,52 @@ final class _BlockingCookieJar extends NullCookieJarPort {
   Future<bool> clearForOrigin(String origin) => release.future;
 }
 
-class _RealHttpOverrides extends HttpOverrides {}
+class _RealHttpOverrides extends HttpOverrides {
+  final _clients = <HttpClient>[];
+  final _connections = <ConnectionTask<Socket>>[];
+  int? allowedPort;
+  bool _closed = false;
+
+  void closeClients() {
+    _closed = true;
+    for (final connection in _connections) {
+      connection.cancel();
+    }
+    _connections.clear();
+    for (final client in _clients) {
+      client.close(force: true);
+    }
+    _clients.clear();
+  }
+
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    final client = super.createHttpClient(context);
+    _clients.add(client);
+    client.findProxy = (_) => 'DIRECT';
+    client.connectionFactory = (uri, proxyHost, proxyPort) async {
+      if (_closed ||
+          uri.port != allowedPort ||
+          uri.scheme != 'http' ||
+          uri.host != '127.0.0.1') {
+        throw const SocketException(
+          'Only the loopback fixture may receive HTTP',
+        );
+      }
+      final connection = await Socket.startConnect(
+        InternetAddress.loopbackIPv4,
+        uri.port,
+      );
+      if (_closed) {
+        connection.cancel();
+      } else {
+        _connections.add(connection);
+      }
+      return connection;
+    };
+    return client;
+  }
+}
 
 /// A Desktop gateway whose first token refresh waits for [release]. Each
 /// refresh spends the refresh token it replaces.

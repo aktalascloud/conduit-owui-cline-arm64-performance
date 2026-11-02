@@ -204,13 +204,8 @@ class _StreamingMarkdownWidgetState
   bool _isRouteVisible = true;
   ImageBuilder? _adaptedImageBuilder;
   // Chunked block inflation registers here while revealing; completion
-  // re-arms SelectionArea wrapping via the listener. A timeline-provided gate
-  // also keeps loading/partial heights out of its measured extent cache.
-  final MarkdownRenderGate _ownedRenderGate = MarkdownRenderGate();
-  MarkdownRenderGate? _inheritedRenderGate;
-  bool _holdingPreparationGate = false;
-  MarkdownRenderGate get _renderGate =>
-      _inheritedRenderGate ?? _ownedRenderGate;
+  // re-arms SelectionArea wrapping via the listener.
+  final MarkdownRenderGate _renderGate = MarkdownRenderGate();
 
   CompiledMarkdownDocument? get _compiledDocument =>
       _documentController.compiledDocument;
@@ -332,14 +327,6 @@ class _StreamingMarkdownWidgetState
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final gate = MarkdownRenderGateScope.maybeOf(context);
-    if (!identical(gate, _inheritedRenderGate)) {
-      _renderGate.removeListener(_handleRenderGateChanged);
-      _syncPreparationGate(false);
-      _inheritedRenderGate = gate;
-      _renderGate.addListener(_handleRenderGateChanged);
-    }
-
     _updateRouteVisibility();
   }
 
@@ -469,9 +456,9 @@ class _StreamingMarkdownWidgetState
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _renderGate.removeListener(_handleRenderGateChanged);
-    _syncPreparationGate(false);
-    _ownedRenderGate.dispose();
+    _renderGate
+      ..removeListener(_handleRenderGateChanged)
+      ..dispose();
     _debugStreamingDelayTimer?.cancel();
     _retirePreparationSession();
     _documentController.dispose();
@@ -781,23 +768,8 @@ class _StreamingMarkdownWidgetState
     };
   }
 
-  void _syncPreparationGate(bool pending) {
-    if (pending == _holdingPreparationGate) return;
-    _holdingPreparationGate = pending;
-    if (pending) {
-      _renderGate.markRegionIncomplete();
-    } else {
-      _renderGate.markRegionComplete();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    _syncPreparationGate(
-      !widget.isStreaming &&
-          widget.content.trim().isNotEmpty &&
-          _compiledDocument == null,
-    );
     final snapshot = _snapshot;
     if (snapshot.isBlank) {
       if (_settledPreparationPending && widget.content.trim().isNotEmpty) {

@@ -8295,5 +8295,12 @@
   "chatHandoffStayHere": "Zostań tutaj",
   "@chatHandoffStayHere": {
     "description": "Cancel button that keeps the user in the current chat instead of following the Open WebUI server's suggestion."
-  }
+  },
+  "voiceAvatar": "Awatar głosowy",
+  "voiceAvatarUnavailable": "Awatar niedostępny. Rozmowa głosowa trwa dalej.",
+  "clineReconnecting": "Ponowne łączenie…",
+  "clineSelectionUnavailable": "Poprzedni model lub dostawca jest niedostępny. Wybierz model; nie podstawiono domyślnego.",
+  "voiceAvatarZoomIn": "Przybliż",
+  "voiceAvatarZoomOut": "Oddal",
+  "voiceAvatarResetView": "Zresetuj widok"
 }
