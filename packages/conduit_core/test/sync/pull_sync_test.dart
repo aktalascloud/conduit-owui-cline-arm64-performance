@@ -6,6 +6,7 @@ import 'package:conduit_core/database/app_database.dart';
 import 'package:conduit_core/database/mappers/chat_blob_mapper.dart';
 import 'package:conduit_core/database/mappers/conversation_assembler.dart'
     show
+        chatRowsFromDb,
         kLocalConversationWorkerPayloadThreshold,
         kLocalConversationWorkerThreshold;
 import 'package:conduit_core/services/worker_manager.dart';
@@ -1282,6 +1283,95 @@ void main() {
         },
       );
     }
+
+    test('projection memo follows a changed queued snapshot hash', () async {
+      const localId = 'local:projection-edit';
+      final raw = <Map<String, dynamic>>[
+        {
+          'type': 'reasoning',
+          'summary': [
+            {'type': 'summary_text', 'text': 'thought'},
+          ],
+          'status': 'completed',
+        },
+        {
+          'type': 'message',
+          'content': [
+            {'type': 'output_text', 'text': 'Answer'},
+          ],
+        },
+      ];
+      final blob = blobFor('projection-edit');
+      final message = blob['history']['messages']['projection-edit-m2'] as Map;
+      message['content'] = renderStructuredOutputBlocks(
+        parseOpenWebUIStructuredOutput(raw),
+      );
+      message['output'] = raw;
+      final rows = ChatBlobMapper.blobToRows(
+        chatId: localId,
+        blob: blob,
+        title: 'Before',
+        createdAt: 100,
+        updatedAt: 200,
+      );
+      await db.chatsDao.insertLocalChatWithCreateOp(
+        chat: rows.chat,
+        messages: rows.messages,
+        blobRows: rows,
+        contentHash: createChatContentHash(rows),
+      );
+      final remapper = IdRemapper(db);
+      addTearDown(remapper.dispose);
+      final healing = PullSync(
+        client: client,
+        db: db,
+        locks: locks,
+        remapper: remapper,
+      );
+      server.seedChat(
+        id: 'srv-unrelated-edit',
+        blob: blobFor('unrelated-edit'),
+        createdAt: 100,
+        updatedAt: 300,
+      );
+      expect((await healing.run()).success, isTrue);
+      expect(await db.chatsDao.getChat(localId), isNotNull);
+
+      (raw.last['content'] as List).first['text'] = 'Edited answer';
+      message['content'] = renderStructuredOutputBlocks(
+        parseOpenWebUIStructuredOutput(raw),
+      );
+      await (db.update(db.messages)
+            ..where((row) => row.chatId.equals(localId))
+            ..where((row) => row.id.equals('projection-edit-m2')))
+          .write(
+            MessagesCompanion(
+              content: Value(message['content'] as String),
+              payload: Value(jsonEncode(message)),
+            ),
+          );
+      final current = chatRowsFromDb(
+        (await db.chatsDao.getChat(localId))!,
+        await db.messagesDao.getForChat(localId),
+      );
+      await (db.update(
+        db.outboxOps,
+      )..where((row) => row.chatId.equals(localId))).write(
+        OutboxOpsCompanion(contentHash: Value(createChatContentHash(current))),
+      );
+      expect(
+        createChatContentHash(current),
+        isNot(createChatContentHash(rows)),
+      );
+      final sent = projectOpenWebUiChatBlob(ChatBlobMapper.rowsToBlob(current));
+      server.tick(400);
+      final serverId = server.createChat({...sent, 'id': ''})['id'] as String;
+      expect((await healing.run()).success, isTrue);
+      expect(await db.chatsDao.getChat(localId), isNull);
+      expect(await db.chatsDao.getChat(serverId), isNotNull);
+      expect(await db.outboxDao.pendingForChat(serverId), isEmpty);
+      expect(client.createChatCalls, 0);
+    });
 
     test(
       'projected match cannot claim a different recorded snapshot hash',

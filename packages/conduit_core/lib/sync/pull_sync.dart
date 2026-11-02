@@ -280,6 +280,9 @@ class PullSync {
   final SyncItemProgressCallback? _onProgress;
   final PullFetchMemo? _fetchMemo;
   final _taskVersionsAtFetch = Expando<int>();
+  // Pending snapshots are reused across incoming chats; revalidate before claim.
+  final _createProjectionHashes =
+      <int, ({String snapshotHash, String projectedHash})>{};
 
   /// [ChatLocks.generation] when each raw response was requested, so the merge
   /// can tell a read that a bulk barrier has since outdated.
@@ -795,7 +798,10 @@ class PullSync {
     final hasPendingCreate =
         hasPendingCreateHashes ??
         await _db.outboxDao.hasPendingCreateContentHashes();
-    if (!hasPendingCreate) return false;
+    if (!hasPendingCreate) {
+      _createProjectionHashes.clear();
+      return false;
+    }
 
     // Hash the server-arrived rows under the SERVER id; createChatContentHash
     // excludes the volatile id/timestamp, so this equals the digest recorded on
@@ -804,24 +810,39 @@ class PullSync {
     final hash = createChatContentHash(rows);
     var claimed = await _db.outboxDao.claimPendingCreateForHash(hash);
     if (claimed == null) {
+      final candidates = await _db.outboxDao
+          .pendingChatCreatesWithContentHashes();
+      final pendingSequences = candidates
+          .map((candidate) => candidate.seq)
+          .toSet();
+      _createProjectionHashes.removeWhere(
+        (seq, _) => !pendingSequences.contains(seq),
+      );
+      if (candidates.isEmpty) return false;
       final projectedHash = createChatProjectedContentHash(rows);
-      for (final candidate
-          in await _db.outboxDao.pendingChatCreatesWithContentHashes()) {
+      for (final candidate in candidates) {
         final localId = candidate.chatId;
-        if (localId == null) continue;
-        final localChat = await _db.chatsDao.getChat(localId);
-        if (localChat == null) continue;
-        final localMessages = await _db.messagesDao.getForChat(localId);
-        final localRows = chatRowsFromDb(localChat, localMessages);
-        if (createChatContentHash(localRows) != candidate.contentHash ||
-            createChatProjectedContentHash(localRows) != projectedHash) {
+        final recordedHash = candidate.contentHash;
+        if (localId == null || recordedHash == null) continue;
+        var cached = _createProjectionHashes[candidate.seq];
+        if (cached?.snapshotHash != recordedHash) {
+          final snapshot = await _pendingCreateSnapshot(localId, recordedHash);
+          if (snapshot == null) continue;
+          cached = (
+            snapshotHash: recordedHash,
+            projectedHash: createChatProjectedContentHash(snapshot),
+          );
+          _createProjectionHashes[candidate.seq] = cached;
+        }
+        if (cached!.projectedHash != projectedHash) continue;
+        final current = await _pendingCreateSnapshot(localId, recordedHash);
+        if (current == null ||
+            createChatProjectedContentHash(current) != projectedHash) {
           continue;
         }
         // Claim before taking the local lock, preserving the existing lock
         // ordering and checking that the recorded hash is still pending.
-        claimed = await _db.outboxDao.claimPendingCreateForHash(
-          candidate.contentHash!,
-        );
+        claimed = await _db.outboxDao.claimPendingCreateForHash(recordedHash);
         if (claimed != null) break;
       }
     }
@@ -891,6 +912,17 @@ class PullSync {
       Error.throwWithStackTrace(error, stackTrace);
     }
     return healed;
+  }
+
+  Future<ChatRows?> _pendingCreateSnapshot(
+    String localId,
+    String recordedHash,
+  ) async {
+    final chat = await _db.chatsDao.getChat(localId);
+    if (chat == null) return null;
+    final messages = await _db.messagesDao.getForChat(localId);
+    final rows = chatRowsFromDb(chat, messages);
+    return createChatContentHash(rows) == recordedHash ? rows : null;
   }
 
   _ChangedItem? _parseListItem(Map<String, dynamic> item) {
