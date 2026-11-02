@@ -12,6 +12,8 @@ Direct connections include MiniMax global/CN presets for M3.1 Flash and M3. Save
 
 ## Build
 
+Normal outbound chat saves project only assistant content that exactly matches the retained structured-output renderer. Raw output, literal text, versions and local rows are preserved; legacy queue hashes remain valid during crash recovery. Upstream may derive display content again when output changes. No bulk history migration runs.
+
 Requires Python 3.12+, Git and GitHub CLI for CI. No LLM, model weights or Codex dependency.
 
 ```cmd

@@ -9,6 +9,9 @@ import 'package:conduit_core/database/mappers/conversation_assembler.dart'
         kLocalConversationWorkerPayloadThreshold,
         kLocalConversationWorkerThreshold;
 import 'package:conduit_core/services/worker_manager.dart';
+import 'package:conduit_core/services/structured_output.dart';
+import 'package:conduit_core/services/structured_output_renderer.dart';
+import 'package:conduit_core/utils/openwebui_message_payload.dart';
 import 'package:conduit_core/sync/chat_locks.dart';
 import 'package:conduit_core/sync/id_remapper.dart';
 import 'package:conduit_core/sync/pull_sync.dart';
@@ -1218,6 +1221,124 @@ void main() {
       ]);
     });
 
+    for (final canonicalWire in [false, true]) {
+      test(
+        'heals retained create hash for ${canonicalWire ? 'canonical' : 'legacy'} wire content',
+        () async {
+          const localId = 'local:projection-heal';
+          final raw = <Map<String, dynamic>>[
+            {
+              'type': 'reasoning',
+              'summary': [
+                {'type': 'summary_text', 'text': 'synthetic thought'},
+              ],
+              'status': 'completed',
+            },
+            {
+              'type': 'message',
+              'content': [
+                {'type': 'output_text', 'text': 'Answer'},
+              ],
+            },
+          ];
+          final blob = blobFor('projection');
+          final message = blob['history']['messages']['projection-m2'] as Map;
+          message['content'] = renderStructuredOutputBlocks(
+            parseOpenWebUIStructuredOutput(raw),
+          );
+          message['output'] = raw;
+          final rows = ChatBlobMapper.blobToRows(
+            chatId: localId,
+            blob: blob,
+            title: 'Title projection',
+            createdAt: 100,
+            updatedAt: 200,
+          );
+          final originalHash = createChatContentHash(rows);
+          await db.chatsDao.insertLocalChatWithCreateOp(
+            chat: rows.chat,
+            messages: rows.messages,
+            blobRows: rows,
+            contentHash: originalHash,
+          );
+          final sent = canonicalWire ? projectOpenWebUiChatBlob(blob) : blob;
+          final serverId =
+              server.createChat({...sent, 'id': ''})['id'] as String;
+          final remapper = IdRemapper(db);
+          addTearDown(remapper.dispose);
+          final healing = PullSync(
+            client: client,
+            db: db,
+            locks: locks,
+            remapper: remapper,
+          );
+          expect((await healing.run()).success, isTrue);
+          expect(await db.chatsDao.getChat(localId), isNull);
+          expect(await db.chatsDao.getChat(serverId), isNotNull);
+          expect(await db.select(db.chats).get(), hasLength(1));
+          expect(await db.outboxDao.pendingForChat(serverId), isEmpty);
+          expect(await db.outboxDao.pendingForChat(localId), isEmpty);
+          expect(client.createChatCalls, 0);
+        },
+      );
+    }
+
+    test(
+      'projected match cannot claim a different recorded snapshot hash',
+      () async {
+        const localId = 'local:stale-projection';
+        final raw = <Map<String, dynamic>>[
+          {
+            'type': 'reasoning',
+            'summary': [
+              {'type': 'summary_text', 'text': 'synthetic'},
+            ],
+            'status': 'completed',
+          },
+          {
+            'type': 'message',
+            'content': [
+              {'type': 'output_text', 'text': 'Answer'},
+            ],
+          },
+        ];
+        final blob = blobFor('projection-stale');
+        final message =
+            blob['history']['messages']['projection-stale-m2'] as Map;
+        message['content'] = renderStructuredOutputBlocks(
+          parseOpenWebUIStructuredOutput(raw),
+        );
+        message['output'] = raw;
+        final rows = ChatBlobMapper.blobToRows(
+          chatId: localId,
+          blob: blob,
+          title: 'Title projection-stale',
+          createdAt: 100,
+          updatedAt: 200,
+        );
+        await db.chatsDao.insertLocalChatWithCreateOp(
+          chat: rows.chat,
+          messages: rows.messages,
+          blobRows: rows,
+          contentHash: '0' * 64,
+        );
+        server.createChat({...projectOpenWebUiChatBlob(blob), 'id': ''});
+        final remapper = IdRemapper(db);
+        addTearDown(remapper.dispose);
+        final healing = PullSync(
+          client: client,
+          db: db,
+          locks: locks,
+          remapper: remapper,
+        );
+        expect((await healing.run()).success, isTrue);
+        expect(await db.chatsDao.getChat(localId), isNotNull);
+        expect(await db.select(db.chats).get(), hasLength(2));
+        expect(await db.outboxDao.pendingForChat(localId), isNotEmpty);
+        expect(client.createChatCalls, 0);
+      },
+    );
+
     test('a non-matching content hash does NOT heal (normal merge)', () async {
       final remapper = IdRemapper(db);
       addTearDown(remapper.dispose);
@@ -1452,9 +1573,8 @@ void main() {
       check(
         client.chatFetchStarts.where((id) => id == 'unread-elsewhere').length,
       ).equals(3);
-      check(
-        (await db.chatsDao.getChat('unread-elsewhere'))!.lastReadAt,
-      ).equals(0);
+      check((await db.chatsDao.getChat('unread-elsewhere'))!.lastReadAt)
+          .equals(0);
     });
   });
 

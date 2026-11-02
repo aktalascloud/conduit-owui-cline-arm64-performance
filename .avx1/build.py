@@ -177,7 +177,20 @@ def build_conduit(package, manifest, channel):
     run(flutter, "analyze", "--no-pub", "--no-fatal-infos", "--no-fatal-warnings", *checks['analysis'])
     run(flutter, "test", "--no-pub", *checks['tests'])
     run(flutter, "test", "--no-pub", "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart")
+    persistence_tests = [
+        "packages/conduit_core/test/utils/openwebui_persistence_projection_test.dart",
+        "packages/conduit_core/test/services/api_service_chat_completion_test.dart",
+        "packages/conduit_core/test/sync/push_sync_test.dart",
+        "packages/conduit_core/test/sync/pull_sync_test.dart",
+        "packages/conduit_core/test/sync/id_remapper_test.dart",
+        "packages/conduit_core/test/database/daos/outbox_dao_test.dart",
+        "packages/conduit_core/test/database/daos/chats_dao_outbox_test.dart",
+    ]
+    run(flutter, "test", "--no-pub", *persistence_tests)
     manifest['check_scope'] = {**checks, 'selected_checks': 'passed'}
+    manifest['check_scope']['extra_core_tests'] = [
+        "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart", *persistence_tests,
+    ]
     native_receipt = prepare_native()
     outdated = run(flutter, "pub", "outdated", "--json", capture=True).stdout
     (WORK / "dependency-review.json").write_text(outdated, encoding="utf-8")

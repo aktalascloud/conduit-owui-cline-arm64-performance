@@ -1,4 +1,70 @@
 import 'package:conduit_core/models/chat_message.dart';
+import 'package:conduit_core/services/structured_output.dart';
+import 'package:conduit_core/services/structured_output_renderer.dart';
+import 'package:conduit_markdown/conduit_markdown.dart';
+
+/// Only replace a display projection proven to come from retained output.
+/// Literal user text, old messages without output, and partial/mismatched
+/// presentations pass through unchanged; never strip HTML heuristically.
+String projectOpenWebUiContent(
+  String role,
+  String content,
+  List<dynamic>? output,
+) {
+  if (role != 'assistant' ||
+      output == null ||
+      output.isEmpty ||
+      !containsRenderedSemanticDetails(content)) {
+    return content;
+  }
+  final blocks = parseOpenWebUIStructuredOutput(output);
+  if (!structuredOutputBlocksContainDetails(blocks) ||
+      renderStructuredOutputBlocks(blocks) != content) {
+    return content;
+  }
+  return structuredOutputBlocksPlainText(blocks);
+}
+
+/// Project only the outbound copy. The database mapper's round-trip remains
+/// verbatim, including unknown fields, structured output and message versions.
+Map<String, dynamic> projectOpenWebUiChatBlob(Map<String, dynamic> blob) {
+  Object? message(Object? value, [String? inheritedRole]) {
+    if (value is! Map) return value;
+    final role = value['role'] ?? inheritedRole;
+    if (role != 'assistant') return value;
+    final result = <Object?, Object?>{...value};
+    final content = value['content'];
+    final output = value['output'];
+    if (content is String && output is List) {
+      result['content'] = projectOpenWebUiContent('assistant', content, output);
+    }
+    final versions = value['versions'];
+    if (versions is List) {
+      result['versions'] = [
+        for (final version in versions) message(version, 'assistant'),
+      ];
+    }
+    return result;
+  }
+
+  final result = <String, dynamic>{...blob};
+  final history = blob['history'];
+  if (history is Map && history['messages'] is Map) {
+    result['history'] = <Object?, Object?>{
+      ...history,
+      'messages': <Object?, Object?>{
+        for (final entry in (history['messages'] as Map).entries)
+          entry.key: message(entry.value),
+      },
+    };
+  }
+  if (blob['messages'] is List) {
+    result['messages'] = [
+      for (final value in blob['messages'] as List) message(value),
+    ];
+  }
+  return result;
+}
 
 /// Serializers for message fields OpenWebUI persists inside chat blobs.
 ///

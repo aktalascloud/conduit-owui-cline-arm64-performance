@@ -14,11 +14,35 @@ import 'package:drift/native.dart';
 import 'package:test/test.dart';
 
 import 'package:conduit_core/testing.dart';
+import 'package:conduit_core/services/structured_output.dart';
+import 'package:conduit_core/services/structured_output_renderer.dart';
 
 class FakeSyncClock implements SyncClock {
   int now = 0;
   @override
   int nowEpochSeconds() => now;
+}
+
+class _ProjectionRecordingClient extends FakeSyncApiClient {
+  _ProjectionRecordingClient(super.server);
+  Map<String, dynamic>? sent;
+  @override
+  Future<Map<String, dynamic>> createChat(
+    Map<String, dynamic> blob, {
+    String? folderId,
+  }) {
+    sent = Map<String, dynamic>.from(jsonDecode(jsonEncode(blob)) as Map);
+    return super.createChat(blob, folderId: folderId);
+  }
+
+  @override
+  Future<Map<String, dynamic>?> updateChat(
+    String id,
+    Map<String, dynamic> blob,
+  ) {
+    sent = Map<String, dynamic>.from(jsonDecode(jsonEncode(blob)) as Map);
+    return super.updateChat(id, blob);
+  }
 }
 
 class _DeleteAfterArchiveToggleClient extends FakeSyncApiClient {
@@ -201,6 +225,100 @@ void main() {
   });
 
   group('pushCreateChat', () {
+    for (final create in [true, false]) {
+      test('projects only outbound display on ${create ? 'create' : 'update'}', () async {
+        final id = create ? 'local:projection' : 'server-projection';
+        if (!create) {
+          server.seedChat(
+            id: id,
+            blob: {
+              'title': 'Existing',
+              'history': {'messages': <String, dynamic>{}},
+            },
+            createdAt: 100,
+            updatedAt: 150,
+          );
+        }
+        await seedLocalChat(db, id: id, messageCount: 2);
+        final recording = _ProjectionRecordingClient(server);
+        final projectionPush = PushSync(
+          client: recording,
+          db: db,
+          chatLocks: chatLocks,
+          folderLocks: folderLocks,
+          clock: clock,
+          remapper: remapper,
+        );
+        const literal =
+            '<details type="tool_calls"><summary>User example</summary>keep</details>';
+        final raw = <Map<String, dynamic>>[
+          {
+            'type': 'reasoning',
+            'summary': [
+              {'type': 'summary_text', 'text': 'synthetic thought'},
+            ],
+            'status': 'completed',
+          },
+          {
+            'type': 'message',
+            'content': [
+              {'type': 'output_text', 'text': 'Answer'},
+            ],
+          },
+        ];
+        final rendered = renderStructuredOutputBlocks(
+          parseOpenWebUIStructuredOutput(raw),
+        );
+        for (final row in await db.messagesDao.getForChat(id)) {
+          final content = row.role == 'assistant' ? rendered : literal;
+          final payload =
+              Map<String, dynamic>.from(jsonDecode(row.payload) as Map)
+                ..['content'] = content
+                ..['custom'] = 'retained';
+          if (row.role == 'assistant') {
+            payload['output'] = raw;
+            payload['versions'] = [
+              {'content': rendered, 'output': raw},
+            ];
+          }
+          await (db.update(
+            db.messages,
+          )..where((t) => t.id.equals(row.id))).write(
+            MessagesCompanion(
+              content: Value(content),
+              payload: Value(jsonEncode(payload)),
+            ),
+          );
+        }
+        final String serverId;
+        if (create) {
+          serverId = (await projectionPush.pushCreateChat(id))!;
+        } else {
+          await projectionPush.pushUpdateChat(id);
+          serverId = id;
+        }
+        final stored =
+            server.getChatById(serverId)!['chat']['history']['messages'] as Map;
+        expect(stored['$id-m1']['content'], literal);
+        final sent = recording.sent!['history']['messages'] as Map;
+        expect(sent['$id-m2']['content'], 'Answer');
+        expect(sent['$id-m2']['output'], raw);
+        // Stock update_chat_by_id derives display content again when output
+        // changes. Verify client egress separately from that server contract.
+        expect(
+          stored['$id-m2']['content'],
+          create ? 'Answer' : FakeOpenWebUiServer.serializeOutput(raw),
+        );
+        expect(stored['$id-m2']['output'], raw);
+        expect(stored['$id-m2']['versions'][0]['content'], 'Answer');
+        expect(stored['$id-m2']['custom'], 'retained');
+        final local = (await db.messagesDao.getForChat(serverId))
+            .singleWhere((row) => row.role == 'assistant');
+        expect(local.content, rendered);
+        expect(jsonDecode(local.payload)['content'], rendered);
+      });
+    }
+
     test('creates server chat, remaps local id, clears dirty', () async {
       const localId = 'local:new';
       await seedLocalChat(db, id: localId, messageCount: 2);

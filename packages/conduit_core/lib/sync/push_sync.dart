@@ -7,6 +7,7 @@ import 'package:conduit_core/database/mappers/chat_blob_mapper.dart';
 import 'package:conduit_core/database/mappers/conversation_assembler.dart';
 
 import 'package:conduit_core/utils/debug_logger.dart';
+import 'package:conduit_core/utils/openwebui_message_payload.dart';
 
 import 'package:conduit_core/sync/chat_locks.dart';
 
@@ -107,7 +108,8 @@ class PushSync {
       }
       final messages = await _db.messagesDao.getForChat(localId);
       final rows = chatRowsFromDb(chat, messages);
-      final blob = ChatBlobMapper.rowsToBlob(rows)..['id'] = '';
+      final blob = projectOpenWebUiChatBlob(ChatBlobMapper.rowsToBlob(rows))
+        ..['id'] = '';
       if (chat.folderId != null && chat.folderId!.startsWith('local:')) {
         DebugLogger.log(
           'create-defer-local-folder',
@@ -211,7 +213,7 @@ class PushSync {
       final messages = await _db.messagesDao.getForChat(chatId);
       final capturedMessageIds = [for (final m in messages) m.id];
       final rows = chatRowsFromDb(chat, messages);
-      final blob = ChatBlobMapper.rowsToBlob(rows);
+      final blob = projectOpenWebUiChatBlob(ChatBlobMapper.rowsToBlob(rows));
 
       final resp = await _client.updateChat(chatId, blob);
       if (resp == null) {

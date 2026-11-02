@@ -485,6 +485,19 @@ class OutboxDao extends DatabaseAccessor<AppDatabase> with _$OutboxDaoMixin {
         .getSingleOrNull();
   }
 
+  /// Compatibility candidates only; active/parked operations must not be stolen.
+  Future<List<OutboxOp>> pendingChatCreatesWithContentHashes() {
+    return (select(outboxOps)
+          ..where(
+            (t) =>
+                t.kind.equals(OutboxKind.createChat.name) &
+                t.contentHash.isNotNull() &
+                t.status.equals(OutboxStatus.pending),
+          )
+          ..orderBy([(t) => OrderingTerm.asc(t.seq)]))
+        .get();
+  }
+
   /// Atomically reserves the pending create op carrying [contentHash] for
   /// crash-heal. The row is flipped to `inFlight` before pull-side remap takes
   /// any local-id lock, so a drain worker cannot claim the same create and form
@@ -581,9 +594,9 @@ class OutboxDao extends DatabaseAccessor<AppDatabase> with _$OutboxDaoMixin {
   /// readable snapshot the replay would read the chat's live params, so the
   /// frozen copy is seeded from those.
   Future<bool> freezeAutomaticReasoningEffortOnCompletion(int seq) async {
-    final op =
-        await (select(outboxOps)..where((t) => t.seq.equals(seq)))
-            .getSingleOrNull();
+    final op = await (select(
+      outboxOps,
+    )..where((t) => t.seq.equals(seq))).getSingleOrNull();
     if (op == null || op.kind != OutboxKind.requestCompletion.name) {
       return false;
     }
@@ -591,7 +604,8 @@ class OutboxDao extends DatabaseAccessor<AppDatabase> with _$OutboxDaoMixin {
     final existing = OpenWebUiChatSettingsSnapshot.tryFromJson(
       payload['chatSettings'],
     );
-    final liveParams = existing != null || op.chatId == null || op.chatId!.isEmpty
+    final liveParams =
+        existing != null || op.chatId == null || op.chatId!.isEmpty
         ? null
         : await attachedDatabase.chatsDao.getChatParams(op.chatId!);
     final frozen = OpenWebUiChatSettingsSnapshot(
@@ -828,7 +842,10 @@ class OutboxDao extends DatabaseAccessor<AppDatabase> with _$OutboxDaoMixin {
             survivorSeq: update.seq,
             mergedPayload: payload.isEmpty
                 ? null
-                : <String, dynamic>{..._decodePayload(update.payload), ...payload},
+                : <String, dynamic>{
+                    ..._decodePayload(update.payload),
+                    ...payload,
+                  },
           );
         }
         return const _CoalesceDecision(insert: true);

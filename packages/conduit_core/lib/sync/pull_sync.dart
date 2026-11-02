@@ -802,7 +802,30 @@ class PullSync {
     // the local op (the server preserves the client's history/message ids on
     // create — only the top-level chat id is reminted).
     final hash = createChatContentHash(rows);
-    final op = await _db.outboxDao.claimPendingCreateForHash(hash);
+    var claimed = await _db.outboxDao.claimPendingCreateForHash(hash);
+    if (claimed == null) {
+      final projectedHash = createChatProjectedContentHash(rows);
+      for (final candidate
+          in await _db.outboxDao.pendingChatCreatesWithContentHashes()) {
+        final localId = candidate.chatId;
+        if (localId == null) continue;
+        final localChat = await _db.chatsDao.getChat(localId);
+        if (localChat == null) continue;
+        final localMessages = await _db.messagesDao.getForChat(localId);
+        final localRows = chatRowsFromDb(localChat, localMessages);
+        if (createChatContentHash(localRows) != candidate.contentHash ||
+            createChatProjectedContentHash(localRows) != projectedHash) {
+          continue;
+        }
+        // Claim before taking the local lock, preserving the existing lock
+        // ordering and checking that the recorded hash is still pending.
+        claimed = await _db.outboxDao.claimPendingCreateForHash(
+          candidate.contentHash!,
+        );
+        if (claimed != null) break;
+      }
+    }
+    final op = claimed;
     if (op == null) return false;
     final localId = op.chatId;
     if (localId == null) {

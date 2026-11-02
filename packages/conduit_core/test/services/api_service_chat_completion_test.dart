@@ -12,6 +12,8 @@ import 'package:conduit_core/services/moa_completion.dart';
 import 'package:conduit_core/services/openwebui_stream_parser.dart';
 import 'package:conduit_core/models/server_config.dart';
 import 'package:conduit_core/services/worker_manager.dart';
+import 'package:conduit_core/services/structured_output.dart';
+import 'package:conduit_core/services/structured_output_renderer.dart';
 import 'package:dio/dio.dart';
 import 'package:test/test.dart';
 
@@ -179,6 +181,62 @@ Map<String, dynamic> _legacyChatPayload({
 }
 
 void main() {
+  test('createConversation keeps raw output and sends canonical content in both shapes', () async {
+    const literal =
+        '<details type="tool_calls"><summary>User example</summary>keep</details>';
+    final raw = <Map<String, dynamic>>[
+      {
+        'type': 'reasoning',
+        'summary': [
+          {'type': 'summary_text', 'text': 'synthetic thought'},
+        ],
+        'status': 'completed',
+      },
+      {
+        'type': 'message',
+        'content': [
+          {'type': 'output_text', 'text': 'Answer'},
+        ],
+      },
+    ];
+    final rendered = renderStructuredOutputBlocks(
+      parseOpenWebUIStructuredOutput(raw),
+    );
+    final adapter = _FakeAdapter.json(
+      _legacyChatPayload(historyMessages: {}, currentId: 'a'),
+    );
+    final api = _buildApiServiceForTest(adapter);
+    final messages = [
+      ChatMessage(
+        id: 'u',
+        role: 'user',
+        content: literal,
+        timestamp: DateTime(2026),
+      ),
+      ChatMessage(
+        id: 'a',
+        role: 'assistant',
+        content: rendered,
+        output: raw,
+        timestamp: DateTime(2026),
+      ),
+    ];
+    await api.createConversation(
+      title: 'Synthetic',
+      messages: messages,
+      model: _model,
+    );
+    final chat = (adapter.lastRequest!.data as Map)['chat'] as Map;
+    final history = chat['history']['messages'] as Map;
+    expect(history['u']['content'], literal);
+    expect(history['a']['content'], 'Answer');
+    expect(history['a']['output'], raw);
+    expect(chat['messages'][1]['content'], 'Answer');
+    expect(chat['messages'][1]['output'], raw);
+    expect(messages[1].content, rendered);
+    api.dio.close(force: true);
+  });
+
   test(
     'tool-call resolution sends the 0.11.1 form and normalizes task ids',
     () async {

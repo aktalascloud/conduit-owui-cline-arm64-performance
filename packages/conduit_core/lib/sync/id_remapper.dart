@@ -9,6 +9,7 @@ import '../database/mappers/chat_blob_mapper.dart';
 import '../database/mappers/conversation_assembler.dart';
 
 import 'package:conduit_core/utils/debug_logger.dart';
+import 'package:conduit_core/utils/openwebui_message_payload.dart';
 
 const _outboxStatusesRewrittenOnChatRemap = <String>[
   'pending',
@@ -51,7 +52,7 @@ enum ChatRemapResult { rewritten, alreadyCommitted, sourceMissing }
 
 /// Stable createChat fingerprint for the §7.3 crash-heal path.
 ///
-/// Definition (BINDING, must match what a pulled server blob would hash to):
+/// Definition (BINDING, retained for already persisted outbox snapshots):
 /// sha256 hex of the canonical-JSON encoding of `ChatBlobMapper.rowsToBlob`,
 /// with map keys sorted recursively, EXCLUDING the volatile top-level keys the
 /// remap/server rewrite: `timestamp` AND `id`. The top-level `id` is exactly
@@ -60,11 +61,23 @@ enum ChatRemapResult { rewritten, alreadyCommitted, sourceMissing }
 /// `Chats.insert_new_chat` persists `form_data.chat` as-is). Hashing it would
 /// make the local op fingerprint (no `id`, built from local rows) differ from
 /// the pulled-back digest (`id: ''`), so the crash-heal would never match.
-/// Excluding it makes "the same function run over `blobToRows(serverBlob)`
-/// after a pull yields the identical digest" actually hold. Envelope
+/// Outgoing display projection can change content; pull verifies the original
+/// local snapshot hash and projected body for that compatibility case. Envelope
 /// `created_at`/`updated_at` are not part of the blob and never participate.
 String createChatContentHash(ChatRows rows) {
-  final blob = ChatBlobMapper.rowsToBlob(rows);
+  return _createChatBlobHash(ChatBlobMapper.rowsToBlob(rows));
+}
+
+/// The canonical wire representation may differ from a retained local display.
+/// Keep the original queue hash stable; pull-side compatibility verifies both
+/// the recorded local snapshot and this projected body before claiming it.
+String createChatProjectedContentHash(ChatRows rows) {
+  return _createChatBlobHash(
+    projectOpenWebUiChatBlob(ChatBlobMapper.rowsToBlob(rows)),
+  );
+}
+
+String _createChatBlobHash(Map<String, dynamic> blob) {
   final stable = Map<String, dynamic>.of(blob)
     ..remove('timestamp')
     ..remove('id');
