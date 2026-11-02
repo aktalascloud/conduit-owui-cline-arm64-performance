@@ -81,28 +81,12 @@ class _VoiceAvatarInteractionState extends State<VoiceAvatarInteraction> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  key: const Key('avatar-zoom-out'),
-                  tooltip: l.voiceAvatarZoomOut,
-                  onPressed: widget.enabled
-                      ? () => _send({'scale': 1.2})
-                      : null,
-                  icon: const Icon(Icons.zoom_out),
-                ),
-                IconButton(
-                  key: const Key('avatar-zoom-in'),
-                  tooltip: l.voiceAvatarZoomIn,
-                  onPressed: widget.enabled
-                      ? () => _send({'scale': 1 / 1.2})
-                      : null,
-                  icon: const Icon(Icons.zoom_in),
-                ),
-                IconButton(
                   key: const Key('avatar-reset-view'),
                   tooltip: l.voiceAvatarResetView,
                   onPressed: widget.enabled
                       ? () => _send({'reset': true})
                       : null,
-                  icon: const Icon(Icons.center_focus_strong),
+                  icon: const Icon(Icons.restart_alt),
                 ),
               ],
             ),

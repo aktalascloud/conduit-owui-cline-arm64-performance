@@ -20,12 +20,10 @@ void main() {
         TextButton(key:const Key('call-end'),onPressed:()=>ended=true,child:const Text('Завершить')),
       ])),
     ));
-    await tester.tap(find.byKey(const Key('avatar-zoom-in')));
-    await tester.tap(find.byKey(const Key('avatar-zoom-out')));
+    expect(find.byIcon(Icons.zoom_in), findsNothing);
+    expect(find.byIcon(Icons.zoom_out), findsNothing);
     await tester.tap(find.byKey(const Key('avatar-reset-view')));
-    expect(commands[0]['scale'],lessThan(1));
-    expect(commands[1]['scale'],greaterThan(1));
-    expect(commands[2],{'reset':true});
+    expect(commands.single, {'reset':true});
     final surface=find.byType(VoiceAvatarInteraction);
     final origin=tester.getTopLeft(surface);
     await tester.dragFrom(origin+const Offset(70,150),const Offset(80,30));
