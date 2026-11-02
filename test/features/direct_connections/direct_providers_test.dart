@@ -264,6 +264,40 @@ void main() {
     expect(discovery.models.every((model) => model.isMultimodal), isTrue);
   });
 
+  test(
+    'MiniMax manual discovery publishes known context without network',
+    () async {
+      for (final baseUrl in [kMiniMaxApiBaseUrl, kMiniMaxCnApiBaseUrl]) {
+        final adapter = _QueuedAdapter();
+        final profile = _profile(
+          baseUrl: baseUrl,
+          manualModelIds: const ['MiniMax-M3.1-Flash', 'MiniMax-M3', 'custom'],
+        );
+        FlutterSecureStorage.setMockInitialValues({
+          'direct_connection_profiles_v1': DirectConnectionProfilesDocument([
+            profile,
+          ]).encode(),
+        });
+        final container = _container(adapter);
+        try {
+          final discovery = await container.read(
+            directModelDiscoveryProvider.future,
+          );
+          expect(adapter.listCalls, 0);
+          expect(discovery.models, hasLength(3));
+          expect(discovery.models[0].capabilities?['context_length'], 1000000);
+          expect(discovery.models[1].capabilities?['context_length'], 1000000);
+          expect(
+            discovery.models[2].capabilities?.containsKey('context_length'),
+            isFalse,
+          );
+        } finally {
+          container.dispose();
+        }
+      }
+    },
+  );
+
   test('failed refresh retains same-profile cached models', () async {
     final adapter = _QueuedAdapter()
       ..responses.add([DirectRemoteModel(id: 'first')])

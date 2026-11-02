@@ -8,6 +8,8 @@ Unofficial fork with reviewed agent/MCP fixes and extended Russian UI. One lates
 
 Native Cline chat uses Conduit themes, responsive spacing and an Act-only composer. Avatar bindings refresh from the server; the private 100 MiB cache checks server SHA256 and downloads changed VRMs. Personal avatars stay on the server.
 
+Direct connections include MiniMax global/CN presets for M3.1 Flash and M3. Saved model IDs stay unchanged. Flash thinking and tool history follow the provider contract; Responses uses client-held history. OpenRouter keeps its advertised routes and existing model choices. These optional direct profiles use your provider credentials and do not change FreeLLM. Regional Responses availability and real inference have not been verified.
+
 ## Build
 
 Requires Python 3.12+, Git and GitHub CLI for CI. No LLM, model weights or Codex dependency.

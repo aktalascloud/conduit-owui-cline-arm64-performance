@@ -31,6 +31,16 @@ const List<String> kApplePccReasoningEfforts = <String>[
 /// Canonical first-party OpenRouter API root.
 const String kOpenRouterApiBaseUrl = 'https://openrouter.ai/api/v1';
 
+/// MiniMax direct API roots and manually discoverable models.
+const String kMiniMaxApiBaseUrl = 'https://api.minimax.io/v1';
+const String kMiniMaxCnApiBaseUrl = 'https://api.minimax.cn/v1';
+const List<String> kMiniMaxModelIds = ['MiniMax-M3.1-Flash', 'MiniMax-M3'];
+const int kMiniMaxContextLength = 1000000;
+const List<String> kOpenRouterMiniMaxModelIds = [
+  'minimax/minimax-m3.1-flash',
+  'minimax/minimax-m3',
+];
+
 /// OpenAI-family completion protocol selected for one connection profile.
 ///
 /// This remains profile data rather than a separate adapter key so OpenAI,
@@ -186,6 +196,9 @@ final class DirectConnectionProfile {
   bool get isOpenRouter =>
       adapterKey == kOpenAiCompatibleAdapterKey &&
       isOpenRouterApiBaseUrl(baseUrl);
+
+  bool get isMiniMax =>
+      adapterKey == kOpenAiCompatibleAdapterKey && isMiniMaxApiBaseUrl(baseUrl);
 
   bool get supportsOpenRouterWebSearch =>
       isOpenRouter && openAiApiMode == DirectOpenAiApiMode.chatCompletions;
@@ -552,6 +565,25 @@ bool isOllamaCloudApiBaseUrl(String value) {
     return false;
   }
   return uri.path.isEmpty || uri.path == '/';
+}
+
+/// Bind provider-specific behavior to an exact first-party HTTPS API root.
+bool isMiniMaxApiBaseUrl(String value) {
+  final uri = Uri.tryParse(value.trim());
+  if (uri == null ||
+      uri.scheme.toLowerCase() != 'https' ||
+      !const {
+        'api.minimax.io',
+        'api.minimax.cn',
+        'api.minimaxi.com',
+      }.contains(uri.host.toLowerCase()) ||
+      (uri.hasPort && uri.port != 443) ||
+      uri.userInfo.isNotEmpty ||
+      uri.hasQuery ||
+      uri.hasFragment) {
+    return false;
+  }
+  return uri.path == '/v1' || uri.path == '/v1/';
 }
 
 bool isOpenRouterApiBaseUrl(String value) {

@@ -9,7 +9,7 @@ import 'package:conduit_core/features/direct_connections/services/direct_mcp_ser
 import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:conduit/platform/flutter_secure_key_value_store.dart';
 
 void main() {
@@ -489,13 +489,18 @@ void main() {
     addTearDown(coordinator.close);
 
     final first = coordinator.connect(server);
-    await firstLaunch.future.timeout(const Duration(seconds: 2));
+    await firstLaunch.future.timeout(
+      const Duration(seconds: 2),
+      onTimeout: () =>
+          throw StateError('First OAuth browser launch did not arrive'),
+    );
     final second = coordinator.connect(server);
 
     await expectLater(first, throwsA(isA<DirectMcpOAuthException>()));
     final connected = await second;
     final secondCallbackRejected = await repeatedCallback.future.timeout(
       const Duration(seconds: 2),
+      onTimeout: () => throw StateError('Repeated callback did not settle'),
     );
     expect(connected.oauthTokens?.accessToken, 'access-one');
     expect(fixture.tokenForms, hasLength(1));
@@ -737,18 +742,27 @@ Future<void> _deliverCallback(
   final redirectUri = Uri.parse(
     authorizationUri.queryParameters['redirect_uri']!,
   );
-  final response = await http.get(
-    redirectUri.replace(
-      queryParameters: {
-        ...extraQueryParameters,
-        'code': 'authorization-code',
-        'state': state ?? authorizationUri.queryParameters['state']!,
-        'iss': ?issuer,
-      },
-    ),
+  // Windows can drop SYNs to a closed loopback port. Bound connection setup,
+  // while a connected callback must still satisfy the existing test deadline.
+  final client = IOClient(
+    HttpClient()..connectionTimeout = const Duration(milliseconds: 500),
   );
-  if (response.statusCode != HttpStatus.ok) {
-    throw StateError('Callback was rejected.');
+  try {
+    final response = await client.get(
+      redirectUri.replace(
+        queryParameters: {
+          ...extraQueryParameters,
+          'code': 'authorization-code',
+          'state': state ?? authorizationUri.queryParameters['state']!,
+          'iss': ?issuer,
+        },
+      ),
+    );
+    if (response.statusCode != HttpStatus.ok) {
+      throw StateError('Callback was rejected.');
+    }
+  } finally {
+    client.close();
   }
 }
 

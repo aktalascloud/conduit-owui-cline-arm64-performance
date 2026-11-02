@@ -176,6 +176,7 @@ def build_conduit(package, manifest, channel):
     write_json(WORK / 'check-plan.json', checks)
     run(flutter, "analyze", "--no-pub", "--no-fatal-infos", "--no-fatal-warnings", *checks['analysis'])
     run(flutter, "test", "--no-pub", *checks['tests'])
+    run(flutter, "test", "--no-pub", "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart")
     manifest['check_scope'] = {**checks, 'selected_checks': 'passed'}
     native_receipt = prepare_native()
     outdated = run(flutter, "pub", "outdated", "--json", capture=True).stdout

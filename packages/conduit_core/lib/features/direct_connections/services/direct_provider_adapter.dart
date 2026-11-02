@@ -89,11 +89,18 @@ List<DirectRemoteModel>? directManualModels(DirectConnectionProfile profile) =>
     ? null
     : List.unmodifiable([
         for (final id in profile.manualModelIds)
-          // Manual IDs currently carry no per-model modality metadata. Keep
+          // Manual IDs usually carry no per-model modality metadata. Keep
           // direct v1's optimistic image support so manually configured vision
           // models remain usable; a future adapter/profile capability override
           // can make this conservative without changing the adapter contract.
-          DirectRemoteModel(id: id, isMultimodal: true),
+          DirectRemoteModel(
+            id: id,
+            isMultimodal: true,
+            capabilities: {
+              if (profile.isMiniMax && kMiniMaxModelIds.contains(id))
+                'context_length': kMiniMaxContextLength,
+            },
+          ),
       ]);
 
 /// Runtime-extensible adapter registry. Persisted profiles store [String] keys

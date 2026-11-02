@@ -125,6 +125,13 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
       _adapterKey = profile.adapterKey;
       _providerPreset = profile.isOpenRouter
           ? kOpenRouterProviderPreset
+          : profile.isMiniMax
+          ? (const {
+                  'api.minimax.cn',
+                  'api.minimaxi.com',
+                }.contains(Uri.parse(profile.baseUrl.trim()).host)
+                ? kMiniMaxCnProviderPreset
+                : kMiniMaxProviderPreset)
           : profile.adapterKey;
       _openAiApiMode = profile.openAiApiMode;
       _authentication =
@@ -159,6 +166,9 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
     required String openRouterDefaultName,
   }) {
     if (providerPreset == value) return;
+    final wasMiniMax =
+        providerPreset == kMiniMaxProviderPreset ||
+        providerPreset == kMiniMaxCnProviderPreset;
     _providerPreset = value;
     _adapterKey = value == kOllamaAdapterKey
         ? kOllamaAdapterKey
@@ -169,15 +179,31 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
       baseUrl.text = switch (value) {
         kOllamaAdapterKey => 'https://ollama.com',
         kOpenRouterProviderPreset => kOpenRouterApiBaseUrl,
+        kMiniMaxProviderPreset => kMiniMaxApiBaseUrl,
+        kMiniMaxCnProviderPreset => kMiniMaxCnApiBaseUrl,
         _ => 'https://api.openai.com/v1',
       };
+      if (value == kMiniMaxProviderPreset ||
+          value == kMiniMaxCnProviderPreset) {
+        if (mode.isNew && models.text.trim().isEmpty) {
+          models.text = kMiniMaxModelIds.join('\n');
+        }
+      } else if (mode.isNew &&
+          wasMiniMax &&
+          models.text == kMiniMaxModelIds.join('\n')) {
+        models.clear();
+      }
       if (mode.isNew &&
           (name.text == defaultName ||
               name.text == ollamaDefaultName ||
-              name.text == openRouterDefaultName)) {
+              name.text == openRouterDefaultName ||
+              name.text == 'MiniMax' ||
+              name.text == 'MiniMax (CN)')) {
         name.text = switch (value) {
           kOllamaAdapterKey => ollamaDefaultName,
           kOpenRouterProviderPreset => openRouterDefaultName,
+          kMiniMaxProviderPreset => 'MiniMax',
+          kMiniMaxCnProviderPreset => 'MiniMax (CN)',
           _ => defaultName,
         };
       }

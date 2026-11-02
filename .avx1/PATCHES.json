@@ -173,5 +173,19 @@
     "id": "APK-LIVE-AVATAR-CONTROLS",
     "description": "Native bounded rotation/pinch/pan/wheel gestures and accessible zoom/reset buttons during voice calls. One-way graphics-only numeric commands; call-end remains outside the gesture region.",
     "verification": "Native gesture/hang-up hit-test regression, 7 renderer/CSP/resource tests, Russian labels; physical phone confirmation pending."
+  },
+  {
+    "id": "APK-COMPOSER-915",
+    "description": "PR915: cap expanded composer at8 visible lines and keep actions outside scrolling text; retain scaled minimum editor height under suggestions.",
+    "url": "https://github.com/cogwheel0/conduit/pull/915",
+    "upstream_head": "cacd31878d852eb1345aa3c12a5a4f2b44ffda6c",
+    "verification": "122 focused composer tests; synthetic Android/iOS variants, not physical phone proof."
+  },
+  {
+    "id": "APK-MINIMAX-733",
+    "description": "PR733 regional MiniMax global/CN presets, Flash thinking validation and preserved tool/reasoning history; Responses replays client-held history. Adapt to current public model catalog: no invented :free route, no hidden existing models. Known direct M3/Flash contexts from primary provider docs; saved/custom model IDs and FreeLLM unchanged. New CN presets use the current documented api.minimax.cn origin; existing api.minimaxi.com profiles keep their original URL. Known context metadata also reaches manual discovery without network calls.",
+    "url": "https://github.com/cogwheel0/conduit/pull/733",
+    "upstream_head": "046668331618c4707710ad7e15454e1050347a5a",
+    "verification": "Targeted transport/editor/manual-discovery tests and Dart analysis; broader Direct checks and inherited OAuth test-fixture diagnosis recorded in maintenance receipt. MCP callback tests bound TCP connect phase on Windows without extending assertions. No real inference or regional Responses availability claim."
   }
 ]
