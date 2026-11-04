@@ -391,13 +391,15 @@
   },
   "analyzing": "Анализирую…",
   "analyzed": "Проанализировано",
-  "showComposerNotesButton": "Show Notes button",
-  "showComposerNotesButtonDescription": "Show Create note in the chat composer.",
+  "showComposerNotesButton": "Показывать кнопку заметок",
+  "showComposerNotesButtonDescription": "Показывать кнопку «Создать заметку» в поле ввода чата.",
   "appCustomization": "Настройка",
   "appCustomizationSubtitle": "Тема, язык, голос и quick actions",
   "quickActionsDescription": "Быстрые клавиши в чате",
   "messageActionsAutomatic": "Автоматический выбор действий",
-  "@messageActionsAutomatic": {"description": "Toggle for choosing response actions automatically from the actions eligible for each message."},
+  "@messageActionsAutomatic": {
+    "description": "Toggle for choosing response actions automatically from the actions eligible for each message."
+  },
   "messageActionsTitle": "Действия с сообщениями",
   "messageActionsDescription": "Выберите действия под ответами. Перетаскивайте включённые действия, чтобы изменить их порядок. Остальные действия останутся в меню «Еще».",
   "messageActionsInline": "Под ответами",

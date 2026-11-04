@@ -14,5 +14,10 @@
   },
   "also_qualified_apk_source": "73237e92505bec1da6ad61b84edb34a7830bfebc",
   "also_qualified_apk_run": 40666979951,
-  "lockfile_sha256": "6184cbff0d285327854af0f7924b046d4a2421d6c1a04164dd2e88f177231f83"
+  "lockfile_sha256": "b289bb22df93352a6ea5717e0b02b88d17783955b5145a5fdaaabae8f8c5866e",
+  "reviewed_non_native_lock_change": {
+    "previous_lockfile_sha256": "6184cbff0d285327854af0f7924b046d4a2421d6c1a04164dd2e88f177231f83",
+    "scope": "Only cupertino_native_better1.6.0->1.8.2,cupertino_ui1.0.2->1.1.5,share_plus13.3.0->13.3.1; ONNX/JNI/SQLite/vad versions and source/compiler/flags unchanged",
+    "upstream_commit": "7a5391a34721bff7bc22c1eda05538f88d6404bb"
+  }
 }
