@@ -175,6 +175,9 @@ def build_conduit(package, manifest, channel):
     checks = select_checks(ROOT)
     write_json(WORK / 'check-plan.json', checks)
     run(flutter, "analyze", "--no-pub", "--no-fatal-infos", "--no-fatal-warnings", *checks['analysis'])
+    # Catch native-view fixture lifecycle failures before the full shared-core suite.
+    if checks['mode'] == 'full':
+        run(flutter, "test", "--no-pub", "test/shared/widgets/platform_ui/settings_switch_semantics_test.dart")
     run(flutter, "test", "--no-pub", *checks['tests'])
     run(flutter, "test", "--no-pub", "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart")
     persistence_tests = [

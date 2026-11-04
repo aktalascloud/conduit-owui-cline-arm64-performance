@@ -217,11 +217,6 @@ void main() {
 }
 
 Future<void> _pump(WidgetTester tester, Widget child, {_Jobs? jobs}) async {
-  addTearDown(() async {
-    await tester.pumpWidget(const SizedBox.shrink());
-    // Native icon creation guards own a bounded 500ms fallback timer.
-    await tester.pump(const Duration(seconds: 1));
-  });
   tester.view.physicalSize = const Size(1200, 3000);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -256,6 +251,9 @@ Future<void> _pump(WidgetTester tester, Widget child, {_Jobs? jobs}) async {
       ),
     ),
   );
+  await tester.pumpAndSettle();
+  // Native icon creation guards need elapsed time even without scheduled frames.
+  await tester.pump(const Duration(seconds: 1));
   await tester.pumpAndSettle();
 }
 
