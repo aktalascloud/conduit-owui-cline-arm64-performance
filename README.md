@@ -6,6 +6,8 @@ Unofficial fork with reviewed agent/MCP fixes and extended Russian UI. One lates
 
 [Upstream](https://github.com/cogwheel0/conduit) · [Release](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Patches](.avx1/PATCHES.json)
 
+Mainstream adds account-local text/recording drafts, seekable read-aloud playback, language-filtered voices, connection retry and native iOS controls. Native Cline and server VRM remain. The upstream server-version warning is retained; this update does not claim physical-phone or 0.13 server qualification.
+
 Native Cline chat uses Conduit themes, responsive spacing and an Act-only composer. Avatar bindings refresh from the server; the private 100 MiB cache checks server SHA256 and downloads changed VRMs. Personal avatars stay on the server.
 
 Direct connections include MiniMax global/CN presets for M3.1 Flash and M3. Saved model IDs stay unchanged. Flash thinking and tool history follow the provider contract; Responses uses client-held history. OpenRouter keeps its advertised routes and existing model choices. These optional direct profiles use your provider credentials and do not change FreeLLM. Regional Responses availability and real inference have not been verified.
