@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'dart:io' show Platform;
 import 'dart:async';
+
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -30,6 +31,7 @@ import '../services/clipboard_attachment_service.dart';
 import '../services/file_attachment_service.dart';
 import '../services/ios_native_paste_service.dart';
 import '../services/ios_keyboard_attachment_bridge.dart';
+import 'speech_playback_bar.dart';
 
 import 'package:conduit_core/features/chat/providers/context_attachments_provider.dart';
 import 'package:conduit_core/features/chat/providers/knowledge_cache_provider.dart';
@@ -67,6 +69,7 @@ import 'package:conduit_core/providers/app_providers.dart';
 
 import '../../../shared/services/navigation_service.dart';
 import '../../../core/services/native_sheet_bridge.dart';
+import '../services/native_stt_service.dart';
 
 import 'package:conduit_core/services/location_service.dart';
 
@@ -97,6 +100,10 @@ import '../../prompts/widgets/prompt_variable_dialog.dart';
 
 import 'package:conduit_core/features/auth/providers/unified_auth_providers.dart';
 
+import '../controllers/composer_draft_binding.dart';
+import '../controllers/composer_recording_session.dart';
+import '../providers/composer_draft_provider.dart';
+import 'composer_recordings.dart';
 import 'chat_draft_queue_sheet.dart';
 import 'chat_input_intents.dart';
 import 'expanded_text_editor.dart';
@@ -139,6 +146,20 @@ TextEditingValue composerTextValueAfterInsertion(
     text: inserted.text,
     selection: TextSelection.collapsed(offset: inserted.caret),
     composing: TextRange.empty,
+  );
+}
+
+@visibleForTesting
+TextEditingValue composerTextValueAfterTranscription(
+  TextEditingValue current,
+  String content,
+) {
+  if (content.isEmpty) return current;
+  final text = current.text;
+  final separator = text.isEmpty || RegExp(r'\s$').hasMatch(text) ? '' : ' ';
+  return composerTextValueAfterInsertion(
+    current.copyWith(selection: TextSelection.collapsed(offset: text.length)),
+    '$separator$content',
   );
 }
 
@@ -365,6 +386,13 @@ List<IosKeyboardAttachmentActionConfig> buildIosKeyboardAttachmentActions({
 class ModernChatInput extends ConsumerStatefulWidget {
   final Function(String) onSendMessage;
 
+  /// Acknowledges admission before the composer retires its local draft.
+  final Future<ChatSendPlaceholderHandle?> Function(
+    String text,
+    void Function(ChatSendPlaceholderHandle) onPrepared,
+  )?
+  onSendDraft;
+
   /// Sends the composer's message to several models as one comparison turn.
   /// Null where the host cannot run one. Completes with the committed turn, or
   /// null if it was not durably admitted; the composer keeps its draft unless
@@ -372,6 +400,7 @@ class ModernChatInput extends ConsumerStatefulWidget {
   final Future<ChatSendPlaceholderHandle?> Function(
     String text,
     List<Model> models,
+    void Function(ChatSendPlaceholderHandle) onPrepared,
   )?
   onCompareSend;
   final bool enabled;
@@ -414,6 +443,7 @@ class ModernChatInput extends ConsumerStatefulWidget {
   const ModernChatInput({
     super.key,
     required this.onSendMessage,
+    this.onSendDraft,
     this.onCompareSend,
     this.enabled = true,
     this.bottomPadding,
@@ -553,7 +583,7 @@ class _StableNativeComposerIconButtonState
 }
 
 class _ModernChatInputState extends ConsumerState<ModernChatInput>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   static const Duration _contextSuggestionDelay = Duration(milliseconds: 250);
   static const int _maxContextSuggestionsPerType = 4;
 
@@ -589,9 +619,12 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   bool _pendingFocus = false;
   bool _isRecording = false;
 
-  /// The account and chat the current dictation was started in. Send while
-  /// dictating sends only there.
-  _ComposerOwner? _dictationOwner;
+  ComposerRecordingSession? _recordingSession;
+  String? _recordingTranscriptionErrorId;
+  String? _recordingCaptureErrorId;
+  ComposerDraftContext? _transcribingRecordingOwner;
+  bool _startingVoice = false;
+  int _voiceStartGeneration = 0;
   // Server STT transcribes after the recording stops (manually or by voice
   // activity detection); show that instead of leaving the composer stuck on
   // "Recording…" (issue #707). Mirrors VoiceInputService.transcribing.
@@ -609,15 +642,18 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   /// when the text was typed back to what it was.
   int _editGeneration = 0;
   String _observedText = '';
+  ComposerDraftBinding? _draftBinding;
+  ChatSendPlaceholderHandle? _draftSendOwner;
+  bool _sendingDraft = false;
+  ProviderSubscription<ComposerDraftContext>? _draftSubscription;
   StreamSubscription<String>? _voiceStreamSubscription;
   final Object _nativePasteHandlerOwner = Object();
   StreamSubscription<IosKeyboardAttachmentEvent>?
   _keyboardAttachmentSubscription;
   VoiceInputService? _voiceService;
-  StreamSubscription<String>? _textSub;
+  StreamSubscription<void>? _textSub;
   Timer? _contextSuggestionDebounce;
   Timer? _skillSuggestionDebounce;
-  String _baseTextAtStart = '';
   bool _isDeactivated = false;
   int _lastHandledFocusTick = 0;
   bool _showPromptOverlay = false;
@@ -678,6 +714,52 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     // Listen for text and selection changes in the composer
     _observedText = _controller.text;
     _controller.addListener(_handleComposerChanged);
+    WidgetsBinding.instance.addObserver(this);
+    _draftBinding = ComposerDraftBinding(
+      _controller,
+      onFailure: (loading, retry) {
+        if (!mounted || _isDeactivated) return;
+        final l10n = AppLocalizations.of(context)!;
+        AdaptiveSnackBar.show(
+          context,
+          message: loading
+              ? l10n.composerDraftLoadFailed
+              : l10n.composerDraftSaveFailed,
+          type: AdaptiveSnackBarType.error,
+          action: l10n.retry,
+          onActionPressed: retry,
+        );
+      },
+    );
+    _draftSubscription = ref.listenManual(composerDraftContextProvider, (
+      previous,
+      next,
+    ) {
+      if (previous != null &&
+          previous != next &&
+          (_isRecording || _startingVoice)) {
+        ++_voiceStartGeneration;
+        unawaited(_stopVoiceListening());
+      }
+      final nativeRemap =
+          previous != null &&
+          previous.owner.backend == 'hermes' &&
+          ref
+                  .read(activeConversationInPlaceRemapProvider)
+                  ?.matches(
+                    previous.chatId,
+                    next.chatId,
+                    namespace: ActiveConversationRemapNamespace.hermes,
+                  ) ==
+              true;
+      unawaited(
+        _draftBinding!.bind(
+          next,
+          remapped: nativeRemap,
+          preserveInput: _draftSendOwner?.ownsActiveChat(ref) == true,
+        ),
+      );
+    }, fireImmediately: true);
 
     if (!kIsWeb && Platform.isIOS) {
       IosNativePasteService.instance.registerHandler(
@@ -754,6 +836,10 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   void dispose() {
     // Note: Avoid using ref in dispose as per Riverpod best practices
     // The focus state will be naturally cleared when the widget is disposed
+
+    unawaited(_draftBinding?.dispose());
+    WidgetsBinding.instance.removeObserver(this);
+    _draftSubscription?.close();
     _controller.removeListener(_handleComposerChanged);
     ThemedSheets.activeSheetListenable.removeListener(
       _handleActiveSheetChanged,
@@ -775,7 +861,15 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     if (!kIsWeb && Platform.isIOS) {
       unawaited(IosKeyboardAttachmentBridge.instance.hide());
     }
-    _voiceService?.stopListening();
+    final voice = _voiceService;
+    final recording = _recordingSession;
+    unawaited(() async {
+      try {
+        await voice?.stopListening();
+      } finally {
+        await recording?.close();
+      }
+    }().catchError((Object _) {}));
     super.dispose();
   }
 
@@ -900,7 +994,16 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     }
   }
 
+  bool get _isRecoveringRecording =>
+      _transcribingRecordingOwner != null &&
+      _transcribingRecordingOwner == ref.read(composerDraftContextProvider);
+
   void _sendMessage() {
+    if (_startingVoice || _isTranscribing || _isRecoveringRecording) return;
+    if (_isRecording) {
+      unawaited(_stopVoice());
+      return;
+    }
     final text = _controller.text.trim();
     if (text.isEmpty || !widget.enabled) return;
     if (_queuesInsteadOfSending) {
@@ -913,6 +1016,12 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     final saved = ref.read(folderDraftComparisonModelsProvider);
     if (saved != null && widget.onCompareSend != null) {
       unawaited(_sendComparison(saved, _captureComposerOwner()));
+      return;
+    }
+
+    final sendDraft = widget.onSendDraft;
+    if (sendDraft != null) {
+      unawaited(_sendOwnedDraft(_captureComposerOwner(), sendDraft));
       return;
     }
 
@@ -1276,6 +1385,22 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     _ensureFocusedIfEnabled();
   }
 
+  void _recordingTranscribingChanged(ComposerDraftContext owner, bool busy) {
+    if (!mounted || (!busy && _transcribingRecordingOwner != owner)) return;
+    setState(() => _transcribingRecordingOwner = busy ? owner : null);
+  }
+
+  void _appendRecordingTranscription(String content) {
+    if (_recordingTranscriptionErrorId != null) {
+      setState(() => _recordingTranscriptionErrorId = null);
+    }
+    _controller.value = composerTextValueAfterTranscription(
+      _controller.value,
+      content,
+    );
+    _ensureFocusedIfEnabled();
+  }
+
   void _insertTextAtCurrentSelection(String content) {
     if (content.isEmpty) {
       return;
@@ -1361,6 +1486,49 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     List<Model>? models,
     _ComposerOwner owner,
   ) async {
+    if (models == null) return;
+    final send = widget.onCompareSend;
+    if (send == null) return;
+    await _sendOwnedDraft(
+      owner,
+      (text, onPrepared) => send(text, models, onPrepared),
+    );
+  }
+
+  Future<void> _sendOwnedDraft(
+    _ComposerOwner owner,
+    Future<ChatSendPlaceholderHandle?> Function(
+      String,
+      void Function(ChatSendPlaceholderHandle),
+    )
+    send,
+  ) async {
+    if (_sendingDraft) return;
+    _sendingDraft = true;
+    try {
+      await _admitOwnedDraft(owner, send);
+    } catch (_) {
+      if (mounted) {
+        AdaptiveSnackBar.show(
+          context,
+          message: AppLocalizations.of(context)!.errorMessage,
+          type: AdaptiveSnackBarType.error,
+        );
+      }
+    } finally {
+      _sendingDraft = false;
+      _draftSendOwner = null;
+    }
+  }
+
+  Future<void> _admitOwnedDraft(
+    _ComposerOwner owner,
+    Future<ChatSendPlaceholderHandle?> Function(
+      String,
+      void Function(ChatSendPlaceholderHandle),
+    )
+    send,
+  ) async {
     bool sameAccount() =>
         mounted &&
         !_isDeactivated &&
@@ -1368,20 +1536,47 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
         identical(ref.read(openWebUiAuthSessionEpochProvider), owner.epoch);
     // The turn goes to whichever chat is active when it is sent, so the chat
     // the user composed in must still be it.
-    if (models == null ||
-        !sameAccount() ||
-        !chatMutationTokenStillActive(ref, owner.chat)) {
+    if (!sameAccount() || !chatMutationTokenStillActive(ref, owner.chat)) {
       return;
     }
     final wireText = _controller.toWireFormat().trim();
     if (wireText.isEmpty || !widget.enabled) return;
-    final send = widget.onCompareSend;
-    if (send == null) return;
     // Edits made after this point belong to a newer draft.
     final draftGeneration = _editGeneration;
     // The draft is the user's until the turn is durably admitted: a refusal
     // leaves its text, mentions and attachments exactly where they are.
-    final committed = await send(wireText, models);
+    final originDraft = ref.read(composerDraftContextProvider);
+    final sentSnapshot = _controller.snapshotDraft();
+    final recordings = originDraft.temporary || originDraft.store == null
+        ? const <String>[]
+        : (await originDraft.store!.recordings
+                  .watch(originDraft.scope, originDraft.chatId)
+                  .first)
+              .map((item) => item.id)
+              .toList();
+    if (!sameAccount() || !chatMutationTokenStillActive(ref, owner.chat)) {
+      return;
+    }
+    final committed = await send(
+      wireText,
+      (handle) => _draftSendOwner = handle,
+    );
+    if (committed != null) {
+      await _draftBinding?.markSent(originDraft, sentSnapshot);
+      try {
+        for (final id in recordings) {
+          await originDraft.store?.recordings.discard(id);
+        }
+      } catch (_) {
+        if (mounted) {
+          AdaptiveSnackBar.show(
+            context,
+            message: AppLocalizations.of(context)!.recordingDiscardFailed,
+            type: AdaptiveSnackBarType.error,
+          );
+        }
+      }
+    }
     // Clear only the composer that sent the turn: same account, showing the
     // chat the turn went into, and not edited since.
     if (committed == null ||
@@ -1548,6 +1743,16 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       return lineCount;
     } finally {
       painter.dispose();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(_draftBinding?.flush());
+      unawaited(_recordingSession?.flush().catchError((Object _) {}));
     }
   }
 
@@ -2467,7 +2672,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                               flex: 2,
                               child: loading
                                   ? const Center(
-                                      child: CircularProgressIndicator(),
+                                      child: AdaptiveProgressIndicator(),
                                     )
                                   : ListView.builder(
                                       itemCount: files.length,
@@ -2587,11 +2792,9 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
           leading: SizedBox(
             width: IconSize.large,
             height: IconSize.large,
-            child: CircularProgressIndicator(
+            child: AdaptiveProgressIndicator(
               strokeWidth: BorderWidth.regular,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                context.conduitTheme.loadingIndicator,
-              ),
+              color: context.conduitTheme.loadingIndicator,
             ),
           ),
         ),
@@ -3260,6 +3463,11 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     final codeInterpreterOffer = ref.watch(codeInterpreterOfferProvider);
     final l10n = AppLocalizations.of(context)!;
     final notesEnabled = ref.watch(notesFeatureEnabledProvider);
+    final showNotesButton = ref.watch(
+      appSettingsProvider.select(
+        (settings) => settings.showComposerNotesButton,
+      ),
+    );
     final isCreatingDraftNote = ref.watch(
       noteCreatorProvider.select((state) => state.isLoading),
     );
@@ -3612,6 +3820,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     final bool showCreateDraftNoteAction =
         !showCompactComposer &&
         notesEnabled &&
+        showNotesButton &&
         _hasText &&
         !isGenerating &&
         !_isRecording;
@@ -3941,7 +4150,10 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     return _wrapWithComposerLineMeasurement(
       compactControls: compactControls,
       child: _wrapWithFallbackAttachmentPanel(
-        composer: composer,
+        composer: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [const SpeechPlaybackBar(), composer],
+        ),
         localAttachmentsOnly: isHermesComposer,
         attachmentAvailability: attachmentAvailability,
       ),
@@ -4033,6 +4245,16 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          ComposerRecordings(
+            key: ValueKey(ref.watch(composerDraftContextProvider)),
+            owner: ref.watch(composerDraftContextProvider),
+            activeId: _isRecording ? _recordingSession?.id : null,
+            transcribing: _isTranscribing,
+            transcriptionErrorId: _recordingTranscriptionErrorId,
+            captureErrorId: _recordingCaptureErrorId,
+            onTranscribingChanged: _recordingTranscribingChanged,
+            onInsert: _appendRecordingTranscription,
+          ),
           composer,
           if (widget.managesSystemKeyboardInset)
             SizedBox(
@@ -4282,6 +4504,9 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                     usesNativePlatformView: usesNativePlatformView,
                   ),
                   cursorColor: Theme.of(context).textSelectionTheme.cursorColor,
+                  magnifierConfiguration: usesNativePlatformView
+                      ? IosTextMagnifier.configuration
+                      : null,
                   scrollPadding: const EdgeInsets.only(bottom: 80),
                   keyboardAppearance: brightness,
                   style: baseChatStyle.copyWith(color: animatedTextColor),
@@ -4325,6 +4550,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
                 showCursor: true,
                 scrollPadding: const EdgeInsets.only(bottom: 80),
                 keyboardAppearance: brightness,
+                magnifierConfiguration: nativeIosTextMagnifierConfiguration,
                 style: baseChatStyle.copyWith(color: animatedTextColor),
                 decoration: context.conduitInputStyles
                     .borderless(hint: inputPlaceholder)
@@ -4611,7 +4837,7 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
             ? SizedBox(
                 width: iconSize,
                 height: iconSize,
-                child: CircularProgressIndicator(
+                child: AdaptiveProgressIndicator(
                   strokeWidth: 2.5,
                   color: context.conduitTheme.textSecondary,
                 ),
@@ -4652,13 +4878,9 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       Platform.isIOS ? IconSize.small : IconSize.medium,
     );
 
-    // Don't allow sending until all uploads are complete. While dictating,
-    // send stops and sends what was said, before its text has arrived.
+    // Don't allow sending until all uploads are complete.
     final enabled =
-        !isGenerating &&
-        (hasText || _isRecording) &&
-        widget.enabled &&
-        allUploadsComplete;
+        !isGenerating && hasText && widget.enabled && allUploadsComplete;
 
     // Generating -> STOP variant
     if (isGenerating) {
@@ -4687,24 +4909,19 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
       );
     }
 
-    // If there's text, render SEND variant. During active dictation, keep the
-    // send affordance visible even before text arrives so the layout stays
-    // stable around the middle text field.
-    if (hasText || _isRecording) {
-      final onPressed = enabled
-          ? () {
-              if (_isRecording) {
-                unawaited(_stopVoiceAndSend());
-              } else {
-                _sendMessage();
-              }
-            }
-          : null;
+    // Dictation only adds text to the draft. Keep its stop/transcribe action
+    // separate from sending, including while the server is transcribing.
+    if (_isRecording || _isTranscribing || _isRecoveringRecording) {
+      return SizedBox.square(dimension: buttonSize);
+    }
+
+    if (hasText) {
+      final onPressed = enabled ? _sendMessage : null;
       final sendChild = hasUploadsInProgress
           ? SizedBox(
               width: primaryIconSize,
               height: primaryIconSize,
-              child: CircularProgressIndicator(
+              child: AdaptiveProgressIndicator(
                 strokeWidth: 2.5,
                 color: context.conduitTheme.textSecondary,
               ),
@@ -5210,6 +5427,25 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   void _showExpandTextModal() async {
     if (Platform.isIOS) {
       final l10n = AppLocalizations.of(context)!;
+      final draftKey = composerDraftKey(ref.read(composerDraftContextProvider));
+      bool ownsInput() =>
+          mounted &&
+          draftKey == composerDraftKey(ref.read(composerDraftContextProvider));
+      void applyText(String text) {
+        if (!ownsInput() || _controller.text == text) return;
+        _controller.value = TextEditingValue(
+          text: text,
+          selection: TextSelection.collapsed(offset: text.length),
+        );
+      }
+
+      final changes = NativeSheetBridge.instance.events.listen((event) {
+        if (event is NativeSheetControlChanged &&
+            event.id == 'expanded-text-value' &&
+            event.value is String) {
+          applyText(event.value as String);
+        }
+      });
       setState(() => _expandModalOpen = true);
       try {
         final result = await NativeSheetBridge.instance.presentTextEditor(
@@ -5220,21 +5456,17 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
               ? l10n.queueDraftAction
               : l10n.send,
           valueId: 'expanded-text-value',
+          emitChanges: true,
           sendActionId: 'send-expanded-text',
           closeActionId: 'close-expanded-text',
           rethrowErrors: true,
         );
         final updatedText = result?.values['expanded-text-value'] as String?;
-        if (mounted && updatedText != null && _controller.text != updatedText) {
-          _controller.value = TextEditingValue(
-            text: updatedText,
-            selection: TextSelection.collapsed(offset: updatedText.length),
-          );
-        }
+        if (updatedText != null) applyText(updatedText);
         if (mounted) {
           setState(() => _expandModalOpen = false);
         }
-        if (result?.actionId == 'send-expanded-text' && mounted) {
+        if (result?.actionId == 'send-expanded-text' && ownsInput()) {
           _sendMessage();
         }
         return;
@@ -5243,6 +5475,8 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
           return;
         }
         setState(() => _expandModalOpen = false);
+      } finally {
+        await changes.cancel();
       }
     }
 
@@ -5308,11 +5542,16 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
   }
 
   Future<void> _startVoice() async {
-    if (!widget.enabled) return;
-    _dictationOwner = _captureComposerOwner();
+    if (!widget.enabled || _startingVoice) return;
+    _startingVoice = true;
+    final generation = ++_voiceStartGeneration;
+    final origin = ref.read(composerDraftContextProvider);
+    final baseSnapshot = _controller.snapshotDraft();
+    final baseText = _controller.text;
     try {
+      await _recordingSession?.close();
       final ok = await _voiceInputService.initialize();
-      if (!mounted) return;
+      if (!mounted || generation != _voiceStartGeneration) return;
       if (!ok) {
         _showVoiceUnavailable(
           AppLocalizations.of(context)?.errorMessage ??
@@ -5320,45 +5559,122 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
         );
         return;
       }
+      var expectedSnapshot = baseSnapshot;
+      late final ComposerRecordingSession recording;
+      recording = await ComposerRecordingSession.begin(
+        origin,
+        stop: (session) => _stopVoiceListening(recording: session),
+        onSaveFailure: () => _showRecordingSaveFailure(recording),
+      );
+      _recordingSession = recording;
+      if (!mounted || generation != _voiceStartGeneration) {
+        await recording.close();
+        return;
+      }
       // Centralized permission + start
-      final stream = await _voiceInputService.beginListening();
-      if (!mounted) return;
+      final stream = await _voiceInputService.beginListening(
+        recording: recording.sink,
+      );
+      if (!mounted || generation != _voiceStartGeneration) {
+        await _voiceInputService.stopListening();
+        await recording.close();
+        return;
+      }
       _transcribingListenable?.removeListener(_handleTranscribingChanged);
       _transcribingListenable = _voiceInputService.transcribing
         ..addListener(_handleTranscribingChanged);
       setState(() {
         _isRecording = true;
-        _baseTextAtStart = _controller.text;
+        _recordingTranscriptionErrorId = null;
+        _recordingCaptureErrorId = null;
       });
       _textSub?.cancel();
-      _textSub = stream.listen(
-        (text) async {
-          final updated = _baseTextAtStart.isEmpty
-              ? text
-              : '${_baseTextAtStart.trimRight()} $text';
-          _controller.value = TextEditingValue(
-            text: updated,
-            selection: TextSelection.collapsed(offset: updated.length),
+      _textSub = stream
+          .asyncMap<void>((text) async {
+            final updated = baseText.isEmpty
+                ? text
+                : '${baseText.trimRight()} $text';
+            final copy = MentionTextEditingController();
+            copy.restoreDraft(baseSnapshot);
+            copy.value = TextEditingValue(
+              text: updated,
+              selection: TextSelection.collapsed(offset: updated.length),
+            );
+            final nextSnapshot = copy.snapshotDraft();
+            copy.dispose();
+            if (await _draftBinding?.applyDictation(
+                  origin,
+                  expectedSnapshot,
+                  nextSnapshot,
+                ) ==
+                true) {
+              expectedSnapshot = nextSnapshot;
+            }
+          })
+          .listen(
+            (_) {},
+            onDone: () {
+              unawaited(recording.close().catchError((Object _) {}));
+              if (!mounted) return;
+              setState(() => _isRecording = false);
+            },
+            onError: (Object error) async {
+              await recording.stopped;
+              if (!mounted) return;
+              final saved = (recording.writer?.savedBytes ?? 0) > 0;
+              setState(() {
+                _isRecording = false;
+                if (saved) {
+                  if (error is NativeSttException &&
+                      error.code == 'AUDIO_PRESERVATION_FAILED') {
+                    _recordingCaptureErrorId = recording.id;
+                  } else {
+                    _recordingTranscriptionErrorId = recording.id;
+                  }
+                }
+              });
+              if (!saved) {
+                _showVoiceUnavailable(
+                  AppLocalizations.of(context)!.errorMessage,
+                );
+              }
+            },
           );
-        },
-        onDone: () {
-          if (!mounted) return;
-          setState(() => _isRecording = false);
-        },
-        onError: (_) {
-          if (!mounted) return;
-          setState(() => _isRecording = false);
-        },
-      );
       _ensureFocusedIfEnabled();
+      if (!origin.temporary && !_voiceInputService.recordingRecoverySupported) {
+        unawaited(
+          origin.store?.recordings
+              .discard(recording.id)
+              .catchError((Object _) {}),
+        );
+        _showVoiceUnavailable(
+          AppLocalizations.of(context)!.recordingRecoveryUnavailable,
+        );
+      }
     } catch (_) {
+      await _recordingSession?.close().catchError((Object _) {});
+      if (!mounted) return;
       _showVoiceUnavailable(
         AppLocalizations.of(context)?.errorMessage ??
             'Failed to start voice input',
       );
-      if (!mounted) return;
       setState(() => _isRecording = false);
+    } finally {
+      _startingVoice = false;
     }
+  }
+
+  void _showRecordingSaveFailure(ComposerRecordingSession recording) {
+    if (!mounted || _isDeactivated) return;
+    final l10n = AppLocalizations.of(context)!;
+    AdaptiveSnackBar.show(
+      context,
+      message: l10n.recordingSaveFailed,
+      type: AdaptiveSnackBarType.error,
+      action: l10n.retry,
+      onActionPressed: () =>
+          unawaited(recording.flush().catchError((Object _) {})),
+    );
   }
 
   void _handleTranscribingChanged() {
@@ -5367,10 +5683,15 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     setState(() => _isTranscribing = value);
   }
 
-  Future<void> _stopVoiceListening() async {
+  Future<void> _stopVoiceListening({
+    ComposerRecordingSession? recording,
+  }) async {
+    ++_voiceStartGeneration;
+    final session = recording ?? _recordingSession;
     try {
       await _voiceInputService.stopListening();
     } finally {
+      await session?.close().catchError((Object _) {});
       if (mounted) {
         setState(() {
           _isTranscribing = false;
@@ -5384,28 +5705,6 @@ class _ModernChatInputState extends ConsumerState<ModernChatInput>
     await _stopVoiceListening();
     if (!mounted) return;
     ConduitHaptics.selectionClick();
-  }
-
-  Future<void> _stopVoiceAndSend() async {
-    // Server dictation has no text until it is transcribed. Stopping hands
-    // what was said to the server, and its text is in the composer by the
-    // time the stop finishes. A message goes to whichever chat is active when
-    // it is sent, and the composer stays up across a chat switch, so it is
-    // sent only if the user is still in the account and chat the dictation
-    // started in; otherwise it stays in the composer.
-    final owner = _dictationOwner ?? _captureComposerOwner();
-    await _stopVoiceListening();
-    if (!mounted || _isDeactivated) return;
-    final sameChat =
-        identical(ref.read(apiServiceProvider), owner.api) &&
-        identical(ref.read(openWebUiAuthSessionEpochProvider), owner.epoch) &&
-        chatMutationTokenStillActive(ref, owner.chat);
-    if (_controller.text.trim().isEmpty || !sameChat) {
-      ConduitHaptics.selectionClick();
-      return;
-    }
-    ConduitHaptics.lightImpact();
-    _sendMessage();
   }
 
   // When on-device STT is unavailable we rely on server transcription.
