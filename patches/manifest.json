@@ -3,8 +3,8 @@
   "ownership": "applied-downstream-only",
   "project": "conduit",
   "upstream": "5d8c74ef44e2e1f324c09e35463ca170dad75849",
-  "snapshot_source": "ca25fa00fa29aaff70a90c0e43f723d02a50150c",
-  "downstream_tree_without_patches": "72b7970d1b06613577a2ccb11453489a61d3e606",
+  "snapshot_source": "5dc07969ee3861c09fcc6b1c012a4854b27a72b2",
+  "downstream_tree_without_patches": "fb38358fd856c9bde34065cdb5c0fe08b293b248",
   "groups": [
     {
       "patch": "01-runtime.patch",
@@ -173,7 +173,7 @@
         "test/features/navigation/widgets/sidebar_workspace_tabs_test.dart",
         "test/shared/widgets/platform_ui/settings_switch_semantics_test.dart"
       ],
-      "sha256": "8379b4a03825791aa0188b3cfa4b6d121ba22fee13a8a5728cfd99f2f449b9be"
+      "sha256": "eba2d3237d3792102e101c393c073cfa815fa41084c4690635e8d8c1c9bd9b5e"
     },
     {
       "patch": "04-documentation.patch",
@@ -196,10 +196,10 @@
   "files": {
     "01-runtime.patch": "a64b74fb1aa7c6e3c8a461a32f29671ccd9d6df5e313655f4095a5cf5b287d10",
     "02-build.patch": "3288dd35ef040f5f5bdfc014456b34cb53f7022df4ad4993286cf7a79d87b7bd",
-    "03-tests.patch": "8379b4a03825791aa0188b3cfa4b6d121ba22fee13a8a5728cfd99f2f449b9be",
+    "03-tests.patch": "eba2d3237d3792102e101c393c073cfa815fa41084c4690635e8d8c1c9bd9b5e",
     "04-documentation.patch": "155f0ed3855ccb5dea920f131d795eed159d011f35df692d97486061db7a3766",
     ".gitattributes": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",
     "series": "0de3cc8bf7284c341fd9a7217a5cc598d813b5a95bdebb6584f9a9c790128ada",
-    "README.md": "b190377567f5712a0c98147730a11fab3cd215c20c1bf199d1767a81a3aa15c4"
+    "README.md": "e39215d37ecaf2521fdfff4e7f367259a6d65298af368182f7f7c1f148d8f7c5"
   }
 }

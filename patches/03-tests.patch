@@ -4648,7 +4648,7 @@ index 636fd4874c443484244258d8ab8dfb2968ff2b01..2c22f5619ee6b29864a1dd347ef5bad3
 +}
 \ No newline at end of file
 diff --git a/test/features/navigation/widgets/sidebar_workspace_tabs_test.dart b/test/features/navigation/widgets/sidebar_workspace_tabs_test.dart
-index 7a4c8ce4f23cd779318d7740a979063e3fd0b213..4a4c17780612f6e3e97d2973d22ada91cb6014c8 100644
+index 7a4c8ce4f23cd779318d7740a979063e3fd0b213..88c8ed23e498606115e2c14397c21910b480dff1 100644
 --- a/test/features/navigation/widgets/sidebar_workspace_tabs_test.dart
 +++ b/test/features/navigation/widgets/sidebar_workspace_tabs_test.dart
 @@ -30,6 +30,7 @@ import 'package:conduit/shared/widgets/user_avatar.dart';
@@ -4679,13 +4679,13 @@ index 7a4c8ce4f23cd779318d7740a979063e3fd0b213..4a4c17780612f6e3e97d2973d22ada91
 +    await tester.pumpAndSettle();
 +    await tester.enterText(find.byType(TextField), 'saved OWUI query');
 +    await tester.pumpAndSettle();
-+    await tester.tap(sidebarTestBottomNavTabLabel('Cline'));
++    await tester.tap(sidebarTestDestinationLabel('Cline'));
 +    await tester.pumpAndSettle();
 +    expect(
 +      container.read(sidebarSearchFieldControllerProvider).text,
 +      'saved OWUI query',
 +    );
-+    await tester.tap(sidebarTestBottomNavTabLabel('Chats'));
++    await tester.tap(sidebarTestDestinationLabel('Chats'));
 +    await tester.pumpAndSettle();
 +    expect(container.read(sidebarHeaderSearchExpandedProvider), isTrue);
 +    expect(
