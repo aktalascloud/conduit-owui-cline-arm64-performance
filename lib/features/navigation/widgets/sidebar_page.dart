@@ -689,7 +689,10 @@ void _selectSlidingSidebarTab(BuildContext context, WidgetRef ref, int index) {
     selected.behavior.onSelected(ref);
   }
   ref.read(sidebarActiveTabProvider.notifier).set(selected.id);
-  closeSidebarSearch(ref);
+  // Cline has its own UI; returning must retain the OWUI history search/draft.
+  if (navigation.selectedTab != SidebarTabId.cline && selected.id != SidebarTabId.cline) {
+    closeSidebarSearch(ref);
+  }
   NavigationService.router.go(selected.location);
   closeSidebarDrawerIfOverlay(context);
 }

@@ -178,6 +178,8 @@ def build_conduit(package, manifest, channel):
     # Catch native-view fixture lifecycle failures before the full shared-core suite.
     if checks['mode'] == 'full':
         run(flutter, "test", "--no-pub", "test/shared/widgets/platform_ui/settings_switch_semantics_test.dart")
+        run(flutter, "test", "--no-pub", "test/features/navigation/widgets/cline_sidebar_mainstream_test.dart",
+            "test/features/navigation/widgets/sidebar_workspace_tabs_test.dart", "--plain-name", "Cline")
     run(flutter, "test", "--no-pub", *checks['tests'])
     run(flutter, "test", "--no-pub", "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart")
     persistence_tests = [

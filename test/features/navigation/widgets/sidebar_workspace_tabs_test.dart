@@ -986,7 +986,7 @@ void main() {
       container.read(sidebarSearchFieldControllerProvider).text,
       'saved OWUI query',
     );
-    await tester.tap(sidebarTestDestinationLabel('Chats'));
+    await tester.tap(find.byKey(const ValueKey<String>('sidebar-page-back-button')).hitTestable());
     await tester.pumpAndSettle();
     expect(container.read(sidebarHeaderSearchExpandedProvider), isTrue);
     expect(
