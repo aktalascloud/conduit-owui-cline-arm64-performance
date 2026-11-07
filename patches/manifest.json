@@ -1,10 +1,11 @@
 {
   "schema": 1,
+  "grouping_version": 2,
   "ownership": "applied-downstream-only",
   "project": "conduit",
   "upstream": "5d8c74ef44e2e1f324c09e35463ca170dad75849",
-  "snapshot_source": "5dc07969ee3861c09fcc6b1c012a4854b27a72b2",
-  "downstream_tree_without_patches": "fb38358fd856c9bde34065cdb5c0fe08b293b248",
+  "snapshot_source": "fb24e0ddafea83289e128ae239115d4a5d594404",
+  "downstream_tree_without_patches": "2e109e54d9b749c9ea17c7c251267992827bc0d6",
   "groups": [
     {
       "patch": "01-runtime.patch",
@@ -78,7 +79,6 @@
         "packages/conduit_core/lib/sync/push_sync.dart",
         "packages/conduit_core/lib/utils/openwebui_message_payload.dart",
         "packages/conduit_core/pubspec.yaml",
-        "pubspec.lock",
         "pubspec.yaml",
         "remote/Setup.cmd",
         "remote/build_dashboard_adapter.ts",
@@ -96,7 +96,7 @@
         "tool/voice_avatar/test.mjs",
         "tool/voice_avatar/texture-loader.js"
       ],
-      "sha256": "a64b74fb1aa7c6e3c8a461a32f29671ccd9d6df5e313655f4095a5cf5b287d10"
+      "sha256": "2d430c0e618f70f72be1acc0f6f7ce310fbcc790b73d151bec07daea6762d7d5"
     },
     {
       "patch": "02-build.patch",
@@ -125,9 +125,11 @@
         ".gitattributes",
         ".github/workflows/avx1-build.yml",
         ".gitignore",
-        "Build.cmd"
+        "Build.cmd",
+        "pubspec.lock",
+        "remote/requirements.txt"
       ],
-      "sha256": "3288dd35ef040f5f5bdfc014456b34cb53f7022df4ad4993286cf7a79d87b7bd"
+      "sha256": "27f46c381834462656800d6e4e8229dc60af6a7f7643727171b2d9a05599a1bd"
     },
     {
       "patch": "03-tests.patch",
@@ -187,19 +189,18 @@
         "README.ru.md",
         "assets/voice_avatar/LICENSES.txt",
         "remote/README.md",
-        "remote/README.ru.md",
-        "remote/requirements.txt"
+        "remote/README.ru.md"
       ],
-      "sha256": "155f0ed3855ccb5dea920f131d795eed159d011f35df692d97486061db7a3766"
+      "sha256": "232a3d3edc4f72c12b6fffbf34d2a1bdad8a639fa491f281ba440c225d77db2f"
     }
   ],
   "files": {
-    "01-runtime.patch": "a64b74fb1aa7c6e3c8a461a32f29671ccd9d6df5e313655f4095a5cf5b287d10",
-    "02-build.patch": "3288dd35ef040f5f5bdfc014456b34cb53f7022df4ad4993286cf7a79d87b7bd",
+    "01-runtime.patch": "2d430c0e618f70f72be1acc0f6f7ce310fbcc790b73d151bec07daea6762d7d5",
+    "02-build.patch": "27f46c381834462656800d6e4e8229dc60af6a7f7643727171b2d9a05599a1bd",
     "03-tests.patch": "eba2d3237d3792102e101c393c073cfa815fa41084c4690635e8d8c1c9bd9b5e",
-    "04-documentation.patch": "155f0ed3855ccb5dea920f131d795eed159d011f35df692d97486061db7a3766",
+    "04-documentation.patch": "232a3d3edc4f72c12b6fffbf34d2a1bdad8a639fa491f281ba440c225d77db2f",
     ".gitattributes": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",
     "series": "0de3cc8bf7284c341fd9a7217a5cc598d813b5a95bdebb6584f9a9c790128ada",
-    "README.md": "e39215d37ecaf2521fdfff4e7f367259a6d65298af368182f7f7c1f148d8f7c5"
+    "README.md": "6c329c945e46bd7d4345308ffe2951c9ae96ccdbf7ed9df2a24501115f085456"
   }
 }

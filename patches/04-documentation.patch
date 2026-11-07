@@ -275,7 +275,7 @@ index 0000000000000000000000000000000000000000..ed3a4bc287cef1a7c87352e10d1345e4
 +  }
 +}
 diff --git a/README.md b/README.md
-index 32031e206eec19510173876b284086c68c831d91..f7a0efa0ac8b359c52fdcd52825161ad470e507e 100644
+index 32031e206eec19510173876b284086c68c831d91..f89155c92caf10e54fd0ce7d13bf65e1d07301fb 100644
 --- a/README.md
 +++ b/README.md
 @@ -1,353 +1,38 @@
@@ -311,7 +311,7 @@ index 32031e206eec19510173876b284086c68c831d91..f7a0efa0ac8b359c52fdcd52825161ad
 -    src="https://img.shields.io/badge/License-GPL%203.0-16A34A"
 -  />
 -</p>
-+[Upstream](https://github.com/cogwheel0/conduit) · [Release](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Patches](.avx1/PATCHES.json)
++[Upstream](https://github.com/cogwheel0/conduit) · [Release](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Patches](patches/README.md)
  
 -<p align="center">
 -  <a href="https://play.google.com/store/apps/details?id=app.cogwheel.conduit">
@@ -654,7 +654,7 @@ index 32031e206eec19510173876b284086c68c831d91..f7a0efa0ac8b359c52fdcd52825161ad
 +Current maintainer-only applied differences: [patches](patches/README.md).
 diff --git a/README.ru.md b/README.ru.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..220374a466fc9d0f16536a21ff71fe402adca595
+index 0000000000000000000000000000000000000000..89d6eacc090759639402be1215d1f12e8330a2de
 --- /dev/null
 +++ b/README.ru.md
 @@ -0,0 +1,38 @@
@@ -664,7 +664,7 @@ index 0000000000000000000000000000000000000000..220374a466fc9d0f16536a21ff71fe40
 +
 +Неофициальный форк: проверенные исправления для агентов/MCP и дополненный русский интерфейс. Один актуальный APK.
 +
-+[Upstream](https://github.com/cogwheel0/conduit) · [Release](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Patches](.avx1/PATCHES.json)
++[Upstream](https://github.com/cogwheel0/conduit) · [Release](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Patches](patches/README.md)
 +
 +Mainstream добавляет локальные черновики текста/записей с разделением аккаунтов, перемотку озвучивания, фильтр языков голосов, повтор подключения и элементы iOS. Native Cline и серверные VRM сохранены. Предупреждение upstream о версии сервера остаётся; проверка телефона и квалификация сервера 0.13 не заявляются.
 +
@@ -840,11 +840,3 @@ index 0000000000000000000000000000000000000000..f8182925eaa64abf916b7bcfee1c08a2
 +Кнопка скрепки передаёт файл через SSH в закрытую папку `user-uploads` на ПК. Проверяются размер и SHA256; повторная передача одинакового файла не создаёт копию. Максимум: 64 МиБ на файл, 1 ГиБ на папку, 4 вложения на сообщение. Изображения до 6 МиБ каждое также передаются через штатный `userImages`, в пределах суммарных 8 МиБ после кодирования; более крупные файлы доступны агенту по пути на ПК. Для понимания изображений нужна модель с поддержкой vision. Документы читает Cline своими инструментами с обычными разрешениями.
 +
 +Файлы добавляются только к следующему сообщению, которое вы отправите сами. Вложения можно убрать перед отправкой. Готовые файлы — пользовательские данные; шлюз не удаляет их как кеш. Нет shell, SFTP и записи по произвольному пути. Голосовой ввод и звонки с телефона для этого подключения пока не реализованы. Голосовой ввод Desktop настраивается отдельно в Cline.
-diff --git a/remote/requirements.txt b/remote/requirements.txt
-new file mode 100644
-index 0000000000000000000000000000000000000000..e82dce581d7db8f35e3a22a25838cca564a1edf5
---- /dev/null
-+++ b/remote/requirements.txt
-@@ -0,0 +1,2 @@
-+asyncssh==2.24.1
-+cryptography==50.0.2

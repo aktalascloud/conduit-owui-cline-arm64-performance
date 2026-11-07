@@ -2558,3 +2558,75 @@ index 0000000000000000000000000000000000000000..311098f171a4267a97eb5bac33deae4d
 +where py >nul 2>&1
 +if errorlevel 1 (python .avx1\portable_build.py %*) else (py -3 .avx1\portable_build.py %*)
 +exit /b %errorlevel%
+diff --git a/pubspec.lock b/pubspec.lock
+index 02a79e250cc3ab268c3cf6719bc76418cb118613..204ceaa199b77282fb32b23a6d8dfe90452ea16f 100644
+--- a/pubspec.lock
++++ b/pubspec.lock
+@@ -73,6 +73,14 @@ packages:
+       url: "https://pub.dev"
+     source: hosted
+     version: "2.7.0"
++  asn1lib:
++    dependency: transitive
++    description:
++      name: asn1lib
++      sha256: "9a8f69025044eb466b9b60ef3bc3ac99b4dc6c158ae9c56d25eeccf5bc56d024"
++      url: "https://pub.dev"
++    source: hosted
++    version: "1.6.5"
+   async:
+     dependency: transitive
+     description:
+@@ -345,6 +353,14 @@ packages:
+       url: "https://pub.dev"
+     source: hosted
+     version: "1.8.2"
++  dartssh2:
++    dependency: transitive
++    description:
++      name: dartssh2
++      sha256: "39359aceafcf5940b868249e3c9c6d86e4e0f989eec7417d033c943157c84c51"
++      url: "https://pub.dev"
++    source: hosted
++    version: "4.1.0"
+   dbus:
+     dependency: transitive
+     description:
+@@ -1651,6 +1667,14 @@ packages:
+       url: "https://pub.dev"
+     source: hosted
+     version: "7.0.2"
++  pinenacl:
++    dependency: transitive
++    description:
++      name: pinenacl
++      sha256: "57e907beaacbc3c024a098910b6240758e899674de07d6949a67b52fd984cbdf"
++      url: "https://pub.dev"
++    source: hosted
++    version: "0.6.0"
+   platform:
+     dependency: transitive
+     description:
+@@ -1667,6 +1691,14 @@ packages:
+       url: "https://pub.dev"
+     source: hosted
+     version: "2.1.8"
++  pointycastle:
++    dependency: transitive
++    description:
++      name: pointycastle
++      sha256: "92aa3841d083cc4b0f4709b5c74fd6409a3e6ba833ffc7dc6a8fee096366acf5"
++      url: "https://pub.dev"
++    source: hosted
++    version: "4.0.0"
+   pool:
+     dependency: transitive
+     description:
+diff --git a/remote/requirements.txt b/remote/requirements.txt
+new file mode 100644
+index 0000000000000000000000000000000000000000..e82dce581d7db8f35e3a22a25838cca564a1edf5
+--- /dev/null
++++ b/remote/requirements.txt
+@@ -0,0 +1,2 @@
++asyncssh==2.24.1
++cryptography==50.0.2
