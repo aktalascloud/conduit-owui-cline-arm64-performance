@@ -4,7 +4,7 @@
 
 Unofficial fork with reviewed agent/MCP fixes and extended Russian UI. One latest APK.
 
-[Upstream](https://github.com/cogwheel0/conduit) · [Release](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Patches](.avx1/PATCHES.json)
+[Upstream](https://github.com/cogwheel0/conduit) · [Release](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Patches](patches/README.md)
 
 Mainstream adds account-local text/recording drafts, seekable read-aloud playback, language-filtered voices, connection retry and native iOS controls. Native Cline and server VRM remain. The upstream server-version warning is retained; this update does not claim physical-phone or 0.13 server qualification.
 
