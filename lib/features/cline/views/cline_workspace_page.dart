@@ -20,6 +20,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/services/navigation_service.dart';
+import '../../navigation/widgets/sidebar_page_leading_button.dart';
 import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/theme/color_tokens.dart' show withMinContrast;
 
@@ -727,7 +728,10 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
     final client = ref.watch(clineBackendClientProvider);
     if (client == null)
       return Scaffold(
-        appBar: AppBar(title: const Text('Cline')),
+        appBar: AppBar(
+          title: const Text('Cline'),
+          leading: widget.embedded ? const SidebarPageLeadingButton(fallback: Routes.chat) : null,
+        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -840,6 +844,8 @@ class _ClineWorkspacePageState extends ConsumerState<ClineWorkspacePage> {
               ],
             ),
             actions: [
+              if (widget.embedded)
+                const SidebarPageLeadingButton(fallback: Routes.chat),
               if (!widget.embedded &&
                   ref.watch(openWebUiAccountAvailableProvider))
                 IconButton(

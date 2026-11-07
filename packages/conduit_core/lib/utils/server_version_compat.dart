@@ -17,10 +17,10 @@ class ServerVersionCompat {
   /// Servers reporting a `/api/config` `version` strictly greater than this are
   /// shown a compatibility warning. Bump this (and re-verify against
   /// `openwebui-src/`) whenever a newer server release is validated.
-  static const String maxSupportedVersion = '0.12.4';
+  static const String maxSupportedVersion = '0.13.0';
 
   /// Parsed [maxSupportedVersion] components: `[major, minor, patch]`.
-  static const List<int> _maxSupported = [0, 12, 4];
+  static const List<int> _maxSupported = [0, 13, 0];
 
   /// Whether [rawVersion] is within the supported range (<= [maxSupportedVersion]).
   ///
@@ -39,6 +39,32 @@ class ServerVersionCompat {
 
   /// The first Open WebUI release that can mark a chat unread.
   static const String markChatUnreadVersion = '0.11.0';
+
+  /// The first Open WebUI release that stores a note as pages, with its
+  /// attachments as links in the page content.
+  static const String notePagesVersion = '0.12.5';
+
+  /// The first Open WebUI release that ties a temporary chat to the socket
+  /// session that started it, and refuses one sent without a session.
+  static const String temporaryChatSessionVersion = '0.13.0';
+
+  /// The first Open WebUI release that limits the files a knowledge base
+  /// holds, and lets its owner set limits of its own.
+  static const String knowledgeLimitsVersion = '0.13.0';
+
+  /// The first Open WebUI release that relays its terminals' events socket
+  /// and browser sessions, and that makes port previews report where a link
+  /// leads instead of following it.
+  static const String terminalLiveFeaturesVersion = '0.13.0';
+
+  /// Whether [rawVersion] is [minimum] or newer, or null when [rawVersion]
+  /// cannot be read. For a choice that must not guess either way.
+  static bool? knownAtLeast(String? rawVersion, String minimum) {
+    final parsed = _parse(rawVersion);
+    final required = _parse(minimum);
+    if (parsed == null || required == null) return null;
+    return _compare(parsed, required) >= 0;
+  }
 
   /// Whether [rawVersion] is [minimum] or newer.
   ///

@@ -1197,6 +1197,10 @@
   "@usageLoadDuration": {
     "description": "Label for model loading duration metric"
   },
+  "usageIncomplete": "一部のステップで使用量が報告されなかったため、これらの数値は実際より少ない可能性があります。",
+  "@usageIncomplete": {
+    "description": "Note under a reply's usage figures when the server marks its usage incomplete: some steps reported none"
+  },
   "usageQueueTime": "キュー時間",
   "@usageQueueTime": {
     "description": "Label for queue waiting time metric"
@@ -3655,6 +3659,8 @@
   "settingsCategoryServer": "サーバー",
   "settingsCategorySupport": "サポート",
   "settingsDataAndConnection": "データと接続",
+  "slidingSidebar": "スライド式サイドバー",
+  "slidingSidebarDescription": "チャット履歴の横でノート、ターミナル、チャンネルを開きます。",
   "settingsAppearance": "外観",
   "settingsAppearanceSubtitle": "テーマ、カラーパレット、言語",
   "settingsChatSubtitle": "チャットの動作、クイックアクション、高度なプロンプト",
@@ -5038,7 +5044,7 @@
   "hermesSessionDeleteFailed": "会話を削除できませんでした。",
   "hermesSessionLoadFailed": "この会話を読み込めませんでした。接続を確認して、もう一度お試しください。",
   "hermesMemoryKeyFieldLabel": "メモリキー",
-  "directMcpServersTitle": "MCP servers", "directMcpEmptyTitle": "No MCP servers yet", "directMcpReachabilityHelp": "Add a Streamable HTTP endpoint that this phone can reach.", "directMcpEditorTitle": "Edit MCP server", "directMcpAddTitle": "Add MCP server", "directMcpName": "Server name", "directMcpEndpoint": "Streamable HTTP endpoint", "directMcpBearerToken": "Bearer token (optional)", "directMcpCustomHeaders": "Custom headers (optional)", "directMcpCustomHeadersHint": "One per line: Name: Value", "directMcpTestConnection": "Test connection", "directMcpTesting": "Testing connection…", "directMcpTestSucceeded": "Connected — {count} tools found.", "directMcpTestFailed": "Could not list tools from this MCP server.", "directMcpSaveFailed": "Could not save this MCP server.", "directMcpLoadFailed": "Could not load MCP servers from secure storage.", "directMcpMissing": "This MCP server no longer exists.", "directMcpCredentialTransferTitle": "Use credentials with new server?", "directMcpCredentialTransferMessage": "This sends the bearer token and custom headers to the new server. Continue only if you trust it. Cancel saves the server without credentials.", "directMcpCredentialTransferConfirm": "Use credentials", "directMcpDeleteTitle": "Delete MCP server?", "directMcpDeleteMessage": "This removes {name} and its credentials from this device.", "directMcpDeleteFailed": "Could not delete this MCP server.", "directMcpAuthMode": "Authentication", "directMcpAuthNone": "None", "directMcpAuthBearer": "Bearer token", "directMcpAuthOAuth": "OAuth", "directMcpOAuthConnect": "Connect in browser", "directMcpOAuthReconnect": "Reconnect in browser", "directMcpOAuthDisconnect": "Disconnect OAuth", "directMcpOAuthPending": "Waiting for authorization in the browser…", "directMcpOAuthConnected": "OAuth connected.", "directMcpOAuthConnectionDetails": "Connected to {issuerHost} · {scopes}", "directMcpOAuthNoScopes": "No scopes reported", "directMcpOAuthConnectFailed": "Could not connect this MCP server with OAuth.", "directMcpOAuthDisconnectFailed": "Could not disconnect OAuth from this MCP server.", "directMcpApprovalTitle": "Tool approval", "directMcpApprovalAllowOnce": "Allow once", "directMcpApprovalAllowSession": "Allow for session", "directMcpApprovalAllowAlways": "Always allow", "directMcpApprovalAlwaysTitle": "Always allow this tool?", "directMcpApprovalAlwaysMessage": "{serverName} will be allowed to run {toolName} without asking again. The approval is revoked automatically if the tool schema changes.", "@directMcpApprovalAlwaysMessage": {"placeholders":{"serverName":{"type":"String"},"toolName":{"type":"String"}}}, "directMcpApprovalSaveFailed": "Could not remember this approval. You can retry or choose another option.", "directMcpApprovalDeny": "Deny", "directMcpApprovalAllowed": "Allowed once", "directMcpApprovalAllowedSession": "Allowed for session", "directMcpApprovalAllowedAlways": "Always allowed", "directMcpApprovalDenied": "Denied", "directMcpApprovalExpired": "Approval expired", "directMcpRememberedApprovalsTitle": "Always allowed tools", "directMcpRememberedApprovalsSubtitle": "These exact tools can run without asking while their server and input schema remain unchanged.", "directMcpRememberedApprovalRevoke": "Revoke", "directMcpRememberedApprovalsRevokeAll": "Revoke all", "directMcpRememberedApprovalRevokeFailed": "Could not revoke the remembered approval."
+  "directMcpServersTitle": "MCP servers", "directMcpEmptyTitle": "No MCP servers yet", "directMcpReachabilityHelp": "Add a Streamable HTTP endpoint that this phone can reach.", "directMcpEditorTitle": "Edit MCP server", "directMcpAddTitle": "Add MCP server", "directMcpName": "Server name", "directMcpEndpoint": "Streamable HTTP endpoint", "directMcpBearerToken": "Bearer token (optional)", "directMcpCustomHeaders": "Custom headers (optional)", "directMcpCustomHeadersHint": "One per line: Name: Value", "directMcpTestConnection": "Test connection", "directMcpTesting": "Testing connection…", "directMcpTestSucceeded": "Connected — {count} tools found.", "directMcpTestFailed": "Could not list tools from this MCP server.", "directMcpSaveFailed": "Could not save this MCP server.", "directMcpLoadFailed": "Could not load MCP servers from secure storage.", "directMcpMissing": "This MCP server no longer exists.", "directMcpCredentialTransferTitle": "Use credentials with new server?", "directMcpCredentialTransferMessage": "This sends the bearer token and custom headers to the new server. Continue only if you trust it. Cancel saves the server without credentials.", "directMcpCredentialTransferConfirm": "Use credentials", "directMcpDeleteTitle": "Delete MCP server?", "directMcpDeleteMessage": "This removes {name} and its credentials from this device.", "directMcpDeleteFailed": "Could not delete this MCP server.", "directMcpAuthMode": "Authentication", "directMcpAuthNone": "None", "directMcpAuthBearer": "Bearer token", "directMcpAuthOAuth": "OAuth", "directMcpOAuthConnect": "Connect in browser", "directMcpOAuthReconnect": "Reconnect in browser", "directMcpOAuthDisconnect": "Disconnect OAuth", "directMcpOAuthPending": "Waiting for authorization in the browser…", "directMcpOAuthConnected": "OAuth connected.", "directMcpOAuthConnectionDetails": "Connected to {issuerHost} · {scopes}", "directMcpOAuthNoScopes": "No scopes reported", "directMcpOAuthConnectFailed": "Could not connect this MCP server with OAuth.", "directMcpOAuthDisconnectFailed": "Could not disconnect OAuth from this MCP server.", "directMcpApprovalTitle": "Tool approval", "directMcpApprovalAllowOnce": "Allow once", "directMcpApprovalAllowSession": "Allow for session", "directMcpApprovalAllowAlways": "Always allow", "directMcpApprovalAlwaysTitle": "Always allow this tool?", "directMcpApprovalAlwaysMessage": "{serverName} will be allowed to run {toolName} without asking again. The approval is revoked automatically if the tool schema changes.", "@directMcpApprovalAlwaysMessage": {"placeholders":{"serverName":{"type":"String"},"toolName":{"type":"String"}}}, "directMcpApprovalSaveFailed": "Could not remember this approval. You can retry or choose another option.", "directMcpApprovalDeny": "拒否", "directMcpApprovalAllowed": "Allowed once", "directMcpApprovalAllowedSession": "Allowed for session", "directMcpApprovalAllowedAlways": "Always allowed", "directMcpApprovalDenied": "Denied", "directMcpApprovalExpired": "Approval expired", "directMcpRememberedApprovalsTitle": "Always allowed tools", "directMcpRememberedApprovalsSubtitle": "These exact tools can run without asking while their server and input schema remain unchanged.", "directMcpRememberedApprovalRevoke": "Revoke", "directMcpRememberedApprovalsRevokeAll": "Revoke all", "directMcpRememberedApprovalRevokeFailed": "Could not revoke the remembered approval."
   ,"directMcpContentAction": "MCP content"
   ,"directMcpContentTitle": "MCP content"
   ,"directMcpContentServer": "MCP server"
@@ -5219,6 +5225,11 @@
   "personalToolSettingsOwnerChanged": "ログイン中のアカウントが変更されたため、何も保存されませんでした。設定を開き直して続行してください。",
   "personalToolSettingsInvalid": "サーバーがこれらの値を受け付けませんでした。",
   "noteReadOnlyNotice": "このノートは読み取り専用です。閲覧のみ可能で、変更はできません。",
+  "notePages": "ページ",
+  "notePagesDescription": "読む・編集するページを選んでください。ページの追加・名前変更・移動はウェブ版の Open WebUI で行えます。",
+  "notePageChipLabel": "ページ {page}。ノートのページを表示します。",
+  "notePageRemoved": "開いていたページは削除されました。ノートの最初のページを表示しています。",
+  "notePageMissingNotice": "このページは別の場所で削除されました。未保存のテキストはここに残っています。別のノートとして保存するか、破棄してください。",
   "noteAccessUnverifiedNotice": "このノートを編集できるか確認するため、再接続してください。",
   "noteAccessRevokedNotice": "このノートを編集できなくなりました。未保存の変更はここに保持されています。",
   "noteSaveAsOwnNote": "自分のノートとして保存",
@@ -5899,5 +5910,29 @@
   "chatHandoffPromptTitle": "{model} に切り替えますか？",
   "chatHandoffPromptMessage": "サーバーが {model} との新しいチャットで続けることを提案しています。提案されたメッセージは、送信するまで入力欄に残ります。",
   "chatHandoffStartNewChat": "新しいチャットを開始",
-  "chatHandoffStayHere": "このままにする"
+  "chatHandoffStayHere": "このままにする",
+  "chatWaitingForApproval": "承認待ち",
+  "generateTitleNone": "サーバーはこのチャットのタイトルを作成しませんでした。タイトル生成がオフになっている可能性があります。",
+  "generateTitleFailed": "タイトルを生成できませんでした。もう一度お試しください。",
+  "workspaceToolActivate": "有効にする",
+  "workspaceToolDeactivate": "無効にする",
+  "workspaceKnowledgeLimitsTitle": "ファイルの上限",
+  "workspaceKnowledgeLimitsFooter": "上限を空欄にすると、サーバーの上限だけが使われます。サーバーの上限は常に適用されます。",
+  "workspaceKnowledgeMaxFileCount": "最大ファイル数",
+  "workspaceKnowledgeMaxFileSize": "最大ファイルサイズ (MB)",
+  "workspaceKnowledgeLimitDefault": "サーバーの上限",
+  "workspaceKnowledgeLimitInvalid": "各上限は 0 より大きい整数で入力するか、空欄にしてください。",
+  "workspaceToolToggleSaveFirst": "ツールを有効または無効にする前に、変更を保存するか破棄してください。",
+  "mcpAppPreviewDescription": "{serverName} のインタラクティブなアプリです。開くとここで使えます。",
+  "mcpAppOpen": "アプリを開く",
+  "mcpAppToolCallTitle": "このツール呼び出しを許可しますか？",
+  "mcpAppToolCallMessage": "アプリは {serverName} に次の内容で {toolName} を実行させようとしています:",
+  "mcpAppToolCallAllow": "許可",
+  "mcpAppLoadFailed": "アプリを読み込めませんでした: {reason}",
+  "mcpAppDidNotStart": "アプリが起動しませんでした。",
+  "mcpAppOpenLinkTitle": "このリンクを開きますか？",
+  "mcpAppOpenLinkConfirm": "開く",
+  "terminalPortPreviewForward": "進む",
+  "terminalPortPreviewReload": "再読み込み",
+  "terminalPortPreviewLoadFailed": "このページを読み込めませんでした。"
 }

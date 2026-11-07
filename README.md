@@ -34,3 +34,5 @@ Current checks and measurements: [.avx1/measurements/latest.json](.avx1/measurem
 Android native builds use Linux (the CI environment). Local builds require the same pinned SDK/NDK and private `CONDUIT_KEYSTORE_BASE64` / `CONDUIT_KEYSTORE_PASSWORD` environment variables; never commit their values.
 
 The withdrawn PR914/918 timeline experiment is removed. Upstream long-chat scrollbar/extent instability remains a known limitation; passing widget tests is not frame-time or phone performance acceptance.
+
+Current maintainer-only applied differences: [patches](patches/README.md).

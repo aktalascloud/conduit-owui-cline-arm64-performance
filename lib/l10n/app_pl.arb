@@ -756,9 +756,13 @@
     "description": "Header for toggle filters section."
   },
   "composerDraftLoadFailed": "Nie udało się wczytać zapisanej wersji roboczej. Spróbuj ponownie, zanim ją zastąpisz.",
-  "@composerDraftLoadFailed": {"description": "Local input draft could not be read; retry leaves the stored draft untouched."},
+  "@composerDraftLoadFailed": {
+    "description": "Local input draft could not be read; retry leaves the stored draft untouched."
+  },
   "composerDraftSaveFailed": "Nie udało się zapisać wersji roboczej na tym urządzeniu. Pozostaw aplikację otwartą i spróbuj ponownie.",
-  "@composerDraftSaveFailed": {"description": "Local composer draft persistence failed; the unsent input remains on screen."},
+  "@composerDraftSaveFailed": {
+    "description": "Local composer draft persistence failed; the unsent input remains on screen."
+  },
   "savedRecording": "Zapisane nagranie",
   "recordingDiscard": "Odrzuć nagranie",
   "recordingTranscriptionFailed": "Nie udało się utworzyć transkrypcji. Nagranie jest zapisane. Spróbuj ponownie lub wybierz inną metodę transkrypcji.",
@@ -1759,17 +1763,29 @@
     "description": "Explains what the server-provided model setting does."
   },
   "messageActionsAutomatic": "Automatyczne działania",
-  "@messageActionsAutomatic": {"description": "Toggle for choosing response actions automatically from the actions eligible for each message."},
+  "@messageActionsAutomatic": {
+    "description": "Toggle for choosing response actions automatically from the actions eligible for each message."
+  },
   "messageActionsTitle": "Działania wiadomości",
-  "@messageActionsTitle": {"description": "Response action customization in Chat settings."},
+  "@messageActionsTitle": {
+    "description": "Response action customization in Chat settings."
+  },
   "messageActionsDescription": "Wybierz działania widoczne pod odpowiedziami. Przeciągnij włączone działania, aby zmienić ich kolejność. Pozostałe znajdziesz w menu Więcej.",
-  "@messageActionsDescription": {"description": "Response action customization in Chat settings."},
+  "@messageActionsDescription": {
+    "description": "Response action customization in Chat settings."
+  },
   "messageActionsInline": "Pod odpowiedziami",
-  "@messageActionsInline": {"description": "Section containing visible response actions in their chosen order."},
+  "@messageActionsInline": {
+    "description": "Section containing visible response actions in their chosen order."
+  },
   "messageActionsReorder": "Przeciągnij, aby zmienić kolejność",
-  "@messageActionsReorder": {"description": "Accessibility label for a response-action drag handle."},
+  "@messageActionsReorder": {
+    "description": "Accessibility label for a response-action drag handle."
+  },
   "messageActionsReset": "Przywróć domyślne",
-  "@messageActionsReset": {"description": "Response action customization in Chat settings."},
+  "@messageActionsReset": {
+    "description": "Response action customization in Chat settings."
+  },
   "chatSettings": "Czat",
   "@chatSettings": {
     "description": "Section header for chat-related customization options."
@@ -1961,9 +1977,13 @@
     "description": "Title for preview button."
   },
   "ttsAllLanguages": "Wszystkie języki",
-  "@ttsAllLanguages": {"description": "Short voice catalog filter label that includes every language."},
+  "@ttsAllLanguages": {
+    "description": "Short voice catalog filter label that includes every language."
+  },
   "ttsSearchVoices": "Szukaj głosów",
-  "@ttsSearchVoices": {"description": "Search field hint in the voice picker."},
+  "@ttsSearchVoices": {
+    "description": "Search field hint in the voice picker."
+  },
   "ttsSystemDefault": "Domyślny systemowy",
   "@ttsSystemDefault": {
     "description": "Label for system default voice option."
@@ -3852,7 +3872,9 @@
     "description": "Socket health status when disconnected."
   },
   "liveConnectionRetryFailed": "Aktualizacje na żywo nadal są rozłączone. Stuknij ikonę połączenia, aby spróbować ponownie.",
-  "@liveConnectionRetryFailed": {"description": "Live update socket connection recovery in the chat toolbar."},
+  "@liveConnectionRetryFailed": {
+    "description": "Live update socket connection recovery in the chat toolbar."
+  },
   "liveConnectionDetails": "Aktualizacje na żywo są rozłączone. Wyświetl szczegóły połączenia.",
   "liveConnectionDetailsTitle": "Aktualizacje na żywo",
   "liveConnectionDetailsMessage": "Aktualizacje na żywo są rozłączone. Odpowiedzi i zmiany w czacie mogą być opóźnione. Sprawdź połączenie lub spróbuj połączyć się ponownie.",
@@ -7024,7 +7046,7 @@
     }
   },
   "directMcpApprovalSaveFailed": "Could not remember this approval. You can retry or choose another option.",
-  "directMcpApprovalDeny": "Deny",
+  "directMcpApprovalDeny": "Odrzuć",
   "directMcpApprovalAllowed": "Allowed once",
   "directMcpApprovalAllowedSession": "Allowed for session",
   "directMcpApprovalAllowedAlways": "Always allowed",
@@ -8346,5 +8368,138 @@
   "clineSelectionUnavailable": "Poprzedni model lub dostawca jest niedostępny. Wybierz model; nie podstawiono domyślnego.",
   "voiceAvatarZoomIn": "Przybliż",
   "voiceAvatarZoomOut": "Oddal",
-  "voiceAvatarResetView": "Zresetuj widok"
+  "voiceAvatarResetView": "Zresetuj widok",
+  "slidingSidebar": "Wysuwany panel boczny",
+  "slidingSidebarDescription": "Otwieraj Notatki, Terminal i Kanały obok historii czatów.",
+  "usageIncomplete": "Niektóre kroki nie zgłosiły użycia, więc te wartości mogą być zaniżone.",
+  "@usageIncomplete": {
+    "description": "Note under a reply's usage figures when the server marks its usage incomplete: some steps reported none"
+  },
+  "notePages": "Strony",
+  "notePagesDescription": "Wybierz stronę do czytania lub edycji. Strony dodasz, zmienisz ich nazwę lub przeniesiesz w Open WebUI w przeglądarce.",
+  "notePageChipLabel": "Strona {page}. Pokazuje strony notatki.",
+  "@notePageChipLabel": {
+    "placeholders": {
+      "page": {
+        "type": "String",
+        "example": "Agenda"
+      }
+    }
+  },
+  "notePageRemoved": "Otwarta strona została usunięta. Wyświetlana jest pierwsza strona notatki.",
+  "notePageMissingNotice": "Ta strona została usunięta gdzie indziej. Niezapisany tekst zostaje tutaj: zapisz go jako osobną notatkę albo odrzuć.",
+  "chatWaitingForApproval": "Oczekuje na zatwierdzenie",
+  "@chatWaitingForApproval": {
+    "description": "Tooltip and accessibility label of the icon on a chat in the chat list while a tool call in it waits for the user to allow or deny it."
+  },
+  "generateTitleNone": "Serwer nie utworzył tytułu dla tego czatu. Generowanie tytułów może być wyłączone.",
+  "@generateTitleNone": {
+    "description": "Shown when the server made no title for the chat, for example because title generation is turned off on the server."
+  },
+  "generateTitleFailed": "Nie udało się wygenerować tytułu. Spróbuj ponownie.",
+  "@generateTitleFailed": {
+    "description": "Error shown when generating or saving a chat title failed."
+  },
+  "workspaceToolActivate": "Aktywuj",
+  "@workspaceToolActivate": {
+    "description": "Overflow action that switches a tool on, so chats can use it again (Open WebUI 0.13 and later)."
+  },
+  "workspaceToolDeactivate": "Dezaktywuj",
+  "@workspaceToolDeactivate": {
+    "description": "Overflow action that switches a tool off, so no chat can pick or run it (Open WebUI 0.13 and later)."
+  },
+  "workspaceKnowledgeLimitsTitle": "Limity plików",
+  "@workspaceKnowledgeLimitsTitle": {
+    "description": "Title of the knowledge base editor section where its owner sets file limits of its own (Open WebUI 0.13 and later)."
+  },
+  "workspaceKnowledgeLimitsFooter": "Pozostaw limit pusty, aby używać tylko limitu serwera. Limity serwera obowiązują zawsze.",
+  "@workspaceKnowledgeLimitsFooter": {
+    "description": "Footer under a knowledge base's own file limits: empty means only the server's limits apply, and those always apply."
+  },
+  "workspaceKnowledgeMaxFileCount": "Maksymalna liczba plików",
+  "@workspaceKnowledgeMaxFileCount": {
+    "description": "Field label: the most files a knowledge base may hold."
+  },
+  "workspaceKnowledgeMaxFileSize": "Maksymalny rozmiar pliku (MB)",
+  "@workspaceKnowledgeMaxFileSize": {
+    "description": "Field label: the largest file, in megabytes, a knowledge base takes."
+  },
+  "workspaceKnowledgeLimitDefault": "Limit serwera",
+  "@workspaceKnowledgeLimitDefault": {
+    "description": "Placeholder and shown value for a knowledge base file limit left empty, meaning only the server's limit applies."
+  },
+  "workspaceKnowledgeLimitInvalid": "Podaj każdy limit jako liczbę całkowitą większą od zera albo pozostaw go pusty.",
+  "@workspaceKnowledgeLimitInvalid": {
+    "description": "Error when a knowledge base file limit is not a whole number above zero."
+  },
+  "workspaceToolToggleSaveFirst": "Zapisz lub odrzuć zmiany, zanim włączysz lub wyłączysz narzędzie.",
+  "@workspaceToolToggleSaveFirst": {
+    "description": "Shown when the user tries to switch a workspace tool on or off while the editor has unsaved changes."
+  },
+  "mcpAppPreviewDescription": "Interaktywna aplikacja z {serverName}. Otwórz ją, aby używać jej tutaj.",
+  "@mcpAppPreviewDescription": {
+    "description": "Shown on an MCP App a tool call showed in a chat, before the user opens it. serverName is the MCP server the app comes from.",
+    "placeholders": {
+      "serverName": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpAppOpen": "Otwórz aplikację",
+  "@mcpAppOpen": {
+    "description": "Button that opens an MCP App inside the chat."
+  },
+  "mcpAppToolCallTitle": "Zezwolić na to wywołanie narzędzia?",
+  "@mcpAppToolCallTitle": {
+    "description": "Title of the confirmation shown before an MCP App in a chat runs a tool."
+  },
+  "mcpAppToolCallMessage": "Aplikacja chce, aby {serverName} uruchomił {toolName} z:",
+  "@mcpAppToolCallMessage": {
+    "description": "Confirmation message before an MCP App runs a tool; the tool's arguments follow it.",
+    "placeholders": {
+      "serverName": {
+        "type": "String"
+      },
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpAppToolCallAllow": "Zezwól",
+  "@mcpAppToolCallAllow": {
+    "description": "Confirm button that lets an MCP App run one tool call."
+  },
+  "mcpAppLoadFailed": "Nie udało się wczytać aplikacji: {reason}",
+  "@mcpAppLoadFailed": {
+    "description": "Shown when an MCP App could not be loaded; reason is the server's explanation.",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpAppDidNotStart": "Aplikacja się nie uruchomiła.",
+  "@mcpAppDidNotStart": {
+    "description": "Shown when an opened MCP App never completed its start-up handshake."
+  },
+  "mcpAppOpenLinkTitle": "Otworzyć ten link?",
+  "@mcpAppOpenLinkTitle": {
+    "description": "Title of the confirmation shown before a link an MCP App asks to open is opened in the browser; the link follows."
+  },
+  "mcpAppOpenLinkConfirm": "Otwórz",
+  "@mcpAppOpenLinkConfirm": {
+    "description": "Confirm button that opens a link an MCP App asked to open."
+  },
+  "terminalPortPreviewForward": "Dalej",
+  "@terminalPortPreviewForward": {
+    "description": "Button in a terminal port preview that goes forward to the next page."
+  },
+  "terminalPortPreviewReload": "Odśwież",
+  "@terminalPortPreviewReload": {
+    "description": "Button in a terminal port preview that loads the current page again."
+  },
+  "terminalPortPreviewLoadFailed": "Nie udało się wczytać tej strony.",
+  "@terminalPortPreviewLoadFailed": {
+    "description": "Shown in a terminal port preview when the page could not be reached."
+  }
 }

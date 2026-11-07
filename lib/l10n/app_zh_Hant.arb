@@ -1015,6 +1015,7 @@
     }
   },
   "usageLoadDuration": "模型載入時間",
+  "usageIncomplete": "部分步驟未回報用量，因此這些數值可能偏低。",
   "usageQueueTime": "排隊時間",
   "usageReasoningTokens": "推理 token",
   "usageTotalTokens": "總 token",
@@ -2046,6 +2047,8 @@
   "settingsCategoryServer": "伺服器",
   "settingsCategorySupport": "支援",
   "settingsDataAndConnection": "資料與連線",
+  "slidingSidebar": "滑動側邊欄",
+  "slidingSidebarDescription": "在聊天記錄旁開啟筆記、終端機和頻道。",
   "settingsAppearance": "外觀",
   "settingsAppearanceSubtitle": "主題、調色盤和語言",
   "settingsChatSubtitle": "聊天行為、快速操作和進階提示詞",
@@ -3429,7 +3432,7 @@
   "hermesSessionDeleteFailed": "無法刪除對話。",
   "hermesSessionLoadFailed": "無法載入此對話。請檢查連線後再試一次。",
   "hermesMemoryKeyFieldLabel": "記憶體索引鍵",
-  "directMcpServersTitle": "MCP servers", "directMcpEmptyTitle": "No MCP servers yet", "directMcpReachabilityHelp": "Add a Streamable HTTP endpoint that this phone can reach.", "directMcpEditorTitle": "Edit MCP server", "directMcpAddTitle": "Add MCP server", "directMcpName": "Server name", "directMcpEndpoint": "Streamable HTTP endpoint", "directMcpBearerToken": "Bearer token (optional)", "directMcpCustomHeaders": "Custom headers (optional)", "directMcpCustomHeadersHint": "One per line: Name: Value", "directMcpTestConnection": "Test connection", "directMcpTesting": "Testing connection…", "directMcpTestSucceeded": "Connected — {count} tools found.", "directMcpTestFailed": "Could not list tools from this MCP server.", "directMcpSaveFailed": "Could not save this MCP server.", "directMcpLoadFailed": "Could not load MCP servers from secure storage.", "directMcpMissing": "This MCP server no longer exists.", "directMcpCredentialTransferTitle": "Use credentials with new server?", "directMcpCredentialTransferMessage": "This sends the bearer token and custom headers to the new server. Continue only if you trust it. Cancel saves the server without credentials.", "directMcpCredentialTransferConfirm": "Use credentials", "directMcpDeleteTitle": "Delete MCP server?", "directMcpDeleteMessage": "This removes {name} and its credentials from this device.", "directMcpDeleteFailed": "Could not delete this MCP server.", "directMcpAuthMode": "Authentication", "directMcpAuthNone": "None", "directMcpAuthBearer": "Bearer token", "directMcpAuthOAuth": "OAuth", "directMcpOAuthConnect": "Connect in browser", "directMcpOAuthReconnect": "Reconnect in browser", "directMcpOAuthDisconnect": "Disconnect OAuth", "directMcpOAuthPending": "Waiting for authorization in the browser…", "directMcpOAuthConnected": "OAuth connected.", "directMcpOAuthConnectionDetails": "Connected to {issuerHost} · {scopes}", "directMcpOAuthNoScopes": "No scopes reported", "directMcpOAuthConnectFailed": "Could not connect this MCP server with OAuth.", "directMcpOAuthDisconnectFailed": "Could not disconnect OAuth from this MCP server.", "directMcpApprovalTitle": "Tool approval", "directMcpApprovalAllowOnce": "Allow once", "directMcpApprovalAllowSession": "Allow for session", "directMcpApprovalAllowAlways": "Always allow", "directMcpApprovalAlwaysTitle": "Always allow this tool?", "directMcpApprovalAlwaysMessage": "{serverName} will be allowed to run {toolName} without asking again. The approval is revoked automatically if the tool schema changes.", "@directMcpApprovalAlwaysMessage": {"placeholders":{"serverName":{"type":"String"},"toolName":{"type":"String"}}}, "directMcpApprovalSaveFailed": "Could not remember this approval. You can retry or choose another option.", "directMcpApprovalDeny": "Deny", "directMcpApprovalAllowed": "Allowed once", "directMcpApprovalAllowedSession": "Allowed for session", "directMcpApprovalAllowedAlways": "Always allowed", "directMcpApprovalDenied": "Denied", "directMcpApprovalExpired": "Approval expired", "directMcpRememberedApprovalsTitle": "Always allowed tools", "directMcpRememberedApprovalsSubtitle": "These exact tools can run without asking while their server and input schema remain unchanged.", "directMcpRememberedApprovalRevoke": "Revoke", "directMcpRememberedApprovalsRevokeAll": "Revoke all", "directMcpRememberedApprovalRevokeFailed": "Could not revoke the remembered approval."
+  "directMcpServersTitle": "MCP servers", "directMcpEmptyTitle": "No MCP servers yet", "directMcpReachabilityHelp": "Add a Streamable HTTP endpoint that this phone can reach.", "directMcpEditorTitle": "Edit MCP server", "directMcpAddTitle": "Add MCP server", "directMcpName": "Server name", "directMcpEndpoint": "Streamable HTTP endpoint", "directMcpBearerToken": "Bearer token (optional)", "directMcpCustomHeaders": "Custom headers (optional)", "directMcpCustomHeadersHint": "One per line: Name: Value", "directMcpTestConnection": "Test connection", "directMcpTesting": "Testing connection…", "directMcpTestSucceeded": "Connected — {count} tools found.", "directMcpTestFailed": "Could not list tools from this MCP server.", "directMcpSaveFailed": "Could not save this MCP server.", "directMcpLoadFailed": "Could not load MCP servers from secure storage.", "directMcpMissing": "This MCP server no longer exists.", "directMcpCredentialTransferTitle": "Use credentials with new server?", "directMcpCredentialTransferMessage": "This sends the bearer token and custom headers to the new server. Continue only if you trust it. Cancel saves the server without credentials.", "directMcpCredentialTransferConfirm": "Use credentials", "directMcpDeleteTitle": "Delete MCP server?", "directMcpDeleteMessage": "This removes {name} and its credentials from this device.", "directMcpDeleteFailed": "Could not delete this MCP server.", "directMcpAuthMode": "Authentication", "directMcpAuthNone": "None", "directMcpAuthBearer": "Bearer token", "directMcpAuthOAuth": "OAuth", "directMcpOAuthConnect": "Connect in browser", "directMcpOAuthReconnect": "Reconnect in browser", "directMcpOAuthDisconnect": "Disconnect OAuth", "directMcpOAuthPending": "Waiting for authorization in the browser…", "directMcpOAuthConnected": "OAuth connected.", "directMcpOAuthConnectionDetails": "Connected to {issuerHost} · {scopes}", "directMcpOAuthNoScopes": "No scopes reported", "directMcpOAuthConnectFailed": "Could not connect this MCP server with OAuth.", "directMcpOAuthDisconnectFailed": "Could not disconnect OAuth from this MCP server.", "directMcpApprovalTitle": "Tool approval", "directMcpApprovalAllowOnce": "Allow once", "directMcpApprovalAllowSession": "Allow for session", "directMcpApprovalAllowAlways": "Always allow", "directMcpApprovalAlwaysTitle": "Always allow this tool?", "directMcpApprovalAlwaysMessage": "{serverName} will be allowed to run {toolName} without asking again. The approval is revoked automatically if the tool schema changes.", "@directMcpApprovalAlwaysMessage": {"placeholders":{"serverName":{"type":"String"},"toolName":{"type":"String"}}}, "directMcpApprovalSaveFailed": "Could not remember this approval. You can retry or choose another option.", "directMcpApprovalDeny": "拒絕", "directMcpApprovalAllowed": "Allowed once", "directMcpApprovalAllowedSession": "Allowed for session", "directMcpApprovalAllowedAlways": "Always allowed", "directMcpApprovalDenied": "Denied", "directMcpApprovalExpired": "Approval expired", "directMcpRememberedApprovalsTitle": "Always allowed tools", "directMcpRememberedApprovalsSubtitle": "These exact tools can run without asking while their server and input schema remain unchanged.", "directMcpRememberedApprovalRevoke": "Revoke", "directMcpRememberedApprovalsRevokeAll": "Revoke all", "directMcpRememberedApprovalRevokeFailed": "Could not revoke the remembered approval."
   ,"directMcpContentAction": "MCP content"
   ,"directMcpContentTitle": "MCP content"
   ,"directMcpContentServer": "MCP server"
@@ -3610,6 +3613,11 @@
   "personalToolSettingsOwnerChanged": "已登入的帳號已變更，因此未儲存任何內容。請重新開啟設定後繼續。",
   "personalToolSettingsInvalid": "伺服器未接受這些值。",
   "noteReadOnlyNotice": "此筆記為唯讀。您可以閱讀，但無法變更。",
+  "notePages": "頁面",
+  "notePagesDescription": "選擇要閱讀或編輯的頁面。新增、重新命名或移動頁面請在網頁版 Open WebUI 中進行。",
+  "notePageChipLabel": "頁面 {page}。顯示筆記的頁面。",
+  "notePageRemoved": "開啟的頁面已被刪除，正在顯示筆記的第一頁。",
+  "notePageMissingNotice": "此頁面已在別處被刪除。未儲存的文字保留在這裡：可將其另存為單獨的筆記，或捨棄變更。",
   "noteAccessUnverifiedNotice": "請重新連線，以確認您可以編輯此筆記。",
   "noteAccessRevokedNotice": "您已無法再編輯此筆記。尚未儲存的變更會保留在此處。",
   "noteSaveAsOwnNote": "另存為我自己的筆記",
@@ -4290,5 +4298,29 @@
   "chatHandoffPromptTitle": "切換到 {model}？",
   "chatHandoffPromptMessage": "伺服器建議使用 {model} 在新對話中繼續。建議的訊息會留在輸入框中，直到你傳送。",
   "chatHandoffStartNewChat": "開始新對話",
-  "chatHandoffStayHere": "留在這裡"
+  "chatHandoffStayHere": "留在這裡",
+  "chatWaitingForApproval": "等待核准",
+  "generateTitleNone": "伺服器沒有為此對話產生標題。標題產生功能可能已關閉。",
+  "generateTitleFailed": "無法產生標題，請再試一次。",
+  "workspaceToolActivate": "啟用",
+  "workspaceToolDeactivate": "停用",
+  "workspaceKnowledgeLimitsTitle": "檔案限制",
+  "workspaceKnowledgeLimitsFooter": "將限制留空即只使用伺服器的限制。伺服器的限制一律適用。",
+  "workspaceKnowledgeMaxFileCount": "最大檔案數",
+  "workspaceKnowledgeMaxFileSize": "最大檔案大小 (MB)",
+  "workspaceKnowledgeLimitDefault": "伺服器限制",
+  "workspaceKnowledgeLimitInvalid": "請將每個限制填寫為大於零的整數，或留空。",
+  "workspaceToolToggleSaveFirst": "請先儲存或捨棄變更，再啟用或停用此工具。",
+  "mcpAppPreviewDescription": "來自 {serverName} 的互動式應用程式。開啟即可在此使用。",
+  "mcpAppOpen": "開啟應用程式",
+  "mcpAppToolCallTitle": "允許此工具呼叫嗎？",
+  "mcpAppToolCallMessage": "此應用程式希望 {serverName} 以下列參數執行 {toolName}：",
+  "mcpAppToolCallAllow": "允許",
+  "mcpAppLoadFailed": "無法載入此應用程式：{reason}",
+  "mcpAppDidNotStart": "此應用程式未能啟動。",
+  "mcpAppOpenLinkTitle": "開啟此連結嗎？",
+  "mcpAppOpenLinkConfirm": "開啟",
+  "terminalPortPreviewForward": "前進",
+  "terminalPortPreviewReload": "重新載入",
+  "terminalPortPreviewLoadFailed": "無法載入此頁面。"
 }

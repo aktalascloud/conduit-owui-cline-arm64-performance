@@ -573,7 +573,7 @@ abstract class _ApiServiceBase {
   // Parse OpenWebUI message format to our ChatMessage format
   // Build ordered messages list from Open‑WebUI history using parent chain to currentId
   // ===== Helpers to synthesize tool-call details blocks for UI parsing =====
-  List<String>? _sanitizeEmbedsForWebUI(List<Map<String, dynamic>>? embeds) {
+  List<Object>? _sanitizeEmbedsForWebUI(List<Map<String, dynamic>>? embeds) {
     return sanitizeEmbedsForWebUi(embeds);
   }
 
@@ -1980,6 +1980,15 @@ abstract class _ApiServiceBase {
         );
       }
     }
+    // Open WebUI 0.13 refuses a temporary chat sent without a socket session
+    // as one it does not hold. That one needs a connection, not a new chat.
+    if (status == 404 &&
+        sessionId == null &&
+        chatId != null &&
+        chatId.startsWith('local:') &&
+        error.trim() == TemporaryChatUnavailable.serverDetail) {
+      throw const TemporaryChatNeedsConnectionException();
+    }
     throw ChatCompletionHttpException(status, error);
   }
 
@@ -2192,6 +2201,16 @@ abstract class _ApiServiceBase {
   /// Depending on the deployment's web fallback, the removed POST can surface
   /// as either status, so subsequent refreshes go straight to the list fallback.
   bool _activeChatsEndpointUnsupported = false;
+
+  /// When the server last answered a temporary chat resume as an unknown
+  /// route: servers before Open WebUI 0.13 have none. Asked again after
+  /// [_temporaryChatResumeRecheck], in case the server was upgraded.
+  DateTime? _temporaryChatResumeUnsupportedAt;
+  static const Duration _temporaryChatResumeRecheck = Duration(minutes: 15);
+
+  /// Set once the server answers a knowledge upload check as an unknown
+  /// route: servers before Open WebUI 0.13 have none, and no such limits.
+  bool _knowledgeUploadValidationUnsupported = false;
   // Keep the total fallback ceiling at 20 requests while reserving capacity
   // for archived chats instead of allowing the regular list to consume all of
   // it before the archived endpoint is attempted.
@@ -2202,15 +2221,19 @@ abstract class _ApiServiceBase {
   /// The regular list includes pinned and folder chats when requested. If an
   /// id is not found there, also scan archived pages. Older servers omit the
   /// additive `active` field, which naturally degrades to an empty set.
-  Future<Set<String>> _checkActiveChatsFromLists(List<String> chatIds) async {
+  Future<ChatActivity> _checkActiveChatsFromLists(List<String> chatIds) async {
     final remaining = chatIds.where((id) => id.isNotEmpty).toSet();
     final active = <String>{};
-    if (remaining.isEmpty) return active;
+    final pendingApproval = <String>{};
+    if (remaining.isEmpty) {
+      return (active: active, pendingApproval: pendingApproval);
+    }
 
     await _collectActiveChatsFromPagedList(
       endpoint: '/api/v1/chats/',
       remaining: remaining,
       active: active,
+      pendingApproval: pendingApproval,
       queryParameters: const {'include_pinned': true, 'include_folders': true},
       pageBudget: _activeChatsListFallbackPageBudgetPerEndpoint,
     );
@@ -2219,17 +2242,19 @@ abstract class _ApiServiceBase {
         endpoint: '/api/v1/chats/archived',
         remaining: remaining,
         active: active,
+        pendingApproval: pendingApproval,
         queryParameters: const {'order_by': 'updated_at', 'direction': 'desc'},
         pageBudget: _activeChatsListFallbackPageBudgetPerEndpoint,
       );
     }
-    return active;
+    return (active: active, pendingApproval: pendingApproval);
   }
 
   Future<int> _collectActiveChatsFromPagedList({
     required String endpoint,
     required Set<String> remaining,
     required Set<String> active,
+    required Set<String> pendingApproval,
     required Map<String, dynamic> queryParameters,
     required int pageBudget,
   }) async {
@@ -2240,6 +2265,8 @@ abstract class _ApiServiceBase {
         final id = row['id']?.toString();
         if (id == null || !remaining.remove(id)) continue;
         if (row['active'] == true) active.add(id);
+        // Open WebUI 0.13 marks a chat whose tool call waits for the user.
+        if (row['pending_approval'] == true) pendingApproval.add(id);
       }
     }
 

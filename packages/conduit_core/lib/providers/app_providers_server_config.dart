@@ -176,6 +176,73 @@ final chatMarkUnreadSupportedProvider = Provider<bool>((ref) {
   );
 });
 
+/// Whether the active Open WebUI server stores notes as pages, with their
+/// attachments as links in the page content (0.12.5 and later).
+///
+/// Null until a config confirmed to belong to the active server reports a
+/// version it can read: a note save must then find out from the server,
+/// rather than guess either way.
+final notePagesServerProvider = Provider<bool?>((ref) {
+  final activeId = ref.watch(activeServerProvider).asData?.value?.id;
+  final config = ref.watch(backendConfigProvider).asData?.value;
+  if (activeId == null || config == null) return null;
+  if (config.serverId != activeId) return null;
+  return ServerVersionCompat.knownAtLeast(
+    config.version,
+    ServerVersionCompat.notePagesVersion,
+  );
+});
+
+/// Whether the active Open WebUI server ties a temporary chat to the socket
+/// session that started it (0.13.0 and later), so that such a chat cannot be
+/// sent without a connected socket.
+///
+/// False until a config confirmed to belong to the active server reports such
+/// a version: an older server answers a temporary chat over HTTP instead.
+final temporaryChatNeedsSocketProvider = Provider<bool>((ref) {
+  final activeId = ref.watch(activeServerProvider).asData?.value?.id;
+  final config = ref.watch(backendConfigProvider).asData?.value;
+  if (activeId == null || config == null) return false;
+  if (config.serverId != activeId) return false;
+  return ServerVersionCompat.knownAtLeast(
+        config.version,
+        ServerVersionCompat.temporaryChatSessionVersion,
+      ) ==
+      true;
+});
+
+/// Whether the active Open WebUI server lets a knowledge base's owner set
+/// file limits of its own (0.13.0 and later). False until a config confirmed
+/// to belong to the active server reports such a version.
+final knowledgeLimitsSupportedProvider = Provider<bool>((ref) {
+  final activeId = ref.watch(activeServerProvider).asData?.value?.id;
+  final config = ref.watch(backendConfigProvider).asData?.value;
+  if (activeId == null || config == null) return false;
+  if (config.serverId != activeId) return false;
+  return ServerVersionCompat.knownAtLeast(
+        config.version,
+        ServerVersionCompat.knowledgeLimitsVersion,
+      ) ==
+      true;
+});
+
+/// Whether the active Open WebUI server relays its terminals' events socket
+/// and browser sessions (0.13.0 and later). False until a config confirmed to
+/// belong to the active server reports such a version: an older server has
+/// neither route, so its terminals refresh on demand and preview ports
+/// through the plain port proxy.
+final systemTerminalLiveFeaturesProvider = Provider<bool>((ref) {
+  final activeId = ref.watch(activeServerProvider).asData?.value?.id;
+  final config = ref.watch(backendConfigProvider).asData?.value;
+  if (activeId == null || config == null) return false;
+  if (config.serverId != activeId) return false;
+  return ServerVersionCompat.knownAtLeast(
+        config.version,
+        ServerVersionCompat.terminalLiveFeaturesVersion,
+      ) ==
+      true;
+});
+
 @Riverpod(keepAlive: true)
 class BackendConfigNotifier extends _$BackendConfigNotifier {
   // AsyncNotifier instances survive dependency-triggered rebuilds. This must

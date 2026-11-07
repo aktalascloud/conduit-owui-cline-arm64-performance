@@ -12,6 +12,9 @@ import '../../../shared/theme/theme_extensions.dart';
 import '../../../shared/widgets/markdown/streaming_markdown_widget.dart';
 import '../../../shared/widgets/markdown/renderer/markdown_style.dart';
 
+import 'package:conduit_core/services/structured_output.dart'
+    show displayedChatFiles;
+import 'package:conduit_core/utils/usage_summary.dart';
 import 'package:conduit_core/models/chat_comparison.dart';
 import 'package:conduit_core/models/chat_message.dart';
 import 'package:conduit_core/models/message_voice.dart';
@@ -85,6 +88,8 @@ import 'package:conduit_core/features/chat/utils/file_utils.dart';
 
 import 'chat_branch_actions.dart';
 import 'chat_comparison_widgets.dart';
+import 'package:conduit/features/chat/widgets/mcp_app_embed.dart';
+import 'package:conduit_core/features/mcp_apps/openwebui_mcp_app.dart';
 import 'code_execution_display.dart';
 import 'follow_up_suggestions.dart';
 import 'usage_stats_modal.dart';
@@ -1278,6 +1283,11 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     final activeFiles = showingVersion
         ? widget.message.versions[_activeVersionIndex].files
         : widget.message.files;
+    final shownFiles = displayedChatFiles(
+      showingVersion
+          ? widget.message.versions[_activeVersionIndex].output
+          : widget.message.output,
+    );
     final activeEmbeds = _resolveActiveEmbeds();
     final queuedCompletionAsync = ref.watch(
       queuedCompletionInfoForMessageProvider(_messageId),
@@ -1358,12 +1368,19 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
               children: [
                 // Display attachments - prioritize files array over attachmentIds to avoid duplication
                 if (activeFiles != null && activeFiles.isNotEmpty) ...[
-                  _buildFilesFromArray(),
+                  _buildFilesFromArray(shownFiles),
                   const SizedBox(height: Spacing.md),
-                ] else if (widget.message.attachmentIds != null &&
-                    widget.message.attachmentIds!.isNotEmpty) ...[
-                  _buildAttachmentItems(),
-                  const SizedBox(height: Spacing.md),
+                ] else ...[
+                  if (widget.message.attachmentIds != null &&
+                      widget.message.attachmentIds!.isNotEmpty) ...[
+                    _buildAttachmentItems(),
+                    const SizedBox(height: Spacing.md),
+                  ],
+                  // Files the model showed come with the reply either way.
+                  if (shownFiles.isNotEmpty) ...[
+                    _buildFilesFromArray(shownFiles),
+                    const SizedBox(height: Spacing.md),
+                  ],
                 ],
 
                 if (activeEmbeds != null && activeEmbeds.isNotEmpty) ...[
@@ -1769,6 +1786,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
         isMarkdownFormat: true,
         constraints: const BoxConstraints(maxWidth: 500, maxHeight: 400),
         disableAnimation: _uiTreatsAsStreaming,
+        semanticLabel: alt,
       ),
     );
   }
@@ -1963,6 +1981,12 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
         .map((entry) {
           final index = entry.$1;
           final embed = entry.$2;
+          if (OpenWebUiMcpApp.tryParse(embed) case final app?) {
+            return KeyedSubtree(
+              key: ValueKey('message-mcp-app-$index-${app.binding}'),
+              child: McpAppEmbed(app: app),
+            );
+          }
           final source = extractEmbedSource(embed);
           if (source == null || source.isEmpty) {
             return null;
@@ -1990,11 +2014,20 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
     );
   }
 
-  Widget _buildFilesFromArray() {
-    final filesArray = _activeVersionIndex >= 0
+  /// The message's files, with [shownFiles]: files the model showed with
+  /// Open WebUI's display_file tool (0.12.5+), which the web client shows
+  /// with the reply, and the model is told the user sees.
+  Widget _buildFilesFromArray(List<Map<String, dynamic>> shownFiles) {
+    final storedFiles = _activeVersionIndex >= 0
         ? widget.message.versions[_activeVersionIndex].files
         : widget.message.files;
-    if (filesArray == null || filesArray.isEmpty) {
+    // The reply's other attachments show only while it lists no files.
+    final filesArray = chatFilesWithShown(
+      storedFiles,
+      shownFiles,
+      attachmentIds: widget.message.attachmentIds,
+    );
+    if (filesArray.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -2167,17 +2200,9 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
         final fileUrl = getFileUrl(file);
         if (fileUrl == null) return const SizedBox.shrink();
 
-        // Extract file ID from URL - handle formats:
-        // - Bare file ID (new OpenWebUI format): "abc-123-def"
-        // - /api/v1/files/{id} (legacy format)
-        // - /api/v1/files/{id}/content (legacy format)
-        String attachmentId = fileUrl;
-        if (fileUrl.contains('/api/v1/files/')) {
-          final fileIdMatch = _fileIdPattern.firstMatch(fileUrl);
-          if (fileIdMatch != null) {
-            attachmentId = fileIdMatch.group(1)!;
-          }
-        }
+        // A bare file id (newer Open WebUI), or /api/v1/files/{id} with or
+        // without /content (older).
+        final attachmentId = chatFileShownId(file) ?? fileUrl;
 
         return EnhancedAttachment(
           key: ValueKey('file_attachment_$attachmentId'),
@@ -2743,7 +2768,7 @@ class _AssistantMessageWidgetState extends ConsumerState<AssistantMessageWidget>
           onTap: () => unawaited(_mergeResponses(comparisonGroup)),
           sfSymbol: 'arrow.triangle.merge',
         ),
-      if (activeUsage != null && activeUsage.isNotEmpty)
+      if (activeUsage != null && usageHasReport(activeUsage))
         _AssistantFooterAction(
           id: 'usage',
           icon: Platform.isIOS ? CupertinoIcons.info : Icons.info_outline,

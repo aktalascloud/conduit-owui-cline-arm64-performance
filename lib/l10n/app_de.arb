@@ -1017,6 +1017,7 @@
     }
   },
   "usageLoadDuration": "Modellladezeit",
+  "usageIncomplete": "Einige Schritte haben keine Nutzung gemeldet, daher können diese Werte zu niedrig sein.",
   "usageQueueTime": "Wartezeit",
   "usageReasoningTokens": "Reasoning-Tokens",
   "usageTotalTokens": "Gesamte Tokens",
@@ -2048,6 +2049,8 @@
   "settingsCategoryServer": "Server",
   "settingsCategorySupport": "Support",
   "settingsDataAndConnection": "Daten & Verbindung",
+  "slidingSidebar": "Ausklappbare Seitenleiste",
+  "slidingSidebarDescription": "Notizen, Terminal und Kanäle neben dem Chatverlauf öffnen.",
   "settingsAppearance": "Erscheinungsbild",
   "settingsAppearanceSubtitle": "Design, Farbpalette und Sprache",
   "settingsChatSubtitle": "Chatverhalten, Schnellaktionen und erweiterte Prompts",
@@ -3429,7 +3432,7 @@
   "notificationRequiresSound": "Aktiviere Ton, um diese Einstellung zu ändern.",
   "passwordChangeDescription": "Passwort deines Kontos aktualisieren",
   "profileDetailsSummary": "Biografie, Geschlecht und Geburtstag",
-  "directMcpServersTitle": "MCP servers", "directMcpEmptyTitle": "No MCP servers yet", "directMcpReachabilityHelp": "Add a Streamable HTTP endpoint that this phone can reach.", "directMcpEditorTitle": "Edit MCP server", "directMcpAddTitle": "Add MCP server", "directMcpName": "Server name", "directMcpEndpoint": "Streamable HTTP endpoint", "directMcpBearerToken": "Bearer token (optional)", "directMcpCustomHeaders": "Custom headers (optional)", "directMcpCustomHeadersHint": "One per line: Name: Value", "directMcpTestConnection": "Test connection", "directMcpTesting": "Testing connection…", "directMcpTestSucceeded": "Connected — {count} tools found.", "directMcpTestFailed": "Could not list tools from this MCP server.", "directMcpSaveFailed": "Could not save this MCP server.", "directMcpLoadFailed": "Could not load MCP servers from secure storage.", "directMcpMissing": "This MCP server no longer exists.", "directMcpCredentialTransferTitle": "Use credentials with new server?", "directMcpCredentialTransferMessage": "This sends the bearer token and custom headers to the new server. Continue only if you trust it. Cancel saves the server without credentials.", "directMcpCredentialTransferConfirm": "Use credentials", "directMcpDeleteTitle": "Delete MCP server?", "directMcpDeleteMessage": "This removes {name} and its credentials from this device.", "directMcpDeleteFailed": "Could not delete this MCP server.", "directMcpAuthMode": "Authentication", "directMcpAuthNone": "None", "directMcpAuthBearer": "Bearer token", "directMcpAuthOAuth": "OAuth", "directMcpOAuthConnect": "Connect in browser", "directMcpOAuthReconnect": "Reconnect in browser", "directMcpOAuthDisconnect": "Disconnect OAuth", "directMcpOAuthPending": "Waiting for authorization in the browser…", "directMcpOAuthConnected": "OAuth connected.", "directMcpOAuthConnectionDetails": "Connected to {issuerHost} · {scopes}", "directMcpOAuthNoScopes": "No scopes reported", "directMcpOAuthConnectFailed": "Could not connect this MCP server with OAuth.", "directMcpOAuthDisconnectFailed": "Could not disconnect OAuth from this MCP server.", "directMcpApprovalTitle": "Tool approval", "directMcpApprovalAllowOnce": "Allow once", "directMcpApprovalAllowSession": "Allow for session", "directMcpApprovalAllowAlways": "Always allow", "directMcpApprovalAlwaysTitle": "Always allow this tool?", "directMcpApprovalAlwaysMessage": "{serverName} will be allowed to run {toolName} without asking again. The approval is revoked automatically if the tool schema changes.", "@directMcpApprovalAlwaysMessage": {"placeholders":{"serverName":{"type":"String"},"toolName":{"type":"String"}}}, "directMcpApprovalSaveFailed": "Could not remember this approval. You can retry or choose another option.", "directMcpApprovalDeny": "Deny", "directMcpApprovalAllowed": "Allowed once", "directMcpApprovalAllowedSession": "Allowed for session", "directMcpApprovalAllowedAlways": "Always allowed", "directMcpApprovalDenied": "Denied", "directMcpApprovalExpired": "Approval expired", "directMcpRememberedApprovalsTitle": "Always allowed tools", "directMcpRememberedApprovalsSubtitle": "These exact tools can run without asking while their server and input schema remain unchanged.", "directMcpRememberedApprovalRevoke": "Revoke", "directMcpRememberedApprovalsRevokeAll": "Revoke all", "directMcpRememberedApprovalRevokeFailed": "Could not revoke the remembered approval."
+  "directMcpServersTitle": "MCP servers", "directMcpEmptyTitle": "No MCP servers yet", "directMcpReachabilityHelp": "Add a Streamable HTTP endpoint that this phone can reach.", "directMcpEditorTitle": "Edit MCP server", "directMcpAddTitle": "Add MCP server", "directMcpName": "Server name", "directMcpEndpoint": "Streamable HTTP endpoint", "directMcpBearerToken": "Bearer token (optional)", "directMcpCustomHeaders": "Custom headers (optional)", "directMcpCustomHeadersHint": "One per line: Name: Value", "directMcpTestConnection": "Test connection", "directMcpTesting": "Testing connection…", "directMcpTestSucceeded": "Connected — {count} tools found.", "directMcpTestFailed": "Could not list tools from this MCP server.", "directMcpSaveFailed": "Could not save this MCP server.", "directMcpLoadFailed": "Could not load MCP servers from secure storage.", "directMcpMissing": "This MCP server no longer exists.", "directMcpCredentialTransferTitle": "Use credentials with new server?", "directMcpCredentialTransferMessage": "This sends the bearer token and custom headers to the new server. Continue only if you trust it. Cancel saves the server without credentials.", "directMcpCredentialTransferConfirm": "Use credentials", "directMcpDeleteTitle": "Delete MCP server?", "directMcpDeleteMessage": "This removes {name} and its credentials from this device.", "directMcpDeleteFailed": "Could not delete this MCP server.", "directMcpAuthMode": "Authentication", "directMcpAuthNone": "None", "directMcpAuthBearer": "Bearer token", "directMcpAuthOAuth": "OAuth", "directMcpOAuthConnect": "Connect in browser", "directMcpOAuthReconnect": "Reconnect in browser", "directMcpOAuthDisconnect": "Disconnect OAuth", "directMcpOAuthPending": "Waiting for authorization in the browser…", "directMcpOAuthConnected": "OAuth connected.", "directMcpOAuthConnectionDetails": "Connected to {issuerHost} · {scopes}", "directMcpOAuthNoScopes": "No scopes reported", "directMcpOAuthConnectFailed": "Could not connect this MCP server with OAuth.", "directMcpOAuthDisconnectFailed": "Could not disconnect OAuth from this MCP server.", "directMcpApprovalTitle": "Tool approval", "directMcpApprovalAllowOnce": "Allow once", "directMcpApprovalAllowSession": "Allow for session", "directMcpApprovalAllowAlways": "Always allow", "directMcpApprovalAlwaysTitle": "Always allow this tool?", "directMcpApprovalAlwaysMessage": "{serverName} will be allowed to run {toolName} without asking again. The approval is revoked automatically if the tool schema changes.", "@directMcpApprovalAlwaysMessage": {"placeholders":{"serverName":{"type":"String"},"toolName":{"type":"String"}}}, "directMcpApprovalSaveFailed": "Could not remember this approval. You can retry or choose another option.", "directMcpApprovalDeny": "Ablehnen", "directMcpApprovalAllowed": "Allowed once", "directMcpApprovalAllowedSession": "Allowed for session", "directMcpApprovalAllowedAlways": "Always allowed", "directMcpApprovalDenied": "Denied", "directMcpApprovalExpired": "Approval expired", "directMcpRememberedApprovalsTitle": "Always allowed tools", "directMcpRememberedApprovalsSubtitle": "These exact tools can run without asking while their server and input schema remain unchanged.", "directMcpRememberedApprovalRevoke": "Revoke", "directMcpRememberedApprovalsRevokeAll": "Revoke all", "directMcpRememberedApprovalRevokeFailed": "Could not revoke the remembered approval."
   ,"directMcpContentAction": "MCP content"
   ,"directMcpContentTitle": "MCP content"
   ,"directMcpContentServer": "MCP server"
@@ -3610,6 +3613,11 @@
   "personalToolSettingsOwnerChanged": "Das angemeldete Konto hat sich geändert, daher wurde nichts gespeichert. Öffne die Einstellungen erneut, um fortzufahren.",
   "personalToolSettingsInvalid": "Der Server hat diese Werte nicht akzeptiert.",
   "noteReadOnlyNotice": "Diese Notiz ist schreibgeschützt. Du kannst sie lesen, aber nicht ändern.",
+  "notePages": "Seiten",
+  "notePagesDescription": "Wähle eine Seite zum Lesen oder Bearbeiten. Seiten hinzufügen, umbenennen oder verschieben kannst du in Open WebUI im Web.",
+  "notePageChipLabel": "Seite {page}. Zeigt die Seiten der Notiz.",
+  "notePageRemoved": "Die geöffnete Seite wurde entfernt. Die erste Seite der Notiz wird angezeigt.",
+  "notePageMissingNotice": "Diese Seite wurde an anderer Stelle entfernt. Dein ungespeicherter Text bleibt hier: Speichere ihn als eigene Notiz oder verwirf ihn.",
   "noteAccessUnverifiedNotice": "Verbinde dich erneut, um zu bestätigen, dass du diese Notiz bearbeiten kannst.",
   "noteAccessRevokedNotice": "Du kannst diese Notiz nicht mehr bearbeiten. Deine ungespeicherten Änderungen bleiben hier erhalten.",
   "noteSaveAsOwnNote": "Als eigene Notiz speichern",
@@ -4290,5 +4298,29 @@
   "chatHandoffPromptTitle": "Zu {model} wechseln?",
   "chatHandoffPromptMessage": "Dein Server schlägt vor, in einem neuen Chat mit {model} weiterzumachen. Eine vorgeschlagene Nachricht wartet im Eingabefeld, bis du sie sendest.",
   "chatHandoffStartNewChat": "Neuen Chat starten",
-  "chatHandoffStayHere": "Hierbleiben"
+  "chatHandoffStayHere": "Hierbleiben",
+  "chatWaitingForApproval": "Wartet auf Freigabe",
+  "generateTitleNone": "Der Server hat keinen Titel für diesen Chat erstellt. Möglicherweise ist die Titelgenerierung deaktiviert.",
+  "generateTitleFailed": "Der Titel konnte nicht generiert werden. Bitte versuche es erneut.",
+  "workspaceToolActivate": "Aktivieren",
+  "workspaceToolDeactivate": "Deaktivieren",
+  "workspaceKnowledgeLimitsTitle": "Dateilimits",
+  "workspaceKnowledgeLimitsFooter": "Lass ein Limit leer, um nur das des Servers zu verwenden. Die Limits des Servers gelten immer.",
+  "workspaceKnowledgeMaxFileCount": "Maximale Dateianzahl",
+  "workspaceKnowledgeMaxFileSize": "Maximale Dateigröße (MB)",
+  "workspaceKnowledgeLimitDefault": "Limit des Servers",
+  "workspaceKnowledgeLimitInvalid": "Gib jedes Limit als ganze Zahl über null ein oder lass es leer.",
+  "workspaceToolToggleSaveFirst": "Speichere oder verwirf deine Änderungen, bevor du das Tool ein- oder ausschaltest.",
+  "mcpAppPreviewDescription": "Eine interaktive App von {serverName}. Öffne sie, um sie hier zu verwenden.",
+  "mcpAppOpen": "App öffnen",
+  "mcpAppToolCallTitle": "Diesen Tool-Aufruf erlauben?",
+  "mcpAppToolCallMessage": "Die App möchte, dass {serverName} {toolName} ausführt mit:",
+  "mcpAppToolCallAllow": "Erlauben",
+  "mcpAppLoadFailed": "Die App konnte nicht geladen werden: {reason}",
+  "mcpAppDidNotStart": "Die App wurde nicht gestartet.",
+  "mcpAppOpenLinkTitle": "Diesen Link öffnen?",
+  "mcpAppOpenLinkConfirm": "Öffnen",
+  "terminalPortPreviewForward": "Vorwärts",
+  "terminalPortPreviewReload": "Neu laden",
+  "terminalPortPreviewLoadFailed": "Diese Seite konnte nicht geladen werden."
 }

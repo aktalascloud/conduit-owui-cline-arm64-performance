@@ -16,6 +16,7 @@ class UsageSummary {
     this.totalSeconds,
     this.queueSeconds,
     this.loadSeconds,
+    this.incomplete = false,
   });
 
   /// Tokens per second while answering, when the provider timed it.
@@ -40,6 +41,10 @@ class UsageSummary {
   /// Time spent loading the model into memory (Ollama).
   final double? loadSeconds;
 
+  /// Whether Open WebUI marked the usage `incomplete`: some steps of the
+  /// reply, a tool round say, reported none, so the figures may be low.
+  final bool incomplete;
+
   bool get isEmpty =>
       generationPerSecond == null &&
       generationTokens == null &&
@@ -61,6 +66,12 @@ class UsageSummary {
     final completionTokens = read('completion_tokens');
     final promptTokens = read('prompt_tokens');
     final totalTokens = read('total_tokens');
+    // Open WebUI 0.12.5 sums input, output and total tokens over the model
+    // calls of a reply (tool rounds), and keeps only the last call's count in
+    // `prompt_tokens`/`completion_tokens`. A count without a rate is the
+    // reply's; a rate stays with the count of the call it was measured on.
+    final inputTokens = read('input_tokens');
+    final outputTokens = read('output_tokens');
     final completionTime = read('completion_time');
     final promptTime = read('prompt_time');
     final totalTime = read('total_time');
@@ -92,7 +103,7 @@ class UsageSummary {
       generationRate = completionTokens / completionTime;
       generationCount = completionTokens;
     } else {
-      generationCount = completionTokens;
+      generationCount = outputTokens ?? completionTokens;
     }
 
     double? promptRate;
@@ -109,7 +120,7 @@ class UsageSummary {
       promptRate = promptTokens / promptTime;
       promptCount = promptTokens;
     } else {
-      promptCount = promptTokens;
+      promptCount = inputTokens ?? promptTokens;
     }
 
     double? seconds;
@@ -127,9 +138,12 @@ class UsageSummary {
       reasoningTokens: reasoning != null && reasoning > 0
           ? reasoning.toInt()
           : null,
+      // The total adds nothing when it is the two counts shown summed.
       totalTokens:
           totalTokens != null &&
-              (completionTokens == null || promptTokens == null)
+              (generationCount == null ||
+                  promptCount == null ||
+                  totalTokens != generationCount + promptCount)
           ? totalTokens.toInt()
           : null,
       totalSeconds: seconds,
@@ -139,6 +153,7 @@ class UsageSummary {
       loadSeconds: loadDuration != null && loadDuration > 0
           ? loadDuration / 1e9
           : null,
+      incomplete: usage['incomplete'] == true,
     );
   }
 
@@ -148,3 +163,9 @@ class UsageSummary {
     _ => null,
   };
 }
+
+/// Whether [usage] reports anything. Open WebUI 0.12.5 can store only
+/// `{incomplete: true}` for a reply whose provider gave no counts, which its
+/// web client does not offer to show; neither does Conduit.
+bool usageHasReport(Map<String, dynamic>? usage) =>
+    usage != null && usage.keys.any((key) => key != 'incomplete');

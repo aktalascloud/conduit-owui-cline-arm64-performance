@@ -756,35 +756,65 @@
     "description": "Header for toggle filters section."
   },
   "composerDraftLoadFailed": "Your saved draft could not be loaded. Try again before replacing it.",
-  "@composerDraftLoadFailed": {"description": "Local input draft could not be read; retry leaves the stored draft untouched."},
+  "@composerDraftLoadFailed": {
+    "description": "Local input draft could not be read; retry leaves the stored draft untouched."
+  },
   "composerDraftSaveFailed": "Your draft could not be saved on this device. Keep the app open and try again.",
-  "@composerDraftSaveFailed": {"description": "Local composer draft persistence failed; the unsent input remains on screen."},
+  "@composerDraftSaveFailed": {
+    "description": "Local composer draft persistence failed; the unsent input remains on screen."
+  },
   "savedRecording": "Saved recording",
-  "@savedRecording": {"description": "Label for locally saved audio attached to an unsent chat draft."},
+  "@savedRecording": {
+    "description": "Label for locally saved audio attached to an unsent chat draft."
+  },
   "recordingDiscard": "Discard recording",
-  "@recordingDiscard": {"description": "Action to discard a saved draft recording."},
+  "@recordingDiscard": {
+    "description": "Action to discard a saved draft recording."
+  },
   "recordingTranscriptionFailed": "Transcription failed. Recording saved.",
-  "@recordingTranscriptionFailed": {"description": "Explains that transcription failed while the saved recording remains available."},
+  "@recordingTranscriptionFailed": {
+    "description": "Explains that transcription failed while the saved recording remains available."
+  },
   "recordingDiscardConfirmation": "Are you sure you want to discard this recording?",
-  "@recordingDiscardConfirmation": {"description": "Confirmation before permanently discarding an unsent audio recording."},
+  "@recordingDiscardConfirmation": {
+    "description": "Confirmation before permanently discarding an unsent audio recording."
+  },
   "recordingDiscardFailed": "Could not discard this recording. Try again.",
   "recordingCaptureInterrupted": "Recording interrupted. Saved audio may be incomplete.",
-  "@recordingCaptureInterrupted": {"description": "Details explaining that a capture failure may have left only part of a saved recording."},
-  "@recordingDiscardFailed": {"description": "Error shown when discarding a saved recording fails."},
+  "@recordingCaptureInterrupted": {
+    "description": "Details explaining that a capture failure may have left only part of a saved recording."
+  },
+  "@recordingDiscardFailed": {
+    "description": "Error shown when discarding a saved recording fails."
+  },
   "recordingLoadFailed": "Could not load recordings. Retry",
-  "@recordingLoadFailed": {"description": "Error shown when a saved recording cannot be loaded."},
+  "@recordingLoadFailed": {
+    "description": "Error shown when a saved recording cannot be loaded."
+  },
   "recordingSaveFailed": "Your recording could not be saved on this device. Keep the app open and retry.",
-  "@recordingSaveFailed": {"description": "Error shown when recording recovery data cannot be saved."},
+  "@recordingSaveFailed": {
+    "description": "Error shown when recording recovery data cannot be saved."
+  },
   "transcribeOnServer": "Transcribe on server",
-  "@transcribeOnServer": {"description": "Action to transcribe a saved recording using the server."},
+  "@transcribeOnServer": {
+    "description": "Action to transcribe a saved recording using the server."
+  },
   "transcribeOnDevice": "Transcribe on device",
-  "@transcribeOnDevice": {"description": "Action to transcribe a saved recording locally on the device."},
+  "@transcribeOnDevice": {
+    "description": "Action to transcribe a saved recording locally on the device."
+  },
   "recordingRecoveryUnavailable": "This speech recognizer cannot keep audio recordings. Transcribed text is still saved with your draft. Choose Server speech-to-text to keep audio.",
-  "@recordingRecoveryUnavailable": {"description": "Explains that recording recovery is unavailable."},
+  "@recordingRecoveryUnavailable": {
+    "description": "Explains that recording recovery is unavailable."
+  },
   "exportRecording": "Export recording",
-  "@exportRecording": {"description": "Action to export a saved draft recording as an audio file."},
+  "@exportRecording": {
+    "description": "Action to export a saved draft recording as an audio file."
+  },
   "recordingExportFailed": "Could not export this recording. Try again.",
-  "@recordingExportFailed": {"description": "Error shown when exporting a saved recording fails."},
+  "@recordingExportFailed": {
+    "description": "Error shown when exporting a saved recording fails."
+  },
   "voiceInput": "Voice input",
   "@voiceInput": {
     "description": "Label for voice input feature."
@@ -1382,9 +1412,13 @@
     "description": "Action to copy text to clipboard."
   },
   "ttsSkipBackward": "Go back 15 seconds",
-  "@ttsSkipBackward": {"description": "Accessibility label for jumping backward 15 seconds in read-aloud audio."},
+  "@ttsSkipBackward": {
+    "description": "Accessibility label for jumping backward 15 seconds in read-aloud audio."
+  },
   "ttsSkipForward": "Go forward 15 seconds",
-  "@ttsSkipForward": {"description": "Accessibility label for jumping forward 15 seconds in read-aloud audio."},
+  "@ttsSkipForward": {
+    "description": "Accessibility label for jumping forward 15 seconds in read-aloud audio."
+  },
   "ttsListen": "Listen",
   "@ttsListen": {
     "description": "Action to play the assistant message using text to speech"
@@ -1783,17 +1817,29 @@
     "description": "Explains what the server-provided model setting does."
   },
   "messageActionsAutomatic": "Automatic actions",
-  "@messageActionsAutomatic": {"description": "Toggle for choosing response actions automatically from the actions eligible for each message."},
+  "@messageActionsAutomatic": {
+    "description": "Toggle for choosing response actions automatically from the actions eligible for each message."
+  },
   "messageActionsTitle": "Message actions",
-  "@messageActionsTitle": {"description": "Response action customization in Chat settings."},
+  "@messageActionsTitle": {
+    "description": "Response action customization in Chat settings."
+  },
   "messageActionsDescription": "Choose which actions appear below responses. Drag enabled actions to change their order. Other actions stay in More.",
-  "@messageActionsDescription": {"description": "Response action customization in Chat settings."},
+  "@messageActionsDescription": {
+    "description": "Response action customization in Chat settings."
+  },
   "messageActionsInline": "Below responses",
-  "@messageActionsInline": {"description": "Section containing visible response actions in their chosen order."},
+  "@messageActionsInline": {
+    "description": "Section containing visible response actions in their chosen order."
+  },
   "messageActionsReorder": "Drag to reorder",
-  "@messageActionsReorder": {"description": "Accessibility label for a response-action drag handle."},
+  "@messageActionsReorder": {
+    "description": "Accessibility label for a response-action drag handle."
+  },
   "messageActionsReset": "Reset to defaults",
-  "@messageActionsReset": {"description": "Response action customization in Chat settings."},
+  "@messageActionsReset": {
+    "description": "Response action customization in Chat settings."
+  },
   "chatSettings": "Chat",
   "@chatSettings": {
     "description": "Section header for chat-related customization options."
@@ -2081,9 +2127,13 @@
     "description": "Title for preview button."
   },
   "ttsAllLanguages": "All languages",
-  "@ttsAllLanguages": {"description": "Short voice catalog filter label that includes every language."},
+  "@ttsAllLanguages": {
+    "description": "Short voice catalog filter label that includes every language."
+  },
   "ttsSearchVoices": "Search voices",
-  "@ttsSearchVoices": {"description": "Search field hint in the voice picker."},
+  "@ttsSearchVoices": {
+    "description": "Search field hint in the voice picker."
+  },
   "ttsSystemDefault": "System default",
   "@ttsSystemDefault": {
     "description": "Label for system default voice option."
@@ -4103,13 +4153,21 @@
     "description": "Socket health status when disconnected."
   },
   "liveConnectionDetails": "Live updates disconnected. View connection details.",
-  "@liveConnectionDetails": {"description": "Accessibility label for the live-update connection details button."},
+  "@liveConnectionDetails": {
+    "description": "Accessibility label for the live-update connection details button."
+  },
   "liveConnectionDetailsTitle": "Live updates",
-  "@liveConnectionDetailsTitle": {"description": "Title of the live-update connection details sheet."},
+  "@liveConnectionDetailsTitle": {
+    "description": "Title of the live-update connection details sheet."
+  },
   "liveConnectionDetailsMessage": "Live updates are disconnected. Replies and chat changes may be delayed. Check your connection or try reconnecting.",
-  "@liveConnectionDetailsMessage": {"description": "Explains a disconnected live-update connection without guessing its cause or exposing transport errors."},
+  "@liveConnectionDetailsMessage": {
+    "description": "Explains a disconnected live-update connection without guessing its cause or exposing transport errors."
+  },
   "liveConnectionRetryFailed": "Live updates are still disconnected. Tap the connection icon to retry.",
-  "@liveConnectionRetryFailed": {"description": "Live update socket connection recovery in the chat toolbar."},
+  "@liveConnectionRetryFailed": {
+    "description": "Live update socket connection recovery in the chat toolbar."
+  },
   "socketLatencyLabel": "Latency",
   "@socketLatencyLabel": {
     "description": "Metric label for socket latency."
@@ -10628,5 +10686,157 @@
   },
   "voiceAvatarZoomIn": "Zoom in",
   "voiceAvatarZoomOut": "Zoom out",
-  "voiceAvatarResetView": "Reset view"
+  "voiceAvatarResetView": "Reset view",
+  "slidingSidebar": "Sliding sidebar",
+  "@slidingSidebar": {
+    "description": "Appearance setting that opts into the sliding sidebar layout."
+  },
+  "slidingSidebarDescription": "Open Notes, Terminal and Channels beside chat history.",
+  "@slidingSidebarDescription": {
+    "description": "Explains that sidebar destinations open beside chat history when the optional layout is enabled."
+  },
+  "usageIncomplete": "Some steps did not report usage, so these figures may be low.",
+  "@usageIncomplete": {
+    "description": "Note under a reply's usage figures when the server marks its usage incomplete: some steps reported none"
+  },
+  "notePages": "Pages",
+  "@notePages": {
+    "description": "Title of the sheet, and the menu item, that list the pages of a note with several pages (Open WebUI 0.12.5 and later)."
+  },
+  "notePagesDescription": "Pick a page to read or edit. Add, rename or move pages in Open WebUI on the web.",
+  "@notePagesDescription": {
+    "description": "Explanation under the title of the note Pages sheet. Conduit can open and edit pages but not add, rename or move them."
+  },
+  "notePageChipLabel": "Page {page}. Shows the note's pages.",
+  "@notePageChipLabel": {
+    "description": "Screen reader label of the chip in the note editor that names the page shown and opens the Pages sheet.",
+    "placeholders": {
+      "page": {
+        "type": "String",
+        "example": "Agenda"
+      }
+    }
+  },
+  "notePageRemoved": "The page you had open was removed. Showing the note's first page.",
+  "@notePageRemoved": {
+    "description": "Notice shown when the note page open in the editor was deleted elsewhere and the editor falls back to the first page."
+  },
+  "notePageMissingNotice": "This page was removed elsewhere. Your unsaved text is kept here: save it as a note of its own, or discard it.",
+  "@notePageMissingNotice": {
+    "description": "Banner shown in the note editor when the page being edited was deleted elsewhere while it had unsaved changes."
+  },
+  "chatWaitingForApproval": "Waiting for approval",
+  "@chatWaitingForApproval": {
+    "description": "Tooltip and accessibility label of the icon on a chat in the chat list while a tool call in it waits for the user to allow or deny it."
+  },
+  "generateTitleNone": "The server didn't make a title for this chat. Title generation may be turned off.",
+  "@generateTitleNone": {
+    "description": "Shown when the server made no title for the chat, for example because title generation is turned off on the server."
+  },
+  "generateTitleFailed": "Couldn't generate a title. Please try again.",
+  "@generateTitleFailed": {
+    "description": "Error shown when generating or saving a chat title failed."
+  },
+  "workspaceToolActivate": "Activate",
+  "@workspaceToolActivate": {
+    "description": "Overflow action that switches a tool on, so chats can use it again (Open WebUI 0.13 and later)."
+  },
+  "workspaceToolDeactivate": "Deactivate",
+  "@workspaceToolDeactivate": {
+    "description": "Overflow action that switches a tool off, so no chat can pick or run it (Open WebUI 0.13 and later)."
+  },
+  "workspaceKnowledgeLimitsTitle": "File limits",
+  "@workspaceKnowledgeLimitsTitle": {
+    "description": "Title of the knowledge base editor section where its owner sets file limits of its own (Open WebUI 0.13 and later)."
+  },
+  "workspaceKnowledgeLimitsFooter": "Leave a limit empty to use only the server's. The server's limits always apply.",
+  "@workspaceKnowledgeLimitsFooter": {
+    "description": "Footer under a knowledge base's own file limits: empty means only the server's limits apply, and those always apply."
+  },
+  "workspaceKnowledgeMaxFileCount": "Maximum files",
+  "@workspaceKnowledgeMaxFileCount": {
+    "description": "Field label: the most files a knowledge base may hold."
+  },
+  "workspaceKnowledgeMaxFileSize": "Maximum file size (MB)",
+  "@workspaceKnowledgeMaxFileSize": {
+    "description": "Field label: the largest file, in megabytes, a knowledge base takes."
+  },
+  "workspaceKnowledgeLimitDefault": "Server's limit",
+  "@workspaceKnowledgeLimitDefault": {
+    "description": "Placeholder and shown value for a knowledge base file limit left empty, meaning only the server's limit applies."
+  },
+  "workspaceKnowledgeLimitInvalid": "Enter each limit as a whole number above zero, or leave it empty.",
+  "@workspaceKnowledgeLimitInvalid": {
+    "description": "Error when a knowledge base file limit is not a whole number above zero."
+  },
+  "workspaceToolToggleSaveFirst": "Save or discard your changes before switching the tool on or off.",
+  "@workspaceToolToggleSaveFirst": {
+    "description": "Shown when the user tries to switch a workspace tool on or off while the editor has unsaved changes."
+  },
+  "mcpAppPreviewDescription": "An interactive app from {serverName}. Open it to use it here.",
+  "@mcpAppPreviewDescription": {
+    "description": "Shown on an MCP App a tool call showed in a chat, before the user opens it. serverName is the MCP server the app comes from.",
+    "placeholders": {
+      "serverName": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpAppOpen": "Open app",
+  "@mcpAppOpen": {
+    "description": "Button that opens an MCP App inside the chat."
+  },
+  "mcpAppToolCallTitle": "Allow this tool call?",
+  "@mcpAppToolCallTitle": {
+    "description": "Title of the confirmation shown before an MCP App in a chat runs a tool."
+  },
+  "mcpAppToolCallMessage": "The app wants {serverName} to run {toolName} with:",
+  "@mcpAppToolCallMessage": {
+    "description": "Confirmation message before an MCP App runs a tool; the tool's arguments follow it.",
+    "placeholders": {
+      "serverName": {
+        "type": "String"
+      },
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpAppToolCallAllow": "Allow",
+  "@mcpAppToolCallAllow": {
+    "description": "Confirm button that lets an MCP App run one tool call."
+  },
+  "mcpAppLoadFailed": "The app could not be loaded: {reason}",
+  "@mcpAppLoadFailed": {
+    "description": "Shown when an MCP App could not be loaded; reason is the server's explanation.",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpAppDidNotStart": "The app did not start.",
+  "@mcpAppDidNotStart": {
+    "description": "Shown when an opened MCP App never completed its start-up handshake."
+  },
+  "mcpAppOpenLinkTitle": "Open this link?",
+  "@mcpAppOpenLinkTitle": {
+    "description": "Title of the confirmation shown before a link an MCP App asks to open is opened in the browser; the link follows."
+  },
+  "mcpAppOpenLinkConfirm": "Open",
+  "@mcpAppOpenLinkConfirm": {
+    "description": "Confirm button that opens a link an MCP App asked to open."
+  },
+  "terminalPortPreviewForward": "Forward",
+  "@terminalPortPreviewForward": {
+    "description": "Button in a terminal port preview that goes forward to the next page."
+  },
+  "terminalPortPreviewReload": "Reload",
+  "@terminalPortPreviewReload": {
+    "description": "Button in a terminal port preview that loads the current page again."
+  },
+  "terminalPortPreviewLoadFailed": "Could not load this page.",
+  "@terminalPortPreviewLoadFailed": {
+    "description": "Shown in a terminal port preview when the page could not be reached."
+  }
 }
