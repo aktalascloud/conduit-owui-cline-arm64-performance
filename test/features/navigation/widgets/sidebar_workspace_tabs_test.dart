@@ -980,13 +980,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'saved OWUI query');
     await tester.pumpAndSettle();
-    await tester.tap(sidebarTestBottomNavTabLabel('Cline'));
+    await tester.tap(sidebarTestDestinationLabel('Cline'));
     await tester.pumpAndSettle();
     expect(
       container.read(sidebarSearchFieldControllerProvider).text,
       'saved OWUI query',
     );
-    await tester.tap(sidebarTestBottomNavTabLabel('Chats'));
+    await tester.tap(sidebarTestDestinationLabel('Chats'));
     await tester.pumpAndSettle();
     expect(container.read(sidebarHeaderSearchExpandedProvider), isTrue);
     expect(
