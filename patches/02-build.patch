@@ -333,10 +333,10 @@ index 0000000000000000000000000000000000000000..81cd1e22f117a086b3819069fe8ff256
 +    subprocess.run([str(manager), pins["platform"], pins["build_tools"], pins["ndk"]], check=True)
 diff --git a/.avx1/build.py b/.avx1/build.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..cd287f001f9cdf2452127580920dca06c4cd22ba
+index 0000000000000000000000000000000000000000..d13be5fa6de0c3349bda0c12446b393e297c0610
 --- /dev/null
 +++ b/.avx1/build.py
-@@ -0,0 +1,304 @@
+@@ -0,0 +1,306 @@
 +"""Build one exact source revision. Outputs contain no local configuration."""
 +from __future__ import annotations
 +import base64
@@ -517,6 +517,8 @@ index 0000000000000000000000000000000000000000..cd287f001f9cdf2452127580920dca06
 +    # Catch native-view fixture lifecycle failures before the full shared-core suite.
 +    if checks['mode'] == 'full':
 +        run(flutter, "test", "--no-pub", "test/shared/widgets/platform_ui/settings_switch_semantics_test.dart")
++        run(flutter, "test", "--no-pub", "test/features/navigation/widgets/cline_sidebar_mainstream_test.dart",
++            "test/features/navigation/widgets/sidebar_workspace_tabs_test.dart", "--plain-name", "Cline")
 +    run(flutter, "test", "--no-pub", *checks['tests'])
 +    run(flutter, "test", "--no-pub", "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart")
 +    persistence_tests = [

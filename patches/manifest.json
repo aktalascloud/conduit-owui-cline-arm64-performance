@@ -4,8 +4,8 @@
   "ownership": "applied-downstream-only",
   "project": "conduit",
   "upstream": "5d8c74ef44e2e1f324c09e35463ca170dad75849",
-  "snapshot_source": "fb24e0ddafea83289e128ae239115d4a5d594404",
-  "downstream_tree_without_patches": "2e109e54d9b749c9ea17c7c251267992827bc0d6",
+  "snapshot_source": "09d0812c353352eb8f4ec487e78b50d3028c39f8",
+  "downstream_tree_without_patches": "641813feee740dfd701a503ee059d786f6d130fc",
   "groups": [
     {
       "patch": "01-runtime.patch",
@@ -96,7 +96,7 @@
         "tool/voice_avatar/test.mjs",
         "tool/voice_avatar/texture-loader.js"
       ],
-      "sha256": "2d430c0e618f70f72be1acc0f6f7ce310fbcc790b73d151bec07daea6762d7d5"
+      "sha256": "f52d05b7e96b89b67217348f5c3829926772a716aa58d1003d746b27e486861e"
     },
     {
       "patch": "02-build.patch",
@@ -129,7 +129,7 @@
         "pubspec.lock",
         "remote/requirements.txt"
       ],
-      "sha256": "27f46c381834462656800d6e4e8229dc60af6a7f7643727171b2d9a05599a1bd"
+      "sha256": "b7dd992214c91e707577624190980c3137e530875595b8bf4dd65946cec22311"
     },
     {
       "patch": "03-tests.patch",
@@ -175,7 +175,7 @@
         "test/features/navigation/widgets/sidebar_workspace_tabs_test.dart",
         "test/shared/widgets/platform_ui/settings_switch_semantics_test.dart"
       ],
-      "sha256": "eba2d3237d3792102e101c393c073cfa815fa41084c4690635e8d8c1c9bd9b5e"
+      "sha256": "7b5826e77c58bd8deb01f93af4fa4d62b61c5786ecf16af1c2dfef62a6078e64"
     },
     {
       "patch": "04-documentation.patch",
@@ -195,12 +195,12 @@
     }
   ],
   "files": {
-    "01-runtime.patch": "2d430c0e618f70f72be1acc0f6f7ce310fbcc790b73d151bec07daea6762d7d5",
-    "02-build.patch": "27f46c381834462656800d6e4e8229dc60af6a7f7643727171b2d9a05599a1bd",
-    "03-tests.patch": "eba2d3237d3792102e101c393c073cfa815fa41084c4690635e8d8c1c9bd9b5e",
+    "01-runtime.patch": "f52d05b7e96b89b67217348f5c3829926772a716aa58d1003d746b27e486861e",
+    "02-build.patch": "b7dd992214c91e707577624190980c3137e530875595b8bf4dd65946cec22311",
+    "03-tests.patch": "7b5826e77c58bd8deb01f93af4fa4d62b61c5786ecf16af1c2dfef62a6078e64",
     "04-documentation.patch": "232a3d3edc4f72c12b6fffbf34d2a1bdad8a639fa491f281ba440c225d77db2f",
     ".gitattributes": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",
     "series": "0de3cc8bf7284c341fd9a7217a5cc598d813b5a95bdebb6584f9a9c790128ada",
-    "README.md": "6c329c945e46bd7d4345308ffe2951c9ae96ccdbf7ed9df2a24501115f085456"
+    "README.md": "c4b215d6ec0e0e298aee5f3ecccd82e54781ffeb0c3eedb744d2383d89d50b26"
   }
 }

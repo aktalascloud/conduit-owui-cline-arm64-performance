@@ -8468,7 +8468,7 @@ index 345170b8d9a946e18ac17a614ade752f2bd7a3b3..60f56304981479e4c2b7e3982bb78101
      final color = context.conduitTheme.textPrimary;
      final page = AdaptiveRouteShell(
 diff --git a/lib/features/navigation/widgets/sidebar_page.dart b/lib/features/navigation/widgets/sidebar_page.dart
-index e4e0235021ae3df9bd912c7e70837280280be126..4a8478183851ba602064ccec37d1d0406404015e 100644
+index e4e0235021ae3df9bd912c7e70837280280be126..f9500110ffd143cc74dd89f5d185cdb57397a227 100644
 --- a/lib/features/navigation/widgets/sidebar_page.dart
 +++ b/lib/features/navigation/widgets/sidebar_page.dart
 @@ -11,6 +11,7 @@ import 'package:conduit_core/services/settings_service.dart';
@@ -8550,6 +8550,18 @@ index e4e0235021ae3df9bd912c7e70837280280be126..4a8478183851ba602064ccec37d1d040
            );
          },
        ),
+@@ -679,7 +689,10 @@ void _selectSlidingSidebarTab(BuildContext context, WidgetRef ref, int index) {
+     selected.behavior.onSelected(ref);
+   }
+   ref.read(sidebarActiveTabProvider.notifier).set(selected.id);
+-  closeSidebarSearch(ref);
++  // Cline has its own UI; returning must retain the OWUI history search/draft.
++  if (navigation.selectedTab != SidebarTabId.cline && selected.id != SidebarTabId.cline) {
++    closeSidebarSearch(ref);
++  }
+   NavigationService.router.go(selected.location);
+   closeSidebarDrawerIfOverlay(context);
+ }
 diff --git a/lib/features/navigation/widgets/sidebar_tab_registry.dart b/lib/features/navigation/widgets/sidebar_tab_registry.dart
 index 013705537adb09b3f4b7d1c2f7d3a7c3abf4858c..c9744a48c333ef84b638c0e55840e0680b4cc9c4 100644
 --- a/lib/features/navigation/widgets/sidebar_tab_registry.dart

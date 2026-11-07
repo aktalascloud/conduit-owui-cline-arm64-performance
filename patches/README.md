@@ -5,7 +5,7 @@ Only currently applied maintainer differences from the exact official baseline a
 Mainstream-only commits, rejected proposals and reverted experiments are excluded.
 Коммиты самого mainstream, неприменённые предложения и отменённые эксперименты исключены.
 
-Official baseline: `5d8c74ef44e2e1f324c09e35463ca170dad75849`. Downstream snapshot: `fb24e0ddafea83289e128ae239115d4a5d594404`.
+Official baseline: `5d8c74ef44e2e1f324c09e35463ca170dad75849`. Downstream snapshot: `09d0812c353352eb8f4ec487e78b50d3028c39f8`.
 Patches are already applied in this fork. Apply `series` only to a clean checkout of that exact baseline.
 В этом форке патчи уже применены. `series` предназначен только для чистого checkout указанной базы.
 Files are grouped by purpose; manifest.json records paths, hashes and the exact reconstructed tree.
