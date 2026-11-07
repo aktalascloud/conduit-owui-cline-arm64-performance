@@ -1,0 +1,4714 @@
+diff --git a/.avx1/frontend_contract.test.mjs b/.avx1/frontend_contract.test.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..3e502d53fc1a0cfeaf64474a5073c3697d903bc7
+--- /dev/null
++++ b/.avx1/frontend_contract.test.mjs
+@@ -0,0 +1,35 @@
++import assert from 'node:assert/strict';
++import { test } from 'node:test';
++import { __assistantMicOrigin as mic, __assistantVoiceBudget as voice } from '../src/lib/utils/assistantCompatibility.js';
++
++test('microphone provenance stays on the exact current draft and clears on replacement', () => {
++  let callbacks = {};
++  let node = {textContent: 'voice', innerText: 'voice', contains: () => true, addEventListener: (name, handler) => callbacks[name] = handler};
++  globalThis.document = {getElementById: () => node};
++  globalThis.getSelection = () => ({isCollapsed: false, anchorNode: node, focusNode: node, toString: () => 'voice'});
++  mic.mark('voice');
++  assert.deepEqual(mic.peek('voice'), {input_source: 'microphone'});
++  assert.equal(mic.peek('unrelated typed message'), undefined);
++  mic.change('voice edited');
++  assert.deepEqual(mic.peek('voice edited'), {input_source: 'microphone'});
++  callbacks.beforeinput();
++  assert.equal(mic.peek('voice edited'), undefined);
++  mic.mark('voice');
++  node = {...node};
++  assert.equal(mic.peek('voice'), undefined);
++});
++
++test('voice budget groups reports, stays message-scoped and preserves full text', () => {
++  voice.start('one', 1);
++  voice.start('two', 1);
++  assert.equal(voice.hold('one', '1С: выручка 100'), true);
++  assert.equal(voice.hold('two', 'Hello'), false);
++  assert.equal(voice.hold('one', 'Прибыль 20'), true);
++  const report = voice.finish('one', 'chat-one');
++  assert.equal(report.text, '1С: выручка 100 Прибыль 20');
++  assert.equal(report.options.speech_message_id, 'one');
++  assert.equal(report.options.speech_chat_id, 'chat-one');
++  assert.equal(voice.finish('two', 'chat-two'), null);
++  assert.equal(voice.finish('one', 'chat-one'), null);
++  assert.equal(voice.emoji('спасибо'), '😊');
++});
+diff --git a/.avx1/test_check_plan.py b/.avx1/test_check_plan.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..9f88a31ecb306c7b0877cc3a9601ae71594ee9cf
+--- /dev/null
++++ b/.avx1/test_check_plan.py
+@@ -0,0 +1,79 @@
++"""Guard against narrowing checks after risky or unrecognized changes."""
++import tempfile
++from pathlib import Path
++import unittest
++from check_plan import select
++
++
++class CheckSelection(unittest.TestCase):
++    def setUp(self):
++        self.temp = tempfile.TemporaryDirectory()
++        self.addCleanup(self.temp.cleanup)
++        self.root = Path(self.temp.name)
++        for p in ['test/core/providers/backend_mode_providers_test.dart',
++                  'test/core/providers/chat_entry_readiness_providers_test.dart',
++                  'test/features/cline/client_test.dart', 'lib/features/cline/client.dart']:
++            path = self.root / p
++            path.parent.mkdir(parents=True, exist_ok=True)
++            path.write_text('', encoding='utf-8')
++
++    def test_native_cline_change_keeps_the_whole_feature_suite(self):
++        mode, tests, _, _ = select(['lib/features/cline/client.dart'], self.root)
++        self.assertEqual(mode, 'targeted')
++        self.assertIn('test/features/cline', tests)
++        self.assertIn('test/core/providers/backend_mode_providers_test.dart', tests)
++
++    def test_changed_shared_or_unknown_inputs_force_full_suite(self):
++        for path in ['pubspec.lock', 'packages/conduit_core/lib/providers/auth.dart',
++                     'packages/conduit_core/lib/utils/unknown.dart',
++                     'android/app/build.gradle.kts', '.avx1/native_arm64.py', '.avx1/toolchains.json', 'unknown.file']:
++            with self.subTest(path=path):
++                self.assertEqual(select([path], self.root)[0], 'full')
++
++    def test_version_gate_uses_specific_core_provider_and_widget_coverage(self):
++        for name in ['packages/conduit_core/test/utils/server_version_compat_test.dart',
++                     'test/core/providers/server_incompatible_provider_test.dart',
++                     'test/shared/widgets/server_version_warning_card_test.dart']:
++            p = self.root / name
++            p.parent.mkdir(parents=True, exist_ok=True)
++            p.write_text('', encoding='utf-8')
++        mode, tests, _, _ = select(['packages/conduit_core/lib/utils/server_version_compat.dart'], self.root)
++        self.assertEqual(mode, 'targeted')
++        self.assertIn('test/shared/widgets/server_version_warning_card_test.dart', tests)
++        self.assertIn('packages/conduit_core/test/utils/server_version_compat_test.dart', tests)
++
++    def test_missing_feature_suite_does_not_silently_skip_tests(self):
++        self.assertEqual(select(['lib/features/new_feature/main.dart'], self.root)[0], 'full')
++
++    def test_unreviewed_build_recipe_forces_full_suite(self):
++        self.assertEqual(select(['.avx1/build.py'], self.root)[0], 'full')
++        self.assertEqual(select(['.avx1/build.py'], self.root, recipe_allowed=True)[0], 'targeted')
++
++    def test_deleted_test_requires_full_suite(self):
++        self.assertEqual(select(['test/features/cline/deleted_test.dart'], self.root)[0], 'full')
++
++    def test_docs_do_not_expand_runtime_coverage(self):
++        mode, tests, _, _ = select(['README.md', '.avx1/measurements/receipt.json'], self.root)
++        self.assertEqual(mode, 'targeted')
++        self.assertEqual(len(tests), 2)
++
++    def test_offline_avatar_assets_keep_voice_regressions(self):
++        p = self.root / 'test/features/chat/voice_mode/test.dart'
++        p.parent.mkdir(parents=True, exist_ok=True)
++        p.write_text('')
++        mode, tests, _, _ = select(['assets/voice_avatar/viewer.html',
++            'tool/voice_avatar/renderer.js', 'pubspec.yaml'], self.root,
++            avatar_assets_only=True)
++        self.assertEqual(mode, 'targeted')
++        self.assertIn('test/features/chat/voice_mode', tests)
++        self.assertEqual(select(['pubspec.yaml'], self.root)[0], 'full')
++
++    def test_feature_folder_does_not_run_its_changed_test_twice(self):
++        mode, tests, _, _ = select(['lib/features/cline/client.dart', 'test/features/cline/client_test.dart'], self.root)
++        self.assertEqual(mode, 'targeted')
++        self.assertIn('test/features/cline', tests)
++        self.assertNotIn('test/features/cline/client_test.dart', tests)
++
++
++if __name__ == '__main__':
++    unittest.main()
+diff --git a/.avx1/test_cline_contract.mjs b/.avx1/test_cline_contract.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..09cf78758acce4c267a5d0a87ad107c24052c840
+--- /dev/null
++++ b/.avx1/test_cline_contract.mjs
+@@ -0,0 +1,71 @@
++import assert from 'node:assert/strict';
++import {createHash} from 'node:crypto';
++import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
++import {stripTypeScriptTypes} from 'node:module';
++import vm from 'node:vm';
++
++const root=new URL('../',import.meta.url);
++const pin=JSON.parse(readFileSync(new URL('.avx1/cline-protocol.json',root),'utf8'));
++async function pinned(definition,local) {
++  let source;
++  if(local) source=readFileSync(local,'utf8');
++  else {
++    for(let attempt=0;attempt<3;attempt++) {
++      try {const r=await fetch(definition.source);if(!r.ok)throw new Error('Pinned source unavailable');source=await r.text();break;}
++      catch(error){if(attempt===2)throw error;await new Promise(r=>setTimeout(r,1000*(attempt+1)));}
++    }
++  }
++  source=source.replaceAll('\r\n','\n');
++  assert.equal(createHash('sha256').update(source).digest('hex'),definition.sha256_utf8_lf);
++  return source;
++}
++const source=await pinned(pin,process.argv[2]);
++const events=await pinned(pin.agent_events,process.argv[3]);
++await pinned(pin.webview_protocol,process.argv[4]);
++function actualFunction(source,name) {
++  const start=source.search(new RegExp(`(?:export )?(?:async )?function ${name}\\(`));
++  assert.ok(start>=0,`Missing Cline function: ${name}`);
++  const rest=source.slice(start);const end=rest.indexOf('\n}\n')+2;
++  assert.ok(end>1);return stripTypeScriptTypes(rest.slice(0,end).replace(/^export /,''));
++}
++const scope={providerSettingsManager:{getLastUsedProviderSettings:()=>undefined},process:{env:{}},
++  workspaceRoot:'/synthetic/default',SessionSource:{WEB:'web'},frames:[]};
++vm.createContext(scope);
++vm.runInContext(actualFunction(source,'resolveLaunchContext')+'\nthis.resolve=resolveLaunchContext;',scope);
++const context=scope.resolve({}, {workspaceRoot:'/synthetic/project',cwd:'/synthetic/project',provider:'local',model:'test-model'});
++assert.equal(context.workspaceRoot,'/synthetic/project');assert.equal(context.providerId,'local');
++vm.runInContext(actualFunction(source,'toRuntimeReasoningOptions')+'\n'+actualFunction(source,'buildSessionStartInput')+'\nthis.startInput=buildSessionStartInput;',scope);
++const input=scope.startInput(context,{mode:'plan',autoApproveTools:false,reasonLevel:'none'});
++assert.equal(input.toolPolicies['*'].autoApprove,false);
++assert.equal(input.config.mode,'plan');assert.equal(input.config.thinking,false);
++let sent;
++scope.createSession=()=>{throw new Error('Existing session must not be replaced');};
++vm.runInContext(actualFunction(source,'sendMessage')+'\nthis.send=sendMessage;',scope);
++await scope.send({cline:{send:async(value)=>{sent=value;}}},{selectedSessionId:'existing'},'literal prompt',
++  {mode:'plan',workspaceRoot:'/must-not-replace',provider:'other',model:'other'},
++  {userImages:['data:image/png;base64,c3ludGhldGlj']});
++assert.equal(sent.sessionId,'existing');assert.equal(sent.prompt,'literal prompt');
++assert.equal(sent.workspaceRoot,undefined);assert.equal(sent.providerId,undefined);assert.equal(sent.modelId,undefined);
++assert.equal(sent.mode,'plan');assert.equal(sent.userImages.length,1);
++
++scope.context={sendToSelectedPeers:(_id,frame)=>scope.frames.push(frame)};
++vm.runInContext(['agentEventText','sendChunkToSelectedPeers','forwardAgentEvent'].map(n=>actualFunction(events,n)).join('\n')+'\nthis.forward=forwardAgentEvent;',scope);
++for(const event of [
++  {type:'content_start',contentType:'text',text:'Before tool'},
++  {type:'content_start',contentType:'reasoning',reasoning:'Synthetic reasoning'},
++  {type:'content_start',contentType:'tool',toolCallId:'tool-1',toolName:'read_files',input:{path:'/synthetic/example.txt'}},
++  {type:'content_update',contentType:'tool',toolCallId:'tool-1',toolName:'read_files',update:'progress'},
++  {type:'content_end',contentType:'tool',toolCallId:'tool-1',toolName:'read_files',output:'result'},
++  {type:'content_start',contentType:'text',text:'After tool'},
++  {type:'done',reason:'stop',iterations:1,usage:{inputTokens:2,outputTokens:3}},
++  {type:'error',error:{message:'Recoverable synthetic notice'},recoverable:true},
++]) scope.forward(scope.context,'synthetic-session',event);
++assert.deepEqual(Array.from(scope.frames,f=>f.type),['assistant_delta','reasoning_delta','tool_event','tool_event','tool_event','assistant_delta','turn_done','error']);
++assert.equal(scope.frames[4].event.status,'completed');assert.equal(scope.frames.at(-1).recoverable,true);
++assert.deepEqual(JSON.parse(readFileSync(new URL('.avx1/cline-native-events.json',root),'utf8')),JSON.parse(JSON.stringify(scope.frames)));
++const workspace=new URL('.avx1-work/',root);mkdirSync(workspace,{recursive:true});
++writeFileSync(new URL('cline-native-events.json',workspace),JSON.stringify(scope.frames,null,2)+'\n');
++const dart=readFileSync(new URL('lib/features/cline/views/cline_remote_page.dart',root),'utf8');
++assert.ok(!dart.includes('InAppWebView')&&!dart.includes('ClineDashboardPage'),'Cline must use the native client');
++assert.ok(readFileSync(new URL('lib/features/cline/views/cline_workspace_page.dart',root),'utf8').includes('StreamingMarkdownWidget'));
++console.log('CLINE_NATIVE_CONTEXT_APPROVAL_AND_PINNED_EVENT_CONTRACT_PASSED');
+diff --git a/.avx1/test_locales.py b/.avx1/test_locales.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..c08ce8b6cabbd90f797e706467133345703b5fca
+--- /dev/null
++++ b/.avx1/test_locales.py
+@@ -0,0 +1,35 @@
++"""Reject missing Russian UI keys or changed interpolation parameters."""
++import json
++from pathlib import Path
++import re
++from common import ROOT
++
++project=json.loads((ROOT/'.avx1/project.json').read_text('utf-8'))['id']
++paths={
++ 'webui':('src/lib/i18n/locales/en-US/translation.json','src/lib/i18n/locales/ru-RU/translation.json'),
++ 'desktop':('src/renderer/src/lib/i18n/locales/en-US/translation.json','src/renderer/src/lib/i18n/locales/ru-RU/translation.json'),
++ 'conduit':('lib/l10n/app_en.arb','lib/l10n/app_ru.arb')
++}
++if project not in paths:
++    print('Terminal UI is localized in its host applications; command output is unchanged.')
++    raise SystemExit(0)
++en,ru=[json.loads((ROOT/path).read_text('utf-8')) for path in paths[project]]
++allow=json.loads((ROOT/'.avx1/locale-allowlist.json').read_text('utf-8'))
++checked=0
++for key,source in en.items():
++    if key.startswith('@') or not isinstance(source,str):continue
++    if project=='webui' and not source:source=key
++    target=ru.get(key)
++    if not isinstance(target,str) or not target.strip():raise RuntimeError('Missing Russian UI string: '+key)
++    expression=r'\{\{\s*([^{}]+?)\s*\}\}' if project!='conduit' else r'\{([A-Za-z_]\w*)\}'
++    if project=='conduit' and en.get('@'+key,{}).get('placeholders'):
++        names=set(en['@'+key]['placeholders'])
++        if set(ru.get('@'+key,{}).get('placeholders',{}))!=names or any(not re.search(r'\{'+re.escape(name)+r'\s*[,}]',target) for name in names):
++            raise RuntimeError('Russian ICU parameters changed: '+key)
++    elif set(re.findall(expression,source))!=set(re.findall(expression,target)):
++        raise RuntimeError('Russian interpolation mismatch: '+key)
++    visible=re.sub(expression,'',source)
++    if source==target and re.search('[A-Za-z]',visible) and allow.get(key)!=source:
++        raise RuntimeError('Unreviewed English UI string: '+key)
++    checked+=1
++print('RUSSIAN_LOCALE_KEYS_AND_PARAMETERS_VERIFIED='+str(checked))
+diff --git a/.avx1/test_native_cache_proof.py b/.avx1/test_native_cache_proof.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..a108192dd9969d5c4afee63230de5d3f7d834f3b
+--- /dev/null
++++ b/.avx1/test_native_cache_proof.py
+@@ -0,0 +1,67 @@
++import json
++from pathlib import Path
++import shutil
++import tempfile
++import unittest
++from native_cache_proof import file_hash, compilation_signature, verify_cache
++
++ROOT = Path(__file__).resolve().parents[1]
++
++
++class ExactNativeCache(unittest.TestCase):
++    def setUp(self):
++        self.tmp = tempfile.TemporaryDirectory()
++        self.addCleanup(self.tmp.cleanup)
++        self.root = Path(self.tmp.name)
++        self.build = self.root/'build'
++        (self.build/'Release').mkdir(parents=True)
++        (self.root/'.avx1/measurements').mkdir(parents=True)
++        for name in ('native_arm64.py','native-arm64.json','toolchains.json'):
++            shutil.copyfile(ROOT/'.avx1'/name, self.root/'.avx1'/name)
++        shutil.copyfile(ROOT/'pubspec.lock', self.root/'pubspec.lock')
++        (self.build/'Release/compile_commands.json').write_text('[]')
++        self.names = ('libonnxruntime.so','libonnxruntime4j_jni.so')
++        for name in self.names: (self.build/'Release'/name).write_bytes(name.encode())
++        self.reference = self.root/'.avx1/measurements/onnx-qualified-reference.json'
++        self.proof = {'run_id':1,'source_commit':'a'*40,'compiler':'NDK Clang exact version',
++            'policy_sha256':file_hash(self.root/'.avx1/native-arm64.json'),
++            'toolchains_sha256':file_hash(self.root/'.avx1/toolchains.json'),
++            'lockfile_sha256':file_hash(self.root/'pubspec.lock'),
++            'compilation_signature':compilation_signature(self.root/'.avx1/native_arm64.py'),
++            'compile_database_sha256':file_hash(self.build/'Release/compile_commands.json'),
++            'binaries':{n:file_hash(self.build/'Release'/n) for n in self.names}}
++        self.save()
++
++    def save(self): self.reference.write_text(json.dumps(self.proof))
++    def verify(self, compiler='NDK Clang exact version'):
++        return verify_cache(self.root,self.build,compiler)['status']
++
++    def test_exact_verified_outputs_reuse(self): self.assertEqual(self.verify(),'reused')
++    def test_compiler_change_rejects(self): self.assertEqual(self.verify('different compiler'),'miss')
++    def test_corrupt_or_missing_output_rejects(self):
++        (self.build/'Release'/self.names[0]).write_bytes(b'changed')
++        self.assertEqual(self.verify(),'miss')
++        (self.build/'Release'/self.names[0]).unlink()
++        self.assertEqual(self.verify(),'miss')
++    def test_changed_inputs_reject(self):
++        for name in ('native-arm64.json','toolchains.json'):
++            p=self.root/'.avx1'/name
++            before=p.read_bytes();p.write_bytes(before+b' ')
++            self.assertEqual(self.verify(),'miss');p.write_bytes(before)
++    def test_flags_or_recipe_change_rejects(self):
++        p=self.root/'.avx1/native_arm64.py'
++        p.write_text(p.read_text().replace("'-O3'","'-O2'",1))
++        self.assertEqual(self.verify(),'miss')
++    def test_command_evidence_change_rejects(self):
++        (self.build/'Release/compile_commands.json').write_text('[{}]')
++        self.assertEqual(self.verify(),'miss')
++    def test_dependency_lock_change_rejects(self):
++        (self.root/'pubspec.lock').write_text('changed dependency graph')
++        self.assertEqual(self.verify(),'miss')
++    def test_missing_or_incomplete_reference_rejects(self):
++        self.proof['binaries'].pop(self.names[0]);self.save()
++        self.assertEqual(self.verify(),'miss')
++        self.reference.unlink();self.assertEqual(self.verify(),'miss')
++
++
++if __name__ == '__main__': unittest.main()
+diff --git a/.avx1/test_native_sqlite.py b/.avx1/test_native_sqlite.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..7d8412197f9e5acdb189a99a6aae4a361edb15d7
+--- /dev/null
++++ b/.avx1/test_native_sqlite.py
+@@ -0,0 +1,27 @@
++"""Exercise the source-built SQLite amalgamation without touching user databases."""
++import ctypes as c
++import sys
++
++db=c.c_void_p();lib=c.CDLL(sys.argv[1])
++lib.sqlite3_open.argtypes=[c.c_char_p,c.POINTER(c.c_void_p)]
++lib.sqlite3_exec.argtypes=[c.c_void_p,c.c_char_p,c.c_void_p,c.c_void_p,c.POINTER(c.c_char_p)]
++lib.sqlite3_get_table.argtypes=[c.c_void_p,c.c_char_p,c.POINTER(c.POINTER(c.c_char_p)),c.POINTER(c.c_int),c.POINTER(c.c_int),c.POINTER(c.c_char_p)]
++lib.sqlite3_free_table.argtypes=[c.POINTER(c.c_char_p)]
++assert lib.sqlite3_open(b':memory:',c.byref(db))==0
++def execute(sql):
++    error=c.c_char_p();code=lib.sqlite3_exec(db,sql.encode(),None,None,c.byref(error))
++    if code:raise RuntimeError('Source-built SQLite query failed: '+str(error.value))
++def scalar(sql):
++    table=c.POINTER(c.c_char_p)();rows=c.c_int();cols=c.c_int();error=c.c_char_p()
++    assert lib.sqlite3_get_table(db,sql.encode(),c.byref(table),c.byref(rows),c.byref(cols),c.byref(error))==0
++    try:return table[cols.value].decode()
++    finally:lib.sqlite3_free_table(table)
++try:
++    execute("CREATE TABLE t(k INTEGER PRIMARY KEY,v TEXT); BEGIN; INSERT INTO t VALUES(1,'kept'); COMMIT; BEGIN; INSERT INTO t VALUES(2,'rolled back'); ROLLBACK;")
++    assert scalar('SELECT count(*) FROM t')=='1'
++    assert scalar("SELECT json_extract('{\"x\":7}', '$.x')")=='7'
++    execute("CREATE VIRTUAL TABLE documents USING fts5(body); INSERT INTO documents VALUES('agent tool result');")
++    assert scalar("SELECT count(*) FROM documents WHERE documents MATCH 'agent'")=='1'
++    assert scalar('PRAGMA integrity_check')=='ok'
++    print('SOURCE_SQLITE_TRANSACTIONS_FTS5_JSON_INTEGRITY_PASSED')
++finally:lib.sqlite3_close(db)
+diff --git a/.avx1/test_public_gate.py b/.avx1/test_public_gate.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..47c838c134e28d50bc0af648203721f193559e63
+--- /dev/null
++++ b/.avx1/test_public_gate.py
+@@ -0,0 +1,18 @@
++import unittest
++from common import scan_bytes
++
++
++class PublicGateTests(unittest.TestCase):
++    def test_tailwind_mask_classes_are_not_api_keys(self):
++        scan_bytes(b'.mask-linear-from-transparent-to-transparent{mask-type:luminance}', 'fixture.css')
++
++    def test_real_token_shapes_and_utf16_private_keys_still_fail_closed(self):
++        for prefix, length in ((b'sk-', 48), (b'sk-proj-', 64), (b'ghp_', 40), (b'hf_', 36)):
++            value = b'"' + prefix + b'a' * length + b'"'
++            with self.subTest(prefix=prefix):
++                with self.assertRaises(ValueError): scan_bytes(value, 'credential fixture')
++                with self.assertRaises(ValueError): scan_bytes(value.decode().encode('utf-16-le'), 'UTF16 fixture')
++
++
++if __name__ == '__main__':
++    unittest.main()
+diff --git a/.avx1/test_terminal.py b/.avx1/test_terminal.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..1ec126684bc9f321e9e9b492c742cdb32b933d4a
+--- /dev/null
++++ b/.avx1/test_terminal.py
+@@ -0,0 +1,34 @@
++"""Behavior tests for the fork's child-environment and MCP fixes."""
++import os
++import subprocess
++import sys
++import types
++import unittest
++from unittest.mock import patch
++
++
++class TerminalTests(unittest.TestCase):
++    def test_child_cannot_read_inherited_terminal_credentials(self):
++        from open_terminal.env import sanitized_environ
++        environment = {**os.environ, "OPEN_TERMINAL_API_KEY": "synthetic-secret",
++                       "open_terminal_private": "synthetic-secret", "KEEP_APPLICATION_SETTING": "kept"}
++        with patch.dict(os.environ, environment, clear=True):
++            child_env = sanitized_environ({"EXTRA_SETTING": "extra"})
++        result = subprocess.run([sys.executable, "-c", "import os; assert not any(k.upper().startswith('OPEN_TERMINAL_') for k in os.environ); assert os.environ['KEEP_APPLICATION_SETTING']=='kept'; assert os.environ['EXTRA_SETTING']=='extra'"],
++                                env=child_env, capture_output=True)
++        self.assertEqual(result.returncode, 0)
++
++    def test_stdio_passes_no_network_arguments(self):
++        from click.testing import CliRunner
++        from open_terminal.cli import main
++        received = []
++        fake = types.ModuleType("open_terminal.mcp_server")
++        fake.mcp = types.SimpleNamespace(run=lambda **kwargs: received.append(kwargs))
++        with patch.dict(sys.modules, {"open_terminal.mcp_server": fake}), patch("open_terminal.config.init", return_value={}):
++            result = CliRunner().invoke(main, ["mcp", "--transport", "stdio"])
++        self.assertEqual(result.exit_code, 0, repr(result.exception))
++        self.assertEqual(received, [{"transport": "stdio"}])
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart b/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart
+index 8dbf2794d3bc6820f338499506a49636c85a5fc7..8f5b68967e3905485cf47f6daecae21bd6a377dd 100644
+--- a/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart
++++ b/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart
+@@ -364,6 +364,46 @@ void main() {
+     check(snapshot.activeCallId).isNull();
+   });
+ 
++  test('hang-up bypasses a blocked pause without reviving the call', () async {
++    final input = _FakeVoiceInputService();
++    final container = ProviderContainer(
++      overrides: [
++        ...openWebUiStorageOpenOverrides(),
++        authNavigationStateProvider.overrideWithValue(
++          AuthNavigationState.authenticated,
++        ),
++        reviewerModeProvider.overrideWithValue(true),
++        selectedModelProvider.overrideWithValue(_model),
++        appSettingsProvider.overrideWithValue(const AppSettings()),
++        voiceModeInputProvider.overrideWithValue(input),
++        voiceModeSpeechProvider.overrideWithValue(_FakeTextToSpeechService()),
++        voiceCallKitProvider.overrideWithValue(_UnavailableCallKitService()),
++        chatVoiceModeBackgroundCoordinatorProvider.overrideWithValue(
++          _FakeChatVoiceBackgroundCoordinator(),
++        ),
++        voiceAudioSessionProvider.overrideWithValue(
++          _FakeChatVoiceAudioSessionCoordinator(),
++        ),
++      ],
++    );
++    addTearDown(container.dispose);
++
++    final controller = container.read(chatVoiceModeControllerProvider.notifier);
++    await controller.start(startNewConversation: false);
++    final gate = Completer<void>();
++    input.nextStopListeningGate = gate;
++    final previousStops = input.stopCalls;
++    final pause = controller.pause();
++    await _until(() => input.stopCalls > previousStops);
++    await controller.stop().timeout(const Duration(seconds: 1));
++    check(container.read(chatVoiceModeControllerProvider).phase)
++        .equals(ChatVoiceModePhase.ended);
++    gate.complete();
++    await pause;
++    check(container.read(chatVoiceModeControllerProvider).phase)
++        .equals(ChatVoiceModePhase.ended);
++  });
++
+   test('stop cancels a start during voice input initialization', () async {
+     final input = _FakeVoiceInputService()..initializeGate = Completer<bool>();
+     final container = ProviderContainer(
+@@ -2716,62 +2756,66 @@ void main() {
+       return container;
+     }
+ 
+-    test('a call with a realtime voice talks through it, not turn by turn',
+-        () async {
+-      final container = realtimeContainer();
+-      final controller = container.read(
+-        chatVoiceModeControllerProvider.notifier,
+-      );
+-
+-      final result = await controller.start(
+-        startNewConversation: false,
+-        admittedModel: _model,
+-      );
+-
+-      check(result).equals(ChatVoiceModeStartResult.started);
+-      check(input.beginCalls).equals(0);
+-      check(audio.started).isTrue();
+-      check(container.read(chatVoiceModeControllerProvider).phase)
+-          .equals(ChatVoiceModePhase.listening);
+-
+-      bridge.inbox.add({
+-        'type': 'conversation.item.input_audio_transcription.completed',
+-        'item_id': 'item-1',
+-        'transcript': 'Hello',
+-      });
+-      await pumpEventQueue();
+-      check(container.read(chatVoiceModeControllerProvider).transcript)
+-          .equals('Hello');
++    test(
++      'a call with a realtime voice talks through it, not turn by turn',
++      () async {
++        final container = realtimeContainer();
++        final controller = container.read(
++          chatVoiceModeControllerProvider.notifier,
++        );
+ 
+-      await controller.toggleMute();
+-      check(container.read(chatVoiceModeControllerProvider).isMuted).isTrue();
+-      check(audio.captureEnabled).equals(false);
++        final result = await controller.start(
++          startNewConversation: false,
++          admittedModel: _model,
++        );
+ 
+-      await controller.stop();
+-      check(bridge.wasClosed).isTrue();
+-      check(audio.stopped).isTrue();
+-      check(container.read(chatVoiceModeControllerProvider).isActive)
+-          .isFalse();
+-    });
++        check(result).equals(ChatVoiceModeStartResult.started);
++        check(input.beginCalls).equals(0);
++        check(audio.started).isTrue();
++        check(container.read(chatVoiceModeControllerProvider).phase)
++            .equals(ChatVoiceModePhase.listening);
++
++        bridge.inbox.add({
++          'type': 'conversation.item.input_audio_transcription.completed',
++          'item_id': 'item-1',
++          'transcript': 'Hello',
++        });
++        await pumpEventQueue();
++        check(container.read(chatVoiceModeControllerProvider).transcript)
++            .equals('Hello');
++
++        await controller.toggleMute();
++        check(container.read(chatVoiceModeControllerProvider).isMuted).isTrue();
++        check(audio.captureEnabled).equals(false);
++
++        await controller.stop();
++        check(bridge.wasClosed).isTrue();
++        check(audio.stopped).isTrue();
++        check(container.read(chatVoiceModeControllerProvider).isActive)
++            .isFalse();
++      },
++    );
+ 
+-    test('a realtime call follows its own chat and ends when another opens',
+-        () {
+-      // The first turn of a call started without a chat creates one.
+-      check(realtimeCallChatAfter(null, 'local:new', createdByCall: true))
+-          .equals((ends: false, chatId: 'local:new'));
+-      // A new chat gets its server id in place.
+-      check(realtimeCallChatAfter('local:new', 'chat-1', remapped: true))
+-          .equals((ends: false, chatId: 'chat-1'));
+-      check(realtimeCallChatAfter('chat-1', 'chat-1'))
+-          .equals((ends: false, chatId: 'chat-1'));
+-      check(realtimeCallChatAfter('chat-1', 'chat-2').ends).isTrue();
+-      check(realtimeCallChatAfter('chat-1', null).ends).isTrue();
+-      check(realtimeCallChatAfter('direct-local:a', 'direct-local:b').ends)
+-          .isTrue();
+-      // A chat the user opens is not the call's, even before it has one.
+-      check(realtimeCallChatAfter(null, 'chat-2').ends).isTrue();
+-      check(realtimeCallChatAfter('local:new', 'chat-2').ends).isTrue();
+-    });
++    test(
++      'a realtime call follows its own chat and ends when another opens',
++      () {
++        // The first turn of a call started without a chat creates one.
++        check(realtimeCallChatAfter(null, 'local:new', createdByCall: true))
++            .equals((ends: false, chatId: 'local:new'));
++        // A new chat gets its server id in place.
++        check(realtimeCallChatAfter('local:new', 'chat-1', remapped: true))
++            .equals((ends: false, chatId: 'chat-1'));
++        check(realtimeCallChatAfter('chat-1', 'chat-1'))
++            .equals((ends: false, chatId: 'chat-1'));
++        check(realtimeCallChatAfter('chat-1', 'chat-2').ends).isTrue();
++        check(realtimeCallChatAfter('chat-1', null).ends).isTrue();
++        check(realtimeCallChatAfter('direct-local:a', 'direct-local:b').ends)
++            .isTrue();
++        // A chat the user opens is not the call's, even before it has one.
++        check(realtimeCallChatAfter(null, 'chat-2').ends).isTrue();
++        check(realtimeCallChatAfter('local:new', 'chat-2').ends).isTrue();
++      },
++    );
+ 
+     test('opening another chat ends a realtime call', () async {
+       // Direct chats, which this container keeps open.
+@@ -2788,8 +2832,7 @@ void main() {
+       await container
+           .read(chatVoiceModeControllerProvider.notifier)
+           .start(startNewConversation: false, admittedModel: _model);
+-      check(container.read(chatVoiceModeControllerProvider).isActive)
+-          .isTrue();
++      check(container.read(chatVoiceModeControllerProvider).isActive).isTrue();
+ 
+       active.set(chat('direct-local:b'));
+       await _until(
+@@ -2818,44 +2861,48 @@ void main() {
+       check(audio.stopped).isTrue();
+       check(await starting).equals(ChatVoiceModeStartResult.cancelled);
+       await stopping;
+-      check(container.read(chatVoiceModeControllerProvider).isActive)
+-          .isFalse();
++      check(container.read(chatVoiceModeControllerProvider).isActive).isFalse();
+     });
+ 
+-    test('ending it from the system call UI while it connects ends it at once',
+-        () async {
+-      bridge.opening = Completer<void>();
+-      final callKit = _AvailableCallKitService();
+-      addTearDown(callKit.dispose);
+-      final container = realtimeContainer(callKit: callKit);
+-      final controller = container.read(
+-        chatVoiceModeControllerProvider.notifier,
+-      );
++    test(
++      'ending it from the system call UI while it connects ends it at once',
++      () async {
++        bridge.opening = Completer<void>();
++        final callKit = _AvailableCallKitService();
++        addTearDown(callKit.dispose);
++        final container = realtimeContainer(callKit: callKit);
++        final controller = container.read(
++          chatVoiceModeControllerProvider.notifier,
++        );
+ 
+-      final starting = controller.start(
+-        startNewConversation: false,
+-        admittedModel: _model,
+-      );
+-      await _until(() => audio.started);
+-      callKit.emit(const VoiceCallKitEnded('call-1'));
+-      await pumpEventQueue();
++        final starting = controller.start(
++          startNewConversation: false,
++          admittedModel: _model,
++        );
++        await _until(() => audio.started);
++        callKit.emit(const VoiceCallKitEnded('call-1'));
++        await pumpEventQueue();
+ 
+-      check(bridge.wasClosed).isTrue();
+-      check(audio.stopped).isTrue();
+-      check(await starting).equals(ChatVoiceModeStartResult.cancelled);
+-      await _until(
+-        () => !container.read(chatVoiceModeControllerProvider).isActive,
+-      );
+-      // The system ended the call; it is not ended again.
+-      check(callKit.endedCallIds).isEmpty();
+-    });
++        check(bridge.wasClosed).isTrue();
++        check(audio.stopped).isTrue();
++        check(await starting).equals(ChatVoiceModeStartResult.cancelled);
++        await _until(
++          () => !container.read(chatVoiceModeControllerProvider).isActive,
++        );
++        // The system ended the call; it is not ended again.
++        check(callKit.endedCallIds).isEmpty();
++      },
++    );
+ 
+     test('unmuting a paused call brings its answers back', () async {
+       final container = realtimeContainer();
+       final controller = container.read(
+         chatVoiceModeControllerProvider.notifier,
+       );
+-      await controller.start(startNewConversation: false, admittedModel: _model);
++      await controller.start(
++        startNewConversation: false,
++        admittedModel: _model,
++      );
+       await controller.pause();
+       await controller.toggleMute();
+ 
+@@ -2872,27 +2919,29 @@ void main() {
+       await controller.stop();
+     });
+ 
+-    test('a chat opened right after the call is asked for cancels it',
+-        () async {
+-      Conversation chat(String id) => Conversation(
+-        id: id,
+-        title: 'Chat',
+-        createdAt: DateTime.utc(2026),
+-        updatedAt: DateTime.utc(2026),
+-        metadata: const {'backend': kDirectTransport},
+-      );
+-      final container = realtimeContainer();
+-      final active = container.read(activeConversationProvider.notifier)
+-        ..set(chat('direct-local:a'));
+-
+-      final starting = container
+-          .read(chatVoiceModeControllerProvider.notifier)
+-          .start(startNewConversation: false, admittedModel: _model);
+-      active.set(chat('direct-local:b'));
+-
+-      check(await starting).equals(ChatVoiceModeStartResult.cancelled);
+-      check(bridge.opened).isFalse();
+-    });
++    test(
++      'a chat opened right after the call is asked for cancels it',
++      () async {
++        Conversation chat(String id) => Conversation(
++          id: id,
++          title: 'Chat',
++          createdAt: DateTime.utc(2026),
++          updatedAt: DateTime.utc(2026),
++          metadata: const {'backend': kDirectTransport},
++        );
++        final container = realtimeContainer();
++        final active = container.read(activeConversationProvider.notifier)
++          ..set(chat('direct-local:a'));
++
++        final starting = container
++            .read(chatVoiceModeControllerProvider.notifier)
++            .start(startNewConversation: false, admittedModel: _model);
++        active.set(chat('direct-local:b'));
++
++        check(await starting).equals(ChatVoiceModeStartResult.cancelled);
++        check(bridge.opened).isFalse();
++      },
++    );
+ 
+     test('a chat opened while the call sets up cancels it', () async {
+       // Direct chats, which this container keeps open.
+@@ -2921,8 +2970,7 @@ void main() {
+ 
+       check(await starting).equals(ChatVoiceModeStartResult.cancelled);
+       check(bridge.opened).isFalse();
+-      check(container.read(chatVoiceModeControllerProvider).isActive)
+-          .isFalse();
++      check(container.read(chatVoiceModeControllerProvider).isActive).isFalse();
+     });
+ 
+     test('a realtime voice that cannot start says why', () async {
+diff --git a/packages/conduit_core/test/features/cline/cline_remote_profile_test.dart b/packages/conduit_core/test/features/cline/cline_remote_profile_test.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..faa1f7f4f84858c51bbebd071ee0b5d71d26101d
+--- /dev/null
++++ b/packages/conduit_core/test/features/cline/cline_remote_profile_test.dart
+@@ -0,0 +1,75 @@
++import 'dart:convert';
++
++import 'package:test/test.dart';
++import 'package:conduit_core/features/cline/models/cline_remote_profile.dart';
++
++void main() {
++  Map<String, Object> fixture() => {
++    'schema': 1,
++    'host': 'host.example',
++    'sshPort': 2222,
++    'username': 'cline',
++    'sshPassword': 'synthetic-test-password-not-a-real-credential',
++    'roomSecret': 'different-synthetic-room-not-a-real-credential',
++    'hostKeyFingerprint': 'SHA256:${'A' * 43}',
++    'dashboardPort': 11280,
++  };
++
++  test('private profile round trips and pins the loopback dashboard', () {
++    final profile = ClineRemoteProfile.decode(jsonEncode(fixture()));
++    expect(
++      ClineRemoteProfile.decode(jsonEncode(profile.toJson())).host,
++      'host.example',
++    );
++    final url = profile.dashboardUrl(11280);
++    expect(url.host, '127.0.0.1');
++    expect(url.queryParameters['roomSecret'], profile.roomSecret);
++  });
++
++  test('missing pin, weak secrets, arbitrary username and invalid ports fail closed', () {
++    for (final change in [
++      {'hostKeyFingerprint': ''},
++      {'sshPassword': 'short'},
++      {'username': 'root'},
++      {'sshPort': 0},
++      {'dashboardPort': 70000},
++      {'host': 'https://host.example'},
++      {'host': 'host.example/path'},
++      {'host': 'host.example@another.example'},
++    ]) {
++      expect(
++        () => ClineRemoteProfile.decode(jsonEncode({...fixture(), ...change})),
++        throwsFormatException,
++      );
++    }
++  });
++
++  test(
++    'foreign origins, alternate ports and credential-bearing URLs are blocked',
++    () {
++      final root = Uri.parse('http://127.0.0.1:11280/');
++      expect(
++        clineDashboardNavigationAllowed(root.resolve('/chat'), root),
++        isTrue,
++      );
++      for (final url in [
++        'https://example.com',
++        'http://127.0.0.1:80/',
++        'file:///tmp/test',
++        'javascript:alert(1)',
++        'http://user@127.0.0.1:11280/',
++      ]) {
++        expect(clineDashboardNavigationAllowed(Uri.parse(url), root), isFalse);
++      }
++    },
++  );
++
++  test('oversized or unversioned connection documents are rejected', () {
++    expect(() => ClineRemoteProfile.decode('x' * 17000), throwsFormatException);
++    final json = fixture()..remove('schema');
++    expect(
++      () => ClineRemoteProfile.decode(jsonEncode(json)),
++      throwsFormatException,
++    );
++  });
++}
+diff --git a/packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart b/packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..cebd41b3450da87dd0ad376fb9ef6f3e4cc382e3
+--- /dev/null
++++ b/packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart
+@@ -0,0 +1,570 @@
++import 'dart:convert';
++import 'dart:typed_data';
++
++import 'package:conduit_core/features/direct_connections/models/direct_completion.dart';
++import 'package:conduit_core/features/direct_connections/models/direct_connection_profile.dart';
++import 'package:conduit_core/features/direct_connections/services/openai_compatible_adapter.dart';
++import 'package:dio/dio.dart';
++import 'package:test/test.dart';
++
++void main() {
++  test(
++    'China preset uses the documented origin and preserves legacy origin',
++    () {
++      expect(kMiniMaxCnApiBaseUrl, 'https://api.minimax.cn/v1');
++      final legacy = _profile('https://api.minimaxi.com/v1');
++      expect(legacy.isMiniMax, isTrue);
++      expect(legacy.baseUrl, 'https://api.minimaxi.com/v1');
++    },
++  );
++
++  for (final baseUrl in [kMiniMaxApiBaseUrl, kMiniMaxCnApiBaseUrl]) {
++    test(
++      '$baseUrl discovers Flash first and preserves manual legacy IDs',
++      () async {
++        final transport = _Transport([]);
++        final adapter = _adapter(transport);
++        final models = await adapter.listModels(_profile(baseUrl));
++        expect(models.map((model) => model.id), kMiniMaxModelIds);
++        expect(
++          models.every(
++            (model) => model.capabilities['context_length'] == 1000000,
++          ),
++          isTrue,
++        );
++        final saved = await adapter.listModels(
++          _profile(baseUrl)
++              .copyWith(manualModelIds: ['MiniMax-M2.7', 'custom']),
++        );
++        expect(saved.map((model) => model.id), ['MiniMax-M2.7', 'custom']);
++        expect(
++          saved.every(
++            (model) => !model.capabilities.containsKey('context_length'),
++          ),
++          isTrue,
++        );
++        final manual = await adapter.listModels(
++          _profile(baseUrl)
++              .copyWith(manualModelIds: ['MiniMax-M3.1-Flash', 'custom']),
++        );
++        expect(manual.first.capabilities['context_length'], 1000000);
++        expect(manual.last.capabilities.containsKey('context_length'), isFalse);
++        expect(transport.requests, isEmpty);
++      },
++    );
++
++    test('$baseUrl sends images and assistant reasoning unchanged', () async {
++      final transport = _Transport([_completion]);
++      final events = await _run(
++        transport,
++        _profile(baseUrl),
++        parameters: const {'reasoning_effort': 'max'},
++      );
++      expect(events.whereType<DirectStreamError>(), isEmpty);
++      final request = transport.requests.single;
++      expect(request.uri.toString(), '$baseUrl/chat/completions');
++      final body = _body(request);
++      expect(body['model'], 'MiniMax-M3.1-Flash');
++      expect(body['reasoning_effort'], 'max');
++      expect(body.containsKey('service_tier'), isFalse);
++      final messages = body['messages'] as List;
++      expect(messages[0]['reasoning_content'], 'Keep this reasoning');
++      expect(messages[1]['content'][1]['image_url']['url'], _image);
++    });
++
++    for (final effort in ['low', 'medium', 'high', 'xhigh', 'max']) {
++      test('$baseUrl permits Flash effort $effort', () async {
++        final transport = _Transport([_completion]);
++        final events = await _run(
++          transport,
++          _profile(baseUrl),
++          parameters: {
++            'reasoning_effort': effort,
++            'thinking': {'type': 'adaptive'},
++          },
++        );
++        expect(events.whereType<DirectStreamError>(), isEmpty);
++        expect(_body(transport.requests.single)['reasoning_effort'], effort);
++      });
++    }
++
++    for (final parameters in [
++      {'reasoning_effort': 'none'},
++      {
++        'thinking': {'type': 'disabled'},
++      },
++      {'reasoning_split': false},
++      {'service_tier': 'priority'},
++    ]) {
++      test(
++        '$baseUrl rejects unsupported Flash controls $parameters before HTTP',
++        () async {
++          final transport = _Transport([]);
++          final events = await _run(
++            transport,
++            _profile(baseUrl),
++            parameters: parameters,
++          );
++          expect(events.whereType<DirectStreamError>().isNotEmpty, isTrue);
++          expect(transport.requests, isEmpty);
++        },
++      );
++    }
++  }
++
++  test(
++    'international Responses sends full reasoning and image history',
++    () async {
++      final transport = _Transport([
++        {
++          'id': 'resp_1',
++          'object': 'response',
++          'status': 'completed',
++          'output': [
++            {
++              'id': 'msg-1',
++              'type': 'message',
++              'role': 'assistant',
++              'status': 'completed',
++              'content': [
++                {'type': 'output_text', 'text': 'Done'},
++              ],
++            },
++          ],
++        },
++      ]);
++      final events = await _run(
++        transport,
++        _profile(kMiniMaxApiBaseUrl, mode: DirectOpenAiApiMode.responses),
++        parameters: const {
++          'reasoning_effort': 'high',
++          'store': true,
++          'previous_response_id': 'old-response',
++          'conversation': 'old-conversation',
++        },
++      );
++      expect(events.whereType<DirectStreamError>(), isEmpty);
++      final request = transport.requests.single;
++      expect(request.uri.toString(), '$kMiniMaxApiBaseUrl/responses');
++      final body = _body(request);
++      expect(body['reasoning'], {'effort': 'high'});
++      expect(body['store'], isFalse);
++      expect(body.containsKey('previous_response_id'), isFalse);
++      expect(body.containsKey('conversation'), isFalse);
++      final input = body['input'] as List;
++      expect(input.any((dynamic item) => item['type'] == 'reasoning'), isTrue);
++      expect(jsonEncode(input), contains(_image));
++    },
++  );
++
++  for (final mode in DirectOpenAiApiMode.values) {
++    test(
++      'MiniMax $mode replays tool result and reasoning on the next HTTP round',
++      () async {
++        final responses = mode == DirectOpenAiApiMode.responses;
++        final transport = _Transport([
++          if (responses)
++            {
++              'id': 'resp-tool',
++              'status': 'completed',
++              'output': [
++                {
++                  'type': 'reasoning',
++                  'id': 'reason-1',
++                  'summary': [
++                    {'type': 'summary_text', 'text': 'Need lookup'},
++                  ],
++                },
++                {
++                  'type': 'function_call',
++                  'id': 'fc-1',
++                  'call_id': 'call-1',
++                  'name': 'lookup',
++                  'arguments': '{}',
++                  'status': 'completed',
++                },
++              ],
++            }
++          else
++            {
++              'id': 'chat-tool',
++              'choices': [
++                {
++                  'index': 0,
++                  'finish_reason': 'tool_calls',
++                  'message': {
++                    'role': 'assistant',
++                    'reasoning_content': 'Need lookup',
++                    'tool_calls': [
++                      {
++                        'id': 'call-1',
++                        'type': 'function',
++                        'function': {'name': 'lookup', 'arguments': '{}'},
++                      },
++                    ],
++                  },
++                },
++              ],
++            },
++          if (responses)
++            {
++              'id': 'resp-final',
++              'status': 'completed',
++              'output': [
++                {
++                  'id': 'msg-final',
++                  'type': 'message',
++                  'role': 'assistant',
++                  'status': 'completed',
++                  'content': [
++                    {'type': 'output_text', 'text': 'Done'},
++                  ],
++                },
++              ],
++            }
++          else
++            _completion,
++        ]);
++        final run = _adapter(transport).startCompletion(
++          _profile(kMiniMaxApiBaseUrl, mode: mode),
++          DirectCompletionRequest(
++            remoteModelId: 'MiniMax-M3.1-Flash',
++            messages: [
++              DirectChatMessage(
++                role: 'user',
++                parts: const [
++                  DirectTextPart('Look up this image'),
++                  DirectImagePart(_image),
++                ],
++              ),
++            ],
++            tools: _tools(),
++          ),
++        );
++        final events = await run.events.toList();
++        await run.done;
++        expect(events.whereType<DirectStreamError>(), isEmpty);
++        expect(transport.requests, hasLength(2));
++        final first = _body(transport.requests.first);
++        final second = _body(transport.requests.last);
++        expect(first['tools'], isNotEmpty);
++        expect(jsonEncode(second), contains(_image));
++        if (responses) {
++          final input = second['input'] as List;
++          expect(
++            input.any((dynamic item) => item['type'] == 'reasoning'),
++            isTrue,
++          );
++          expect(
++            input.any(
++              (dynamic item) =>
++                  item['type'] == 'function_call' &&
++                  item['call_id'] == 'call-1',
++            ),
++            isTrue,
++          );
++          expect(
++            input.any(
++              (dynamic item) =>
++                  item['type'] == 'function_call_output' &&
++                  item['call_id'] == 'call-1' &&
++                  item['output'] == 'lookup result',
++            ),
++            isTrue,
++          );
++          expect(second.containsKey('previous_response_id'), isFalse);
++        } else {
++          final messages = second['messages'] as List;
++          expect(messages[1]['reasoning_content'], 'Need lookup');
++          expect(messages[1]['tool_calls'][0]['id'], 'call-1');
++          expect(messages[2]['tool_call_id'], 'call-1');
++          expect(messages[2]['content'], 'lookup result');
++        }
++      },
++    );
++  }
++
++  test('Responses rejects none effort before HTTP', () async {
++    final transport = _Transport([]);
++    final events = await _run(
++      transport,
++      _profile(kMiniMaxApiBaseUrl, mode: DirectOpenAiApiMode.responses),
++      parameters: const {
++        'reasoning': {'effort': 'none'},
++      },
++    );
++    expect(events.whereType<DirectStreamError>().isNotEmpty, isTrue);
++    expect(transport.requests, isEmpty);
++  });
++
++  test(
++    'M3 disabled thinking and explicit legacy/custom requests remain intact',
++    () async {
++      for (final model in ['MiniMax-M3', 'MiniMax-M2.7', 'my-custom-model']) {
++        final transport = _Transport([_completion]);
++        final events = await _run(
++          transport,
++          _profile(kMiniMaxApiBaseUrl),
++          model: model,
++          parameters: const {
++            'thinking': {'type': 'disabled'},
++            'service_tier': 'priority',
++          },
++        );
++        expect(events.whereType<DirectStreamError>(), isEmpty);
++        expect(_body(transport.requests.single)['model'], model);
++        expect(_body(transport.requests.single)['thinking'], {
++          'type': 'disabled',
++        });
++        expect(_body(transport.requests.single)['service_tier'], 'priority');
++      }
++    },
++  );
++
++  test(
++    'gateway keeps existing model choices and retains gateway metadata',
++    () async {
++      final transport = _Transport([
++        {
++          'data': [
++            {'id': 'other/provider'},
++            {'id': 'minimax/minimax-m3', 'context_length': 524288},
++            {'id': 'minimax/minimax-m2.7'},
++            {
++              'id': 'minimax/image-model',
++              'architecture': {
++                'output_modalities': ['image'],
++              },
++            },
++            {'id': 'minimax/minimax-m3.1-flash', 'context_length': 262144},
++          ],
++        },
++      ]);
++      final models = await _adapter(transport)
++          .listModels(_profile(kOpenRouterApiBaseUrl));
++      expect(models.map((model) => model.id), [
++        'other/provider',
++        'minimax/minimax-m3.1-flash',
++        'minimax/minimax-m2.7',
++        'minimax/image-model',
++        'minimax/minimax-m3',
++      ]);
++      expect(models[1].capabilities['context_length'], 262144);
++      expect(
++        models[2].capabilities.containsKey('ordinary_model_choice'),
++        false,
++      );
++      expect(
++        models[3].capabilities.containsKey('ordinary_model_choice'),
++        false,
++      );
++      expect(models[4].capabilities['context_length'], 524288);
++    },
++  );
++
++  test(
++    'gateway does not invent a Flash route absent from the catalog',
++    () async {
++      final transport = _Transport([
++        {
++          'data': [
++            {'id': 'minimax/minimax-m2.7'},
++          ],
++        },
++      ]);
++      final models = await _adapter(transport)
++          .listModels(_profile(kOpenRouterApiBaseUrl));
++      expect(models.map((model) => model.id), ['minimax/minimax-m2.7']);
++      expect(
++        models.single.capabilities.containsKey('ordinary_model_choice'),
++        isFalse,
++      );
++    },
++  );
++
++  test(
++    'gateway Flash serializes its verified route and gateway reasoning',
++    () async {
++      final transport = _Transport([_completion]);
++      final events = await _run(
++        transport,
++        _profile(kOpenRouterApiBaseUrl),
++        model: 'minimax/minimax-m3.1-flash',
++        parameters: const {'reasoning_effort': 'high'},
++      );
++      expect(events.whereType<DirectStreamError>(), isEmpty);
++      final body = _body(transport.requests.single);
++      expect(body['model'], 'minimax/minimax-m3.1-flash');
++      expect(body['reasoning'], {'effort': 'high'});
++      expect(body.containsKey('reasoning_effort'), isFalse);
++      expect(
++        (body['messages'] as List).first['reasoning_content'],
++        'Keep this reasoning',
++      );
++    },
++  );
++
++  test('gateway Flash rejects disabled reasoning before HTTP', () async {
++    final transport = _Transport([]);
++    final events = await _run(
++      transport,
++      _profile(kOpenRouterApiBaseUrl),
++      model: 'minimax/minimax-m3.1-flash',
++      parameters: const {'reasoning_effort': 'none'},
++    );
++    expect(events.whereType<DirectStreamError>().isNotEmpty, isTrue);
++    expect(transport.requests, isEmpty);
++  });
++
++  test(
++    'unrelated providers and lookalike URLs retain their controls',
++    () async {
++      for (final url in [
++        'https://example.com/v1',
++        'https://api.minimax.io.example.com/v1',
++      ]) {
++        final transport = _Transport([_completion]);
++        final events = await _run(
++          transport,
++          _profile(url),
++          parameters: const {
++            'reasoning_effort': 'none',
++            'service_tier': 'priority',
++          },
++        );
++        expect(events.whereType<DirectStreamError>(), isEmpty);
++        final body = _body(transport.requests.single);
++        expect(body['reasoning_effort'], 'none');
++        expect(body['service_tier'], 'priority');
++        expect(
++          (body['messages'] as List).first.containsKey('reasoning_content'),
++          isFalse,
++        );
++      }
++    },
++  );
++}
++
++const _image = 'data:image/png;base64,aGVsbG8=';
++const _completion = {
++  'id': 'completion-1',
++  'choices': [
++    {
++      'index': 0,
++      'message': {'role': 'assistant', 'content': 'Done'},
++      'finish_reason': 'stop',
++    },
++  ],
++};
++
++DirectConnectionProfile _profile(
++  String url, {
++  DirectOpenAiApiMode mode = DirectOpenAiApiMode.chatCompletions,
++}) => DirectConnectionProfile(
++  id: 'offline-fixture',
++  name: 'Offline fixture',
++  adapterKey: kOpenAiCompatibleAdapterKey,
++  baseUrl: url,
++  openAiApiMode: mode,
++);
++
++OpenAiCompatibleAdapter _adapter(_Transport transport) =>
++    OpenAiCompatibleAdapter(
++      dioFactory: (_) => Dio()..httpClientAdapter = transport,
++    );
++
++Future<List<DirectStreamEvent>> _run(
++  _Transport transport,
++  DirectConnectionProfile profile, {
++  String model = 'MiniMax-M3.1-Flash',
++  Map<String, dynamic> parameters = const {},
++}) async {
++  final run = _adapter(transport).startCompletion(
++    profile,
++    DirectCompletionRequest(
++      remoteModelId: model,
++      parameters: parameters,
++      messages: [
++        DirectChatMessage(
++          role: 'assistant',
++          parts: const [DirectTextPart('Previous answer')],
++          reasoning: 'Keep this reasoning',
++        ),
++        DirectChatMessage(
++          role: 'user',
++          parts: const [
++            DirectTextPart('Describe this image'),
++            DirectImagePart(_image),
++          ],
++        ),
++      ],
++    ),
++  );
++  final events = await run.events.toList();
++  await run.done;
++  return events;
++}
++
++DirectToolRuntime _tools() => DirectToolRuntime(
++  definitions: [
++    DirectToolDefinition(
++      name: 'lookup',
++      serverId: 'fixture',
++      serverName: 'Fixture',
++      remoteName: 'lookup',
++      displayName: 'Lookup',
++      description: 'Offline lookup',
++      approvalFingerprint: 'a' * 64,
++      inputSchema: const {'type': 'object'},
++    ),
++  ],
++  requestApproval: (callId, definition, arguments) => DirectToolApprovalHandle(
++    request: DirectToolApprovalRequest(
++      id: 'approval',
++      serverName: definition.serverName,
++      toolName: definition.displayName,
++      callId: callId,
++      argumentsJson: jsonEncode(arguments),
++    ),
++    decision: Future.value(DirectToolApprovalDecision.allowOnce),
++    requiresUserDecision: false,
++  ),
++  execute: (_, _) async => const DirectToolResult(text: 'lookup result'),
++);
++
++Map<String, dynamic> _body(RequestOptions request) =>
++    request.extra['serializedBody'] as Map<String, dynamic>;
++
++final class _Transport implements HttpClientAdapter {
++  _Transport(this.replies);
++  final List<Map<String, dynamic>> replies;
++  final List<RequestOptions> requests = [];
++
++  @override
++  Future<ResponseBody> fetch(
++    RequestOptions options,
++    Stream<Uint8List>? requestStream,
++    Future<void>? cancelFuture,
++  ) async {
++    requests.add(options);
++    if (requestStream != null) {
++      options.extra['serializedBody'] = jsonDecode(
++        await utf8.decoder.bind(requestStream).join(),
++      );
++    }
++    return ResponseBody.fromString(
++      jsonEncode({
++        if (options.path == 'responses') 'object': 'response',
++        if (options.path == 'responses') 'created_at': 1,
++        ...replies.removeAt(0),
++      }),
++      200,
++      headers: {
++        'content-type': ['application/json'],
++      },
++    );
++  }
++
++  @override
++  void close({bool force = false}) {}
++}
+diff --git a/packages/conduit_core/test/navigation/route_redirect_test.dart b/packages/conduit_core/test/navigation/route_redirect_test.dart
+index 38f205be453c3b8ea853a4f9314e28414ea95a5d..d3a6d9ab71ffc614284a097b4a31752315b93523 100644
+--- a/packages/conduit_core/test/navigation/route_redirect_test.dart
++++ b/packages/conduit_core/test/navigation/route_redirect_test.dart
+@@ -106,6 +106,12 @@ Future<AsyncValue<ServerConfig?>> _refreshing(ServerConfig server) async {
+ }
+ 
+ void main() {
++  test('Cline connection setup remains available without an OWUI account', () {
++    check(resolveRouteRedirect(Routes.clineRemote, _reader(
++      activeServer: const AsyncLoading(),
++      auth: AuthNavigationState.needsLogin,
++    ))).isNull();
++  });
+   group('resolveRouteRedirect', () {
+     test('reviewer mode pins the app to chat', () {
+       final read = _reader(reviewerMode: true);
+diff --git a/packages/conduit_core/test/services/api_service_chat_completion_test.dart b/packages/conduit_core/test/services/api_service_chat_completion_test.dart
+index b7bab0f565be2a644ecbf28ebf6854dbebe3e6a7..f6b4bcfea81f77287589ec1aa6f6144ab782b3fc 100644
+--- a/packages/conduit_core/test/services/api_service_chat_completion_test.dart
++++ b/packages/conduit_core/test/services/api_service_chat_completion_test.dart
+@@ -12,6 +12,8 @@ import 'package:conduit_core/services/moa_completion.dart';
+ import 'package:conduit_core/services/openwebui_stream_parser.dart';
+ import 'package:conduit_core/models/server_config.dart';
+ import 'package:conduit_core/services/worker_manager.dart';
++import 'package:conduit_core/services/structured_output.dart';
++import 'package:conduit_core/services/structured_output_renderer.dart';
+ import 'package:dio/dio.dart';
+ import 'package:test/test.dart';
+ 
+@@ -179,6 +181,62 @@ Map<String, dynamic> _legacyChatPayload({
+ }
+ 
+ void main() {
++  test('createConversation keeps raw output and sends canonical content in both shapes', () async {
++    const literal =
++        '<details type="tool_calls"><summary>User example</summary>keep</details>';
++    final raw = <Map<String, dynamic>>[
++      {
++        'type': 'reasoning',
++        'summary': [
++          {'type': 'summary_text', 'text': 'synthetic thought'},
++        ],
++        'status': 'completed',
++      },
++      {
++        'type': 'message',
++        'content': [
++          {'type': 'output_text', 'text': 'Answer'},
++        ],
++      },
++    ];
++    final rendered = renderStructuredOutputBlocks(
++      parseOpenWebUIStructuredOutput(raw),
++    );
++    final adapter = _FakeAdapter.json(
++      _legacyChatPayload(historyMessages: {}, currentId: 'a'),
++    );
++    final api = _buildApiServiceForTest(adapter);
++    final messages = [
++      ChatMessage(
++        id: 'u',
++        role: 'user',
++        content: literal,
++        timestamp: DateTime(2026),
++      ),
++      ChatMessage(
++        id: 'a',
++        role: 'assistant',
++        content: rendered,
++        output: raw,
++        timestamp: DateTime(2026),
++      ),
++    ];
++    await api.createConversation(
++      title: 'Synthetic',
++      messages: messages,
++      model: _model,
++    );
++    final chat = (adapter.lastRequest!.data as Map)['chat'] as Map;
++    final history = chat['history']['messages'] as Map;
++    expect(history['u']['content'], literal);
++    expect(history['a']['content'], 'Answer');
++    expect(history['a']['output'], raw);
++    expect(chat['messages'][1]['content'], 'Answer');
++    expect(chat['messages'][1]['output'], raw);
++    expect(messages[1].content, rendered);
++    api.dio.close(force: true);
++  });
++
+   test(
+     'tool-call resolution sends the 0.11.1 form and normalizes task ids',
+     () async {
+diff --git a/packages/conduit_core/test/sync/pull_sync_test.dart b/packages/conduit_core/test/sync/pull_sync_test.dart
+index d87dea7ca6c99457e70603ab94ffbdf16681ad71..82692584cdc1665367ec373cf01d1f6edba753ba 100644
+--- a/packages/conduit_core/test/sync/pull_sync_test.dart
++++ b/packages/conduit_core/test/sync/pull_sync_test.dart
+@@ -6,9 +6,13 @@ import 'package:conduit_core/database/app_database.dart';
+ import 'package:conduit_core/database/mappers/chat_blob_mapper.dart';
+ import 'package:conduit_core/database/mappers/conversation_assembler.dart'
+     show
++        chatRowsFromDb,
+         kLocalConversationWorkerPayloadThreshold,
+         kLocalConversationWorkerThreshold;
+ import 'package:conduit_core/services/worker_manager.dart';
++import 'package:conduit_core/services/structured_output.dart';
++import 'package:conduit_core/services/structured_output_renderer.dart';
++import 'package:conduit_core/utils/openwebui_message_payload.dart';
+ import 'package:conduit_core/sync/chat_locks.dart';
+ import 'package:conduit_core/sync/id_remapper.dart';
+ import 'package:conduit_core/sync/pull_sync.dart';
+@@ -1346,6 +1350,213 @@ void main() {
+       ]);
+     });
+ 
++    for (final canonicalWire in [false, true]) {
++      test(
++        'heals retained create hash for ${canonicalWire ? 'canonical' : 'legacy'} wire content',
++        () async {
++          const localId = 'local:projection-heal';
++          final raw = <Map<String, dynamic>>[
++            {
++              'type': 'reasoning',
++              'summary': [
++                {'type': 'summary_text', 'text': 'synthetic thought'},
++              ],
++              'status': 'completed',
++            },
++            {
++              'type': 'message',
++              'content': [
++                {'type': 'output_text', 'text': 'Answer'},
++              ],
++            },
++          ];
++          final blob = blobFor('projection');
++          final message = blob['history']['messages']['projection-m2'] as Map;
++          message['content'] = renderStructuredOutputBlocks(
++            parseOpenWebUIStructuredOutput(raw),
++          );
++          message['output'] = raw;
++          final rows = ChatBlobMapper.blobToRows(
++            chatId: localId,
++            blob: blob,
++            title: 'Title projection',
++            createdAt: 100,
++            updatedAt: 200,
++          );
++          final originalHash = createChatContentHash(rows);
++          await db.chatsDao.insertLocalChatWithCreateOp(
++            chat: rows.chat,
++            messages: rows.messages,
++            blobRows: rows,
++            contentHash: originalHash,
++          );
++          final sent = canonicalWire ? projectOpenWebUiChatBlob(blob) : blob;
++          final serverId =
++              server.createChat({...sent, 'id': ''})['id'] as String;
++          final remapper = IdRemapper(db);
++          addTearDown(remapper.dispose);
++          final healing = PullSync(
++            client: client,
++            db: db,
++            locks: locks,
++            remapper: remapper,
++          );
++          expect((await healing.run()).success, isTrue);
++          expect(await db.chatsDao.getChat(localId), isNull);
++          expect(await db.chatsDao.getChat(serverId), isNotNull);
++          expect(await db.select(db.chats).get(), hasLength(1));
++          expect(await db.outboxDao.pendingForChat(serverId), isEmpty);
++          expect(await db.outboxDao.pendingForChat(localId), isEmpty);
++          expect(client.createChatCalls, 0);
++        },
++      );
++    }
++
++    test('projection memo follows a changed queued snapshot hash', () async {
++      const localId = 'local:projection-edit';
++      final raw = <Map<String, dynamic>>[
++        {
++          'type': 'reasoning',
++          'summary': [
++            {'type': 'summary_text', 'text': 'thought'},
++          ],
++          'status': 'completed',
++        },
++        {
++          'type': 'message',
++          'content': [
++            {'type': 'output_text', 'text': 'Answer'},
++          ],
++        },
++      ];
++      final blob = blobFor('projection-edit');
++      final message = blob['history']['messages']['projection-edit-m2'] as Map;
++      message['content'] = renderStructuredOutputBlocks(
++        parseOpenWebUIStructuredOutput(raw),
++      );
++      message['output'] = raw;
++      final rows = ChatBlobMapper.blobToRows(
++        chatId: localId,
++        blob: blob,
++        title: 'Before',
++        createdAt: 100,
++        updatedAt: 200,
++      );
++      await db.chatsDao.insertLocalChatWithCreateOp(
++        chat: rows.chat,
++        messages: rows.messages,
++        blobRows: rows,
++        contentHash: createChatContentHash(rows),
++      );
++      final remapper = IdRemapper(db);
++      addTearDown(remapper.dispose);
++      final healing = PullSync(
++        client: client,
++        db: db,
++        locks: locks,
++        remapper: remapper,
++      );
++      server.seedChat(
++        id: 'srv-unrelated-edit',
++        blob: blobFor('unrelated-edit'),
++        createdAt: 100,
++        updatedAt: 300,
++      );
++      expect((await healing.run()).success, isTrue);
++      expect(await db.chatsDao.getChat(localId), isNotNull);
++
++      (raw.last['content'] as List).first['text'] = 'Edited answer';
++      message['content'] = renderStructuredOutputBlocks(
++        parseOpenWebUIStructuredOutput(raw),
++      );
++      await (db.update(db.messages)
++            ..where((row) => row.chatId.equals(localId))
++            ..where((row) => row.id.equals('projection-edit-m2')))
++          .write(
++            MessagesCompanion(
++              content: Value(message['content'] as String),
++              payload: Value(jsonEncode(message)),
++            ),
++          );
++      final current = chatRowsFromDb(
++        (await db.chatsDao.getChat(localId))!,
++        await db.messagesDao.getForChat(localId),
++      );
++      await (db.update(
++        db.outboxOps,
++      )..where((row) => row.chatId.equals(localId))).write(
++        OutboxOpsCompanion(contentHash: Value(createChatContentHash(current))),
++      );
++      expect(
++        createChatContentHash(current),
++        isNot(createChatContentHash(rows)),
++      );
++      final sent = projectOpenWebUiChatBlob(ChatBlobMapper.rowsToBlob(current));
++      server.tick(400);
++      final serverId = server.createChat({...sent, 'id': ''})['id'] as String;
++      expect((await healing.run()).success, isTrue);
++      expect(await db.chatsDao.getChat(localId), isNull);
++      expect(await db.chatsDao.getChat(serverId), isNotNull);
++      expect(await db.outboxDao.pendingForChat(serverId), isEmpty);
++      expect(client.createChatCalls, 0);
++    });
++
++    test(
++      'projected match cannot claim a different recorded snapshot hash',
++      () async {
++        const localId = 'local:stale-projection';
++        final raw = <Map<String, dynamic>>[
++          {
++            'type': 'reasoning',
++            'summary': [
++              {'type': 'summary_text', 'text': 'synthetic'},
++            ],
++            'status': 'completed',
++          },
++          {
++            'type': 'message',
++            'content': [
++              {'type': 'output_text', 'text': 'Answer'},
++            ],
++          },
++        ];
++        final blob = blobFor('projection-stale');
++        final message =
++            blob['history']['messages']['projection-stale-m2'] as Map;
++        message['content'] = renderStructuredOutputBlocks(
++          parseOpenWebUIStructuredOutput(raw),
++        );
++        message['output'] = raw;
++        final rows = ChatBlobMapper.blobToRows(
++          chatId: localId,
++          blob: blob,
++          title: 'Title projection-stale',
++          createdAt: 100,
++          updatedAt: 200,
++        );
++        await db.chatsDao.insertLocalChatWithCreateOp(
++          chat: rows.chat,
++          messages: rows.messages,
++          blobRows: rows,
++          contentHash: '0' * 64,
++        );
++        server.createChat({...projectOpenWebUiChatBlob(blob), 'id': ''});
++        final remapper = IdRemapper(db);
++        addTearDown(remapper.dispose);
++        final healing = PullSync(
++          client: client,
++          db: db,
++          locks: locks,
++          remapper: remapper,
++        );
++        expect((await healing.run()).success, isTrue);
++        expect(await db.chatsDao.getChat(localId), isNotNull);
++        expect(await db.select(db.chats).get(), hasLength(2));
++        expect(await db.outboxDao.pendingForChat(localId), isNotEmpty);
++        expect(client.createChatCalls, 0);
++      },
++    );
++
+     test('a non-matching content hash does NOT heal (normal merge)', () async {
+       final remapper = IdRemapper(db);
+       addTearDown(remapper.dispose);
+@@ -1580,9 +1791,8 @@ void main() {
+       check(
+         client.chatFetchStarts.where((id) => id == 'unread-elsewhere').length,
+       ).equals(3);
+-      check(
+-        (await db.chatsDao.getChat('unread-elsewhere'))!.lastReadAt,
+-      ).equals(0);
++      check((await db.chatsDao.getChat('unread-elsewhere'))!.lastReadAt)
++          .equals(0);
+     });
+   });
+ 
+diff --git a/packages/conduit_core/test/sync/push_sync_test.dart b/packages/conduit_core/test/sync/push_sync_test.dart
+index 3725a7fe12699a2510bd5199a8797d1102e5f0e0..bd7fa998294312ee349dd08a3f12387df61b85b2 100644
+--- a/packages/conduit_core/test/sync/push_sync_test.dart
++++ b/packages/conduit_core/test/sync/push_sync_test.dart
+@@ -14,6 +14,8 @@ import 'package:drift/native.dart';
+ import 'package:test/test.dart';
+ 
+ import 'package:conduit_core/testing.dart';
++import 'package:conduit_core/services/structured_output.dart';
++import 'package:conduit_core/services/structured_output_renderer.dart';
+ 
+ class FakeSyncClock implements SyncClock {
+   int now = 0;
+@@ -21,6 +23,28 @@ class FakeSyncClock implements SyncClock {
+   int nowEpochSeconds() => now;
+ }
+ 
++class _ProjectionRecordingClient extends FakeSyncApiClient {
++  _ProjectionRecordingClient(super.server);
++  Map<String, dynamic>? sent;
++  @override
++  Future<Map<String, dynamic>> createChat(
++    Map<String, dynamic> blob, {
++    String? folderId,
++  }) {
++    sent = Map<String, dynamic>.from(jsonDecode(jsonEncode(blob)) as Map);
++    return super.createChat(blob, folderId: folderId);
++  }
++
++  @override
++  Future<Map<String, dynamic>?> updateChat(
++    String id,
++    Map<String, dynamic> blob,
++  ) {
++    sent = Map<String, dynamic>.from(jsonDecode(jsonEncode(blob)) as Map);
++    return super.updateChat(id, blob);
++  }
++}
++
+ class _DeleteAfterArchiveToggleClient extends FakeSyncApiClient {
+   _DeleteAfterArchiveToggleClient(super.server);
+ 
+@@ -201,6 +225,100 @@ void main() {
+   });
+ 
+   group('pushCreateChat', () {
++    for (final create in [true, false]) {
++      test('projects only outbound display on ${create ? 'create' : 'update'}', () async {
++        final id = create ? 'local:projection' : 'server-projection';
++        if (!create) {
++          server.seedChat(
++            id: id,
++            blob: {
++              'title': 'Existing',
++              'history': {'messages': <String, dynamic>{}},
++            },
++            createdAt: 100,
++            updatedAt: 150,
++          );
++        }
++        await seedLocalChat(db, id: id, messageCount: 2);
++        final recording = _ProjectionRecordingClient(server);
++        final projectionPush = PushSync(
++          client: recording,
++          db: db,
++          chatLocks: chatLocks,
++          folderLocks: folderLocks,
++          clock: clock,
++          remapper: remapper,
++        );
++        const literal =
++            '<details type="tool_calls"><summary>User example</summary>keep</details>';
++        final raw = <Map<String, dynamic>>[
++          {
++            'type': 'reasoning',
++            'summary': [
++              {'type': 'summary_text', 'text': 'synthetic thought'},
++            ],
++            'status': 'completed',
++          },
++          {
++            'type': 'message',
++            'content': [
++              {'type': 'output_text', 'text': 'Answer'},
++            ],
++          },
++        ];
++        final rendered = renderStructuredOutputBlocks(
++          parseOpenWebUIStructuredOutput(raw),
++        );
++        for (final row in await db.messagesDao.getForChat(id)) {
++          final content = row.role == 'assistant' ? rendered : literal;
++          final payload =
++              Map<String, dynamic>.from(jsonDecode(row.payload) as Map)
++                ..['content'] = content
++                ..['custom'] = 'retained';
++          if (row.role == 'assistant') {
++            payload['output'] = raw;
++            payload['versions'] = [
++              {'content': rendered, 'output': raw},
++            ];
++          }
++          await (db.update(
++            db.messages,
++          )..where((t) => t.id.equals(row.id))).write(
++            MessagesCompanion(
++              content: Value(content),
++              payload: Value(jsonEncode(payload)),
++            ),
++          );
++        }
++        final String serverId;
++        if (create) {
++          serverId = (await projectionPush.pushCreateChat(id))!;
++        } else {
++          await projectionPush.pushUpdateChat(id);
++          serverId = id;
++        }
++        final stored =
++            server.getChatById(serverId)!['chat']['history']['messages'] as Map;
++        expect(stored['$id-m1']['content'], literal);
++        final sent = recording.sent!['history']['messages'] as Map;
++        expect(sent['$id-m2']['content'], 'Answer');
++        expect(sent['$id-m2']['output'], raw);
++        // Stock update_chat_by_id derives display content again when output
++        // changes. Verify client egress separately from that server contract.
++        expect(
++          stored['$id-m2']['content'],
++          create ? 'Answer' : FakeOpenWebUiServer.serializeOutput(raw),
++        );
++        expect(stored['$id-m2']['output'], raw);
++        expect(stored['$id-m2']['versions'][0]['content'], 'Answer');
++        expect(stored['$id-m2']['custom'], 'retained');
++        final local = (await db.messagesDao.getForChat(serverId))
++            .singleWhere((row) => row.role == 'assistant');
++        expect(local.content, rendered);
++        expect(jsonDecode(local.payload)['content'], rendered);
++      });
++    }
++
+     test('creates server chat, remaps local id, clears dirty', () async {
+       const localId = 'local:new';
+       await seedLocalChat(db, id: localId, messageCount: 2);
+diff --git a/packages/conduit_core/test/utils/openwebui_persistence_projection_test.dart b/packages/conduit_core/test/utils/openwebui_persistence_projection_test.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..46114f9ea1147bb39960e79d0b2d90c1c56e4bb9
+--- /dev/null
++++ b/packages/conduit_core/test/utils/openwebui_persistence_projection_test.dart
+@@ -0,0 +1,153 @@
++import 'dart:convert';
++
++import 'package:conduit_core/services/structured_output.dart';
++import 'package:conduit_core/services/structured_output_renderer.dart';
++import 'package:conduit_core/utils/openwebui_message_payload.dart';
++import 'package:test/test.dart';
++
++List<Map<String, dynamic>> output(String answer) => [
++  {
++    'type': 'function_call',
++    'call_id': 'call',
++    'name': 'lookup',
++    'arguments': '{}',
++    'status': 'completed',
++  },
++  {
++    'type': 'function_call_output',
++    'call_id': 'call',
++    'output': 'synthetic result',
++  },
++  {
++    'type': 'message',
++    'content': [
++      {'type': 'output_text', 'text': answer},
++    ],
++  },
++];
++String display(List<Map<String, dynamic>> value) =>
++    renderStructuredOutputBlocks(parseOpenWebUIStructuredOutput(value));
++
++void main() {
++  const literal =
++      '<details type="tool_calls"><summary>Example</summary>literal</details>';
++  const answer = 'Answer.\n```html\n$literal\n```\n\n$literal';
++
++  test('verified display projects to exact source text including code and literal HTML', () {
++    final raw = output(answer);
++    final rendered = display(raw);
++    expect(rendered, isNot(answer));
++    expect(projectOpenWebUiContent('assistant', rendered, raw), answer);
++  });
++
++  test(
++    'user text is never projected even when it equals a display projection',
++    () {
++      final raw = output(answer);
++      expect(projectOpenWebUiContent('user', display(raw), raw), display(raw));
++      expect(projectOpenWebUiContent('user', literal, null), literal);
++    },
++  );
++
++  test(
++    'missing output and mismatched partial streaming text stay verbatim',
++    () {
++      final raw = output(answer);
++      final partial = '${display(raw)}\nnew unfinished suffix';
++      expect(projectOpenWebUiContent('assistant', partial, raw), partial);
++      expect(projectOpenWebUiContent('assistant', literal, null), literal);
++      expect(projectOpenWebUiContent('assistant', literal, []), literal);
++    },
++  );
++
++  test('source-owned semantic HTML without generated sections is retained', () {
++    final raw = [
++      {
++        'type': 'message',
++        'content': [
++          {'type': 'output_text', 'text': literal},
++        ],
++      },
++    ];
++    final rendered = display(raw);
++    expect(projectOpenWebUiContent('assistant', rendered, raw), rendered);
++  });
++
++  test('whole blob projection preserves output, branches, versions, fields and input', () {
++    final raw = output(answer);
++    final message = {
++      'id': 'a',
++      'role': 'assistant',
++      'content': display(raw),
++      'output': raw,
++      'versions': [
++        {'content': display(raw), 'output': raw, 'custom': 7},
++      ],
++      'unknown': {'keep': true},
++    };
++    final user = {
++      'id': 'u',
++      'role': 'user',
++      'content': literal,
++      'versions': [
++        {'content': literal},
++      ],
++      'output': raw,
++    };
++    final blob = <String, dynamic>{
++      'history': {
++        'currentId': 'a',
++        'messages': {'a': message, 'u': user},
++        'unknown': 8,
++      },
++      'messages': [user, message],
++      'params': {'temperature': 0.7},
++      'acl': {'keep': true},
++      'custom': 9,
++    };
++    final before = jsonEncode(blob);
++    final projected = projectOpenWebUiChatBlob(blob);
++    final history = projected['history']['messages'] as Map;
++    expect(history['a']['content'], answer);
++    expect(history['a']['versions'][0]['content'], answer);
++    expect(history['a']['output'], raw);
++    expect(history['a']['unknown'], {'keep': true});
++    expect(history['u'], user);
++    expect(projected['params'], blob['params']);
++    expect(projected['acl'], blob['acl']);
++    expect((projected['messages'] as List)[1]['content'], answer);
++    expect(jsonEncode(blob), before);
++    expect(projectOpenWebUiChatBlob(projected), projected);
++  });
++
++  test('malformed and multimodal content shapes remain untouched', () {
++    final blob = <String, dynamic>{
++      'history': 'legacy',
++      'messages': [
++        null,
++        7,
++        {
++          'role': 'assistant',
++          'content': [
++            {'type': 'text', 'text': literal},
++          ],
++          'output': output(answer),
++        },
++      ],
++    };
++    expect(projectOpenWebUiChatBlob(blob), blob);
++  });
++
++  test('tool-only reply keeps protocol history while dropping only generated display', () {
++    final raw = output('')..removeLast();
++    final blob = <String, dynamic>{
++      'messages': [
++        {'role': 'assistant', 'content': display(raw), 'output': raw},
++      ],
++    };
++    final projected = projectOpenWebUiChatBlob(blob);
++    expect(projected['messages'][0]['content'], '');
++    expect(projected['messages'][0]['output'], raw);
++    expect(blob['messages'][0]['content'], isNotEmpty);
++  });
++}
+diff --git a/packages/conduit_core/test/utils/server_version_compat_test.dart b/packages/conduit_core/test/utils/server_version_compat_test.dart
+index 24a6c7ade86c73e2de4f1ab4279d5ec474eb2057..992cbd04adf2a21bfce0b938928c13271bcd0435 100644
+--- a/packages/conduit_core/test/utils/server_version_compat_test.dart
++++ b/packages/conduit_core/test/utils/server_version_compat_test.dart
+@@ -6,7 +6,7 @@ void main() {
+   group('ServerVersionCompat.isAtLeast', () {
+     test('compares against the minimum', () {
+       check(ServerVersionCompat.isAtLeast('0.11.0', '0.11.0')).isTrue();
+-      check(ServerVersionCompat.isAtLeast('v0.12.3', '0.11.0')).isTrue();
++      check(ServerVersionCompat.isAtLeast('v0.12.4', '0.11.0')).isTrue();
+       check(ServerVersionCompat.isAtLeast('0.10.9', '0.11.0')).isFalse();
+     });
+ 
+diff --git a/remote/session_model.test.ts b/remote/session_model.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..b0a70109616730103473f33c795762dc1f404da9
+--- /dev/null
++++ b/remote/session_model.test.ts
+@@ -0,0 +1,30 @@
++import {test,expect} from "bun:test";
++import {changeSessionModel} from "./session_model";
++function fixture(){
++ const session:any={provider:"local",model:"old",status:"completed",workspaceRoot:"kept",metadata:{}};
++ const calls:any[]=[];
++ const ctx={cline:{get:async()=>session,updateSessionConnection:async(id:any,patch:any)=>{calls.push([id,patch]);session.model=patch.modelId;}}};
++ const peer={selectedSessionId:"chosen",sending:false};
++ const deps={models:async()=>({models:[{id:"new",operation:"language"}]}),settings:{getProviderConfig:()=>({})}};
++ return {ctx,peer,deps,calls,session};
++}
++test("model update retains session, workspace and history and never sends",async()=>{
++ const f=fixture();const result=await changeSessionModel(f.ctx,f.peer,{sessionId:"chosen",provider:"local",model:"new"},f.deps);
++ expect(result).toEqual({sessionId:"chosen",provider:"local",model:"new"});
++ expect(f.calls).toEqual([["chosen",{modelId:"new"}]]);expect(f.session.workspaceRoot).toBe("kept");
++});
++for(const invalid of [{sessionId:"other",provider:"local",model:"new"},{sessionId:"chosen",provider:"other",model:"new"},{sessionId:"chosen",provider:"local",model:"unknown"}]){
++ test("rejects unselected session, provider or unlisted model "+JSON.stringify(invalid),async()=>{const f=fixture();await expect(changeSessionModel(f.ctx,f.peer,invalid,f.deps)).rejects.toThrow();expect(f.calls).toHaveLength(0);});
++}
++test("running turn cannot change model",async()=>{const f=fixture();f.peer.sending=true;await expect(changeSessionModel(f.ctx,f.peer,{sessionId:"chosen",provider:"local",model:"new"},f.deps)).rejects.toThrow();expect(f.calls).toHaveLength(0);});
++
++test("dormant session retains identity and history without a prompt",async()=>{
++ const f:any=fixture(); const messages=[{role:"user",content:"kept"}]; let live=false; let resumed:any;
++ f.ctx.cline.updateSessionConnection=async(_id:any,patch:any)=>{if(!live)throw new Error("session not found: chosen");f.session.model=patch.modelId;};
++ f.ctx.cline.readMessages=async()=>messages;
++ f.ctx.cline.start=async(input:any)=>{resumed=input;live=true;return {sessionId:"chosen"};};
++ f.deps.resume=()=>({config:{cwd:"kept"},initialMessages:messages});
++ await changeSessionModel(f.ctx,f.peer,{sessionId:"chosen",provider:"local",model:"new"},f.deps);
++ expect(resumed.config.sessionId).toBe("chosen"); expect(resumed.prompt).toBeUndefined();
++ expect(resumed.initialMessages).toEqual(messages); expect(resumed.toolPolicies["*"].autoApprove).toBe(false);
++});
+diff --git a/remote/test_cline_gateway.py b/remote/test_cline_gateway.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..172e117e583c3521cf689b66dc3baf67e564729f
+--- /dev/null
++++ b/remote/test_cline_gateway.py
+@@ -0,0 +1,142 @@
++import asyncio
++import json
++import hashlib
++import struct
++from pathlib import Path
++import tempfile
++import unittest
++from unittest.mock import patch
++
++import asyncssh
++import cline_gateway as gateway
++
++
++class GatewayTests(unittest.IsolatedAsyncioTestCase):
++    def test_adapter_uses_installed_cli_for_hub_startup(self):
++        config = {'workspace_root': 'fixture-workspace', 'cline_config_dir': 'fixture-profile'}
++        with patch.object(gateway.subprocess, 'run') as run:
++            run.return_value.returncode = 0
++            gateway.ensure_adapter_hub('fixture-cli', config, {'CLINE_DIR': 'fixture-profile'}, 0)
++            self.assertEqual(run.call_args.args[0], ['fixture-cli', 'hub', 'ensure', '--cwd', 'fixture-workspace'])
++            self.assertEqual(run.call_args.kwargs['env']['CLINE_DIR'], 'fixture-profile')
++            self.assertNotIn('shell', run.call_args.kwargs)
++            run.return_value.returncode = 1
++            with self.assertRaises(RuntimeError):
++                gateway.ensure_adapter_hub('fixture-cli', config, {}, 0)
++
++    async def asyncSetUp(self):
++        self.temp=tempfile.TemporaryDirectory()
++        root=Path(self.temp.name)
++        self.config=gateway.prepare(root,root/'cli',root,root/'profile')
++        async def echo(reader,writer):
++            try:
++                writer.write(await reader.read(128));await writer.drain()
++            finally:writer.close();await writer.wait_closed()
++        self.target=await asyncio.start_server(echo,'127.0.0.1',0)
++        self.config['dashboard_port']=self.target.sockets[0].getsockname()[1]
++        # A test-only ephemeral listen port; production config requires >=1024.
++        probe=await asyncio.start_server(echo,'127.0.0.1',0)
++        self.config['ssh_port']=probe.sockets[0].getsockname()[1]
++        probe.close();await probe.wait_closed()
++        self.server=await gateway.listen(self.config)
++        self.known=asyncssh.import_public_key(asyncssh.read_private_key(self.config['host_key_file']).export_public_key())
++
++    async def asyncTearDown(self):
++        self.server.close();await self.server.wait_closed()
++        self.target.close();await self.target.wait_closed();self.temp.cleanup()
++
++    async def connect(self,password=None):
++        return await asyncssh.connect('127.0.0.1',self.config['ssh_port'],username='cline',
++            password=password or self.config['password'],known_hosts=([self.known],[],[]))
++
++    async def test_authenticated_forward_preserves_bytes(self):
++        async with await self.connect() as connection:
++            reader,writer=await connection.open_connection('127.0.0.1',self.config['dashboard_port'])
++            writer.write(b'synthetic-stream');await writer.drain()
++            self.assertEqual(await reader.read(),b'synthetic-stream')
++            writer.close();await writer.wait_closed()
++
++    async def test_wrong_secret_is_rejected(self):
++        with self.assertRaises(asyncssh.PermissionDenied):await self.connect('wrong-synthetic-secret')
++
++    async def test_shell_sftp_other_ports_and_reverse_forward_are_rejected(self):
++        async with await self.connect() as connection:
++            for host,port in [('127.0.0.1',1),('example.com',443)]:
++                with self.assertRaises(asyncssh.ChannelOpenError):await connection.open_connection(host,port)
++            self.assertEqual((await connection.run('echo denied')).exit_status,126)
++            with self.assertRaises(asyncssh.ChannelOpenError):await connection.start_sftp_client()
++            with self.assertRaises(asyncssh.ChannelListenError):await connection.forward_remote_port('127.0.0.1',0,'127.0.0.1',80)
++
++    async def upload(self, connection, name, content, *, sha=None, extra=b''):
++        process=await connection.create_process('conduit-upload-v1',encoding=None)
++        header=json.dumps({'name':name,'size':len(content),'sha256':sha or hashlib.sha256(content).hexdigest()}).encode()
++        process.stdin.write(struct.pack('>I',len(header))+header)
++        first=json.loads(await process.stdout.readline())
++        if first['status']=='ready':
++            process.stdin.write(content+extra);process.stdin.write_eof()
++            first=json.loads(await process.stdout.readline())
++        await process.wait()
++        return first
++
++    async def test_document_upload_is_verified_and_deduplicated(self):
++        async with await self.connect() as connection:
++            content='Пример документа'.encode()
++            first=await self.upload(connection,'example.txt',content)
++            self.assertEqual(first['status'],'stored')
++            self.assertEqual(Path(first['path']).read_bytes(),content)
++            again=await self.upload(connection,'other-name.txt',content)
++            self.assertEqual(again['path'],first['path'])
++            self.assertEqual(len(list(Path(first['path']).parent.iterdir())),1)
++
++    async def test_upload_rejects_paths_executables_and_digest_mismatch(self):
++        async with await self.connect() as connection:
++            for name in ('../escape.txt','C:\\escape.txt','run.exe','file.ps1'):
++                self.assertEqual((await self.upload(connection,name,b'synthetic'))['status'],'rejected')
++            self.assertEqual((await self.upload(connection,'ok.txt',b'synthetic',sha='0'*64))['status'],'rejected')
++        self.assertEqual(list((Path(self.temp.name)/'user-uploads').glob('*')),[])
++
++    async def test_upload_rejects_extra_bytes_and_cleans_partial(self):
++        async with await self.connect() as connection:
++            self.assertEqual((await self.upload(connection,'ok.pdf',b'synthetic',extra=b'x'))['status'],'rejected')
++        self.assertEqual(list((Path(self.temp.name)/'user-uploads').glob('*')),[])
++
++    async def test_upload_rejects_oversized_declared_content_before_transfer(self):
++        async with await self.connect() as connection:
++            async with connection.create_process('conduit-upload-v1',encoding=None) as process:
++                header=json.dumps({'name':'ok.pdf','size':64*1024*1024+1,'sha256':'0'*64}).encode()
++                process.stdin.write(struct.pack('>I',len(header))+header)
++                self.assertEqual(json.loads(await process.stdout.readline())['status'],'rejected')
++
++    async def test_preparation_reuses_identity_and_profile_matches_pin(self):
++        root=Path(self.temp.name)
++        again=gateway.prepare(root,root/'different-cli',root,root/'profile')
++        self.assertEqual(again['password'],self.config['password'])
++        profile=gateway.client_profile(again,'host.example')
++        self.assertEqual(profile['hostKeyFingerprint'],self.known.get_fingerprint('sha256'))
++        self.assertNotEqual(profile['roomSecret'],profile['sshPassword'])
++
++    def test_auth_rate_and_memory_are_bounded(self):
++        admission=gateway.Admission()
++        for _ in range(6):admission.failed('synthetic')
++        self.assertTrue(admission.blocked('synthetic'))
++        for i in range(2000):admission.failed(str(i))
++        self.assertLessEqual(len(admission.failures),1024)
++
++    def test_nat_external_port_does_not_change_the_local_listener(self):
++        local=self.config['ssh_port']
++        self.config['public_ssh_port']=49123
++        gateway.validate_config(self.config)
++        self.assertEqual(gateway.client_profile(self.config,'host.example')['sshPort'],49123)
++        self.assertEqual(self.config['ssh_port'],local)
++
++    def test_idle_logins_per_source_are_bounded(self):
++        admission=gateway.Admission()
++        self.assertTrue(admission.enter('synthetic-peer'))
++        self.assertTrue(admission.enter('synthetic-peer'))
++        self.assertFalse(admission.enter('synthetic-peer'))
++        self.assertTrue(admission.enter('other-peer'))
++        admission.end_pending('synthetic-peer')
++        self.assertTrue(admission.enter('synthetic-peer'))
++
++
++if __name__=='__main__':unittest.main()
+diff --git a/test/features/auth/views/backend_onboarding_adaptive_test.dart b/test/features/auth/views/backend_onboarding_adaptive_test.dart
+index d3007d82b5a6d9c72aa6005ad7241acb8c13c058..4561e76279155fb5eadb1c7c92e9d70252de3415 100644
+--- a/test/features/auth/views/backend_onboarding_adaptive_test.dart
++++ b/test/features/auth/views/backend_onboarding_adaptive_test.dart
+@@ -6,6 +6,7 @@ import 'package:conduit_core/models/server_config.dart';
+ import 'package:conduit_core/features/direct_connections/services/apple_pcc_host.dart';
+ import 'package:conduit/shared/services/navigation_service.dart';
+ import 'package:conduit/features/auth/views/backend_chooser_page.dart';
++import 'package:conduit/features/cline/views/cline_remote_page.dart';
+ import 'package:conduit_core/features/direct_connections/models/direct_connection_profile.dart';
+ import 'package:conduit/shared/widgets/utility_components.dart';
+ import 'package:conduit_core/features/hermes/providers/hermes_providers.dart';
+@@ -39,6 +40,37 @@ PlatformPccStatus _appleStatus(PlatformPccAvailability availability) =>
+     );
+ 
+ void main() {
++  testWidgets(
++    'fresh Android chooser opens Russian Cline SSH without another backend',
++    (tester) async {
++      usePhoneViewport(tester);
++      await initializeBackendOnboardingStorage();
++      final harness = BackendOnboardingHarness(
++        platform: TargetPlatform.android,
++      );
++      addTearDown(harness.dispose);
++      await tester.pumpWidget(
++        harness.build(
++          initialLocation: Routes.backendChooser,
++          locale: const Locale('ru'),
++        ),
++      );
++      await tester.pumpAndSettle();
++      final entry = find.byKey(const Key('choose-cline-ssh'));
++      await tester.ensureVisible(entry);
++      expect(find.text('Cline через SSH'), findsOneWidget);
++      await tester.tap(entry);
++      await tester.pumpAndSettle();
++      expect(harness.router.canPop(), isTrue);
++      expect(find.byType(ClineRemotePage), findsOneWidget);
++      expect(find.byType(BackendChooserPage), findsNothing);
++      expect(tester.takeException(), isNull);
++      await tester.binding.handlePopRoute();
++      await tester.pumpAndSettle();
++      expect(find.byType(BackendChooserPage), findsOneWidget);
++      await harness.unmount(tester);
++    },
++  );
+   testWidgets('backend chooser groups available backends with clear copy', (
+     tester,
+   ) async {
+@@ -266,6 +298,8 @@ void main() {
+       await tester.pumpAndSettle();
+       expect(tester.takeException(), isNull);
+ 
++      await tester.ensureVisible(find.text('Connect directly'));
++      await tester.pumpAndSettle();
+       await tester.tap(find.text('Connect directly'));
+       await tester.pumpAndSettle();
+ 
+@@ -337,6 +371,8 @@ void main() {
+       );
+       await tester.pumpAndSettle();
+ 
++      await tester.ensureVisible(find.text('Connect directly'));
++      await tester.pumpAndSettle();
+       await tester.tap(find.text('Connect directly'));
+       await tester.pumpAndSettle();
+ 
+diff --git a/test/features/auth/views/support/adaptive_auth_harness.dart b/test/features/auth/views/support/adaptive_auth_harness.dart
+index 83c383f1554ecf80530e951ae55c1ab6ff809175..cdb12062d6fc838fbd14e279c5986acf26d53e1c 100644
+--- a/test/features/auth/views/support/adaptive_auth_harness.dart
++++ b/test/features/auth/views/support/adaptive_auth_harness.dart
+@@ -10,6 +10,7 @@ import 'package:conduit_core/services/api_service.dart';
+ import 'package:conduit_core/services/optimized_storage_service.dart';
+ import 'package:conduit/features/auth/views/authentication_page.dart';
+ import 'package:conduit/features/auth/views/backend_chooser_page.dart';
++import 'package:conduit/features/cline/views/cline_remote_page.dart';
+ import 'package:conduit/features/auth/views/server_connection_page.dart';
+ import 'package:conduit/features/direct_connections/views/direct_connection_editor_page.dart';
+ import 'package:conduit_core/features/direct_connections/controllers/direct_connection_editor_draft.dart';
+@@ -59,9 +60,8 @@ class AdaptiveAuthHarness {
+     when(() => _storage.saveLocalUserAvatar(null)).thenAnswer((_) async {});
+     when(() => _storage.getReviewerMode()).thenAnswer((_) async => false);
+     if (savedServersError case final error?) {
+-      when(
+-        () => _storage.getOpenWebUiRegistryStrict(),
+-      ).thenAnswer((_) async => throw error);
++      when(() => _storage.getOpenWebUiRegistryStrict())
++          .thenAnswer((_) async => throw error);
+     }
+     if (authActions != null) {
+       // A sign-in attempt first saves the server it was opened for.
+@@ -285,7 +285,7 @@ PlatformPccStatus _unavailableAppleStatus() => PlatformPccStatus(
+ );
+ 
+ class BackendOnboardingHarness {
+-  BackendOnboardingHarness() {
++  BackendOnboardingHarness({this.platform = TargetPlatform.iOS}) {
+     router = GoRouter(
+       routes: [
+         GoRoute(
+@@ -299,6 +299,11 @@ class BackendOnboardingHarness {
+           builder: (_, state) =>
+               HermesSettingsPage(isOnboarding: state.extra == true),
+         ),
++        GoRoute(
++          path: Routes.clineRemote,
++          name: RouteNames.clineRemote,
++          builder: (_, _) => const ClineRemotePage(),
++        ),
+         GoRoute(
+           path: Routes.directConnections,
+           name: RouteNames.directConnections,
+@@ -325,10 +330,11 @@ class BackendOnboardingHarness {
+   }
+ 
+   late final GoRouter router;
++  final TargetPlatform platform;
+   bool _disposed = false;
+ 
+-  Widget build({required String initialLocation}) {
+-    PlatformUiCapabilities.debugPlatformOverride = TargetPlatform.iOS;
++  Widget build({required String initialLocation, Locale? locale}) {
++    PlatformUiCapabilities.debugPlatformOverride = platform;
+     router.go(initialLocation);
+     return ProviderScope(
+       overrides: [
+@@ -347,7 +353,8 @@ class BackendOnboardingHarness {
+         ),
+       ],
+       child: MaterialApp.router(
+-        theme: ThemeData(platform: TargetPlatform.iOS),
++        theme: ThemeData(platform: platform),
++        locale: locale,
+         localizationsDelegates: conduitLocalizationsDelegates,
+         supportedLocales: AppLocalizations.supportedLocales,
+         routerConfig: router,
+diff --git a/test/features/chat/voice_mode/chat_voice_mode_overlay_test.dart b/test/features/chat/voice_mode/chat_voice_mode_overlay_test.dart
+index 0076ce16626bc00e47033b976d467b10bbe26113..cdc5c090bf2983494ad122a1a8ea1a6399b0a448 100644
+--- a/test/features/chat/voice_mode/chat_voice_mode_overlay_test.dart
++++ b/test/features/chat/voice_mode/chat_voice_mode_overlay_test.dart
+@@ -1,5 +1,6 @@
+ import 'package:conduit/features/chat/voice_mode/chat_voice_mode_overlay.dart';
+ import 'package:conduit/features/chat/voice_mode/chat_voice_mode_controller.dart';
++import 'package:conduit/features/chat/voice_mode/voice_avatar_binding.dart';
+ import 'package:conduit/l10n/app_localizations.dart';
+ import 'package:conduit/l10n/conduit_localizations.dart';
+ import 'package:conduit/shared/theme/app_theme.dart';
+@@ -7,8 +8,72 @@ import 'package:conduit/shared/theme/tweakcn_themes.dart';
+ import 'package:material_ui/material_ui.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
++import 'package:conduit_core/models/model.dart';
++import 'package:conduit_core/providers/app_providers.dart';
+ 
+ void main() {
++  testWidgets(
++    'avatar panel uses available height and compacts for the keyboard',
++    (tester) async {
++      tester.view.physicalSize = const Size(402, 874);
++      tester.view.devicePixelRatio = 1;
++      addTearDown(tester.view.resetPhysicalSize);
++      addTearDown(tester.view.resetDevicePixelRatio);
++      final model = Model.fromJson({
++        'id': 'fixture',
++        'name': 'Fixture',
++        'meta': {
++          'voice_avatar': {'file_id': '97abe420-cbc2-4f30-a00c-7940119d7d4f'},
++        },
++      });
++      final container = ProviderContainer(
++        overrides: [
++          selectedModelProvider.overrideWithValue(model),
++          apiServiceProvider.overrideWithValue(null),
++          voiceAvatarBindingProvider.overrideWith(
++            (ref) => Stream.value((
++              fileId: '97abe420-cbc2-4f30-a00c-7940119d7d4f',
++              revision: 'fixture',
++            )),
++          ),
++          chatVoiceModeControllerProvider.overrideWith(
++            () => _TestVoiceModeController(
++              const ChatVoiceModeSnapshot(phase: ChatVoiceModePhase.listening),
++            ),
++          ),
++        ],
++      );
++      addTearDown(container.dispose);
++      await tester.pumpWidget(_buildActiveHarness(container));
++      await tester.pumpAndSettle();
++      expect(
++        tester
++            .getSize(find.byKey(const ValueKey('voice-overlay-expanded')))
++            .height,
++        inInclusiveRange(360, 560),
++      );
++      expect(tester.takeException(), isNull);
++      final controller = container.read(
++        chatVoiceModeControllerProvider.notifier,
++      ) as _TestVoiceModeController;
++      await tester.tap(find.byIcon(Icons.call_end_rounded));
++      await tester.pump();
++      expect(controller.stopCalls, 1);
++      await tester.pumpWidget(_buildActiveHarness(container, keyboard: 600));
++      await tester.pumpAndSettle();
++      expect(
++        find.byKey(const ValueKey('voice-mode-collapsed')),
++        findsOneWidget,
++      );
++      expect(tester.takeException(), isNull);
++    },
++  );
++
++  test('large text requires enough space for avatar and native controls', () {
++    expect(voiceAvatarHasRoom(700, 1), isTrue);
++    expect(voiceAvatarHasRoom(300, 1), isFalse);
++    expect(voiceAvatarHasRoom(500, 2), isFalse);
++  });
+   testWidgets('inactive overlay does not collapse a loose Stack', (
+     tester,
+   ) async {
+@@ -192,6 +257,7 @@ void main() {
+ Widget _buildActiveHarness(
+   ProviderContainer container, {
+   bool disableAnimations = false,
++  double keyboard = 0,
+ }) {
+   return UncontrolledProviderScope(
+     container: container,
+@@ -201,7 +267,11 @@ Widget _buildActiveHarness(
+       supportedLocales: AppLocalizations.supportedLocales,
+       home: Scaffold(
+         body: MediaQuery(
+-          data: MediaQueryData(disableAnimations: disableAnimations),
++          data: MediaQueryData(
++            size: const Size(402, 874),
++            viewInsets: EdgeInsets.only(bottom: keyboard),
++            disableAnimations: disableAnimations,
++          ),
+           child: const SizedBox(
+             width: 402,
+             height: 874,
+@@ -222,6 +292,11 @@ class _TestVoiceModeController extends ChatVoiceModeController {
+   _TestVoiceModeController(this.initialState);
+ 
+   final ChatVoiceModeSnapshot initialState;
++  int stopCalls = 0;
++  @override
++  Future<void> stop() async {
++    stopCalls++;
++  }
+ 
+   @override
+   ChatVoiceModeSnapshot build() => initialState;
+diff --git a/test/features/chat/voice_mode/voice_avatar_binding_test.dart b/test/features/chat/voice_mode/voice_avatar_binding_test.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..fb2b3da2d52583471b0aff7fa9be5a93bff83745
+--- /dev/null
++++ b/test/features/chat/voice_mode/voice_avatar_binding_test.dart
+@@ -0,0 +1,79 @@
++import 'dart:async';
++
++import 'package:conduit/features/chat/voice_mode/voice_avatar_binding.dart';
++import 'package:conduit_core/ports/app_lifecycle.dart';
++import 'package:flutter_test/flutter_test.dart';
++
++class _Lifecycle implements AppLifecyclePort {
++  final events = StreamController<AppLifecyclePhase>.broadcast(sync: true);
++  @override
++  AppLifecyclePhase? current = AppLifecyclePhase.resumed;
++  @override
++  Stream<AppLifecyclePhase> get changes => events.stream;
++  void set(AppLifecyclePhase value) {
++    current = value;
++    events.add(value);
++  }
++}
++
++void main() {
++  test(
++    'fresh model card replaces old avatar and respects explicit removal',
++    () async {
++      final lifecycle = _Lifecycle();
++      var id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
++      var revision = 1;
++      final updates = <VoiceAvatarBinding?>[];
++      final subscription = watchVoiceAvatarBindings(
++        () async => {
++          'updated_at': revision,
++          'meta': {
++            'voice_avatar': id.isEmpty ? null : {'file_id': id},
++          },
++        },
++        lifecycle: lifecycle,
++        interval: const Duration(days: 1),
++      ).listen(updates.add);
++      await Future<void>.delayed(Duration.zero);
++      expect(updates.last?.fileId, id);
++      id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
++      revision++;
++      lifecycle.set(AppLifecyclePhase.resumed);
++      await Future<void>.delayed(Duration.zero);
++      expect(updates.last?.fileId, id);
++      id = '';
++      revision++;
++      lifecycle.set(AppLifecyclePhase.resumed);
++      await Future<void>.delayed(Duration.zero);
++      expect(updates.last, isNull);
++      await subscription.cancel();
++      await lifecycle.events.close();
++    },
++  );
++
++  test(
++    'background pauses metadata checks and cancellation stops polling',
++    () async {
++      final lifecycle = _Lifecycle()..set(AppLifecyclePhase.paused);
++      var calls = 0;
++      final subscription = watchVoiceAvatarBindings(
++        () async {
++          calls++;
++          return {};
++        },
++        lifecycle: lifecycle,
++        interval: const Duration(milliseconds: 5),
++      ).listen((_) {});
++      await Future<void>.delayed(const Duration(milliseconds: 15));
++      expect(calls, 0);
++      lifecycle.set(AppLifecyclePhase.resumed);
++      await Future<void>.delayed(Duration.zero);
++      expect(calls, 1);
++      await subscription.cancel();
++      final stoppedAt = calls;
++      await Future<void>.delayed(const Duration(milliseconds: 15));
++      expect(calls, stoppedAt);
++      await lifecycle.events.close();
++    },
++  );
++}
+diff --git a/test/features/chat/voice_mode/voice_avatar_cache_test.dart b/test/features/chat/voice_mode/voice_avatar_cache_test.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..67fedf8061f2bf1b3120db33a26b8c43ab07f219
+--- /dev/null
++++ b/test/features/chat/voice_mode/voice_avatar_cache_test.dart
+@@ -0,0 +1,116 @@
++import 'dart:convert';
++import 'dart:io';
++import 'dart:typed_data';
++
++import 'package:crypto/crypto.dart';
++
++import 'package:conduit/features/chat/voice_mode/voice_avatar_cache.dart';
++import 'package:flutter_test/flutter_test.dart';
++
++void main() {
++  late Directory directory;
++  late VoiceAvatarCache cache;
++  late String data;
++  setUp(() async {
++    directory = await Directory.systemTemp.createTemp('voice-avatar-cache-');
++    cache = VoiceAvatarCache(directory: () async => directory);
++    final bytes = Uint8List(20)..setAll(0, [0x67, 0x6c, 0x54, 0x46]);
++    ByteData.sublistView(bytes).setUint32(8, bytes.length, Endian.little);
++    data = base64Encode(bytes);
++  });
++  tearDown(() => directory.delete(recursive: true));
++
++  test(
++    'same avatar survives cache recreation; server/account/file isolate it',
++    () async {
++      var downloads = 0;
++      Future<String> download() async {
++        downloads++;
++        return data;
++      }
++
++      Future<String> load(
++        VoiceAvatarCache c,
++        String server,
++        String user,
++        String file,
++      ) => c.load(
++        server: server,
++        userId: user,
++        fileId: file,
++        download: download,
++      );
++      expect(await load(cache, 'a', 'u', 'one'), data);
++      cache = VoiceAvatarCache(directory: () async => directory);
++      expect(await load(cache, 'a', 'u', 'one'), data);
++      expect(downloads, 1);
++      await load(cache, 'b', 'u', 'one');
++      await load(cache, 'a', 'other', 'one');
++      await load(cache, 'a', 'u', 'two');
++      expect(downloads, 4);
++      final files = await directory
++          .list(recursive: true)
++          .where((f) => f is File)
++          .toList();
++      expect(files.length, 4);
++    },
++  );
++  test(
++    'changed server hash redownloads the same file ID exactly once',
++    () async {
++      var downloads = 0;
++      var body = data;
++      Future<String> load() => cache.load(
++        server: 'a',
++        userId: 'u',
++        fileId: 'same',
++        expectedSha256: sha256.convert(base64Decode(body)).toString(),
++        download: () async {
++          downloads++;
++          return body;
++        },
++      );
++      await load();
++      final changed = base64Decode(data);
++      changed[changed.length - 1] ^= 1;
++      body = base64Encode(changed);
++      expect(await load(), body);
++      await load();
++      expect(downloads, 2);
++    },
++  );
++
++  test(
++    'corrupt body is fetched again; invalid download is not stored',
++    () async {
++      var downloads = 0;
++      Future<String> load() => cache.load(
++        server: 'a',
++        userId: 'u',
++        fileId: 'one',
++        download: () async {
++          downloads++;
++          return data;
++        },
++      );
++      await load();
++      final file =
++          (await directory.list(recursive: true).where((f) => f is File).first)
++              as File;
++      final bytes = await file.readAsBytes();
++      bytes[bytes.length - 1] ^= 1;
++      await file.writeAsBytes(bytes);
++      expect(await load(), data);
++      expect(downloads, 2);
++      await expectLater(
++        cache.load(
++          server: 'a',
++          userId: 'u',
++          fileId: 'bad',
++          download: () async => base64Encode([1, 2, 3]),
++        ),
++        throwsFormatException,
++      );
++    },
++  );
++}
+diff --git a/test/features/chat/voice_mode/voice_avatar_interaction_test.dart b/test/features/chat/voice_mode/voice_avatar_interaction_test.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..341c54c96a18fcf10b7d7afe50feb7a23c6582fb
+--- /dev/null
++++ b/test/features/chat/voice_mode/voice_avatar_interaction_test.dart
+@@ -0,0 +1,40 @@
++import 'package:conduit/features/chat/voice_mode/voice_avatar_interaction.dart';
++import 'package:conduit/l10n/app_localizations.dart';
++import 'package:conduit/l10n/conduit_localizations.dart';
++import 'package:conduit/shared/theme/app_theme.dart';
++import 'package:conduit/shared/theme/tweakcn_themes.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:material_ui/material_ui.dart';
++
++void main() {
++  testWidgets('camera controls and drag do not intercept the call-end button', (tester) async {
++    final commands=<Map<String,Object>>[];
++    var ended=false;
++    await tester.pumpWidget(MaterialApp(
++      theme:AppTheme.dark(TweakcnThemes.t3Chat), locale:const Locale('ru'),
++      localizationsDelegates:conduitLocalizationsDelegates,
++      supportedLocales:AppLocalizations.supportedLocales,
++      home:Scaffold(body:Column(children:[
++        SizedBox(width:320,height:320,child:VoiceAvatarInteraction(
++          enabled:true,onView:commands.add,child:const IgnorePointer(child:ColoredBox(color:Colors.black)))),
++        TextButton(key:const Key('call-end'),onPressed:()=>ended=true,child:const Text('Завершить')),
++      ])),
++    ));
++    expect(find.byIcon(Icons.zoom_in), findsNothing);
++    expect(find.byIcon(Icons.zoom_out), findsNothing);
++    await tester.tap(find.byKey(const Key('avatar-reset-view')));
++    expect(commands.single, {'reset':true});
++    final surface=find.byType(VoiceAvatarInteraction);
++    final origin=tester.getTopLeft(surface);
++    await tester.dragFrom(origin+const Offset(70,150),const Offset(80,30));
++    expect(commands.any((c)=>(c['dx'] as num? ?? 0)!=0),isTrue);
++    final before=commands.length;
++    await tester.tap(find.byKey(const Key('call-end')));
++    expect(ended,isTrue); expect(commands.length,before);
++    expect(find.byTooltip('Сбросить ракурс'),findsOneWidget);
++    expect(tester.takeException(),isNull);
++    await tester.pump(const Duration(milliseconds:350));
++    await tester.pumpWidget(const SizedBox.shrink());
++    await tester.pump();
++  });
++}
+diff --git a/test/features/chat/voice_mode/voice_avatar_policy_test.dart b/test/features/chat/voice_mode/voice_avatar_policy_test.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..b28ed1776dfa611023a47d797baaaa862980873a
+--- /dev/null
++++ b/test/features/chat/voice_mode/voice_avatar_policy_test.dart
+@@ -0,0 +1,132 @@
++import 'package:conduit/features/chat/voice_mode/voice_avatar_policy.dart';
++import 'package:conduit/features/chat/voice_mode/voice_avatar_view.dart';
++import 'package:conduit_core/models/model.dart';
++import 'package:flutter_test/flutter_test.dart';
++// Exercise the Android implementation already pinned by flutter_inappwebview.
++// ignore: depend_on_referenced_packages
++import 'package:flutter_inappwebview_android/flutter_inappwebview_android.dart';
++
++void main() {
++  TestWidgetsFlutterBinding.ensureInitialized();
++  setUpAll(AndroidInAppWebViewPlatform.registerWith);
++  test('only the bundled main document may be served; resource errors are not fatal', () {
++    final document = Uri.parse(voiceAvatarDocumentUrl);
++    expect(voiceAvatarDocumentAllowed(document, isMainFrame: true), isTrue);
++    expect(voiceAvatarDocumentAllowed(document, isMainFrame: false), isFalse);
++    for (final url in [
++      'https://example.com/',
++      '$voiceAvatarOrigin/key',
++      '$voiceAvatarOrigin/?url=file:///private',
++    ]) {
++      expect(
++        voiceAvatarDocumentAllowed(Uri.parse(url), isMainFrame: true),
++        isFalse,
++      );
++    }
++    expect(
++      voiceAvatarLoadErrorIsFatal(
++        Uri.parse('$voiceAvatarOrigin/favicon.ico'),
++        isMainFrame: false,
++      ),
++      isFalse,
++    );
++    expect(
++      voiceAvatarLoadErrorIsFatal(
++        Uri.parse('blob:$voiceAvatarOrigin/texture'),
++        isMainFrame: false,
++      ),
++      isFalse,
++    );
++    expect(voiceAvatarLoadErrorIsFatal(document, isMainFrame: true), isTrue);
++  });
++  const id = '97abe420-cbc2-4f30-a00c-7940119d7d4f';
++  test('uses the selected model avatar, never a provider URL', () {
++    final model = Model.fromJson({
++      'id': 'test',
++      'name': 'test',
++      'info': {
++        'meta': {
++          'voice_avatar': {'file_id': id},
++        },
++      },
++    });
++    expect(voiceAvatarFileId(model), id);
++    expect(voiceAvatarFileId(null), isNull);
++    expect(
++      voiceAvatarFileId(
++        Model.fromJson({
++          'id': 'test',
++          'meta': {
++            'voice_avatar': {'file_id': 'https://evil.invalid/model.vrm'},
++          },
++        }),
++      ),
++      isNull,
++    );
++    expect(
++      voiceAvatarFileId(
++        Model.fromJson({
++          'id': 'test',
++          'meta': {
++            'voice_avatar': {'file_id': '../private/key'},
++          },
++        }),
++      ),
++      isNull,
++    );
++  });
++  test('only assistant speech opens the mouth; levels are bounded', () {
++    Map<String, Object> signal(bool speaking, int intensity, bool active) =>
++        voiceAvatarSignals(
++          speaking: speaking,
++          intensity: intensity,
++          active: active,
++          reducedMotion: true,
++        );
++    expect(signal(false, 10, true)['level'], 0);
++    expect(signal(true, 10, false)['level'], 0);
++    expect(signal(true, 99, true)['level'], 1);
++    expect(signal(true, -1, true)['level'], 0);
++    expect(signal(true, 5, true)['level'], .5);
++    expect(signal(true, 5, true)['reducedMotion'], isTrue);
++    expect(
++      voiceAvatarSignals(
++        speaking: true,
++        intensity: 0,
++        active: true,
++        reducedMotion: false,
++        outputMetered: false,
++      )['metered'],
++      isFalse,
++    );
++  });
++  test(
++    'viewport cannot access network, files, storage or Native Messaging',
++    () {
++      for (final u in [
++        'https://example.com/model.vrm',
++        'http://127.0.0.1:8080/',
++        'file:///private/key',
++        'content://key',
++        'javascript:alert(1)',
++        'data:text/html,hi',
++      ]) {
++        expect(voiceAvatarResourceAllowed(Uri.parse(u)), isFalse);
++      }
++      expect(
++        voiceAvatarResourceAllowed(Uri.parse('blob:$voiceAvatarOrigin/123')),
++        isTrue,
++      );
++      final s = voiceAvatarWebViewSettings();
++      expect(s.blockNetworkLoads, isTrue);
++      expect(s.webViewAssetLoader?.domain, 'appassets.androidplatform.net');
++      expect(s.webViewAssetLoader?.pathHandlers?.single.path, '/assets/');
++      expect(s.allowFileAccess, isFalse);
++      expect(s.allowContentAccess, isFalse);
++      expect(s.javaScriptBridgeEnabled, isFalse);
++      expect(s.sharedCookiesEnabled, isFalse);
++      expect(s.domStorageEnabled, isFalse);
++      expect(s.geolocationEnabled, isFalse);
++    },
++  );
++}
+diff --git a/test/features/cline/cline_backend_routing_test.dart b/test/features/cline/cline_backend_routing_test.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..81d7911dc4d228c562c79362bd9ddfa86f62041a
+--- /dev/null
++++ b/test/features/cline/cline_backend_routing_test.dart
+@@ -0,0 +1,46 @@
++import 'package:flutter_test/flutter_test.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:riverpod/misc.dart';
++import 'package:conduit_core/features/auth/providers/unified_auth_providers.dart';
++import 'package:conduit_core/features/chat/providers/chat_providers.dart';
++import 'package:conduit_core/features/cline/providers/cline_backend_providers.dart';
++import 'package:conduit_core/navigation/route_redirect.dart';
++import 'package:conduit_core/navigation/routes.dart';
++import 'package:conduit_core/models/server_config.dart';
++import 'package:conduit_core/providers/app_providers.dart';
++import 'package:conduit_core/providers/backend_mode_providers.dart';
++
++class _ClinePreferred extends PreferredBackendController {
++  @override
++  PreferredBackend build() => PreferredBackend.cline;
++}
++
++void main() {
++  test('Cline cold start uses native workspace without an OWUI login', () {
++    T read<T>(ProviderListenable<T> p) {
++      if (p == reviewerModeProvider) return false as T;
++      if (p == activeServerProvider)
++        return const AsyncData<ServerConfig?>(null) as T;
++      if (p == authNavigationStateProvider)
++        return AuthNavigationState.needsLogin as T;
++      if (p == preferredBackendProvider) return PreferredBackend.cline as T;
++      throw StateError('Unexpected cross-backend provider read');
++    }
++
++    expect(resolveRouteRedirect(Routes.chat, read), Routes.clineWorkspace);
++    expect(resolveRouteRedirect(Routes.splash, read), Routes.clineWorkspace);
++    expect(resolveRouteRedirect(Routes.clineRemote, read), isNull);
++    expect(resolveRouteRedirect(Routes.accounts, read), isNull);
++  });
++  test('generic sends cannot fall through to an OWUI account while Cline is offline', () async {
++    final container = ProviderContainer(
++      overrides: [preferredBackendProvider.overrideWith(_ClinePreferred.new)],
++    );
++    addTearDown(container.dispose);
++    expect(container.read(clineBackendClientProvider), isNull);
++    await expectLater(
++      sendMessageWithContainer(container, 'Private Cline prompt', null),
++      throwsA(isA<StateError>()),
++    );
++  });
++}
+diff --git a/test/features/cline/cline_native_client_test.dart b/test/features/cline/cline_native_client_test.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..d5e456d29b4fb9d09536a4b02c7cf74c661e14a8
+--- /dev/null
++++ b/test/features/cline/cline_native_client_test.dart
+@@ -0,0 +1,432 @@
++import 'dart:async';
++import 'dart:convert';
++import 'dart:io';
++
++import 'package:flutter_test/flutter_test.dart';
++import 'package:conduit_core/features/cline/models/cline_native_models.dart';
++import 'package:conduit_core/features/cline/services/cline_native_client.dart';
++
++class NativeWireFixture implements ClineWireTransport {
++  final incoming = StreamController<String>.broadcast(sync: true);
++  final List<Map<String, dynamic>> sent = [];
++  bool failWrite = false;
++  void receive(Map<String, dynamic> frame) => incoming.add(jsonEncode(frame));
++  @override
++  Stream<String> get frames => incoming.stream;
++  @override
++  void send(String frame) {
++    if (failWrite) throw StateError('synthetic failed write');
++    sent.add(jsonDecode(frame) as Map<String, dynamic>);
++  }
++
++  @override
++  Future<void> close() async {
++    if (!incoming.isClosed) await incoming.close();
++  }
++}
++
++void makeNativeReady(NativeWireFixture wire) {
++  wire.receive({
++    'type': 'defaults',
++    'defaults': {
++      'provider': 'local',
++      'model': 'test-model',
++      'workspaceRoot': r'C:\Projects',
++    },
++  });
++  wire.receive({
++    'type': 'providers',
++    'providers': [
++      {
++        'id': 'local',
++        'name': 'Local',
++        'enabled': true,
++        'defaultModelId': 'test-model',
++      },
++    ],
++  });
++  wire.receive({
++    'type': 'models',
++    'providerId': 'local',
++    'models': [
++      {
++        'id': 'test-model',
++        'name': 'Test model',
++        'operation': 'language',
++        'inputModalities': ['text', 'image'],
++      },
++    ],
++  });
++  wire.receive({
++    'type': 'sessions',
++    'sessions': [
++      {
++        'sessionId': 'existing',
++        'title': 'Existing project',
++        'workspaceRoot': r'C:\Existing',
++        'status': 'completed',
++        'providerId': 'local',
++        'model': 'test-model',
++      },
++    ],
++  });
++  wire.receive({'type': 'hub_state', 'connected': true});
++}
++
++void main() {
++  late NativeWireFixture wire;
++  late ClineNativeClient client;
++  setUp(() {
++    wire = NativeWireFixture();
++    client = ClineNativeClient(wire, project: r'C:\Projects');
++    client.start();
++    makeNativeReady(wire);
++  });
++  tearDown(() async => client.close());
++  test(
++    'existing model changes only after acknowledged same-session update',
++    () async {
++      client.openSession('existing');
++      wire.receive({
++        'type': 'session_hydrated',
++        'sessionId': 'existing',
++        'providerId': 'local',
++        'modelId': 'test-model',
++        'status': 'completed',
++        'messages': [
++          {'role': 'user', 'content': 'kept'},
++        ],
++      });
++      wire.receive({
++        'type': 'models',
++        'providerId': 'local',
++        'models': [
++          {'id': 'test-model'},
++          {'id': 'second'},
++        ],
++      });
++      final history = client.state.messages;
++      final change = client.selectModel(provider: 'local', model: 'second');
++      expect(client.state.model, 'test-model');
++      final request = wire.sent.last;
++      expect(request['command'], 'conduit_set_session_model');
++      wire.receive({
++        'type': 'desktopCommandResult',
++        'id': request['id'],
++        'ok': true,
++        'result': {
++          'sessionId': 'existing',
++          'provider': 'local',
++          'model': 'second',
++        },
++      });
++      await change;
++      expect(client.state.model, 'second');
++      expect(client.state.sessionId, 'existing');
++      expect(client.state.project, r'C:\Existing');
++      expect(client.state.messages, history);
++      expect(wire.sent.where((f) => f['type'] == 'send'), isEmpty);
++    },
++  );
++
++  test('frames produced by the pinned real Cline event mapper are rendered natively', () {
++    client.sendMessage('Synthetic stream');
++    final frames = jsonDecode(
++      File('.avx1/cline-native-events.json').readAsStringSync(),
++    ) as List;
++    for (final frame in frames)
++      wire.receive(Map<String, dynamic>.from(frame as Map));
++    final message = client.state.messages.last;
++    expect(message.text, 'Before toolAfter tool');
++    expect(message.tools.single.status, 'completed');
++    expect(message.reasoning, 'Synthetic reasoning');
++    expect(message.usage['outputTokens'], 3);
++    expect(client.state.busy, isFalse);
++  });
++  test('closing transport does not wait for a paused UI observer', () async {
++    final observer = client.changes.listen((_) {});
++    observer.pause();
++    await client.close().timeout(const Duration(seconds: 1));
++    await observer.cancel();
++  });
++  test('new chat sends one native frame with explicit approval policy and the exact prompt', () {
++    client.sendMessage('  Точный текст\n/code\n');
++    final frames = wire.sent.where((f) => f['type'] == 'send').toList();
++    expect(frames, hasLength(1));
++    expect(frames.single['prompt'], '  Точный текст\n/code\n');
++    final config = frames.single['config'] as Map;
++    expect(config['workspaceRoot'], r'C:\Projects');
++    expect(config['cwd'], r'C:\Projects');
++    expect(config['provider'], 'local');
++    expect(config['model'], 'test-model');
++    expect(config['autoApproveTools'], isFalse);
++    expect(client.state.busy, isTrue);
++  });
++  test(
++    'existing session keeps context; mode requires explicit native selection',
++    () {
++      client.openSession('existing');
++      wire.receive({'type': 'session_started', 'sessionId': 'existing'});
++      wire.receive({
++        'type': 'session_hydrated',
++        'sessionId': 'existing',
++        'status': 'completed',
++        'providerId': 'local',
++        'modelId': 'test-model',
++        'messages': [],
++      });
++      expect(client.state.project, r'C:\Existing');
++      expect(client.state.canSend, isFalse);
++      client.configure(mode: 'plan');
++      client.sendMessage('Continue');
++      expect(wire.sent.last['config'], {'mode': 'plan'});
++    },
++  );
++  test('new session hydration preserves the just-sent native user bubble', () {
++    client.sendMessage('Hello');
++    wire.receive({'type': 'session_started', 'sessionId': 'new-session'});
++    wire.receive({
++      'type': 'session_hydrated',
++      'sessionId': 'new-session',
++      'status': 'running',
++      'messages': [],
++    });
++    expect(client.state.messages.single.text, 'Hello');
++    expect(client.state.messages.single.role, 'user');
++  });
++  test(
++    'history for an unexpected session cannot replace the selected transcript',
++    () {
++      client.openSession('existing');
++      wire.receive({
++        'type': 'session_hydrated',
++        'sessionId': 'other',
++        'messages': [
++          {'id': 'wrong', 'role': 'assistant', 'text': 'wrong'},
++        ],
++      });
++      expect(client.state.loadingHistory, isTrue);
++      expect(client.state.messages, isEmpty);
++      wire.receive({
++        'type': 'session_hydrated',
++        'sessionId': 'existing',
++        'messages': [
++          {'id': 'ok', 'role': 'assistant', 'text': 'right'},
++        ],
++      });
++      expect(client.state.messages.single.text, 'right');
++    },
++  );
++  test(
++    'native stream retains text/tool/text order and updates a tool in place',
++    () {
++      client.sendMessage('Work');
++      wire.receive({'type': 'assistant_delta', 'text': 'First '});
++      wire.receive({
++        'type': 'tool_event',
++        'event': {
++          'toolCallId': 't1',
++          'toolName': 'read_files',
++          'status': 'running',
++          'input': {'path': 'example.txt'},
++        },
++      });
++      wire.receive({
++        'type': 'tool_event',
++        'event': {
++          'toolCallId': 't1',
++          'toolName': 'read_files',
++          'status': 'completed',
++          'output': 'verified',
++        },
++      });
++      wire.receive({'type': 'assistant_delta', 'text': 'Then'});
++      final message = client.state.messages.last;
++      expect(message.parts.map((p) => p.type), ['text', 'tool', 'text']);
++      expect(message.tools, hasLength(1));
++      expect(message.tools.single.status, 'completed');
++      expect(message.text, 'First Then');
++      wire.receive({
++        'type': 'turn_done',
++        'finishReason': 'stop',
++        'usage': {'inputTokens': 5, 'outputTokens': 4},
++      });
++      wire.receive({'type': 'turn_done', 'finishReason': 'stop'});
++      expect(client.state.messages, hasLength(2));
++      expect(client.state.busy, isFalse);
++      expect(client.state.messages.last.usage['outputTokens'], 4);
++    },
++  );
++  test('approval responds only once, only for a real pending request', () {
++    client.sendMessage('Work');
++    wire.receive({'type': 'session_started', 'sessionId': 'own'});
++    wire.receive({
++      'type': 'approval_request',
++      'approvalId': 'a1',
++      'sessionId': 'own',
++      'toolName': 'run_commands',
++      'input': {'command': 'echo example'},
++    });
++    expect(
++      () => client.approve('invented', true),
++      throwsA(isA<ClineNativeException>()),
++    );
++    client.approve('a1', false);
++    expect(
++      () => client.approve('a1', true),
++      throwsA(isA<ClineNativeException>()),
++    );
++    expect(wire.sent.where((f) => f['type'] == 'approval_response').single, {
++      'type': 'approval_response',
++      'approvalId': 'a1',
++      'approved': false,
++    });
++    wire.receive({
++      'type': 'approval_resolved',
++      'approvalId': 'a1',
++      'approved': false,
++    });
++    expect(client.state.approvals, isEmpty);
++  });
++  test('another session approval is not presented or accepted', () {
++    wire.receive({
++      'type': 'approval_request',
++      'approvalId': 'foreign',
++      'sessionId': 'other',
++      'toolName': 'editor',
++      'input': {},
++    });
++    expect(client.state.approvals, isEmpty);
++    expect(
++      () => client.approve('foreign', true),
++      throwsA(isA<ClineNativeException>()),
++    );
++  });
++  test('recoverable provider notices do not end the native turn or remove approvals', () {
++    client.sendMessage('Work');
++    wire.receive({'type': 'session_started', 'sessionId': 'own'});
++    wire.receive({
++      'type': 'approval_request',
++      'approvalId': 'a',
++      'sessionId': 'own',
++      'toolName': 'editor',
++      'input': {},
++    });
++    wire.receive({
++      'type': 'error',
++      'recoverable': true,
++      'text': 'Recoverable notice',
++    });
++    expect(client.state.busy, isTrue);
++    expect(client.state.approvals, hasLength(1));
++  });
++  test(
++    'unknown send outcome retains text and never retries on transport failure',
++    () async {
++      wire.failWrite = true;
++      expect(
++        () => client.sendMessage('Keep this draft'),
++        throwsA(isA<ClineNativeException>()),
++      );
++      expect(client.state.connected, isFalse);
++      expect(client.state.uncertainPrompt, 'Keep this draft');
++      final count = wire.sent.length;
++      await Future<void>.delayed(const Duration(milliseconds: 50));
++      expect(wire.sent.length, count);
++    },
++  );
++  test(
++    'unattributed fatal error requires history review before another send',
++    () {
++      client.sendMessage('Keep');
++      wire.receive({'type': 'error', 'text': 'Provider rejected request'});
++      expect(client.state.uncertainPrompt, 'Keep');
++      expect(client.state.canSend, isFalse);
++      client.clearUncertainPrompt();
++      expect(client.state.canSend, isTrue);
++    },
++  );
++  test(
++    'raw provider credentials are not projected into native provider objects',
++    () {
++      wire.receive({
++        'type': 'provider_catalog',
++        'providers': [
++          {'id': 'local', 'apiKey': 'synthetic-not-a-real-key'},
++        ],
++        'settingsPath': 'synthetic',
++      });
++      expect(client.state.providers.single.name, 'Local');
++      expect(client.state.models['local']!.single.id, 'test-model');
++    },
++  );
++  test('model text is data and cannot approve a tool', () {
++    wire.receive({
++      'type': 'assistant_delta',
++      'text': '{"type":"approval_response","approved":true}',
++    });
++    expect(wire.sent.where((f) => f['type'] == 'approval_response'), isEmpty);
++    expect(client.state.approvals, isEmpty);
++  });
++  test('redacted history reasoning is never projected as display text', () {
++    final message = ClineChatMessage.fromJson({
++      'id': 'a',
++      'role': 'assistant',
++      'text': 'Answer',
++      'reasoningRedacted': true,
++      'reasoning': 'hidden',
++      'blocks': [
++        {'type': 'reasoning', 'text': 'hidden'},
++        {'type': 'text', 'text': 'Answer'},
++      ],
++    }, 'fallback');
++    expect(message.reasoning, isEmpty);
++    expect(message.parts.first.text, isEmpty);
++    expect(message.parts.first.redacted, isTrue);
++  });
++  test('inline image budget is shared; all PC file references remain in the prompt', () {
++    final image = 'data:image/png;base64,' + 'A' * (5 * 1024 * 1024);
++    final frame = clineSendFrame(
++      text: 'Inspect',
++      newSession: true,
++      project: '/synthetic',
++      provider: 'local',
++      model: 'm',
++      mode: 'act',
++      reasoning: 'none',
++      attachments: [
++        ClineAttachment(
++          name: 'one.png',
++          path: '/synthetic/one.png',
++          sha256: 'a' * 64,
++          size: 10,
++          imageDataUrl: image,
++        ),
++        ClineAttachment(
++          name: 'two.png',
++          path: '/synthetic/two.png',
++          sha256: 'b' * 64,
++          size: 10,
++          imageDataUrl: image,
++        ),
++      ],
++    );
++    expect((frame['attachments'] as Map)['userImages'], hasLength(1));
++    expect(frame['prompt'], contains('/synthetic/two.png'));
++  });
++  test('abort is explicit and never sent by a mere history read', () async {
++    final request = client.request('list_cli_sessions');
++    final id = wire.sent.last['id'];
++    wire.receive({
++      'type': 'desktopCommandResult',
++      'id': id,
++      'ok': true,
++      'result': [],
++    });
++    await request;
++    expect(wire.sent.where((f) => f['type'] == 'abort'), isEmpty);
++    client.sendMessage('Work');
++    client.abort();
++    expect(wire.sent.last, {'type': 'abort'});
++  });
++}
+diff --git a/test/features/cline/cline_native_widget_test.dart b/test/features/cline/cline_native_widget_test.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..bd2d8bd450d0226618a568c6088f204d11e5cf87
+--- /dev/null
++++ b/test/features/cline/cline_native_widget_test.dart
+@@ -0,0 +1,559 @@
++import 'dart:async';
++import 'dart:convert';
++import 'dart:io';
++import 'dart:ui' as ui;
++import 'dart:typed_data';
++
++import 'package:flutter/services.dart';
++import 'package:flutter/rendering.dart';
++
++import 'package:conduit/features/cline/views/cline_workspace_page.dart';
++import 'package:conduit/l10n/app_localizations.dart';
++import 'package:conduit/shared/theme/app_theme.dart';
++import 'package:conduit/shared/theme/tweakcn_themes.dart';
++import 'package:conduit/shared/theme/color_tokens.dart' show contrastRatio;
++import 'package:conduit/shared/theme/theme_extensions.dart';
++import 'package:conduit/l10n/conduit_localizations.dart';
++import 'package:conduit/features/navigation/widgets/sidebar_tab_registry.dart';
++import 'package:conduit_core/features/navigation/models/sidebar_navigation_model.dart';
++import 'package:conduit/shared/widgets/markdown/streaming_markdown_widget.dart';
++import 'package:conduit_core/features/cline/providers/cline_backend_providers.dart';
++import 'package:conduit_core/features/cline/services/cline_native_client.dart';
++import 'package:conduit_core/providers/backend_mode_providers.dart';
++import 'package:conduit_core/providers/app_providers.dart'
++    show openWebUiAccountAvailableProvider;
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:material_ui/material_ui.dart';
++
++class _Wire implements ClineWireTransport {
++  final incoming = StreamController<String>.broadcast(sync: true);
++  final sent = <Map<String, dynamic>>[];
++  void receive(Map<String, dynamic> frame) => incoming.add(jsonEncode(frame));
++  @override
++  Stream<String> get frames => incoming.stream;
++  @override
++  void send(String frame) =>
++      sent.add(jsonDecode(frame) as Map<String, dynamic>);
++  @override
++  Future<void> close() async {
++    if (!incoming.isClosed) unawaited(incoming.close());
++  }
++}
++
++class _Client extends ClineBackendClientController {
++  _Client(this.client);
++  final ClineNativeClient client;
++  @override
++  ClineNativeClient? build() => client;
++}
++
++class _Preferred extends PreferredBackendController {
++  @override
++  PreferredBackend build() => PreferredBackend.cline;
++  @override
++  Future<void> set(PreferredBackend backend) async => state = backend;
++}
++
++Future<void> _mount(
++  WidgetTester tester,
++  _Wire wire,
++  ClineNativeClient client, {
++  double scale = 1,
++  ThemeData? theme,
++  ValueNotifier<bool>? active,
++  double width = 400,
++}) async {
++  tester.view.physicalSize = Size(width, 900);
++  tester.view.devicePixelRatio = 1;
++  addTearDown(tester.view.resetPhysicalSize);
++  addTearDown(tester.view.resetDevicePixelRatio);
++  wire.receive({
++    'type': 'defaults',
++    'defaults': {
++      'provider': 'local',
++      'model': 'test-model',
++      'workspaceRoot': r'C:\Project',
++    },
++  });
++  wire.receive({
++    'type': 'providers',
++    'providers': [
++      {'id': 'local', 'name': 'Local', 'enabled': true},
++    ],
++  });
++  wire.receive({
++    'type': 'models',
++    'providerId': 'local',
++    'models': [
++      {'id': 'test-model', 'name': 'Test model', 'operation': 'language'},
++    ],
++  });
++  wire.receive({
++    'type': 'sessions',
++    'sessions': [
++      {
++        'sessionId': 'existing',
++        'title': 'Saved session',
++        'workspaceRoot': r'C:\Project',
++        'status': 'completed',
++      },
++    ],
++  });
++  wire.receive({'type': 'hub_state', 'connected': true});
++  await tester.pumpWidget(
++    ProviderScope(
++      overrides: [
++        clineBackendClientProvider.overrideWith(() => _Client(client)),
++        preferredBackendProvider.overrideWith(_Preferred.new),
++        openWebUiAccountAvailableProvider.overrideWithValue(false),
++      ],
++      child: MaterialApp(
++        locale: const Locale('ru'),
++        theme: theme ?? ThemeData(platform: TargetPlatform.android),
++        localizationsDelegates: conduitLocalizationsDelegates,
++        supportedLocales: AppLocalizations.supportedLocales,
++        builder: (context, child) => MediaQuery(
++          data: MediaQuery.of(context)
++              .copyWith(textScaler: TextScaler.linear(scale)),
++          child: RepaintBoundary(
++            key: const Key('cline-preview-boundary'),
++            child: child!,
++          ),
++        ),
++        home: active == null
++            ? const ClineWorkspacePage()
++            : ValueListenableBuilder<bool>(
++                valueListenable: active,
++                builder: (_, visible, _) => Stack(
++                  children: [
++                    Offstage(
++                      offstage: !visible,
++                      child: ClineSidebarTab(active: visible),
++                    ),
++                    if (!visible) const Scaffold(body: Text('OWUI')),
++                  ],
++                ),
++              ),
++      ),
++    ),
++  );
++  await tester.pump(const Duration(milliseconds: 80));
++  addTearDown(() async {
++    await tester.pumpWidget(const SizedBox.shrink());
++    await tester.runAsync(() => client.close());
++  });
++}
++
++Future<void> _unmount(WidgetTester tester, ClineNativeClient client) async {
++  await tester.pumpWidget(const SizedBox.shrink());
++
++  await tester.runAsync(() => client.close());
++}
++
++void main() {
++  if (Platform.environment['CONDUIT_UI_PREVIEW'] case final String output) {
++    testWidgets('preview compact themed chat', (tester) async {
++      await tester.runAsync(() async {
++        for (final entry in {
++          'Roboto': Platform.environment['CONDUIT_UI_FONT'],
++          'MaterialIcons': Platform.environment['CONDUIT_UI_ICONS'],
++        }.entries) {
++          if (entry.value == null) continue;
++          final loader = FontLoader(entry.key)
++            ..addFont(
++              File(entry.value!).readAsBytes().then(ByteData.sublistView),
++            );
++          await loader.load();
++        }
++      });
++      final wire = _Wire();
++      final client = ClineNativeClient(wire, project: r'C:\Project');
++      await _mount(
++        tester,
++        wire,
++        client,
++        theme: AppTheme.dark(TweakcnThemes.t3Chat),
++      );
++      client.openSession('existing');
++      wire.receive({
++        'type': 'session_hydrated',
++        'sessionId': 'existing',
++        'status': 'completed',
++        'providerId': 'local',
++        'modelId': 'test-model',
++        'messages': [
++          {
++            'role': 'user',
++            'text': 'Проверь проект и предложи небольшие улучшения.',
++          },
++          {
++            'role': 'assistant',
++            'text': '### Что я предлагаю\n\nУпростить навигацию и сохранить привычный стиль приложения.\n\n- Компактное поле ввода\n- Чёткие основные действия\n- Удобные отступы на узком экране\n\nГотова продолжать, когда выберете задачу.',
++          },
++        ],
++      });
++      await tester.pumpAndSettle();
++      final boundary = tester.renderObject<RenderRepaintBoundary>(
++        find.byKey(const Key('cline-preview-boundary')),
++      );
++      await tester.runAsync(() async {
++        final image = await boundary.toImage(pixelRatio: 1);
++        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
++        await File(output).writeAsBytes(bytes!.buffer.asUint8List());
++        image.dispose();
++      });
++      await tester.pumpWidget(const SizedBox.shrink());
++      unawaited(client.close());
++      await tester.pump();
++    });
++  }
++
++  testWidgets(
++    'opening history follows final layout and user scroll cancels follow',
++    (tester) async {
++      final wire = _Wire();
++      final client = ClineNativeClient(wire, project: r'C:\Project');
++      await _mount(tester, wire, client);
++      client.openSession('existing');
++      wire.receive({
++        'type': 'session_hydrated',
++        'sessionId': 'existing',
++        'status': 'completed',
++        'providerId': 'local',
++        'modelId': 'test-model',
++        'messages': [
++          for (var i = 0; i < 45; i++)
++            {
++              'role': 'assistant',
++              'text': 'Message $i\n\n' + ('long line of content ' * 20),
++            },
++        ],
++      });
++      await tester.pumpAndSettle();
++      final list = find
++          .byWidgetPredicate((w) => w is ListView && w.controller != null)
++          .first;
++      final scroll = tester.widget<ListView>(list).controller!;
++      expect(scroll.position.extentAfter, lessThan(2));
++      await tester.drag(list, const Offset(0, 450));
++      await tester.pumpAndSettle();
++      final offset = scroll.offset;
++      wire.receive({
++        'type': 'assistant_delta',
++        'text': 'additional streamed response ' * 15,
++      });
++      wire.receive({'type': 'turn_done'});
++      await tester.pumpAndSettle();
++      expect(scroll.offset, closeTo(offset, 2));
++      await tester.tap(find.byKey(const Key('cline-model-picker')));
++      await tester.pumpAndSettle();
++      expect(
++        wire.sent.any(
++          (frame) =>
++              frame['type'] == 'loadModels' && frame['providerId'] == 'local',
++        ),
++        isTrue,
++      );
++      expect(find.widgetWithText(ListTile, 'Test model'), findsOneWidget);
++      expect(find.textContaining('Папка и модель'), findsNothing);
++      await _unmount(tester, client);
++    },
++  );
++
++  testWidgets(
++    'unavailable restored selection is explained in Russian, not as a raw code',
++    (tester) async {
++      final wire = _Wire();
++      final client = ClineNativeClient(wire, project: r'C:\Project');
++      await _mount(tester, wire, client);
++      wire.receive({'type': 'error', 'text': 'selectionUnavailable'});
++      await tester.pump(const Duration(milliseconds: 80));
++      expect(
++        find.text(
++          'Прежняя модель или провайдер недоступны. Выберите модель; автоматической подмены не было.',
++        ),
++        findsOneWidget,
++      );
++      expect(find.text('selectionUnavailable'), findsNothing);
++      await _unmount(tester, client);
++    },
++  );
++  testWidgets('disconnect reports reconnecting and never replays the draft', (
++    tester,
++  ) async {
++    final wire = _Wire();
++    final client = ClineNativeClient(wire, project: r'C:\Project');
++    await _mount(tester, wire, client);
++    await tester.enterText(
++      find.byKey(const Key('cline-native-input')),
++      'unsent fixture',
++    );
++    final before = wire.sent.where((f) => f['type'] == 'send').length;
++    unawaited(wire.close());
++    await tester.pump(const Duration(milliseconds: 80));
++    await tester.pump();
++    expect(find.text('Переподключение…'), findsOneWidget);
++    expect(wire.sent.where((f) => f['type'] == 'send').length, before);
++    expect(
++      tester
++          .widget<TextField>(find.byKey(const Key('cline-native-input')))
++          .controller!
++          .text,
++      'unsent fixture',
++    );
++    await tester.pumpWidget(const SizedBox.shrink());
++    unawaited(client.close());
++    await tester.pump();
++    await tester.pump();
++  });
++  testWidgets(
++    'Cline workspace stays unmounted until its first explicit tab selection',
++    (tester) async {
++      final wire = _Wire();
++      final client = ClineNativeClient(wire, project: r'C:\Project');
++      final active = ValueNotifier(false);
++      addTearDown(active.dispose);
++      await _mount(tester, wire, client, active: active);
++      expect(
++        find.byType(ClineWorkspacePage, skipOffstage: false),
++        findsNothing,
++      );
++      final count = wire.sent.length;
++      active.value = true;
++      await tester.pump(const Duration(milliseconds: 80));
++      expect(find.byType(ClineWorkspacePage), findsOneWidget);
++      expect(wire.sent.length, count);
++      expect(tester.takeException(), isNull);
++    },
++  );
++  test(
++    'Cline is the fourth primary destination without hiding optional tabs',
++    () {
++      final tabs = visibleSidebarTabIds(
++        const SidebarTabAvailability(
++          hermesOnly: false,
++          hasOpenWebUi: true,
++          hermesEnabled: false,
++          notesEnabled: true,
++          terminalEnabled: true,
++          channelsEnabled: false,
++        ),
++      );
++      expect(tabs, [
++        SidebarTabId.chats,
++        SidebarTabId.notes,
++        SidebarTabId.terminal,
++        SidebarTabId.cline,
++      ]);
++      expect(
++        sidebarTabDescriptor(SidebarTabId.cline).materialIcon,
++        Icons.code_outlined,
++      );
++    },
++  );
++
++  test(
++    'switching the primary backend preserves the parallel SSH client',
++    () async {
++      final wire = _Wire();
++      final client = ClineNativeClient(wire, project: r'C:\Project');
++      final container = ProviderContainer(
++        overrides: [preferredBackendProvider.overrideWith(_Preferred.new)],
++      );
++      container.read(clineBackendClientProvider.notifier).adopt(client);
++      await container
++          .read(preferredBackendProvider.notifier)
++          .set(PreferredBackend.owui);
++      expect(container.read(clineBackendClientProvider), same(client));
++      expect(
++        wire.sent.where((m) => m['type'] == 'send' || m['type'] == 'approval'),
++        isEmpty,
++      );
++      container.read(clineBackendClientProvider.notifier).disconnect();
++      expect(container.read(clineBackendClientProvider), isNull);
++      container.dispose();
++      await client.close();
++    },
++  );
++
++  testWidgets(
++    'sidebar round trip preserves draft, client and approval without replay',
++    (tester) async {
++      final wire = _Wire();
++      final client = ClineNativeClient(wire, project: r'C:\Project');
++      final active = ValueNotifier(true);
++      addTearDown(active.dispose);
++      await _mount(
++        tester,
++        wire,
++        client,
++        active: active,
++        width: 320,
++        scale: 1.4,
++        theme: AppTheme.dark(TweakcnThemes.all.first),
++      );
++      await tester.enterText(
++        find.byKey(const Key('cline-native-input')),
++        'Unsent private draft',
++      );
++      final before = wire.sent.length;
++      active.value = false;
++      await tester.pump(const Duration(milliseconds: 80));
++      expect(find.text('OWUI'), findsOneWidget);
++      active.value = true;
++      await tester.pump(const Duration(milliseconds: 80));
++      expect(
++        tester
++            .widget<TextField>(find.byKey(const Key('cline-native-input')))
++            .controller!
++            .text,
++        'Unsent private draft',
++      );
++      expect(wire.sent.length, before);
++      expect(find.byKey(const Key('cline-model-picker')), findsOneWidget);
++      expect(find.byKey(const Key('cline-project-picker')), findsNothing);
++      expect(tester.takeException(), isNull);
++    },
++  );
++  for (final palette in TweakcnThemes.all) {
++    for (final brightness in Brightness.values) {
++      testWidgets(
++        'Cline mode contrast and input stay readable: ${palette.id} $brightness',
++        (tester) async {
++          final wire = _Wire();
++          final client = ClineNativeClient(wire, project: r'C:\Project');
++          final theme = brightness == Brightness.dark
++              ? AppTheme.dark(palette)
++              : AppTheme.light(palette);
++          await _mount(tester, wire, client, theme: theme);
++          expect(find.byKey(const ValueKey('cline-mode-act')), findsNothing);
++          expect(find.byKey(const ValueKey('cline-mode-plan')), findsNothing);
++          final labelFinder = find
++              .descendant(
++                of: find.byKey(const Key('cline-model-picker')),
++                matching: find.byType(Text),
++              )
++              .first;
++          final label = tester.widget<Text>(labelFinder);
++          expect(
++            contrastRatio(
++              label.style!.color!,
++              tester.element(labelFinder).conduitTheme.inputBackground,
++            ),
++            greaterThanOrEqualTo(4.5),
++          );
++          final input = tester.widget<TextField>(
++            find.byKey(const Key('cline-native-input')),
++          );
++          expect(input.decoration!.focusedBorder, InputBorder.none);
++          expect(input.decoration!.enabledBorder, InputBorder.none);
++          expect(client.state.mode, 'act');
++          expect(wire.sent.where((frame) => frame['type'] == 'send'), isEmpty);
++          expect(tester.takeException(), isNull);
++          await _unmount(tester, client);
++        },
++      );
++    }
++  }
++
++  testWidgets(
++    'native Cline composer renders streamed Markdown using Conduit widgets',
++    (tester) async {
++      final wire = _Wire();
++      final client = ClineNativeClient(wire, project: r'C:\Project');
++
++      await _mount(tester, wire, client);
++
++      await tester.enterText(
++        find.byKey(const Key('cline-native-input')),
++        'Тест',
++      );
++
++      await tester.pump();
++
++      await tester.tap(find.byKey(const Key('cline-native-send')));
++      await tester.pump();
++      expect(wire.sent.where((f) => f['type'] == 'send'), hasLength(1));
++      wire.receive({'type': 'assistant_delta', 'text': '**Native answer**'});
++      wire.receive({'type': 'turn_done', 'finishReason': 'stop'});
++      await tester.pump(const Duration(milliseconds: 80));
++      await tester.pump(const Duration(milliseconds: 80));
++      expect(find.byType(StreamingMarkdownWidget), findsWidgets);
++      expect(find.byKey(const Key('cline-native-input')), findsOneWidget);
++      expect(tester.takeException(), isNull);
++
++      await _unmount(tester, client);
++    },
++  );
++  testWidgets(
++    'native approval requires an explicit tap and carries the exact denial',
++    (tester) async {
++      final wire = _Wire();
++      final client = ClineNativeClient(wire, project: r'C:\Project');
++      await _mount(tester, wire, client);
++      await tester.enterText(
++        find.byKey(const Key('cline-native-input')),
++        'Work',
++      );
++      await tester.pump();
++      await tester.tap(find.byKey(const Key('cline-native-send')));
++      wire.receive({'type': 'session_started', 'sessionId': 'own'});
++      wire.receive({
++        'type': 'approval_request',
++        'approvalId': 'request-1',
++        'sessionId': 'own',
++        'toolName': 'run_commands',
++        'input': {'command': 'echo synthetic'},
++      });
++      await tester.pump(const Duration(milliseconds: 80));
++      expect(wire.sent.where((f) => f['type'] == 'approval_response'), isEmpty);
++      await tester.tap(find.byKey(const ValueKey('cline-deny-request-1')));
++      await tester.pump();
++      expect(
++        wire.sent
++            .where((f) => f['type'] == 'approval_response')
++            .single['approved'],
++        isFalse,
++      );
++      expect(tester.takeException(), isNull);
++      await _unmount(tester, client);
++    },
++  );
++  testWidgets('native Cline session list stays within a phone viewport', (
++    tester,
++  ) async {
++    final wire = _Wire();
++    final client = ClineNativeClient(wire, project: r'C:\Project');
++    await _mount(tester, wire, client, scale: 1.6);
++    await tester.tap(find.byIcon(Icons.menu));
++    await tester.pumpAndSettle();
++    expect(find.text('Saved session'), findsOneWidget);
++    expect(find.text('Проекты на ПК'), findsNothing);
++    expect(tester.takeException(), isNull);
++    await _unmount(tester, client);
++  });
++  testWidgets(
++    'native approvals and composer fit with a keyboard and large text',
++    (tester) async {
++      final wire = _Wire();
++      final client = ClineNativeClient(wire, project: r'C:\Project');
++      await _mount(tester, wire, client, scale: 2.0);
++      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
++      addTearDown(tester.view.resetViewInsets);
++      wire.receive({'type': 'session_started', 'sessionId': 'own'});
++      wire.receive({
++        'type': 'approval_request',
++        'approvalId': 'large',
++        'sessionId': 'own',
++        'toolName': 'editor',
++        'input': {'patch': 'Synthetic patch\n' * 20},
++      });
++      await tester.pump(const Duration(milliseconds: 80));
++      expect(find.byKey(const ValueKey('cline-deny-large')), findsOneWidget);
++      expect(find.byKey(const Key('cline-native-input')), findsOneWidget);
++      expect(tester.takeException(), isNull);
++      await _unmount(tester, client);
++    },
++  );
++}
+diff --git a/test/features/cline/cline_reconnect_selection_test.dart b/test/features/cline/cline_reconnect_selection_test.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..7589aa6c3306c5a1184a282a0d751299e97eb9fa
+--- /dev/null
++++ b/test/features/cline/cline_reconnect_selection_test.dart
+@@ -0,0 +1,147 @@
++import 'dart:async';
++import 'dart:convert';
++
++import 'package:conduit_core/features/cline/services/cline_native_client.dart';
++import 'package:flutter_test/flutter_test.dart';
++
++class _Wire implements ClineWireTransport {
++  final events = StreamController<String>.broadcast(sync: true);
++  final sent = <Map<String, dynamic>>[];
++  @override
++  Stream<String> get frames => events.stream;
++  @override
++  void send(String frame) => sent.add(jsonDecode(frame));
++  @override
++  Future<void> close() async {
++    unawaited(events.close());
++  }
++}
++
++void ready(_Wire wire, {bool chosen = true}) {
++  for (final provider in [
++    'different-provider',
++    if (chosen) 'chosen-provider',
++  ]) {
++    wire.events.add(
++      jsonEncode({
++        'type': 'providers',
++        'providers': [
++          {'id': 'different-provider', 'enabled': true},
++          if (chosen) {'id': 'chosen-provider', 'enabled': true},
++        ],
++      }),
++    );
++    wire.events.add(
++      jsonEncode({
++        'type': 'models',
++        'providerId': provider,
++        'models': [
++          {
++            'id': provider == 'chosen-provider'
++                ? 'chosen-model'
++                : 'different-model',
++            'operation': 'language',
++          },
++        ],
++      }),
++    );
++  }
++  wire.events.add(jsonEncode({'type': 'hub_state', 'connected': true}));
++}
++
++void main() {
++  test('reconnect restores explicit new-chat selection without sending or clearing uncertainty', () async {
++    final oldWire = _Wire();
++    final old = ClineNativeClient(
++      oldWire,
++      project: 'initial',
++      identity: 'account-a',
++    );
++    ready(oldWire);
++    old.configure(
++      provider: 'chosen-provider',
++      model: 'chosen-model',
++      project: 'chosen-project',
++      reasoning: 'high',
++    );
++    final choice = ClineDraftSelection.capture(old)!;
++    final wire = _Wire();
++    final restored = ClineNativeClient(
++      wire,
++      project: 'different-default',
++      identity: 'account-a',
++    );
++    ready(wire);
++    restored.configure(
++      provider: 'different-provider',
++      model: 'different-model',
++    );
++    restored.retainUncertainPrompt('Uncertain fixture, never replay');
++    expect(choice.restore(restored), isTrue);
++    expect(restored.state.project, 'chosen-project');
++    expect(restored.state.provider, 'chosen-provider');
++    expect(restored.state.model, 'chosen-model');
++    expect(restored.state.reasoning, 'high');
++    expect(restored.state.mode, 'act');
++    expect(restored.state.uncertainPrompt, 'Uncertain fixture, never replay');
++    expect(wire.sent.where((frame) => frame['type'] == 'send'), isEmpty);
++    await old.close();
++    await restored.close();
++  });
++  test(
++    'another account never receives the previous draft configuration',
++    () async {
++      final old = ClineNativeClient(
++        _Wire(),
++        project: 'private-project',
++        identity: 'account-a',
++      );
++      final other = ClineNativeClient(
++        _Wire(),
++        project: 'other-project',
++        identity: 'account-b',
++      );
++      expect(ClineDraftSelection.capture(old)!.restore(other), isFalse);
++      expect(other.state.project, 'other-project');
++      await old.close();
++      await other.close();
++    },
++  );
++  test(
++    'a removed provider stays explicit and blocks sends until a valid choice',
++    () async {
++      final oldWire = _Wire();
++      final old = ClineNativeClient(
++        oldWire,
++        project: 'chosen-project',
++        identity: 'account-a',
++      );
++      ready(oldWire);
++      old.configure(provider: 'chosen-provider', model: 'chosen-model');
++      final wire = _Wire();
++      final restored = ClineNativeClient(
++        wire,
++        project: 'different-default',
++        identity: 'account-a',
++      );
++      ready(wire, chosen: false);
++      expect(ClineDraftSelection.capture(old)!.restore(restored), isTrue);
++      expect(restored.state.project, 'chosen-project');
++      expect(restored.state.provider, 'chosen-provider');
++      expect(restored.state.model, 'chosen-model');
++      expect(restored.state.error, 'selectionUnavailable');
++      expect(restored.state.canSend, isFalse);
++      restored.clearError();
++      expect(restored.state.canSend, isFalse);
++      expect(wire.sent.where((f) => f['type'] == 'send'), isEmpty);
++      restored.configure(
++        provider: 'different-provider',
++        model: 'different-model',
++      );
++      expect(restored.state.error, isNull);
++      expect(restored.state.canSend, isTrue);
++      await old.close();
++      await restored.close();
++    },
++  );
++}
+diff --git a/test/features/cline/cline_ssh_tunnel_test.dart b/test/features/cline/cline_ssh_tunnel_test.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..b3b71d627eeb4c6cff83e6a55c15aed8b55d2be9
+--- /dev/null
++++ b/test/features/cline/cline_ssh_tunnel_test.dart
+@@ -0,0 +1,144 @@
++import 'dart:convert';
++import 'dart:io';
++
++import 'package:flutter_test/flutter_test.dart';
++import 'package:conduit_core/features/cline/models/cline_remote_profile.dart';
++import 'package:conduit_core/features/cline/services/cline_ssh_tunnel.dart';
++import 'package:conduit_core/features/cline/services/cline_native_client.dart';
++
++void main() {
++  late Process fixture;
++  late ClineRemoteProfile profile;
++  setUpAll(() async {
++    fixture = await Process.start(
++      Platform.environment['CONDUIT_SSH_TEST_PYTHON'] ?? 'python',
++      ['-B', 'remote/ssh_test_fixture.py'],
++    );
++    final source = await fixture.stdout
++        .transform(utf8.decoder)
++        .transform(const LineSplitter())
++        .first
++        .timeout(const Duration(seconds: 20));
++    profile = ClineRemoteProfile.decode(source);
++    fixture.stderr.drain<void>();
++  });
++  tearDownAll(() async {
++    await fixture.stdin.close();
++    try {
++      await fixture.exitCode.timeout(const Duration(seconds: 10));
++    } catch (_) {
++      fixture.kill();
++    }
++  });
++  test(
++    'Dart pins the real Python SSH server and forwards HTTP bytes',
++    () async {
++      final tunnel = await ClineSshTunnel.connect(profile, localPort: 0);
++      final http = HttpClient();
++      try {
++        final request = await http.getUrl(tunnel.url);
++        final response = await request.close();
++        expect(response.statusCode, 200);
++        expect(
++          await response.transform(utf8.decoder).join(),
++          'conduit-cline-encrypted-transport-ok',
++        );
++      } finally {
++        http.close(force: true);
++        await tunnel.close();
++      }
++    },
++  );
++  test(
++    'native JSON uses the remote loopback Host and Origin over pinned SSH',
++    () async {
++      final tunnel = await ClineSshTunnel.connect(profile, localPort: 0);
++      final client = await ClineNativeClient.connect(tunnel);
++      try {
++        expect(client.state.sessions.single.id, 'fixture-session');
++        final hydrated = client.changes.firstWhere(
++          (state) =>
++              state.sessionId == 'fixture-session' && !state.loadingHistory,
++        );
++        client.openSession('fixture-session');
++        await hydrated.timeout(const Duration(seconds: 10));
++        expect(client.state.messages.single.text, 'Native fixture history');
++        client.configure(mode: 'plan');
++        final done = client.changes.firstWhere(
++          (state) =>
++              !state.busy &&
++              state.messages.any(
++                (message) => message.text == 'Native synthetic response',
++              ),
++        );
++        client.sendMessage('Synthetic fixture prompt only');
++        await done.timeout(const Duration(seconds: 10));
++      } finally {
++        await client.close();
++        await tunnel.close();
++      }
++    },
++  );
++  test('changed server key is rejected before authentication', () async {
++    final changed = ClineRemoteProfile.decode(
++      jsonEncode({
++        ...profile.toJson(),
++        'hostKeyFingerprint': 'SHA256:${'A' * 43}',
++      }),
++    );
++    await expectLater(
++      ClineSshTunnel.connect(changed, localPort: 0),
++      throwsA(
++        isA<ClineConnectionException>().having(
++          (e) => e.failure,
++          'failure',
++          ClineConnectionFailure.hostKey,
++        ),
++      ),
++    );
++  });
++  test(
++    'real Dart upload verifies document bytes and digest over SSH',
++    () async {
++      final tunnel = await ClineSshTunnel.connect(profile, localPort: 0);
++      final directory = await Directory.systemTemp.createTemp(
++        'conduit-upload-test-',
++      );
++      try {
++        final file = File('${directory.path}/example.txt');
++        await file.writeAsString('synthetic encrypted document');
++        final uploaded = await tunnel.upload(file, 'example.txt');
++        expect(uploaded.size, await file.length());
++        expect(uploaded.sha256, hasLength(64));
++        final again = await tunnel.upload(file, 'example.txt');
++        expect(again.path, uploaded.path);
++        // The fixture shares this test machine's filesystem, never a real profile.
++        expect(
++          await File(uploaded.path).readAsBytes(),
++          await file.readAsBytes(),
++        );
++      } finally {
++        await tunnel.close();
++        await directory.delete(recursive: true);
++      }
++    },
++  );
++  test('wrong credentials do not start a local listener', () async {
++    final changed = ClineRemoteProfile.decode(
++      jsonEncode({
++        ...profile.toJson(),
++        'sshPassword': 'wrong-synthetic-password-not-a-real-credential',
++      }),
++    );
++    await expectLater(
++      ClineSshTunnel.connect(changed, localPort: 0),
++      throwsA(
++        isA<ClineConnectionException>().having(
++          (e) => e.failure,
++          'failure',
++          ClineConnectionFailure.authentication,
++        ),
++      ),
++    );
++  });
++}
+diff --git a/test/features/direct_connections/direct_connection_editor_controller_test.dart b/test/features/direct_connections/direct_connection_editor_controller_test.dart
+index 1a1f0c5945bf20d327f0c815e38850fa2532b84b..61cdb69fe17197b5feecec13cebe429cecf17d30 100644
+--- a/test/features/direct_connections/direct_connection_editor_controller_test.dart
++++ b/test/features/direct_connections/direct_connection_editor_controller_test.dart
+@@ -11,6 +11,73 @@ import 'package:conduit_core/features/direct_connections/services/direct_connect
+ import 'package:flutter_test/flutter_test.dart';
+ 
+ void main() {
++  test(
++    'MiniMax regional presets round-trip and clear new default models on exit',
++    () {
++      final editor = _EditorHarness();
++      addTearDown(editor.dispose);
++      editor.form.hydrate(null);
++      for (final preset in [kMiniMaxProviderPreset, kMiniMaxCnProviderPreset]) {
++        editor.form.selectProviderPreset(
++          preset,
++          ollamaDefaultName: 'Ollama Cloud',
++          openRouterDefaultName: 'OpenRouter',
++        );
++        editor.form.apiKey.text = 'test-key';
++        final result = editor.form.buildDraft(
++          validateFields: true,
++          openWebUiFallbackName: 'Connection',
++        );
++        expect(result.errors.hasAny, isFalse);
++        final profile = result.profile!;
++        expect(profile.adapterKey, kOpenAiCompatibleAdapterKey);
++        expect(profile.openAiApiMode, DirectOpenAiApiMode.chatCompletions);
++        expect(
++          profile.baseUrl,
++          preset == kMiniMaxProviderPreset
++              ? kMiniMaxApiBaseUrl
++              : kMiniMaxCnApiBaseUrl,
++        );
++        expect(profile.manualModelIds, kMiniMaxModelIds);
++        editor.form.hydrate(profile);
++        expect(editor.form.providerPreset, preset);
++      }
++      editor.form.selectProviderPreset(
++        kOpenAiCompatibleAdapterKey,
++        ollamaDefaultName: 'Ollama Cloud',
++        openRouterDefaultName: 'OpenRouter',
++      );
++      expect(editor.form.models.text, isEmpty);
++    },
++  );
++
++  test('MiniMax region changes preserve saved legacy and custom model IDs', () {
++    final editor = _EditorHarness(isNew: false);
++    addTearDown(editor.dispose);
++    editor.form.hydrate(
++      DirectConnectionProfile(
++        id: 'saved',
++        name: 'My MiniMax',
++        adapterKey: kOpenAiCompatibleAdapterKey,
++        baseUrl: '$kMiniMaxApiBaseUrl/',
++        manualModelIds: ['MiniMax-M2.7', 'my-custom-model'],
++      ),
++    );
++    expect(editor.form.providerPreset, kMiniMaxProviderPreset);
++    for (final preset in [
++      kMiniMaxCnProviderPreset,
++      kMiniMaxProviderPreset,
++      kOpenAiCompatibleAdapterKey,
++    ]) {
++      editor.form.selectProviderPreset(
++        preset,
++        ollamaDefaultName: 'Ollama Cloud',
++        openRouterDefaultName: 'OpenRouter',
++      );
++      expect(editor.form.models.text, 'MiniMax-M2.7\nmy-custom-model');
++    }
++  });
++
+   test('form owns provider transitions and profile creation', () {
+     final editor = _EditorHarness();
+     addTearDown(editor.dispose);
+diff --git a/test/features/direct_connections/direct_mcp_oauth_test.dart b/test/features/direct_connections/direct_mcp_oauth_test.dart
+index 7f79bb4f416dc064f0f4c2382d598cbadeb90152..332008969f45e2f3b63e62703a90f3527298716a 100644
+--- a/test/features/direct_connections/direct_mcp_oauth_test.dart
++++ b/test/features/direct_connections/direct_mcp_oauth_test.dart
+@@ -9,7 +9,7 @@ import 'package:conduit_core/features/direct_connections/services/direct_mcp_ser
+ import 'package:crypto/crypto.dart';
+ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+ import 'package:flutter_test/flutter_test.dart';
+-import 'package:http/http.dart' as http;
++import 'package:http/io_client.dart';
+ import 'package:conduit/platform/flutter_secure_key_value_store.dart';
+ 
+ void main() {
+@@ -489,13 +489,18 @@ void main() {
+     addTearDown(coordinator.close);
+ 
+     final first = coordinator.connect(server);
+-    await firstLaunch.future.timeout(const Duration(seconds: 2));
++    await firstLaunch.future.timeout(
++      const Duration(seconds: 2),
++      onTimeout: () =>
++          throw StateError('First OAuth browser launch did not arrive'),
++    );
+     final second = coordinator.connect(server);
+ 
+     await expectLater(first, throwsA(isA<DirectMcpOAuthException>()));
+     final connected = await second;
+     final secondCallbackRejected = await repeatedCallback.future.timeout(
+       const Duration(seconds: 2),
++      onTimeout: () => throw StateError('Repeated callback did not settle'),
+     );
+     expect(connected.oauthTokens?.accessToken, 'access-one');
+     expect(fixture.tokenForms, hasLength(1));
+@@ -737,18 +742,27 @@ Future<void> _deliverCallback(
+   final redirectUri = Uri.parse(
+     authorizationUri.queryParameters['redirect_uri']!,
+   );
+-  final response = await http.get(
+-    redirectUri.replace(
+-      queryParameters: {
+-        ...extraQueryParameters,
+-        'code': 'authorization-code',
+-        'state': state ?? authorizationUri.queryParameters['state']!,
+-        'iss': ?issuer,
+-      },
+-    ),
++  // Windows can drop SYNs to a closed loopback port. Bound connection setup,
++  // while a connected callback must still satisfy the existing test deadline.
++  final client = IOClient(
++    HttpClient()..connectionTimeout = const Duration(milliseconds: 500),
+   );
+-  if (response.statusCode != HttpStatus.ok) {
+-    throw StateError('Callback was rejected.');
++  try {
++    final response = await client.get(
++      redirectUri.replace(
++        queryParameters: {
++          ...extraQueryParameters,
++          'code': 'authorization-code',
++          'state': state ?? authorizationUri.queryParameters['state']!,
++          'iss': ?issuer,
++        },
++      ),
++    );
++    if (response.statusCode != HttpStatus.ok) {
++      throw StateError('Callback was rejected.');
++    }
++  } finally {
++    client.close();
+   }
+ }
+ 
+diff --git a/test/features/direct_connections/direct_providers_test.dart b/test/features/direct_connections/direct_providers_test.dart
+index 5ec15c676eda4bcaade768d9491b7b4a3662f61f..0c597d4cd867659c8f6811310148acbbe9b35184 100644
+--- a/test/features/direct_connections/direct_providers_test.dart
++++ b/test/features/direct_connections/direct_providers_test.dart
+@@ -264,6 +264,40 @@ void main() {
+     expect(discovery.models.every((model) => model.isMultimodal), isTrue);
+   });
+ 
++  test(
++    'MiniMax manual discovery publishes known context without network',
++    () async {
++      for (final baseUrl in [kMiniMaxApiBaseUrl, kMiniMaxCnApiBaseUrl]) {
++        final adapter = _QueuedAdapter();
++        final profile = _profile(
++          baseUrl: baseUrl,
++          manualModelIds: const ['MiniMax-M3.1-Flash', 'MiniMax-M3', 'custom'],
++        );
++        FlutterSecureStorage.setMockInitialValues({
++          'direct_connection_profiles_v1': DirectConnectionProfilesDocument([
++            profile,
++          ]).encode(),
++        });
++        final container = _container(adapter);
++        try {
++          final discovery = await container.read(
++            directModelDiscoveryProvider.future,
++          );
++          expect(adapter.listCalls, 0);
++          expect(discovery.models, hasLength(3));
++          expect(discovery.models[0].capabilities?['context_length'], 1000000);
++          expect(discovery.models[1].capabilities?['context_length'], 1000000);
++          expect(
++            discovery.models[2].capabilities?.containsKey('context_length'),
++            isFalse,
++          );
++        } finally {
++          container.dispose();
++        }
++      }
++    },
++  );
++
+   test('failed refresh retains same-profile cached models', () async {
+     final adapter = _QueuedAdapter()
+       ..responses.add([DirectRemoteModel(id: 'first')])
+diff --git a/test/features/hermes/hermes_connections_page_test.dart b/test/features/hermes/hermes_connections_page_test.dart
+index 100f85039651e58b35c8de921dbe871bfaa9087f..46260fa3e1aa96416be83d05d60b8a229a6a163e 100644
+--- a/test/features/hermes/hermes_connections_page_test.dart
++++ b/test/features/hermes/hermes_connections_page_test.dart
+@@ -62,7 +62,6 @@ void main() {
+   });
+   tearDown(PreferencesStore.debugReset);
+ 
+-
+   testWidgets('lists connections, switches on tap, and opens the editor', (
+     tester,
+   ) async {
+@@ -185,11 +184,12 @@ void main() {
+     check(saved.nameSource).equals(HermesConnectionNameSource.user);
+     // Saving another connection leaves the runtime on the active one.
+     check(container.read(hermesConfigProvider).connectionId).equals(_home);
+-    check(
+-      await secrets.read(key: 'hermes_api_key_v1:$_work'),
+-    ).equals('work-key');
++    check(await secrets.read(key: 'hermes_api_key_v1:$_work'))
++        .equals('work-key');
+ 
+-    await tester.tap(find.byKey(const ValueKey<String>('hermes-use-connection')));
++    await tester.tap(
++      find.byKey(const ValueKey<String>('hermes-use-connection')),
++    );
+     await tester.pumpAndSettle();
+     check(container.read(hermesConfigProvider).connectionId).equals(_work);
+     expect(
+@@ -273,9 +273,8 @@ void main() {
+ 
+     await tester.tap(find.text('Test connection'));
+     await tester.pumpAndSettle();
+-    check(
+-      gateway.probed.single.desktopCredentials?.nativeTokens?.refreshToken,
+-    ).equals('refresh-1');
++    check(gateway.probed.single.desktopCredentials?.nativeTokens?.refreshToken)
++        .equals('refresh-1');
+   });
+ 
+   testWidgets('switching waits for the token refresh its editor started', (
+@@ -286,9 +285,12 @@ void main() {
+     addTearDown(tester.view.reset);
+     // The binding blocks real HTTP; the refresh must really be in flight.
+     final blockedHttp = HttpOverrides.current;
+-    HttpOverrides.global = _RealHttpOverrides();
++    final realHttp = _RealHttpOverrides();
++    HttpOverrides.global = realHttp;
++    addTearDown(realHttp.closeClients);
+     addTearDown(() => HttpOverrides.global = blockedHttp);
+     final gateway = (await tester.runAsync(_RotatingGateway.start))!;
++    realHttp.allowedPort = Uri.parse(gateway.baseUrl).port;
+     addTearDown(gateway.close);
+     // Hermes stays off, so no live client refreshes the tokens itself.
+     PreferencesStore.debugOverride(
+@@ -374,9 +376,8 @@ void main() {
+     check(active.connectionId).equals(_work);
+     // The switch picked up the replacement tokens; the spent ones would
+     // sign the connection out at its next refresh.
+-    check(
+-      active.desktopCredentials?.nativeTokens?.refreshToken,
+-    ).equals('refresh-1');
++    check(active.desktopCredentials?.nativeTokens?.refreshToken)
++        .equals('refresh-1');
+     final stored = HermesDesktopCredentials.fromJson(
+       jsonDecode(
+         (await secrets.read(key: 'hermes_desktop_credentials_v1:$_work'))!,
+@@ -384,8 +385,10 @@ void main() {
+     );
+     check(stored.nativeTokens?.refreshToken).equals('refresh-1');
+ 
+-    // The editor lists the now active connection's profiles again; closing
+-    // the gateway ends that request with the test.
++    // Dispose the editor/client before its real loopback server. This keeps
++    // a reconnect to the closed fixture from leaking fake connect timers.
++    await tester.pumpWidget(const SizedBox.shrink());
++    realHttp.closeClients();
+     await tester.runAsync(gateway.close);
+     for (var i = 0; i < 5; i++) {
+       await settleIo();
+@@ -400,9 +403,12 @@ void main() {
+     addTearDown(tester.view.reset);
+     // The binding blocks real HTTP; the refresh must really be in flight.
+     final blockedHttp = HttpOverrides.current;
+-    HttpOverrides.global = _RealHttpOverrides();
++    final realHttp = _RealHttpOverrides();
++    HttpOverrides.global = realHttp;
++    addTearDown(realHttp.closeClients);
+     addTearDown(() => HttpOverrides.global = blockedHttp);
+     final gateway = (await tester.runAsync(_RotatingGateway.start))!;
++    realHttp.allowedPort = Uri.parse(gateway.baseUrl).port;
+     addTearDown(gateway.close);
+     PreferencesStore.debugOverride(
+       InMemoryKeyValueStore(<String, Object?>{
+@@ -487,9 +493,9 @@ void main() {
+       final stored = await secrets.read(
+         key: 'hermes_desktop_credentials_v1:$_work',
+       );
+-      return HermesDesktopCredentials.fromJson(
+-        jsonDecode(stored!),
+-      ).nativeTokens?.refreshToken;
++      return HermesDesktopCredentials.fromJson(jsonDecode(stored!))
++          .nativeTokens
++          ?.refreshToken;
+     }
+ 
+     for (var i = 0; i < 100 && await storedRefreshToken() != 'refresh-1'; i++) {
+@@ -622,9 +628,9 @@ void main() {
+     // The edited connection stops being active, and reading its stored
+     // baseline fails (reads of Hermes secrets retry once).
+     flaky.failures = 2;
+-    await container.read(hermesConfigProvider.notifier).setActiveConnection(
+-      _work,
+-    );
++    await container
++        .read(hermesConfigProvider.notifier)
++        .setActiveConnection(_work);
+     await tester.pumpAndSettle();
+     expect(retry, findsOneWidget);
+     check(save().onPressed).isNull();
+@@ -700,9 +706,8 @@ void main() {
+ 
+     check(container.read(hermesConnectionsProvider)).isEmpty();
+     // With nothing left, a Hermes-only install goes back to the chooser.
+-    check(
+-      container.read(preferredBackendProvider),
+-    ).equals(PreferredBackend.unset);
++    check(container.read(preferredBackendProvider))
++        .equals(PreferredBackend.unset);
+     check(tester.takeException()).isNull();
+   });
+ 
+@@ -802,7 +807,52 @@ final class _BlockingCookieJar extends NullCookieJarPort {
+   Future<bool> clearForOrigin(String origin) => release.future;
+ }
+ 
+-class _RealHttpOverrides extends HttpOverrides {}
++class _RealHttpOverrides extends HttpOverrides {
++  final _clients = <HttpClient>[];
++  final _connections = <ConnectionTask<Socket>>[];
++  int? allowedPort;
++  bool _closed = false;
++
++  void closeClients() {
++    _closed = true;
++    for (final connection in _connections) {
++      connection.cancel();
++    }
++    _connections.clear();
++    for (final client in _clients) {
++      client.close(force: true);
++    }
++    _clients.clear();
++  }
++
++  @override
++  HttpClient createHttpClient(SecurityContext? context) {
++    final client = super.createHttpClient(context);
++    _clients.add(client);
++    client.findProxy = (_) => 'DIRECT';
++    client.connectionFactory = (uri, proxyHost, proxyPort) async {
++      if (_closed ||
++          uri.port != allowedPort ||
++          uri.scheme != 'http' ||
++          uri.host != '127.0.0.1') {
++        throw const SocketException(
++          'Only the loopback fixture may receive HTTP',
++        );
++      }
++      final connection = await Socket.startConnect(
++        InternetAddress.loopbackIPv4,
++        uri.port,
++      );
++      if (_closed) {
++        connection.cancel();
++      } else {
++        _connections.add(connection);
++      }
++      return connection;
++    };
++    return client;
++  }
++}
+ 
+ /// A Desktop gateway whose first token refresh waits for [release]. Each
+ /// refresh spends the refresh token it replaces.
+diff --git a/test/features/navigation/widgets/cline_sidebar_mainstream_test.dart b/test/features/navigation/widgets/cline_sidebar_mainstream_test.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..a890874d817a8a5b84514f97c0790b3631df44ba
+--- /dev/null
++++ b/test/features/navigation/widgets/cline_sidebar_mainstream_test.dart
+@@ -0,0 +1,22 @@
++import 'package:conduit/features/navigation/widgets/sidebar_tab_registry.dart';
++import 'package:conduit_core/features/navigation/models/sidebar_navigation_model.dart';
++import 'package:conduit_core/navigation/routes.dart';
++import 'package:flutter_test/flutter_test.dart';
++
++void main() {
++  test('mainstream sliding navigation retains Cline fourth and resolves its route', () {
++    final tabs=visibleSidebarTabIds(const SidebarTabAvailability(
++      hermesOnly:false,hasOpenWebUi:true,hermesEnabled:false,
++      notesEnabled:true,terminalEnabled:true,channelsEnabled:true,
++    ));
++    expect(tabs[3],SidebarTabId.cline);
++    expect(sidebarTabDescriptor(SidebarTabId.cline).location,Routes.clineSidebar);
++    expect(sidebarTabDescriptor(SidebarTabId.cline).location,isNot(Routes.clineWorkspace));
++    expect(sidebarTabForLocation(Routes.clineSidebar),SidebarTabId.cline);
++    expect(sidebarTabForLocation('${Routes.clineSidebar}/fixture'),SidebarTabId.cline);
++    expect(visibleSidebarTabIds(const SidebarTabAvailability(
++      hermesOnly:true,hasOpenWebUi:false,hermesEnabled:true,
++      notesEnabled:false,terminalEnabled:false,channelsEnabled:false,
++    )),isNot(contains(SidebarTabId.cline)));
++  });
++}
+diff --git a/test/features/navigation/widgets/sidebar_page_test.dart b/test/features/navigation/widgets/sidebar_page_test.dart
+index 636fd4874c443484244258d8ab8dfb2968ff2b01..2c22f5619ee6b29864a1dd347ef5bad3d1ab5bc3 100644
+--- a/test/features/navigation/widgets/sidebar_page_test.dart
++++ b/test/features/navigation/widgets/sidebar_page_test.dart
+@@ -736,4 +736,4 @@ void main() {
+       Tristate.isFalse,
+     );
+   });
+-}
++}
+\ No newline at end of file
+diff --git a/test/features/navigation/widgets/sidebar_workspace_tabs_test.dart b/test/features/navigation/widgets/sidebar_workspace_tabs_test.dart
+index 7a4c8ce4f23cd779318d7740a979063e3fd0b213..4a4c17780612f6e3e97d2973d22ada91cb6014c8 100644
+--- a/test/features/navigation/widgets/sidebar_workspace_tabs_test.dart
++++ b/test/features/navigation/widgets/sidebar_workspace_tabs_test.dart
+@@ -30,6 +30,7 @@ import 'package:conduit/shared/widgets/user_avatar.dart';
+ import 'package:conduit/features/notes/widgets/notes_list_tab.dart';
+ import 'package:material_ui/material_ui.dart';
+ import 'package:flutter/services.dart';
++import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:go_router/go_router.dart';
+@@ -963,6 +964,38 @@ void main() {
+     );
+   });
+ 
++  testWidgets('Cline round trip preserves the OWUI search and expanded state', (
++    tester,
++  ) async {
++    FlutterSecureStorage.setMockInitialValues({});
++    final controllers = SidebarTestSidebarHarnessControllers();
++    await tester.pumpWidget(sidebarTestBuildHarness(controllers: controllers));
++    await tester.pumpAndSettle();
++    final container = ProviderScope.containerOf(
++      tester.element(find.byType(SidebarPage)),
++    );
++    container
++        .read(sidebarHeaderSearchExpandedProvider.notifier)
++        .setExpanded(true);
++    await tester.pumpAndSettle();
++    await tester.enterText(find.byType(TextField), 'saved OWUI query');
++    await tester.pumpAndSettle();
++    await tester.tap(sidebarTestBottomNavTabLabel('Cline'));
++    await tester.pumpAndSettle();
++    expect(
++      container.read(sidebarSearchFieldControllerProvider).text,
++      'saved OWUI query',
++    );
++    await tester.tap(sidebarTestBottomNavTabLabel('Chats'));
++    await tester.pumpAndSettle();
++    expect(container.read(sidebarHeaderSearchExpandedProvider), isTrue);
++    expect(
++      tester.widget<TextField>(find.byType(TextField)).controller!.text,
++      'saved OWUI query',
++    );
++    expect(tester.takeException(), isNull);
++  });
++
+   testWidgets('closing expanded search clears the active filter', (
+     tester,
+   ) async {
+diff --git a/test/shared/widgets/platform_ui/settings_switch_semantics_test.dart b/test/shared/widgets/platform_ui/settings_switch_semantics_test.dart
+index 942c31682a639702ad0f52e7e9e8caa3e11ec3ef..797b1a682efbb26412c059f02ce72a7b2249fd08 100644
+--- a/test/shared/widgets/platform_ui/settings_switch_semantics_test.dart
++++ b/test/shared/widgets/platform_ui/settings_switch_semantics_test.dart
+@@ -252,6 +252,9 @@ Future<void> _pump(WidgetTester tester, Widget child, {_Jobs? jobs}) async {
+     ),
+   );
+   await tester.pumpAndSettle();
++  // Native icon creation guards need elapsed time even without scheduled frames.
++  await tester.pump(const Duration(seconds: 1));
++  await tester.pumpAndSettle();
+ }
+ 
+ AppLocalizations _l10n(WidgetTester tester) =>

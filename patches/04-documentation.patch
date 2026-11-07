@@ -1,0 +1,850 @@
+diff --git a/.avx1/licenses/Apache-2.0.txt b/.avx1/licenses/Apache-2.0.txt
+new file mode 100644
+index 0000000000000000000000000000000000000000..d645695673349e3947e8e5ae42332d0ac3164cd7
+--- /dev/null
++++ b/.avx1/licenses/Apache-2.0.txt
+@@ -0,0 +1,202 @@
++
++                                 Apache License
++                           Version 2.0, January 2004
++                        http://www.apache.org/licenses/
++
++   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
++
++   1. Definitions.
++
++      "License" shall mean the terms and conditions for use, reproduction,
++      and distribution as defined by Sections 1 through 9 of this document.
++
++      "Licensor" shall mean the copyright owner or entity authorized by
++      the copyright owner that is granting the License.
++
++      "Legal Entity" shall mean the union of the acting entity and all
++      other entities that control, are controlled by, or are under common
++      control with that entity. For the purposes of this definition,
++      "control" means (i) the power, direct or indirect, to cause the
++      direction or management of such entity, whether by contract or
++      otherwise, or (ii) ownership of fifty percent (50%) or more of the
++      outstanding shares, or (iii) beneficial ownership of such entity.
++
++      "You" (or "Your") shall mean an individual or Legal Entity
++      exercising permissions granted by this License.
++
++      "Source" form shall mean the preferred form for making modifications,
++      including but not limited to software source code, documentation
++      source, and configuration files.
++
++      "Object" form shall mean any form resulting from mechanical
++      transformation or translation of a Source form, including but
++      not limited to compiled object code, generated documentation,
++      and conversions to other media types.
++
++      "Work" shall mean the work of authorship, whether in Source or
++      Object form, made available under the License, as indicated by a
++      copyright notice that is included in or attached to the work
++      (an example is provided in the Appendix below).
++
++      "Derivative Works" shall mean any work, whether in Source or Object
++      form, that is based on (or derived from) the Work and for which the
++      editorial revisions, annotations, elaborations, or other modifications
++      represent, as a whole, an original work of authorship. For the purposes
++      of this License, Derivative Works shall not include works that remain
++      separable from, or merely link (or bind by name) to the interfaces of,
++      the Work and Derivative Works thereof.
++
++      "Contribution" shall mean any work of authorship, including
++      the original version of the Work and any modifications or additions
++      to that Work or Derivative Works thereof, that is intentionally
++      submitted to Licensor for inclusion in the Work by the copyright owner
++      or by an individual or Legal Entity authorized to submit on behalf of
++      the copyright owner. For the purposes of this definition, "submitted"
++      means any form of electronic, verbal, or written communication sent
++      to the Licensor or its representatives, including but not limited to
++      communication on electronic mailing lists, source code control systems,
++      and issue tracking systems that are managed by, or on behalf of, the
++      Licensor for the purpose of discussing and improving the Work, but
++      excluding communication that is conspicuously marked or otherwise
++      designated in writing by the copyright owner as "Not a Contribution."
++
++      "Contributor" shall mean Licensor and any individual or Legal Entity
++      on behalf of whom a Contribution has been received by Licensor and
++      subsequently incorporated within the Work.
++
++   2. Grant of Copyright License. Subject to the terms and conditions of
++      this License, each Contributor hereby grants to You a perpetual,
++      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
++      copyright license to reproduce, prepare Derivative Works of,
++      publicly display, publicly perform, sublicense, and distribute the
++      Work and such Derivative Works in Source or Object form.
++
++   3. Grant of Patent License. Subject to the terms and conditions of
++      this License, each Contributor hereby grants to You a perpetual,
++      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
++      (except as stated in this section) patent license to make, have made,
++      use, offer to sell, sell, import, and otherwise transfer the Work,
++      where such license applies only to those patent claims licensable
++      by such Contributor that are necessarily infringed by their
++      Contribution(s) alone or by combination of their Contribution(s)
++      with the Work to which such Contribution(s) was submitted. If You
++      institute patent litigation against any entity (including a
++      cross-claim or counterclaim in a lawsuit) alleging that the Work
++      or a Contribution incorporated within the Work constitutes direct
++      or contributory patent infringement, then any patent licenses
++      granted to You under this License for that Work shall terminate
++      as of the date such litigation is filed.
++
++   4. Redistribution. You may reproduce and distribute copies of the
++      Work or Derivative Works thereof in any medium, with or without
++      modifications, and in Source or Object form, provided that You
++      meet the following conditions:
++
++      (a) You must give any other recipients of the Work or
++          Derivative Works a copy of this License; and
++
++      (b) You must cause any modified files to carry prominent notices
++          stating that You changed the files; and
++
++      (c) You must retain, in the Source form of any Derivative Works
++          that You distribute, all copyright, patent, trademark, and
++          attribution notices from the Source form of the Work,
++          excluding those notices that do not pertain to any part of
++          the Derivative Works; and
++
++      (d) If the Work includes a "NOTICE" text file as part of its
++          distribution, then any Derivative Works that You distribute must
++          include a readable copy of the attribution notices contained
++          within such NOTICE file, excluding those notices that do not
++          pertain to any part of the Derivative Works, in at least one
++          of the following places: within a NOTICE text file distributed
++          as part of the Derivative Works; within the Source form or
++          documentation, if provided along with the Derivative Works; or,
++          within a display generated by the Derivative Works, if and
++          wherever such third-party notices normally appear. The contents
++          of the NOTICE file are for informational purposes only and
++          do not modify the License. You may add Your own attribution
++          notices within Derivative Works that You distribute, alongside
++          or as an addendum to the NOTICE text from the Work, provided
++          that such additional attribution notices cannot be construed
++          as modifying the License.
++
++      You may add Your own copyright statement to Your modifications and
++      may provide additional or different license terms and conditions
++      for use, reproduction, or distribution of Your modifications, or
++      for any such Derivative Works as a whole, provided Your use,
++      reproduction, and distribution of the Work otherwise complies with
++      the conditions stated in this License.
++
++   5. Submission of Contributions. Unless You explicitly state otherwise,
++      any Contribution intentionally submitted for inclusion in the Work
++      by You to the Licensor shall be under the terms and conditions of
++      this License, without any additional terms or conditions.
++      Notwithstanding the above, nothing herein shall supersede or modify
++      the terms of any separate license agreement you may have executed
++      with Licensor regarding such Contributions.
++
++   6. Trademarks. This License does not grant permission to use the trade
++      names, trademarks, service marks, or product names of the Licensor,
++      except as required for reasonable and customary use in describing the
++      origin of the Work and reproducing the content of the NOTICE file.
++
++   7. Disclaimer of Warranty. Unless required by applicable law or
++      agreed to in writing, Licensor provides the Work (and each
++      Contributor provides its Contributions) on an "AS IS" BASIS,
++      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
++      implied, including, without limitation, any warranties or conditions
++      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
++      PARTICULAR PURPOSE. You are solely responsible for determining the
++      appropriateness of using or redistributing the Work and assume any
++      risks associated with Your exercise of permissions under this License.
++
++   8. Limitation of Liability. In no event and under no legal theory,
++      whether in tort (including negligence), contract, or otherwise,
++      unless required by applicable law (such as deliberate and grossly
++      negligent acts) or agreed to in writing, shall any Contributor be
++      liable to You for damages, including any direct, indirect, special,
++      incidental, or consequential damages of any character arising as a
++      result of this License or out of the use or inability to use the
++      Work (including but not limited to damages for loss of goodwill,
++      work stoppage, computer failure or malfunction, or any and all
++      other commercial damages or losses), even if such Contributor
++      has been advised of the possibility of such damages.
++
++   9. Accepting Warranty or Additional Liability. While redistributing
++      the Work or Derivative Works thereof, You may choose to offer,
++      and charge a fee for, acceptance of support, warranty, indemnity,
++      or other liability obligations and/or rights consistent with this
++      License. However, in accepting such obligations, You may act only
++      on Your own behalf and on Your sole responsibility, not on behalf
++      of any other Contributor, and only if You agree to indemnify,
++      defend, and hold each Contributor harmless for any liability
++      incurred by, or claims asserted against, such Contributor by reason
++      of your accepting any such warranty or additional liability.
++
++   END OF TERMS AND CONDITIONS
++
++   APPENDIX: How to apply the Apache License to your work.
++
++      To apply the Apache License to your work, attach the following
++      boilerplate notice, with the fields enclosed by brackets "[]"
++      replaced with your own identifying information. (Don't include
++      the brackets!)  The text should be enclosed in the appropriate
++      comment syntax for the file format. We also recommend that a
++      file or class name and description of purpose be included on the
++      same "printed page" as the copyright notice for easier
++      identification within third-party archives.
++
++   Copyright [yyyy] [name of copyright owner]
++
++   Licensed under the Apache License, Version 2.0 (the "License");
++   you may not use this file except in compliance with the License.
++   You may obtain a copy of the License at
++
++       http://www.apache.org/licenses/LICENSE-2.0
++
++   Unless required by applicable law or agreed to in writing, software
++   distributed under the License is distributed on an "AS IS" BASIS,
++   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++   See the License for the specific language governing permissions and
++   limitations under the License.
+diff --git a/.avx1/licenses/Silero-VAD-MIT.txt b/.avx1/licenses/Silero-VAD-MIT.txt
+new file mode 100644
+index 0000000000000000000000000000000000000000..0bf5e90cac691b999d4a35044f97167d7bbbf0b9
+--- /dev/null
++++ b/.avx1/licenses/Silero-VAD-MIT.txt
+@@ -0,0 +1,21 @@
++MIT License
++
++Copyright (c) 2020-present Silero Team
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+\ No newline at end of file
+diff --git a/.avx1/measurements/latest.json b/.avx1/measurements/latest.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..87ea693cc86686ee5c26c82b59af94a259bd1a07
+--- /dev/null
++++ b/.avx1/measurements/latest.json
+@@ -0,0 +1,5 @@
++{
++  "scope": "current selected checks; final package and deployment receipts are recorded after CI",
++  "inference_speedup_percent": null,
++  "model_required_for_build": false
++}
+diff --git a/.avx1/measurements/onnx-qualified-reference.json b/.avx1/measurements/onnx-qualified-reference.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..ed3a4bc287cef1a7c87352e10d1345e4dad68928
+--- /dev/null
++++ b/.avx1/measurements/onnx-qualified-reference.json
+@@ -0,0 +1,23 @@
++{
++  "schema": 1,
++  "run_id": 40821699974,
++  "source_commit": "11cae6e436e48b51fde41efdaaca015c63866d57",
++  "qualification_scope": "Native compilation/flags/exports/AArch64/16KiB completed successfully; the separate Flutter candidate failed an onLoadStop return-type check. Not an APK qualification.",
++  "policy_sha256": "3d2070ea5202ff26f3ea094ec22ce9a3ef7807acee701cccebe6cd8700f5f694",
++  "toolchains_sha256": "52842762d4313e288c0f5e70c972ea25764ebd17b0f9ab7caa4e6d99db06d6e9",
++  "compilation_signature": "96f27b69c53aee2cb6b9428cf3a1700398b0fd3de4bd29b067f26807fa549377",
++  "compiler": "Android (13989888, +pgo, +bolt, +lto, +mlgo, based on r563880c) clang version 21.0.0 (https://android.googlesource.com/toolchain/llvm-project 5e96669f06077099aa41290cdb4c5e6fa0f59349)",
++  "compile_database_sha256": "05ff91c601d0719385906414ad22b86e8e00d7ed4221e824b05725625d50e0fb",
++  "binaries": {
++    "libonnxruntime.so": "8b388eadf807d245646e2fe5be314c8e86dde15e6a11fb819a6b818fd2aafc62",
++    "libonnxruntime4j_jni.so": "bdb5d81569cd0b1a7a97281dca3a473224959c88acd43e5eb412338edc4c0fd7"
++  },
++  "also_qualified_apk_source": "73237e92505bec1da6ad61b84edb34a7830bfebc",
++  "also_qualified_apk_run": 40666979951,
++  "lockfile_sha256": "b289bb22df93352a6ea5717e0b02b88d17783955b5145a5fdaaabae8f8c5866e",
++  "reviewed_non_native_lock_change": {
++    "previous_lockfile_sha256": "6184cbff0d285327854af0f7924b046d4a2421d6c1a04164dd2e88f177231f83",
++    "scope": "Only cupertino_native_better1.6.0->1.8.2,cupertino_ui1.0.2->1.1.5,share_plus13.3.0->13.3.1; ONNX/JNI/SQLite/vad versions and source/compiler/flags unchanged",
++    "upstream_commit": "7a5391a34721bff7bc22c1eda05538f88d6404bb"
++  }
++}
+diff --git a/README.md b/README.md
+index 32031e206eec19510173876b284086c68c831d91..f7a0efa0ac8b359c52fdcd52825161ad470e507e 100644
+--- a/README.md
++++ b/README.md
+@@ -1,353 +1,38 @@
+-<h1 align="center">Conduit</h1>
++# Conduit OWUI + Cline ARM64
+ 
+-<p align="center">
+-  <img
+-    src="assets/icons/icon.png"
+-    alt="Conduit icon"
+-    width="96"
+-    height="96"
+-  />
+-</p>
++[Русский](README.ru.md)
+ 
+-<p align="center">
+-  <strong>A native mobile client for Open WebUI, your own model endpoints, and self-hosted agents.</strong>
+-</p>
++Unofficial fork with reviewed agent/MCP fixes and extended Russian UI. One latest APK.
+ 
+-<p align="center">
+-  <img
+-    alt="Latest Release"
+-    src="https://img.shields.io/github/v/release/cogwheel0/conduit?display_name=tag&color=0A84FF"
+-  />
+-  <img
+-    alt="GitHub all downloads"
+-    src="https://img.shields.io/github/downloads/cogwheel0/conduit/total?style=flat-square&label=Downloads&logo=github&color=111827"
+-  />
+-  <img
+-    alt="License: GPL-3.0"
+-    src="https://img.shields.io/badge/License-GPL%203.0-16A34A"
+-  />
+-</p>
++[Upstream](https://github.com/cogwheel0/conduit) · [Release](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Patches](.avx1/PATCHES.json)
+ 
+-<p align="center">
+-  <a href="https://play.google.com/store/apps/details?id=app.cogwheel.conduit">
+-    <img
+-      src="docs/store-badges/google.webp"
+-      alt="Get it on Google Play"
+-      height="56"
+-    />
+-  </a>
+-  <a
+-    href="https://apps.apple.com/us/app/conduit-open-webui-client/id6749840287"
+-  >
+-    <img
+-      src="docs/store-badges/apple.webp"
+-      alt="Download on the App Store"
+-      height="56"
+-    />
+-  </a>
+-</p>
++Mainstream adds account-local text/recording drafts, seekable read-aloud playback, language-filtered voices, connection retry and native iOS controls. Native Cline and server VRM remain. The upstream server-version warning is retained; this update does not claim physical-phone or 0.13 server qualification.
+ 
+-<p align="center">
+-  <a href="https://vercel.com/blog/vercel-open-source-program-fall-2025-cohort#conduit">
+-    <img
+-      alt="Vercel OSS Program"
+-      src="https://vercel.com/oss/program-badge.svg"
+-      width="240"
+-      height="24"
+-      align="middle"
+-    />
+-  </a>
+-  &nbsp;
+-  <a
+-    href="https://trendshift.io/repositories/15397?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-15397"
+-    target="_blank"
+-    rel="noopener noreferrer"
+-  >
+-    <img
+-      src="https://trendshift.io/api/badge/trendshift/repositories/15397/daily?language=Dart"
+-      alt="cogwheel0/conduit: #1 Dart repository of the day on Trendshift"
+-      width="200"
+-      height="44"
+-      align="middle"
+-    />
+-  </a>
+-</p>
++Native Cline chat uses Conduit themes, responsive spacing and an Act-only composer. Avatar bindings refresh from the server; the private 100 MiB cache checks server SHA256 and downloads changed VRMs. Personal avatars stay on the server.
+ 
+-<p align="center">
+-  <a href="#ways-to-connect">Connect</a> ·
+-  <a href="#screenshots">Screenshots</a> ·
+-  <a href="#what-you-get">Features</a> ·
+-  <a href="#getting-started">Getting Started</a> ·
+-  <a href="#privacy">Privacy</a> ·
+-  <a href="docs/BUILDING.md">Build from Source</a>
+-</p>
++Direct connections include MiniMax global/CN presets for M3.1 Flash and M3. Saved model IDs stay unchanged. Flash thinking and tool history follow the provider contract; Responses uses client-held history. OpenRouter keeps its advertised routes and existing model choices. These optional direct profiles use your provider credentials and do not change FreeLLM. Regional Responses availability and real inference have not been verified.
+ 
+-<br>
++## Build
+ 
+-<p align="center">
+-  <img
+-    src="https://github.com/user-attachments/assets/8531f859-a2c4-4e61-877e-9885d1413f4e"
+-    alt="Conduit demo"
+-    width="360"
+-  />
+-</p>
++Normal outbound chat saves project only assistant content that exactly matches the retained structured-output renderer. Raw output, literal text, versions and local rows are preserved; legacy queue hashes remain valid during crash recovery. Upstream may derive display content again when output changes. No bulk history migration runs.
+ 
+-<br>
++Requires Python 3.12+, Git and GitHub CLI for CI. No LLM, model weights or Codex dependency.
+ 
+-Open WebUI is excellent on the desktop. On mobile it breaks down at the edges:
+-authentication behind a reverse proxy, streaming that drops when the app
+-backgrounds, getting a screenshot into a prompt, starting a chat from the home
+-screen. Conduit is a real Flutter app built to close that gap, and as of 4.0 it
+-works with or without an Open WebUI server at all.
+-
+-Your chats live on your device first. Nothing routes through a backend the
+-maintainer operates.
+-
+-## Ways to connect
+-
+-On first launch Conduit asks how you want to connect. Pick one, add the others
+-later, and skip any sign-in you don't need.
+-
+-| | | |
+-| --- | --- | --- |
+-| **Open WebUI** | Your self-hosted server | Full feature set: chats, folders, notes, channels, workspace, tools, web search, image generation |
+-| **Direct** | OpenAI-compatible, Ollama, OpenRouter | Talk straight to a provider or a model on your own machine. No Open WebUI account required |
+-| **Apple On-Device** | Apple Intelligence | Run Apple's local model offline on eligible iOS 26 devices without an API key |
+-| **Apple PCC** | Apple Private Cloud Compute | Use Apple's private cloud model on eligible iOS 27 devices without an API key |
+-| **Hermes** | Your self-hosted agent | An agent that runs tools, asks before sensitive steps, and works on a schedule |
+-
+-**Direct connections** cover OpenAI-compatible endpoints (Chat Completions or
+-Responses), LM Studio, Azure-style API versions, native Ollama, and first-party
+-OpenRouter. Bring an API key, or skip it for a local endpoint that doesn't want
+-one. Direct connections you already configured in Open WebUI come along
+-automatically. Keys and custom headers stay in platform secure storage.
+-
+-**Apple On-Device** is an iOS-only Direct provider backed by Apple's local
+-SystemLanguageModel. It requires iOS 26 and Apple Intelligence, works offline,
+-and supports streaming, sampling controls, and JSON-schema responses with a 4K
+-context window. Image input, reasoning controls, and tool calling are not
+-available.
+-
+-**Apple Private Cloud Compute** is an iOS-only Direct provider. It uses Apple's
+-Foundation Models framework, streams responses through the same chat path as
+-other Direct models, and requires iOS 27, Apple Intelligence availability, and
+-Apple's managed PCC entitlement. It supports image input, reasoning levels,
+-sampling and output limits, JSON-schema responses, live quota/context status,
+-and an optional on-device fallback for PCC network failures. Tool calling is
+-not enabled.
+-
+-**Hermes Agent** connects to your own Hermes server. You watch its tools work
+-live, approve sensitive steps before they run, and let scheduled agents run
+-while you sleep. Conversations and schedules get their own tab, and Conduit only
+-exposes the capabilities your server actually reports.
+-
+-## Screenshots
+-
+-| Chat | Connect | Chats | Voice |
+-| --- | --- | --- | --- |
+-| <img src="docs/screenshots/1.png" alt="Multimodal chat with an image attachment and streaming response" width="200" /> | <img src="docs/screenshots/2.png" alt="Choose a Conduit chat backend" width="200" /> | <img src="docs/screenshots/3.png" alt="Chat with rich replies and Ask Conduit input" width="200" /> | <img src="docs/screenshots/4.png" alt="Voice call mode listening with call controls" width="200" /> |
+-
+-## What you get
+-
+-### Chat that survives mobile
+-
+-Token-by-token streaming over WebSocket. The transcript holds its place while a
+-response grows, pinned prompts stay put, and long conversations load without
+-stalling the UI. Search across conversations, organize with folders, pin what
+-matters, or start a temporary chat that leaves nothing behind.
+-
+-### Rendering that holds up on a phone
+-
+-Native Flutter surfaces, not a web view wrapped in a shell:
+-
+-- syntax-highlighted code blocks with copy and preview
+-- Mermaid diagrams rendered natively
+-- LaTeX and math
+-- expandable reasoning, tool-call, and code-execution sections
+-- inline citations, source cards, and follow-up suggestions
+-- Chart.js embeds
+-
+-### A real Workspace
+-
+-Models, knowledge, prompts, tools, and skills as native screens with unified
+-settings navigation. Sections you don't have permission for simply don't appear.
+-
+-### Everything else
+-
+-| Area | What's included |
+-| --- | --- |
+-| Files and media | Uploads, re-attaching previously uploaded server files, multimodal prompts, clipboard image paste, audio attachments |
+-| Notes | Autosave, pinning, AI-generated titles, AI enhancement, audio recording, all available offline |
+-| Channels | Threads and reactions, when your server enables them |
+-| Voice | Voice input with on-device or server speech recognition, plus a full voice-call mode |
+-| Home screen | Widgets on iOS and Android for new chat, mic, camera, photos, and clipboard; app quick actions; iOS App Intents and Shortcuts |
+-| Sharing | Share-sheet ingestion from other apps straight into a prompt |
+-| Terminal | Interactive sessions over WebSocket with a file browser, shown only when your server exposes it |
+-| Personalization | Light, dark, and system themes; five accent palettes; adaptive Material and Cupertino UI; haptics |
+-| Languages | 14 locales: English, German, Spanish, French, Italian, Japanese, Korean, Dutch, Russian, Simplified and Traditional Chinese, Czech, Slovak, Polish |
+-
+-Server-dependent features (channels, notes, web search, image generation,
+-toggle filters, terminal) appear only when your deployment exposes them.
+-
+-Writing Open WebUI filters or tools? Conduit never runs their JavaScript, but
+-a filter can move the user to a new chat on another model with a documented
+-event: see [Open WebUI functions in Conduit](docs/open-webui-functions.md).
+-
+-## Built for self-hosted reality
+-
+-Most mobile clients assume a plain login form. Real deployments rarely look like
+-that.
+-
+-- **Every auth path Open WebUI offers**: username and password, LDAP, manual JWT
+-  entry, SSO and OAuth providers.
+-- **Reverse proxies actually work**: `oauth2-proxy`, Authelia, Authentik,
+-  Pangolin, and Cloudflare Tunnel, by capturing the right cookies and session
+-  state on-device.
+-- **Custom headers during setup** for environments that require `X-API-Key`,
+-  `Authorization`, or organization routing headers.
+-- **Credentials in Keychain or Keystore**, never plain-text local storage.
+-- **Tracks upstream**: Conduit supports Open WebUI 0.11.
+-
+-## Getting started
+-
+-Install from the [App Store](https://apps.apple.com/us/app/conduit-open-webui-client/id6749840287)
+-or [Google Play](https://play.google.com/store/apps/details?id=app.cogwheel.conduit),
+-then pick how you want to connect.
+-
+-<details open>
+-<summary><strong>Open WebUI</strong></summary>
+-
+-1. Launch Conduit and choose Open WebUI.
+-2. Enter your instance's base URL.
+-3. Add any required custom headers.
+-4. Sign in with username and password, LDAP, JWT, SSO, or proxy auth.
+-5. Pick a model and start chatting.
+-
+-</details>
+-
+-<details>
+-<summary><strong>Direct connection</strong></summary>
+-
+-1. Launch Conduit and choose Direct connection.
+-2. Add an OpenAI-compatible or Ollama profile with its base URL and any API key
+-   or custom headers.
+-3. Test the connection, enable it, and select a discovered or manually entered
+-   model.
+-4. Choose whether new direct chats use Open WebUI history when one is signed in,
+-   or stay only on this device. Existing chats keep their current location.
+-5. Start chatting. No Open WebUI account required.
+-
+-</details>
+-
+-<details>
+-<summary><strong>Apple On-Device</strong></summary>
+-
+-1. On an eligible iOS 26 device, launch Conduit and choose Apple On-Device.
+-2. Conduit checks Apple Intelligence and local-model availability. No API key
+-   or network connection is required.
+-3. Start chatting. New Apple-only installations keep Direct history on the
+-   device unless you later enable Open WebUI history.
+-
+-</details>
+-
+-<details>
+-<summary><strong>Apple Private Cloud Compute</strong></summary>
+-
+-1. On an eligible iOS 27 device, launch Conduit and choose Apple Private Cloud
+-   Compute.
+-2. Conduit checks Apple Intelligence and PCC availability. No API key is
+-   required.
+-3. Start chatting. New PCC-only installations keep Direct history on the
+-   device unless you later enable Open WebUI history.
+-
+-</details>
+-
+-<details>
+-<summary><strong>Hermes Agent</strong></summary>
+-
+-1. Launch Conduit and choose Hermes Agent.
+-2. Enter your Hermes server URL and `API_SERVER_KEY`.
+-3. Optionally set a memory key to scope the agent's long-term memory to you. One
+-   is generated automatically on first chat if you leave it blank.
+-4. Open the Hermes tab for conversations and scheduled agents.
+-
+-</details>
+-
+-## Privacy
+-
+-- Chats, notes, and drafts are stored on your device. Notes and drafts stay
+-  available without a connection.
+-- Credentials use platform secure storage: Keychain on iOS, Keystore on
+-  Android.
+-- No third-party analytics or advertising SDKs.
+-- Diagnostic logging is local and transient.
+-- No developer-operated backend relays your data. Traffic goes from your device
+-  to the server or provider you configured, and nowhere else.
+-- Signing out lets you choose what stays behind. Clearing everything clears
+-  on-device chats too, and fails safely rather than half-deleting.
+-
+-Full details in [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
+-
+-## Build from source
+-
+-See **[docs/BUILDING.md](docs/BUILDING.md)** for requirements, submodules,
+-codegen, verification, project layout, and troubleshooting.
+-
+-```bash
+-git clone --recursive https://github.com/cogwheel0/conduit.git
+-cd conduit
+-flutter pub get
+-dart run build_runner build
+-flutter run -d ios   # or: flutter run -d android
++```cmd
++Build.cmd status
++Build.cmd build
+ ```
+ 
+-Clone recursively and run `build_runner`. The Mermaid renderer is a submodule,
+-and generated Dart files are git-ignored.
+-
+-## Contributing
+-
+-Conduit is actively developed and feedback is welcome.
+-
+-- Bugs → [GitHub Issues](https://github.com/cogwheel0/conduit/issues)
+-- Features, deployment notes, questions →
+-  [GitHub Discussions](https://github.com/cogwheel0/conduit/discussions)
+-
+-Unsolicited pull requests are not the primary contribution path right now. Open
+-an issue or discussion first so changes line up with the roadmap.
+-
+-## Enterprise and white-label
+-
+-For private distribution, internal deployment support, or a custom
+-enterprise/white-label build, open a discussion or reach the maintainer at
+-[cogwheel@cogwheel.app](mailto:cogwheel@cogwheel.app).
+-
+-## Support
++`build` verifies the clean published commit and dispatches the pinned workflow. For a prepared local compiler/SDK environment: `Build.cmd local`. Dependencies, flags, tests and license gates are in `.avx1/`; lockfiles and source history are retained. Signing keys stay outside the repository.
+ 
+-If Conduit is useful to you, you can support development through
+-[GitHub Sponsors](https://github.com/sponsors/cogwheel0) or
+-[Buy Me a Coffee](https://www.buymeacoffee.com/cogwheel0).
++## Run and verify
+ 
+-## Acknowledgements
++Install the single signed ARM64 APK. Keep user data separate from source. Android release AOT and native-library provenance/flags are recorded in the manifest. Phone FPS has not been measured.
+ 
+-- Supported by the [Vercel OSS Program](https://vercel.com/blog/vercel-open-source-program-fall-2025-cohort#conduit).
+-- Tested with BrowserStack.
+-- Code review provided by <a href="http://macroscope.com/?utm_source=open_source&utm_term=conduit">
+-    <picture>
+-      <source
+-        media="(prefers-color-scheme: dark)"
+-        srcset="https://macroscope.com/assets/Brand%20Kit/Macroscope%20Logos/svg/Macroscope%20Logotype%20-%20white.svg"
+-      />
+-      <img
+-        src="https://macroscope.com/assets/Brand%20Kit/Macroscope%20Logos/svg/Macroscope%20Logotype%20-%20black.svg"
+-        alt="Macroscope"
+-        height="16"
+-        align="middle"
+-      />
+-    </picture>
+-  </a>.
++Current checks and measurements: [.avx1/measurements/latest.json](.avx1/measurements/latest.json). CPU microbenchmarks are not LLM tokens/s. Original licenses and notices apply.
+ 
+-## License
++Android native builds use Linux (the CI environment). Local builds require the same pinned SDK/NDK and private `CONDUIT_KEYSTORE_BASE64` / `CONDUIT_KEYSTORE_PASSWORD` environment variables; never commit their values.
+ 
+-Released under the [GPL-3.0 License](LICENSE).
++The withdrawn PR914/918 timeline experiment is removed. Upstream long-chat scrollbar/extent instability remains a known limitation; passing widget tests is not frame-time or phone performance acceptance.
+ 
+-Conduit is an independent client and is not affiliated with Open WebUI.
++Current maintainer-only applied differences: [patches](patches/README.md).
+diff --git a/README.ru.md b/README.ru.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..220374a466fc9d0f16536a21ff71fe402adca595
+--- /dev/null
++++ b/README.ru.md
+@@ -0,0 +1,38 @@
++# Conduit OWUI + Cline ARM64
++
++[English](README.md)
++
++Неофициальный форк: проверенные исправления для агентов/MCP и дополненный русский интерфейс. Один актуальный APK.
++
++[Upstream](https://github.com/cogwheel0/conduit) · [Release](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Patches](.avx1/PATCHES.json)
++
++Mainstream добавляет локальные черновики текста/записей с разделением аккаунтов, перемотку озвучивания, фильтр языков голосов, повтор подключения и элементы iOS. Native Cline и серверные VRM сохранены. Предупреждение upstream о версии сервера остаётся; проверка телефона и квалификация сервера 0.13 не заявляются.
++
++Нативный Cline-чат использует темы Conduit, адаптивные отступы и режим действия. Аватар сверяется с сервером; закрытый кэш 100 МиБ проверяет SHA256 и загружает изменённые VRM. Личные аватары остаются на сервере.
++
++Прямые подключения включают региональные пресеты MiniMax global/CN для M3.1 Flash и M3. Сохранённые ID моделей не меняются. Thinking Flash и история инструментов учитывают контракт провайдера; Responses передаёт историю с клиента. OpenRouter сохраняет модели и маршруты своего каталога. Эти дополнительные прямые профили используют ключ провайдера и не меняют FreeLLM. Доступность регионального Responses и реальный inference не проверены.
++
++## Сборка
++
++При обычном сохранении чата преобразуется только контент ассистента, точно совпавший с renderer сохранённого structured output. Сам output, буквальный текст, версии и локальные строки сохраняются; старые hash очереди совместимы с восстановлением после сбоя. Upstream может снова сформировать display content при изменении output. Массовой миграции истории нет.
++
++Нужны Python 3.12+, Git и GitHub CLI для CI. Сборка не зависит от модели, её весов или Codex.
++
++```cmd
++Build.cmd status
++Build.cmd build
++```
++
++`build` проверяет чистоту опубликованного коммита и запускает закреплённый workflow. При готовом локальном компиляторе/SDK: `Build.cmd local`. Зависимости, флаги, тесты и проверки лицензий — в `.avx1/`. Lockfiles и история исходников сохранены. Ключи подписи в репозиторий не входят.
++
++## Установка и проверки
++
++Установите единственный подписанный ARM64 APK. Пользовательские данные храните отдельно от исходников. Release AOT, происхождение нативных библиотек и реальные флаги указаны в манифесте. FPS на физическом телефоне не измерялся.
++
++Последние проверки и замеры: [.avx1/measurements/latest.json](.avx1/measurements/latest.json). Микрозамеры CPU не означают скорость LLM. Исходные лицензии и уведомления сохранены.
++
++Нативная сборка Android выполняется в Linux, как в CI. Для локальной сборки нужны те же закреплённые SDK/NDK и закрытые переменные `CONDUIT_KEYSTORE_BASE64` / `CONDUIT_KEYSTORE_PASSWORD`; их значения нельзя коммитить.
++
++Эксперимент timeline из отозванных PR914/918 удалён. Нестабильность scrollbar/высоты длинных сообщений upstream остаётся известным ограничением; widget-тесты не подтверждают frame-time или производительность телефона.
++
++Только наши текущие применённые изменения: [patches](patches/README.md).
+diff --git a/assets/voice_avatar/LICENSES.txt b/assets/voice_avatar/LICENSES.txt
+new file mode 100644
+index 0000000000000000000000000000000000000000..d8a12cd40ee5cadbb1a8f5fac76d9bd200db4aab
+--- /dev/null
++++ b/assets/voice_avatar/LICENSES.txt
+@@ -0,0 +1,50 @@
++## three
++
++The MIT License
++
++Copyright © 2010-2026 three.js authors
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in
++all copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++THE SOFTWARE.
++
++
++## @pixiv/three-vrm
++
++Copyright (c) 2019-2026 pixiv Inc.
++
++MIT License
++
++Permission is hereby granted, free of charge, to any person obtaining
++a copy of this software and associated documentation files (the
++"Software"), to deal in the Software without restriction, including
++without limitation the rights to use, copy, modify, merge, publish,
++distribute, sublicense, and/or sell copies of the Software, and to
++permit persons to whom the Software is furnished to do so, subject to
++the following conditions:
++
++The above copyright notice and this permission notice shall be
++included in all copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
++MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
++NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
++LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
++OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
++WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
++
+diff --git a/remote/README.md b/remote/README.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..4fe066e8ff54f0aa80eb724999e0ce6db60a66a0
+--- /dev/null
++++ b/remote/README.md
+@@ -0,0 +1,39 @@
++# OWUI + Cline remote access
++
++Conduit connects to the installed Cline Hub JSON protocol through an encrypted SSH tunnel. Chat, history, project selection, model controls and tool approvals use native Flutter widgets and Conduit's Markdown renderer. Cline, its providers, sessions and project files stay on the PC. The APK contains no Cline binary, provider credential or configured server address.
++
++## Windows
++
++Install Python 3.12+ and Cline Desktop. Clone this repository and run:
++
++```powershell
++.\remote\Setup.cmd -HostAddress your-host.example -ListenAddress 0.0.0.0 -Workspace C:\Projects\Example -InstallStartup -Start
++```
++
++Use `-ClineCli` and `-ClineConfig` for a different installed CLI/profile. Setup creates a private directory under Local AppData, a persistent Ed25519 host key and two independent random access secrets. It prints only the connection-document path. Existing keys are retained. The optional login shortcut starts the gateway outside Codex.
++
++For public access, allow inbound TCP 2222 for the gateway interpreter and forward that one router port to the PC. Keep the dashboard port 11280 on loopback. Restrict access by source IP when practical. No VPN subscription is required.
++
++## Android
++
++Install the signed OWUI + Cline APK. In Conduit, open **Cline via SSH** on the first screen (also in Accounts/Settings), import the private `connection.json` from the PC, and connect. Transfer it privately; never publish it. Connection settings are saved only in secure device storage. The server fingerprint must match; there is no trust-all fallback.
++
++Open a session from the sidebar or start a new chat. The workspace stays on the PC; the composer uses Act. Change models within the current provider while preserving the session ID and history. A different provider requires a new chat to keep credentials separate. Reconnection restores history without replaying uncertain messages.
++
++The optional `conduit-dashboard.exe` adapter goes beside `cline_gateway.py`. Build it with `bun run remote/build_dashboard_adapter.ts CLINE_SOURCE OUTPUT_EXE` from a reviewed, dependency-installed Cline checkout. It uses the public SDK and resumes dormant sessions with the same ID, without a prompt or automatic approvals. The installed Cline files remain unchanged. The executable targets Windows x64 baseline. Cline sources retain their [Apache-2.0 license](https://github.com/cline/cline/blob/main/LICENSE).
++
++## Scope and security
++
++- Shell, SFTP, reverse forwarding and arbitrary TCP destinations are rejected. Only the local Cline dashboard and one fixed upload RPC are reachable.
++- Host-key pinning, independent dashboard authentication, bounded connections/login attempts and no automatic command replay are enforced.
++- Cline's approvals remain enabled. An already running Desktop turn can retain its original approval owner; subsequent turns started from Conduit show native approval cards with full input inspection.
++- An SSH connection does **not** protect an internet connection from volumetric DDoS. Use an upstream protected service or private VPN when that is required.
++- A disconnected phone is not a request to replay a message. Read the session state before manually retrying uncertain actions.
++
++Conduit remains GPL-3.0. Cline is separately installed under its own license; see [Cline](https://github.com/cline/cline). Dart SSH dependencies retain their package notices; AsyncSSH is available under EPL-2.0 or GPL-2.0-or-later. Private configuration, keys and runtime data must stay outside the checkout and releases.
++
++## Images and documents
++
++Use the paperclip to transfer a file through SSH into the private PC `user-uploads` inbox. Size and SHA256 are verified; identical uploads reuse the same content-addressed file. Limits: 64 MiB/file, 1 GiB/inbox, 4 attachments/message. Images up to 6 MiB each also use the normal `userImages` field, within an aggregate 8 MiB encoded-image budget; larger files remain accessible by their PC path. Image understanding requires a vision-capable model. Cline reads documents with its normal tools and approval rules.
++
++Files attach only to the next message you send yourself. Clear pending attachments before sending if needed. Completed uploads are user data, never disposable cache. No shell, SFTP or arbitrary destination path is exposed. Phone voice input/calls are not implemented for this connection. Desktop voice input is configured separately in Cline.
+diff --git a/remote/README.ru.md b/remote/README.ru.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..f8182925eaa64abf916b7bcfee1c08a2194fd8f7
+--- /dev/null
++++ b/remote/README.ru.md
+@@ -0,0 +1,37 @@
++# Удалённый доступ: OWUI + Cline
++
++Conduit подключается к JSON-протоколу установленного Cline Hub через зашифрованный SSH-туннель. Чат, история, выбор проекта и модели, подтверждения инструментов работают на нативных виджетах Flutter с Markdown Conduit. Cline, провайдеры, сессии и файлы проектов остаются на ПК. В APK нет бинарника Cline, ключей провайдеров или готового адреса сервера.
++
++## Windows
++
++Установите Python 3.12+ и Cline Desktop. Скачайте исходники этого репозитория и выполните:
++
++```powershell
++.\remote\Setup.cmd -HostAddress your-host.example -ListenAddress 0.0.0.0 -Workspace C:\Projects\Example -InstallStartup -Start
++```
++
++Для другого CLI или профиля используйте `-ClineCli` и `-ClineConfig`. Настройка создаёт закрытую папку в Local AppData, постоянный ключ сервера Ed25519 и два независимых случайных кода доступа. Выводится только путь к файлу подключения. Существующие ключи сохраняются. Необязательный ярлык автозагрузки запускает шлюз независимо от Codex.
++
++Для внешнего доступа разрешите входящий TCP 2222 для интерпретатора шлюза и пробросьте только этот порт на ПК. Порт панели 11280 оставьте на локальном интерфейсе. По возможности ограничьте адреса клиентов. Подписка на VPN не требуется.
++
++## Android
++
++Установите подписанный APK OWUI + Cline. Откройте **Начальный экран → Cline через SSH**, импортируйте закрытый `connection.json` с ПК и подключитесь. Передавайте этот файл лично; не публикуйте его. Параметры сохраняются только в защищённом хранилище телефона. Отпечаток сервера обязан совпадать; режима принятия любого ключа нет.
++
++Откройте сессию из бокового списка либо выберите папку проекта на ПК и модель для нового чата. Существующие сессии сохраняют свою модель и каталог; перед отправкой явно выберите «План» или «Действие». Нативный интерфейс переведён на русский и английский. При необходимости войдите к провайдеру модели на ПК. После обрыва связи подключитесь снова и проверьте историю, прежде чем повторять сообщение с неизвестным исходом.
++
++## Границы и безопасность
++
++- Shell, SFTP, обратный туннель и произвольные TCP-адреса запрещены. Доступны локальная панель Cline и единственный RPC приёма файлов.
++- Проверяются ключ сервера и отдельный код панели; ограничены подключения и попытки входа. Автоматического повтора команд нет.
++- Подтверждения Cline сохраняются. Уже запущенный в Desktop ход может сохранять исходного владельца подтверждений; новые ходы из Conduit показывают нативные карточки разрешений с просмотром полного запроса.
++- SSH не защищает интернет-канал от объёмного DDoS. Для такой защиты нужен сервис с защитой выше по сети либо закрытая VPN-сеть.
++- Потеря связи с телефоном не означает повторную отправку сообщения. Перед ручным повтором действия с неизвестным исходом проверьте состояние сессии.
++
++Лицензия Conduit — GPL-3.0. Cline устанавливается отдельно по собственной лицензии: [исходный проект](https://github.com/cline/cline). Уведомления зависимостей Dart SSH сохраняются; AsyncSSH распространяется по EPL-2.0 либо GPL-2.0-or-later. Конфигурацию, ключи и рабочие данные нельзя помещать в исходники и релизы.
++
++## Изображения и документы
++
++Кнопка скрепки передаёт файл через SSH в закрытую папку `user-uploads` на ПК. Проверяются размер и SHA256; повторная передача одинакового файла не создаёт копию. Максимум: 64 МиБ на файл, 1 ГиБ на папку, 4 вложения на сообщение. Изображения до 6 МиБ каждое также передаются через штатный `userImages`, в пределах суммарных 8 МиБ после кодирования; более крупные файлы доступны агенту по пути на ПК. Для понимания изображений нужна модель с поддержкой vision. Документы читает Cline своими инструментами с обычными разрешениями.
++
++Файлы добавляются только к следующему сообщению, которое вы отправите сами. Вложения можно убрать перед отправкой. Готовые файлы — пользовательские данные; шлюз не удаляет их как кеш. Нет shell, SFTP и записи по произвольному пути. Голосовой ввод и звонки с телефона для этого подключения пока не реализованы. Голосовой ввод Desktop настраивается отдельно в Cline.
+diff --git a/remote/requirements.txt b/remote/requirements.txt
+new file mode 100644
+index 0000000000000000000000000000000000000000..e82dce581d7db8f35e3a22a25838cca564a1edf5
+--- /dev/null
++++ b/remote/requirements.txt
+@@ -0,0 +1,2 @@
++asyncssh==2.24.1
++cryptography==50.0.2
