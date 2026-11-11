@@ -4,8 +4,8 @@
   "ownership": "applied-downstream-only",
   "project": "conduit",
   "upstream": "c22b3ad2f86bd4dfbb5972c465f046bbb5086a0e",
-  "snapshot_source": "2f585dc61cb653c98ab983d62a3e3bf6150d2f3d",
-  "downstream_tree_without_patches": "994351d71b2d42ae4166462cf69b10bd45617fda",
+  "snapshot_source": "6abfb119de600a6a1868bdc8d8383f5d59f859d5",
+  "downstream_tree_without_patches": "979ea0a206e8cd576e64c32196140cbaa2af19bd",
   "groups": [
     {
       "patch": "01-cline-ssh-gateway.patch",
@@ -193,7 +193,7 @@
         ".avx1/test_native_sqlite.py",
         ".avx1/test_terminal.py"
       ],
-      "sha256": "e3f013aa98cfd0859396daa8bcb9339e1d9755d87b614b886d0a5d6d3216bb63"
+      "sha256": "8c6a798df1b3da57115196746a15521f5df03d79f51570937242e556849f7da0"
     },
     {
       "patch": "09-android-package.patch",
@@ -207,7 +207,7 @@
         "pubspec.lock",
         "pubspec.yaml"
       ],
-      "sha256": "3b9d2c6b1073f3547f0493f37ed2795b31bcab2bb496d39f688a0077dfda32de"
+      "sha256": "5ca1f80c534b020aaef94e9803587523a93adf687152f0818c89669d2c62ec88"
     },
     {
       "patch": "10-portable-install.patch",
@@ -265,14 +265,14 @@
     "05-provider-compatibility.patch": "50b478febb1300fb6c7104a9344f871df0a711623ad00ec304abb9652358ecab",
     "06-chat-persistence.patch": "5d281faa968b3604d23faba2fe14d076e6e09e06b1e3eeeb6831df2e3150a023",
     "07-localization.patch": "8f6b81871f6c27c78b1763111b17f3bf99422b3eed577521c46f625469a70e40",
-    "08-arm64-native.patch": "e3f013aa98cfd0859396daa8bcb9339e1d9755d87b614b886d0a5d6d3216bb63",
-    "09-android-package.patch": "3b9d2c6b1073f3547f0493f37ed2795b31bcab2bb496d39f688a0077dfda32de",
+    "08-arm64-native.patch": "8c6a798df1b3da57115196746a15521f5df03d79f51570937242e556849f7da0",
+    "09-android-package.patch": "5ca1f80c534b020aaef94e9803587523a93adf687152f0818c89669d2c62ec88",
     "10-portable-install.patch": "a5f4c34a7c7c47f8f56c4bebdee4b03422237c66a6b0445f57c1f5d3aceeb4c9",
     "11-ci-build.patch": "f22e73d54b30c96244a27e230eb8d3d02160eb17ad4c8950c9b6017a56643cf4",
     "12-project-docs.patch": "79891d19775269b171a756aa5f6b7255ff7dd7adc385ed28b357dc5429c8daac",
     "13-fork-records.patch": "10d25f732aec0e27ebe9ab74ecb2b6bacc505c00a3b35e6486b6d11be572c530",
     ".gitattributes": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",
     "series": "8225bb5291e2e2e00fcf2cbbbabe94eeaaf07bc596564f383d1bee6a45cb0554",
-    "README.md": "7d69489d4aa29a2dda998deb86973c5e89737e99fea443b861e9be6b727be097"
+    "README.md": "5bf8eb47a23f6481b73228560a803bd208d763f4a58fec10afff174eafd230f7"
   }
 }

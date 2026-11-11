@@ -95,7 +95,7 @@ index bd5081b8a3328b3db7fb06ec54475f32a64ec27c..b0ee3f3eb457e8435b3735f1d8a50e41
    # owns the schema, so drift belongs here rather than in the front-ends.
    archive: ^4.6.0
 diff --git a/pubspec.lock b/pubspec.lock
-index 4fab64aa1f5b586d7d3c43c2d4cb8050ef66d0f2..23ab48dff57ddfd61114bd2993913e33311c8ed0 100644
+index 4fab64aa1f5b586d7d3c43c2d4cb8050ef66d0f2..4fd429afb2c6a14d25386ea8282519010746eb89 100644
 --- a/pubspec.lock
 +++ b/pubspec.lock
 @@ -1,2572 +1,2604 @@
@@ -4605,13 +4605,13 @@ index 4fab64aa1f5b586d7d3c43c2d4cb8050ef66d0f2..23ab48dff57ddfd61114bd2993913e33
 +    source: hosted
 +    version: "2.5.6"
 +  shared_preferences_android:
-+    dependency: transitive
++    dependency: "direct overridden"
 +    description:
 +      name: shared_preferences_android
-+      sha256: "33b38b07d9ac7d16aff0426c61418752fd3e7a8c7dc8be786c875d6ce673b002"
++      sha256: "1e12aafe408aa50da80edfd679a2a6bf63ba7ab37c7fa98286da459a757b3399"
 +      url: "https://pub.dev"
 +    source: hosted
-+    version: "2.5.4"
++    version: "2.4.28"
 +  shared_preferences_foundation:
 +    dependency: transitive
 +    description:
@@ -5276,10 +5276,10 @@ index 4fab64aa1f5b586d7d3c43c2d4cb8050ef66d0f2..23ab48dff57ddfd61114bd2993913e33
 +  dart: ">=3.13.0 <4.0.0"
 +  flutter: ">=3.47.0"
 diff --git a/pubspec.yaml b/pubspec.yaml
-index a9ba064094e04c766867deecb9088b4528d966f3..417789fa454d611eed8e6f36fb768f4c380231dd 100644
+index a9ba064094e04c766867deecb9088b4528d966f3..784ee5087374d02e1bc766bef4e2a04c775116f7 100644
 --- a/pubspec.yaml
 +++ b/pubspec.yaml
-@@ -1,211 +1,231 @@
+@@ -1,211 +1,232 @@
 -name: conduit
 -description: Open-source mobile client for Open-WebUI
 -version: 4.3.1+155
@@ -5645,6 +5645,7 @@ index a9ba064094e04c766867deecb9088b4528d966f3..417789fa454d611eed8e6f36fb768f4c
 +  # Keep the already qualified Android native ABI and vendor binaries.
 +  jni: "1.0.3"
 +  jni_flutter: "1.0.3"
++  shared_preferences_android: "2.4.28"
 +  sqlite3: "3.6.0"
 +  flutter_webrtc: "1.6.2+hotfix.4"
 +  pdfrx: "2.6.1"
