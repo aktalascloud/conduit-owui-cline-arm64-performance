@@ -2706,10 +2706,10 @@ index 83c383f1554ecf80530e951ae55c1ab6ff809175..cdb12062d6fc838fbd14e279c5986acf
          routerConfig: router,
 diff --git a/test/features/cline/cline_backend_routing_test.dart b/test/features/cline/cline_backend_routing_test.dart
 new file mode 100644
-index 0000000000000000000000000000000000000000..81d7911dc4d228c562c79362bd9ddfa86f62041a
+index 0000000000000000000000000000000000000000..2fc932b0388f5c6eb91a55fd391df2d3fdcaa4ab
 --- /dev/null
 +++ b/test/features/cline/cline_backend_routing_test.dart
-@@ -0,0 +1,46 @@
+@@ -0,0 +1,49 @@
 +import 'package:flutter_test/flutter_test.dart';
 +import 'package:flutter_riverpod/flutter_riverpod.dart';
 +import 'package:riverpod/misc.dart';
@@ -2721,6 +2721,7 @@ index 0000000000000000000000000000000000000000..81d7911dc4d228c562c79362bd9ddfa8
 +import 'package:conduit_core/models/server_config.dart';
 +import 'package:conduit_core/providers/app_providers.dart';
 +import 'package:conduit_core/providers/backend_mode_providers.dart';
++import 'package:conduit_core/providers/primary_account_providers.dart';
 +
 +class _ClinePreferred extends PreferredBackendController {
 +  @override
@@ -2730,7 +2731,9 @@ index 0000000000000000000000000000000000000000..81d7911dc4d228c562c79362bd9ddfa8
 +void main() {
 +  test('Cline cold start uses native workspace without an OWUI login', () {
 +    T read<T>(ProviderListenable<T> p) {
-+      if (p == reviewerModeProvider) return false as T;
++      if (p == reviewerModeProvider || p == primaryBootRecoveryPendingProvider) {
++        return false as T;
++      }
 +      if (p == activeServerProvider)
 +        return const AsyncData<ServerConfig?>(null) as T;
 +      if (p == authNavigationStateProvider)
