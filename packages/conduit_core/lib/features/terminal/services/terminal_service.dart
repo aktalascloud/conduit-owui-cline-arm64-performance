@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:conduit_core/auth/proxy_session.dart';
 import 'package:conduit_core/features/integrations/personal_connection_settings.dart';
 import 'package:conduit_core/services/api_service.dart';
 
@@ -338,6 +339,40 @@ class TerminalService {
 
   final ApiService api;
 
+  /// Uses the selected terminal's existing credentials and chat context for
+  /// Computer endpoints, including personal connections and server proxies.
+  Future<Response<dynamic>> requestComputer(
+    TerminalServerInfo server,
+    String path, {
+    required String sessionScopeId,
+    String method = 'GET',
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+    ResponseType? responseType,
+  }) {
+    final scope = isSavedTerminalChatScopeId(sessionScopeId)
+        ? sessionScopeId
+        : null;
+    return server.isSystem
+        ? _requestSystem(
+            '/api/v1/terminals/${Uri.encodeComponent(server.systemServerId!)}/$path',
+            method: method,
+            data: data,
+            queryParameters: queryParameters,
+            responseType: responseType,
+            sessionScopeId: scope,
+          )
+        : _requestDirect(
+            server,
+            '/$path',
+            method: method,
+            data: data,
+            queryParameters: queryParameters,
+            responseType: responseType,
+            sessionScopeId: scope,
+          );
+  }
+
   String get _apiBaseUrl => _trimTrailingSlashes(api.baseUrl);
 
   String? get _authToken {
@@ -533,6 +568,39 @@ class TerminalService {
     }
     final base = _toWebSocketBaseUrl(server.baseUrl.toString());
     return Uri.parse('$base/events');
+  }
+
+  /// The cookies of a sign-in proxy in front of Open WebUI, which every
+  /// request to it carries, for a preview of one of its own terminals; empty
+  /// for a direct terminal. Open WebUI's own cookies, its account token among
+  /// them, are left out: the preview gets only what the proxy needs.
+  Map<String, String> proxyCookiesForServer(TerminalServerInfo server) {
+    if (!server.isSystem) return const {};
+    final cookies = cookiesFromHeaders(api.serverConfig.customHeaders);
+    return {
+      for (final entry in cookies.entries)
+        if (!openWebUiCookieNames.contains(entry.key)) entry.key: entry.value,
+    };
+  }
+
+  /// Custom proxy authentication for Computer's native WebSocket handshake.
+  /// Direct terminals must never receive the Open WebUI server's credentials.
+  Map<String, String> computerProxyHeadersForServer(TerminalServerInfo server) {
+    if (!server.isSystem) return const {};
+    return {
+      for (final entry in api.serverConfig.customHeaders.entries)
+        if (!const {
+              'cookie',
+              'host',
+              'origin',
+              'connection',
+              'upgrade',
+              'content-length',
+              'transfer-encoding',
+            }.contains(entry.key.toLowerCase()) &&
+            !entry.key.toLowerCase().startsWith('sec-websocket-'))
+          entry.key: entry.value,
+    };
   }
 
   String? authTokenForServer(TerminalServerInfo server) {

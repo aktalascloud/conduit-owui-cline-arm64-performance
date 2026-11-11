@@ -175,3 +175,7 @@ remote/private/
 remote/.venv/
 tool/voice_avatar/node_modules/
 .bun-cache/
+.venv/
+
+# Push relay (Rust) build output
+relay/target/

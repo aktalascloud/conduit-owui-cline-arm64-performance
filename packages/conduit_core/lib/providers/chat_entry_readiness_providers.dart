@@ -8,6 +8,7 @@ import 'package:conduit_core/features/hermes/providers/hermes_providers.dart';
 import 'package:conduit_core/providers/app_providers.dart';
 import 'package:conduit_core/providers/backend_mode_providers.dart';
 import 'package:conduit_core/features/cline/providers/cline_backend_providers.dart';
+import 'package:conduit_core/providers/primary_account_providers.dart';
 
 /// Whether the preferred backend is an accountless transport (Direct or
 /// Hermes) that is usable right now.
@@ -27,6 +28,7 @@ final accountlessPrimaryBackendUsableProvider = Provider<bool>((ref) {
     case PreferredBackend.hermes:
       return ref.watch(hermesConfigProvider).isUsable;
     case PreferredBackend.owui:
+    case PreferredBackend.libreChat:
     case PreferredBackend.unset:
       return false;
   }
@@ -35,11 +37,12 @@ final accountlessPrimaryBackendUsableProvider = Provider<bool>((ref) {
 /// Whether chat can accept externally delivered work (shared content, home
 /// widget and app shortcut actions, Siri/Shortcuts, Android assistant).
 ///
-/// True with an authenticated Open WebUI session, or when a usable accountless
-/// primary backend makes chat reachable without one.
+/// True with the primary account (Open WebUI's or LibreChat's) signed in, or
+/// when a usable accountless primary backend makes chat reachable without
+/// one.
 final chatEntryReadyProvider = Provider<bool>((ref) {
   if (ref.watch(preferredBackendProvider)==PreferredBackend.cline) return ref.watch(clineBackendReadyProvider);
-  if (ref.watch(authNavigationStateProvider) ==
+  if (ref.watch(primaryAuthNavigationStateProvider) ==
       AuthNavigationState.authenticated) {
     return true;
   }
@@ -77,13 +80,16 @@ Future<bool> waitForChatEntryReady(
 }
 
 bool _chatEntryReadinessPending(Ref ref) {
-  if (ref.read(authNavigationStateProvider) == AuthNavigationState.loading) {
+  if (ref.read(primaryAuthNavigationStateProvider) ==
+      AuthNavigationState.loading) {
     return true;
   }
   return switch (ref.read(preferredBackendProvider)) {
     PreferredBackend.direct =>
       ref.read(effectiveDirectConnectionProfilesProvider).isLoading,
     PreferredBackend.hermes => ref.read(hermesSecretsLoadingProvider),
-    PreferredBackend.owui || PreferredBackend.unset || PreferredBackend.cline => false,
+    PreferredBackend.owui ||
+    PreferredBackend.libreChat ||
+    PreferredBackend.unset || PreferredBackend.cline => false,
   };
 }

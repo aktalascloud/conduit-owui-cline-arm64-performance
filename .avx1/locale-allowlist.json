@@ -43,5 +43,6 @@
   "sidebarHermesTab": "Hermes",
   "directMcpAuthOAuth": "OAuth",
   "calendarRangeLabel": "{start} – {end}",
-  "chatComparisonSlotLabel": "{model} · {number}"
+  "chatComparisonSlotLabel": "{model} · {number}",
+  "libreChatTitle": "LibreChat"
 }

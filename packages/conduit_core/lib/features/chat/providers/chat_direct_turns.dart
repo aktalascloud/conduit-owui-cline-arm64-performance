@@ -888,6 +888,10 @@ Future<void> _dispatchDirectRunFromChatWithTrackedOwner(
     )[route.model.id],
   );
   final compactionThreshold = contextLength * 70 ~/ 100;
+  final maxImagesPerRequest = effectiveDirectMaxImagesPerRequest(
+    adapterKey: route.binding.adapterKey,
+    configured: ref.read(directMaxImagesPerRequestProvider),
+  );
   final requiresReplayVerificationKey = requestMessages.any(
     (message) =>
         (message.files ?? const <Map<String, dynamic>>[]).any(
@@ -924,6 +928,7 @@ Future<void> _dispatchDirectRunFromChatWithTrackedOwner(
         directDocumentVerificationKey: verificationKey,
         openRouterProfile: route.profile.isOpenRouter ? route.profile : null,
         ephemeralFilePartsByAttachmentId: ephemeralFilePartsByAttachmentId,
+        maxImages: maxImagesPerRequest,
       );
     },
   );
@@ -990,6 +995,7 @@ Future<void> _dispatchDirectRunFromChatWithTrackedOwner(
           directDocumentVerificationKey: verificationKey,
           openRouterProfile: route.profile.isOpenRouter ? route.profile : null,
           ephemeralFilePartsByAttachmentId: ephemeralFilePartsByAttachmentId,
+          maxImages: maxImagesPerRequest,
         ),
       );
       summary = await _awaitDirectPreflightOrCancellation(
@@ -1073,6 +1079,7 @@ Future<void> _dispatchDirectRunFromChatWithTrackedOwner(
           directDocumentVerificationKey: verificationKey,
           openRouterProfile: route.profile.isOpenRouter ? route.profile : null,
           ephemeralFilePartsByAttachmentId: ephemeralFilePartsByAttachmentId,
+          maxImages: maxImagesPerRequest,
         ),
       );
       directMessages = fitDirectContextMessages(
@@ -1884,11 +1891,64 @@ Future<void> _dispatchDirectRunFromChatWithTrackedOwner(
       rethrow;
     }
     registry.markDurablyPersisted(reservation);
+    await _announceDirectRunCompletion(
+      ref,
+      registry,
+      reservation,
+      owner: owner,
+      message: completed,
+    );
     if (terminalFailure != null && !accumulator.hasGeneratedImages) {
       Error.throwWithStackTrace(terminalFailure, terminalFailureStack!);
     }
   } finally {
     registry.complete(reservation, run);
     await closeMcpSessionBestEffort();
+  }
+}
+
+/// Tells [DirectRunRegistry.completions] that the reply [message] of
+/// [owner]'s chat is done and stored, for a notification when the app is in
+/// the background. Called while the run still holds its database lease.
+/// Never fails the run it reports on.
+Future<void> _announceDirectRunCompletion(
+  dynamic ref,
+  DirectRunRegistry registry,
+  DirectRunReservation reservation, {
+  required _DirectConversationOwner owner,
+  required ChatMessage message,
+}) async {
+  if (registry.isCancelled(reservation)) return;
+  try {
+    final location = owner.location;
+    final active = ref.read(activeConversationProvider) as Conversation?;
+    String? title;
+    if (active != null && active.id == owner.conversationId) {
+      title = active.title;
+    } else if (location != null) {
+      final row = await location.database.chatsDao
+          .getChat(owner.conversationId)
+          .timeout(const Duration(seconds: 2));
+      title = row?.title;
+    }
+    registry.announceCompletion(
+      reservation,
+      DirectRunCompletion(
+        conversationId: owner.conversationId,
+        message: message,
+        title: title,
+        storage: location?.storage,
+        openWebUiAccountId: location?.storage == ChatStorageKind.openWebUi
+            ? owner.persistenceOwnerId
+            : null,
+      ),
+    );
+  } catch (error, stackTrace) {
+    DebugLogger.error(
+      'completion-announce-failed',
+      scope: 'direct-connections/chat',
+      error: error,
+      stackTrace: stackTrace,
+    );
   }
 }

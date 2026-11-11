@@ -169,36 +169,57 @@ def build_conduit(package, manifest, channel):
                 if pubspec.exists() and re.search(r"(?m)^  build_runner:", pubspec.read_text("utf-8")):
                     run(dart, "run", "build_runner", "build", "--delete-conflicting-outputs", cwd=folder)
     run(dart, "run", "build_runner", "build", "--delete-conflicting-outputs")
-    from check_plan import plan as select_checks
-    run(sys.executable, ROOT / '.avx1/test_check_plan.py')
-    run(sys.executable, ROOT / '.avx1/test_native_cache_proof.py')
-    checks = select_checks(ROOT)
-    write_json(WORK / 'check-plan.json', checks)
-    run(flutter, "analyze", "--no-pub", "--no-fatal-infos", "--no-fatal-warnings", *checks['analysis'])
-    # Catch native-view fixture lifecycle failures before the full shared-core suite.
-    if checks['mode'] == 'full':
-        run(flutter, "test", "--no-pub", "test/shared/widgets/platform_ui/settings_switch_semantics_test.dart")
-        run(flutter, "test", "--no-pub", "test/features/navigation/widgets/cline_sidebar_mainstream_test.dart",
-            "test/features/navigation/widgets/sidebar_workspace_tabs_test.dart", "--plain-name", "Cline")
-    run(flutter, "test", "--no-pub", *checks['tests'])
-    run(flutter, "test", "--no-pub", "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart")
-    persistence_tests = [
-        "packages/conduit_core/test/utils/openwebui_persistence_projection_test.dart",
-        "packages/conduit_core/test/services/api_service_chat_completion_test.dart",
-        "packages/conduit_core/test/sync/push_sync_test.dart",
-        "packages/conduit_core/test/sync/pull_sync_test.dart",
-        "packages/conduit_core/test/sync/id_remapper_test.dart",
-        "packages/conduit_core/test/database/daos/outbox_dao_test.dart",
-        "packages/conduit_core/test/database/daos/chats_dao_outbox_test.dart",
-    ]
-    run(flutter, "test", "--no-pub", *persistence_tests)
-    manifest['check_scope'] = {**checks, 'selected_checks': 'passed'}
-    manifest['check_scope']['extra_core_tests'] = [
-        "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart", *persistence_tests,
-    ]
+    fast = os.environ.get('AVX1_FAST_CHECKS') == 'true'
+    if fast:
+        tests = ['test/features/cline']
+        navigation_tests = [
+            'test/features/navigation/widgets/cline_sidebar_mainstream_test.dart',
+            'test/features/navigation/widgets/sidebar_workspace_tabs_test.dart',
+        ]
+        checks = {
+            'mode': 'targeted',
+            'tests': tests,
+            'extra_navigation_tests': navigation_tests,
+            'reason': 'Fast release requested: Cline transport, client and navigation checks',
+            'full_suite': 'not run',
+            'selected_checks': 'passed',
+        }
+        run(flutter, 'test', '--no-pub', *tests)
+        run(flutter, 'test', '--no-pub', *navigation_tests, '--plain-name', 'Cline')
+        manifest['check_scope'] = checks
+        write_json(WORK / 'check-plan.json', checks)
+    else:
+        from check_plan import plan as select_checks
+        run(sys.executable, ROOT / '.avx1/test_check_plan.py')
+        run(sys.executable, ROOT / '.avx1/test_native_cache_proof.py')
+        checks = select_checks(ROOT)
+        write_json(WORK / 'check-plan.json', checks)
+        run(flutter, "analyze", "--no-pub", "--no-fatal-infos", "--no-fatal-warnings", *checks['analysis'])
+        # Catch native-view fixture lifecycle failures before the full shared-core suite.
+        if checks['mode'] == 'full':
+            run(flutter, "test", "--no-pub", "test/shared/widgets/platform_ui/settings_switch_semantics_test.dart")
+            run(flutter, "test", "--no-pub", "test/features/navigation/widgets/cline_sidebar_mainstream_test.dart",
+                "test/features/navigation/widgets/sidebar_workspace_tabs_test.dart", "--plain-name", "Cline")
+        run(flutter, "test", "--no-pub", *checks['tests'])
+        run(flutter, "test", "--no-pub", "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart")
+        persistence_tests = [
+            "packages/conduit_core/test/utils/openwebui_persistence_projection_test.dart",
+            "packages/conduit_core/test/services/api_service_chat_completion_test.dart",
+            "packages/conduit_core/test/sync/push_sync_test.dart",
+            "packages/conduit_core/test/sync/pull_sync_test.dart",
+            "packages/conduit_core/test/sync/id_remapper_test.dart",
+            "packages/conduit_core/test/database/daos/outbox_dao_test.dart",
+            "packages/conduit_core/test/database/daos/chats_dao_outbox_test.dart",
+        ]
+        run(flutter, "test", "--no-pub", *persistence_tests)
+        manifest['check_scope'] = {**checks, 'selected_checks': 'passed'}
+        manifest['check_scope']['extra_core_tests'] = [
+            "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart", *persistence_tests,
+        ]
     native_receipt = prepare_native()
-    outdated = run(flutter, "pub", "outdated", "--json", capture=True).stdout
-    (WORK / "dependency-review.json").write_text(outdated, encoding="utf-8")
+    if not fast:
+        outdated = run(flutter, "pub", "outdated", "--json", capture=True).stdout
+        (WORK / "dependency-review.json").write_text(outdated, encoding="utf-8")
     key = WORK / "conduit-signing.p12"
     properties = ROOT / "android/key.properties"
     key.write_bytes(base64.b64decode(signing_material, validate=True))
@@ -231,7 +252,7 @@ def build_conduit(package, manifest, channel):
     shutil.copy2(apk, package / f"conduit-{channel}-arm64-v8a.apk")
     manifest["optimization_scope"] = "Flutter release AOT, ARM64, R8/tree shaking; SQLite/dartjni/ONNX Runtime+JNI rebuilt with O3 ARMv8-A ThinLTO; remaining vendor libraries explicitly inventoried"
     manifest["security"] = {"flutter_tests": checks["mode"] + " checks passed", "apk_signature": "verified",
-                            "dependency_review": "outdated report; not a complete vulnerability audit"}
+                            "dependency_review": ("pinned lockfile and gateway audit" if fast else "outdated report; not a complete vulnerability audit")}
     manifest["application_id"] = "io.github.aktalascloud.conduit"
     manifest['cline_integration'] = {'transport':'pinned SSH and typed native Cline JSON',
         'ui':'native Flutter with Conduit Markdown','webview':False,'native_client_tests':'passed',

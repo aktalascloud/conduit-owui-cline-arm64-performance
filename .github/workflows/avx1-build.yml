@@ -6,6 +6,10 @@ on:
         description: Build date YYYYMMDD
         required: true
         type: string
+      fast_checks:
+        description: Run focused Cline checks plus APK release checks
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -59,6 +63,7 @@ jobs:
         env:
           BUILD_CHANNEL: latest
           BUILD_DAY: ${{ inputs.day }}
+          AVX1_FAST_CHECKS: ${{ inputs.fast_checks }}
           CONDUIT_KEYSTORE_BASE64: ${{ secrets.CONDUIT_KEYSTORE_BASE64 }}
           CONDUIT_KEYSTORE_PASSWORD: ${{ secrets.CONDUIT_KEYSTORE_PASSWORD }}
         run: python .avx1/build.py

@@ -10,6 +10,7 @@ Future<void> _sendMessageInternal(
   void Function(ChatSendPlaceholderHandle handle)?
   onAssistantPlaceholderCreated,
   ChatSendVoiceContext? voice,
+  void Function()? onTurnStarted,
 ]) async {
   if (ref.read(preferredBackendProvider) == PreferredBackend.cline) {
     final client=ref.read(clineBackendClientProvider);
@@ -19,6 +20,28 @@ Future<void> _sendMessageInternal(
     }
     client.sendMessage(message);
     return;
+  }
+  final libreChatSelected = ref.read(selectedModelProvider) as Model?;
+  final libreChatActive = ref.read(activeConversationProvider) as Conversation?;
+  if (libreChatSelected != null && isLibreChatModel(libreChatSelected)) {
+    // An existing chat still opening is not a new chat yet: sending now
+    // would start one on the server, as below for the other backends.
+    if (libreChatActive == null &&
+        ref.read(isLoadingConversationProvider) == true) {
+      throw StateError('Conversation is still loading');
+    }
+    return _sendLibreChatMessage(
+      ref,
+      message,
+      attachments,
+      model: libreChatSelected,
+      toolIds: toolIds,
+      voice: voice,
+      onAssistantPlaceholderCreated: onAssistantPlaceholderCreated,
+    );
+  }
+  if (isLibreChatConversation(libreChatActive)) {
+    throw StateError('A LibreChat chat continues only with a LibreChat model.');
   }
   final hermesSelectedAtStart = ref.read(selectedModelProvider) as Model?;
   if (hermesSelectedAtStart != null && isHermesModel(hermesSelectedAtStart)) {
@@ -548,6 +571,10 @@ Future<void> _sendMessageInternal(
       }
       pendingRunHandedOff = true;
       databaseLeaseHandedOff = true;
+      // The turn is in the chat and goes to its run, which this send waits
+      // out to the end, approvals and questions included. Its words leave
+      // the composer once it passed its preflight: a new session that could
+      // not be made leaves them there.
       await _dispatchHermesRunFromChat(
         ref,
         assistantMessageId: assistantMessageId,
@@ -573,6 +600,7 @@ Future<void> _sendMessageInternal(
         preRegisteredCancelToken: pendingCancelToken,
         reasoningEffort: reasoningEffortAtSendStart,
         voiceContext: voice?.spokenContext,
+        onRunStarting: onTurnStarted,
       );
     } catch (error) {
       final visible = hermesOwner.isActive(ref)
@@ -747,6 +775,9 @@ Future<void> _sendMessageInternal(
         messages: <ChatMessage>[...existingMessages, userMessage],
         systemPrompt: currentConversation?.systemPrompt,
       );
+      // The turn is in the chat and goes to its run, which this send waits
+      // out to the end, tool approvals included.
+      onTurnStarted?.call();
       await _dispatchDirectRunFromChat(
         ref,
         route: directRoute,
@@ -896,6 +927,13 @@ Future<void> _sendMessageInternal(
             _isDirectConversationOwnerActive(ref, failedOwner)) {
           notifier.updateMessageById(assistantMessageId, (_) => failedSnapshot);
         }
+        await _announceDirectRunCompletion(
+          ref,
+          registry,
+          reservation,
+          owner: failedOwner,
+          message: failedSnapshot,
+        );
       }
       rethrow;
     } finally {
@@ -1333,9 +1371,10 @@ Future<void> _sendMessageInternal(
       );
     } catch (_) {}
     requireOpenWebUiPreflightOwner();
-    final terminalIdForApi = modelSupportsTerminal(selectedModel)
-        ? _resolveTerminalIdForRequest(selectedTerminalId: selectedTerminalId)
-        : null;
+    final terminalIdForApi = terminalIdForModelRequest(
+      selectedModel,
+      selectedTerminalId: selectedTerminalId,
+    );
     final codeInterpreterEnabled =
         codeInterpreterAtSendStart && terminalIdForApi == null;
 
@@ -1706,6 +1745,7 @@ String chatErrorContentForException(Object e) {
     return TemporaryChatUnavailable.userMessage;
   }
   if (e is HermesAttachmentsUnsupportedException) return e.message;
+  if (e is HermesDesktopGatewayStartingException) return e.message;
   if (e is HermesChatInputException) return e.message;
   if (e is HermesLocalDocumentException) return e.message;
   if (e is DirectChatInputException) return e.message;
