@@ -9,7 +9,7 @@ import 'package:conduit_core/navigation/routes.dart';
 import 'package:conduit_core/models/server_config.dart';
 import 'package:conduit_core/providers/app_providers.dart';
 import 'package:conduit_core/providers/backend_mode_providers.dart';
-import 'package:conduit_core/providers/primary_account_providers.dart';
+import 'package:conduit_core/providers/primary_account_switcher.dart';
 
 class _ClinePreferred extends PreferredBackendController {
   @override
