@@ -58,7 +58,7 @@ index eb98cad140fee9e8578616fe364063aa21c3601d..d3148e022d25f475ae0d1b76a1ee28c2
          }
          return const _CoalesceDecision(insert: true);
 diff --git a/packages/conduit_core/lib/features/chat/providers/chat_providers.dart b/packages/conduit_core/lib/features/chat/providers/chat_providers.dart
-index fd230c19ed8f06a828f2ff31a563afbd898c6b21..905fa4a5284d4a7c0acfba613457f90a648f720a 100644
+index 6d8ca0563b3ddcb51bf830d4aeec043f0fdeaa37..e2eab1defd67b610dc882a37688d9b6bb2e4bd58 100644
 --- a/packages/conduit_core/lib/features/chat/providers/chat_providers.dart
 +++ b/packages/conduit_core/lib/features/chat/providers/chat_providers.dart
 @@ -13,6 +13,9 @@
@@ -72,12 +72,12 @@ index fd230c19ed8f06a828f2ff31a563afbd898c6b21..905fa4a5284d4a7c0acfba613457f90a
  import 'dart:collection';
  import 'dart:convert';
 diff --git a/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart b/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart
-index 5bb68c8a04ce08a5f4bd2bab6dca326b6fda56bb..3e3521771e3aa28c1d9c86faad6a586d649f96f7 100644
+index 179f52a1847cb3d1967750f2d3bdf2e7aa13083d..51ea54c157365095934fa8d1be20716cd1b5db94 100644
 --- a/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart
 +++ b/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart
-@@ -11,6 +11,15 @@ Future<void> _sendMessageInternal(
-   onAssistantPlaceholderCreated,
+@@ -12,6 +12,15 @@ Future<void> _sendMessageInternal(
    ChatSendVoiceContext? voice,
+   void Function()? onTurnStarted,
  ]) async {
 +  if (ref.read(preferredBackendProvider) == PreferredBackend.cline) {
 +    final client=ref.read(clineBackendClientProvider);
@@ -88,9 +88,9 @@ index 5bb68c8a04ce08a5f4bd2bab6dca326b6fda56bb..3e3521771e3aa28c1d9c86faad6a586d
 +    client.sendMessage(message);
 +    return;
 +  }
-   final hermesSelectedAtStart = ref.read(selectedModelProvider) as Model?;
-   if (hermesSelectedAtStart != null && isHermesModel(hermesSelectedAtStart)) {
-     // Before anything below is captured: switching connections replaces the
+   final libreChatSelected = ref.read(selectedModelProvider) as Model?;
+   final libreChatActive = ref.read(activeConversationProvider) as Conversation?;
+   if (libreChatSelected != null && isLibreChatModel(libreChatSelected)) {
 diff --git a/packages/conduit_core/lib/features/chat/providers/chat_session_lifecycle.dart b/packages/conduit_core/lib/features/chat/providers/chat_session_lifecycle.dart
 index f6e037241d80d91edfb64611db0c552b243aef79..a8e7ac7e36edbf53c4019974fa9b1be27c7f33b3 100644
 --- a/packages/conduit_core/lib/features/chat/providers/chat_session_lifecycle.dart
@@ -998,7 +998,7 @@ index 0000000000000000000000000000000000000000..46114f9ea1147bb39960e79d0b2d90c1
 +  });
 +}
 diff --git a/packages/conduit_core/test/utils/server_version_compat_test.dart b/packages/conduit_core/test/utils/server_version_compat_test.dart
-index 24a6c7ade86c73e2de4f1ab4279d5ec474eb2057..992cbd04adf2a21bfce0b938928c13271bcd0435 100644
+index 8a20619144e529eb3c8a10bcbcf5a59dcf8198da..5c9859e64f5f0eea65ab4f5a2956e83626e89238 100644
 --- a/packages/conduit_core/test/utils/server_version_compat_test.dart
 +++ b/packages/conduit_core/test/utils/server_version_compat_test.dart
 @@ -6,7 +6,7 @@ void main() {

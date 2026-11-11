@@ -285,10 +285,10 @@ index 0000000000000000000000000000000000000000..0bf5e90cac691b999d4a35044f97167d
 \ No newline at end of file
 diff --git a/.avx1/measurements/onnx-qualified-reference.json b/.avx1/measurements/onnx-qualified-reference.json
 new file mode 100644
-index 0000000000000000000000000000000000000000..ed3a4bc287cef1a7c87352e10d1345e4dad68928
+index 0000000000000000000000000000000000000000..366768f8d4262695102e21f7c8856af627a546d1
 --- /dev/null
 +++ b/.avx1/measurements/onnx-qualified-reference.json
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,27 @@
 +{
 +  "schema": 1,
 +  "run_id": 40821699974,
@@ -310,7 +310,11 @@ index 0000000000000000000000000000000000000000..ed3a4bc287cef1a7c87352e10d1345e4
 +    "previous_lockfile_sha256": "6184cbff0d285327854af0f7924b046d4a2421d6c1a04164dd2e88f177231f83",
 +    "scope": "Only cupertino_native_better1.6.0->1.8.2,cupertino_ui1.0.2->1.1.5,share_plus13.3.0->13.3.1; ONNX/JNI/SQLite/vad versions and source/compiler/flags unchanged",
 +    "upstream_commit": "7a5391a34721bff7bc22c1eda05538f88d6404bb"
-+  }
++  },
++  "compatible_lockfile_sha256": [
++    "c742480d34bf076825af156f0ca480dfb9e5d5c6c66ba9f85a6b94d9a5fecb6b"
++  ],
++  "compatible_lockfile_scope": "2026-11-11 mainstream Dart lock refresh; JNI/SQLite/PDFium/WebRTC package versions and archive hashes unchanged. ONNX C/C++ inputs and qualified binary evidence unchanged."
 +}
 diff --git a/.avx1/native-arm64.json b/.avx1/native-arm64.json
 new file mode 100644
@@ -1438,7 +1442,7 @@ index 0000000000000000000000000000000000000000..fbff8defd39720af5f7c7d2b1f70f4a9
 +with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as f:f.write('prefix='+prefix+'\n')
 diff --git a/.avx1/native_cache_proof.py b/.avx1/native_cache_proof.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..6969f44dd74c1223ca29745130b731c885a0e7dd
+index 0000000000000000000000000000000000000000..827ea3273f34886e6d559e42b7d9d4911a288c85
 --- /dev/null
 +++ b/.avx1/native_cache_proof.py
 @@ -0,0 +1,63 @@
@@ -1487,7 +1491,7 @@ index 0000000000000000000000000000000000000000..6969f44dd74c1223ca29745130b731c8
 +        proof = json.loads(reference.read_text('utf-8'))
 +        exact = (proof['policy_sha256'] == file_hash(root/'.avx1/native-arm64.json') and
 +                 proof['toolchains_sha256'] == file_hash(root/'.avx1/toolchains.json') and
-+                 proof['lockfile_sha256'] == file_hash(root/'pubspec.lock') and
++                 file_hash(root/'pubspec.lock') in {proof['lockfile_sha256'], *proof.get('compatible_lockfile_sha256', [])} and
 +                 proof['compilation_signature'] == compilation_signature(root/'.avx1/native_arm64.py') and
 +                 proof['compiler'] == compiler and
 +                 proof['compile_database_sha256'] == file_hash(build/'Release/compile_commands.json'))

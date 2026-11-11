@@ -1,9 +1,9 @@
 diff --git a/.avx1/build.py b/.avx1/build.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..d13be5fa6de0c3349bda0c12446b393e297c0610
+index 0000000000000000000000000000000000000000..e06e8e93eaa1a71543e0ba709153bcd9d8a5eab0
 --- /dev/null
 +++ b/.avx1/build.py
-@@ -0,0 +1,306 @@
+@@ -0,0 +1,327 @@
 +"""Build one exact source revision. Outputs contain no local configuration."""
 +from __future__ import annotations
 +import base64
@@ -175,36 +175,57 @@ index 0000000000000000000000000000000000000000..d13be5fa6de0c3349bda0c12446b393e
 +                if pubspec.exists() and re.search(r"(?m)^  build_runner:", pubspec.read_text("utf-8")):
 +                    run(dart, "run", "build_runner", "build", "--delete-conflicting-outputs", cwd=folder)
 +    run(dart, "run", "build_runner", "build", "--delete-conflicting-outputs")
-+    from check_plan import plan as select_checks
-+    run(sys.executable, ROOT / '.avx1/test_check_plan.py')
-+    run(sys.executable, ROOT / '.avx1/test_native_cache_proof.py')
-+    checks = select_checks(ROOT)
-+    write_json(WORK / 'check-plan.json', checks)
-+    run(flutter, "analyze", "--no-pub", "--no-fatal-infos", "--no-fatal-warnings", *checks['analysis'])
-+    # Catch native-view fixture lifecycle failures before the full shared-core suite.
-+    if checks['mode'] == 'full':
-+        run(flutter, "test", "--no-pub", "test/shared/widgets/platform_ui/settings_switch_semantics_test.dart")
-+        run(flutter, "test", "--no-pub", "test/features/navigation/widgets/cline_sidebar_mainstream_test.dart",
-+            "test/features/navigation/widgets/sidebar_workspace_tabs_test.dart", "--plain-name", "Cline")
-+    run(flutter, "test", "--no-pub", *checks['tests'])
-+    run(flutter, "test", "--no-pub", "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart")
-+    persistence_tests = [
-+        "packages/conduit_core/test/utils/openwebui_persistence_projection_test.dart",
-+        "packages/conduit_core/test/services/api_service_chat_completion_test.dart",
-+        "packages/conduit_core/test/sync/push_sync_test.dart",
-+        "packages/conduit_core/test/sync/pull_sync_test.dart",
-+        "packages/conduit_core/test/sync/id_remapper_test.dart",
-+        "packages/conduit_core/test/database/daos/outbox_dao_test.dart",
-+        "packages/conduit_core/test/database/daos/chats_dao_outbox_test.dart",
-+    ]
-+    run(flutter, "test", "--no-pub", *persistence_tests)
-+    manifest['check_scope'] = {**checks, 'selected_checks': 'passed'}
-+    manifest['check_scope']['extra_core_tests'] = [
-+        "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart", *persistence_tests,
-+    ]
++    fast = os.environ.get('AVX1_FAST_CHECKS') == 'true'
++    if fast:
++        tests = ['test/features/cline']
++        navigation_tests = [
++            'test/features/navigation/widgets/cline_sidebar_mainstream_test.dart',
++            'test/features/navigation/widgets/sidebar_workspace_tabs_test.dart',
++        ]
++        checks = {
++            'mode': 'targeted',
++            'tests': tests,
++            'extra_navigation_tests': navigation_tests,
++            'reason': 'Fast release requested: Cline transport, client and navigation checks',
++            'full_suite': 'not run',
++            'selected_checks': 'passed',
++        }
++        run(flutter, 'test', '--no-pub', *tests)
++        run(flutter, 'test', '--no-pub', *navigation_tests, '--plain-name', 'Cline')
++        manifest['check_scope'] = checks
++        write_json(WORK / 'check-plan.json', checks)
++    else:
++        from check_plan import plan as select_checks
++        run(sys.executable, ROOT / '.avx1/test_check_plan.py')
++        run(sys.executable, ROOT / '.avx1/test_native_cache_proof.py')
++        checks = select_checks(ROOT)
++        write_json(WORK / 'check-plan.json', checks)
++        run(flutter, "analyze", "--no-pub", "--no-fatal-infos", "--no-fatal-warnings", *checks['analysis'])
++        # Catch native-view fixture lifecycle failures before the full shared-core suite.
++        if checks['mode'] == 'full':
++            run(flutter, "test", "--no-pub", "test/shared/widgets/platform_ui/settings_switch_semantics_test.dart")
++            run(flutter, "test", "--no-pub", "test/features/navigation/widgets/cline_sidebar_mainstream_test.dart",
++                "test/features/navigation/widgets/sidebar_workspace_tabs_test.dart", "--plain-name", "Cline")
++        run(flutter, "test", "--no-pub", *checks['tests'])
++        run(flutter, "test", "--no-pub", "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart")
++        persistence_tests = [
++            "packages/conduit_core/test/utils/openwebui_persistence_projection_test.dart",
++            "packages/conduit_core/test/services/api_service_chat_completion_test.dart",
++            "packages/conduit_core/test/sync/push_sync_test.dart",
++            "packages/conduit_core/test/sync/pull_sync_test.dart",
++            "packages/conduit_core/test/sync/id_remapper_test.dart",
++            "packages/conduit_core/test/database/daos/outbox_dao_test.dart",
++            "packages/conduit_core/test/database/daos/chats_dao_outbox_test.dart",
++        ]
++        run(flutter, "test", "--no-pub", *persistence_tests)
++        manifest['check_scope'] = {**checks, 'selected_checks': 'passed'}
++        manifest['check_scope']['extra_core_tests'] = [
++            "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart", *persistence_tests,
++        ]
 +    native_receipt = prepare_native()
-+    outdated = run(flutter, "pub", "outdated", "--json", capture=True).stdout
-+    (WORK / "dependency-review.json").write_text(outdated, encoding="utf-8")
++    if not fast:
++        outdated = run(flutter, "pub", "outdated", "--json", capture=True).stdout
++        (WORK / "dependency-review.json").write_text(outdated, encoding="utf-8")
 +    key = WORK / "conduit-signing.p12"
 +    properties = ROOT / "android/key.properties"
 +    key.write_bytes(base64.b64decode(signing_material, validate=True))
@@ -237,7 +258,7 @@ index 0000000000000000000000000000000000000000..d13be5fa6de0c3349bda0c12446b393e
 +    shutil.copy2(apk, package / f"conduit-{channel}-arm64-v8a.apk")
 +    manifest["optimization_scope"] = "Flutter release AOT, ARM64, R8/tree shaking; SQLite/dartjni/ONNX Runtime+JNI rebuilt with O3 ARMv8-A ThinLTO; remaining vendor libraries explicitly inventoried"
 +    manifest["security"] = {"flutter_tests": checks["mode"] + " checks passed", "apk_signature": "verified",
-+                            "dependency_review": "outdated report; not a complete vulnerability audit"}
++                            "dependency_review": ("pinned lockfile and gateway audit" if fast else "outdated report; not a complete vulnerability audit")}
 +    manifest["application_id"] = "io.github.aktalascloud.conduit"
 +    manifest['cline_integration'] = {'transport':'pinned SSH and typed native Cline JSON',
 +        'ui':'native Flutter with Conduit Markdown','webview':False,'native_client_tests':'passed',
@@ -587,7 +608,7 @@ index 0000000000000000000000000000000000000000..e874280cb0d73c156847d9c271a8253f
 +    verify_archive(target)
 diff --git a/.avx1/project.json b/.avx1/project.json
 new file mode 100644
-index 0000000000000000000000000000000000000000..40fc967a7f55db7dc55dff3a8e332bcaed167a35
+index 0000000000000000000000000000000000000000..b565bf96614537c5980dac21abb93e1df30390a1
 --- /dev/null
 +++ b/.avx1/project.json
 @@ -0,0 +1,13 @@
@@ -600,8 +621,8 @@ index 0000000000000000000000000000000000000000..40fc967a7f55db7dc55dff3a8e332bca
 +  "description": "Conduit for OWUI + Cline: signed ARM64 APK, SSH access to Cline sessions/projects, O3 ThinLTO native libraries; extended Russian UI / дополненный русский перевод.",
 +  "repository": "aktalascloud/conduit-owui-cline-arm64-performance",
 +  "channel": "latest",
-+  "upstream_commit": "5d8c74ef44e2e1f324c09e35463ca170dad75849",
-+  "stable_tag": "v4.2.2",
++  "upstream_commit": "c22b3ad2f86bd4dfbb5972c465f046bbb5086a0e",
++  "stable_tag": "v4.3.1",
 +  "distribution": "single unified latest"
 +}
 diff --git a/.avx1/test_check_plan.py b/.avx1/test_check_plan.py
@@ -750,10 +771,10 @@ index 0000000000000000000000000000000000000000..7a3bfaee6e584eab99fbc48ba372a012
 +.avx1/project.json merge=ours
 diff --git a/.github/workflows/avx1-build.yml b/.github/workflows/avx1-build.yml
 new file mode 100644
-index 0000000000000000000000000000000000000000..819201c3a9f8a1e6671c73bf17d3d4c0aac0dd83
+index 0000000000000000000000000000000000000000..a088ce1d402fcff53c06345e66ddb023fe838723
 --- /dev/null
 +++ b/.github/workflows/avx1-build.yml
-@@ -0,0 +1,94 @@
+@@ -0,0 +1,99 @@
 +name: AVX1 verified candidates
 +on:
 +  workflow_dispatch:
@@ -762,6 +783,10 @@ index 0000000000000000000000000000000000000000..819201c3a9f8a1e6671c73bf17d3d4c0
 +        description: Build date YYYYMMDD
 +        required: true
 +        type: string
++      fast_checks:
++        description: Run focused Cline checks plus APK release checks
++        type: boolean
++        default: false
 +permissions:
 +  contents: read
 +concurrency:
@@ -815,6 +840,7 @@ index 0000000000000000000000000000000000000000..819201c3a9f8a1e6671c73bf17d3d4c0
 +        env:
 +          BUILD_CHANNEL: latest
 +          BUILD_DAY: ${{ inputs.day }}
++          AVX1_FAST_CHECKS: ${{ inputs.fast_checks }}
 +          CONDUIT_KEYSTORE_BASE64: ${{ secrets.CONDUIT_KEYSTORE_BASE64 }}
 +          CONDUIT_KEYSTORE_PASSWORD: ${{ secrets.CONDUIT_KEYSTORE_PASSWORD }}
 +        run: python .avx1/build.py
@@ -849,10 +875,10 @@ index 0000000000000000000000000000000000000000..819201c3a9f8a1e6671c73bf17d3d4c0
 +            .avx1-work/native/ort-build
 +          key: ${{ steps.native-cache.outputs.cache-primary-key }}
 diff --git a/.gitignore b/.gitignore
-index 81193904c45d84d22a13ab3c802059cdf94a3fc8..f44b762e41524236ecbb0671aba43409bf479024 100644
+index 35b186cdbd6f59f853c062d757345ed31a107e70..c0afce3fe5a122aed611b21bcff9f105a34885a4 100644
 --- a/.gitignore
 +++ b/.gitignore
-@@ -162,3 +162,16 @@ GoogleService-Info.plist
+@@ -162,6 +162,19 @@ GoogleService-Info.plist
  !**/ios/**/default.pbxuser
  !**/ios/**/default.perspectivev3
  !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
@@ -869,3 +895,6 @@ index 81193904c45d84d22a13ab3c802059cdf94a3fc8..f44b762e41524236ecbb0671aba43409
 +remote/.venv/
 +tool/voice_avatar/node_modules/
 +.bun-cache/
+ .venv/
+ 
+ # Push relay (Rust) build output

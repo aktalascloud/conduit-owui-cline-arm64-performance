@@ -5273,18 +5273,18 @@ index 0000000000000000000000000000000000000000..b84dd9e7beec8a756b1dca566b160c7d
 +</script></body></html>
 \ No newline at end of file
 diff --git a/lib/core/services/media_upload_controller.dart b/lib/core/services/media_upload_controller.dart
-index 639d0f6f259ec9828646b469318bd5f9a359fb06..80a3d43637c231b78ea91fb1bcdd510bc3bb11e3 100644
+index 0be912dbedf5db0ff834e2e853b5b2676985b0c3..087015f8b01fcfbad86fc02d3c16e71f0f8617b2 100644
 --- a/lib/core/services/media_upload_controller.dart
 +++ b/lib/core/services/media_upload_controller.dart
-@@ -24,6 +24,7 @@ import 'package:conduit_core/features/hermes/services/hermes_local_document_serv
- import 'package:conduit_core/models/file_info.dart';
+@@ -32,6 +32,7 @@ import 'package:conduit_core/models/file_info.dart';
+ import 'package:conduit_core/models/model.dart';
  
  import 'package:conduit_core/providers/app_providers.dart';
 +import 'package:conduit_core/providers/backend_mode_providers.dart';
  
  import 'package:conduit_core/utils/debug_logger.dart';
  
-@@ -515,6 +516,7 @@ class MediaUploadController {
+@@ -523,6 +524,7 @@ class MediaUploadController {
      String? mimeType,
      String? checksum,
    }) {
@@ -5292,7 +5292,7 @@ index 639d0f6f259ec9828646b469318bd5f9a359fb06..80a3d43637c231b78ea91fb1bcdd510b
      return _startUpload(
        filePath: filePath,
        fileName: fileName,
-@@ -540,6 +542,7 @@ class MediaUploadController {
+@@ -548,6 +550,7 @@ class MediaUploadController {
      String? checksum,
      LocalAttachment? publishAttachment,
    }) async {
@@ -5300,7 +5300,7 @@ index 639d0f6f259ec9828646b469318bd5f9a359fb06..80a3d43637c231b78ea91fb1bcdd510b
      await _enqueueUploadOwned(
        filePath: filePath,
        fileName: fileName,
-@@ -563,6 +566,7 @@ class MediaUploadController {
+@@ -571,6 +574,7 @@ class MediaUploadController {
      String? checksum,
      LocalAttachment? publishAttachment,
    }) async {
@@ -5309,7 +5309,7 @@ index 639d0f6f259ec9828646b469318bd5f9a359fb06..80a3d43637c231b78ea91fb1bcdd510b
        filePath: filePath,
        fileName: fileName,
 diff --git a/lib/core/services/native_sheet_bridge.dart b/lib/core/services/native_sheet_bridge.dart
-index 03fddaba6e31f58d326dcc7060896a88ceebc8ba..48229b28f8a6ee04cf129497a11fc02fbe18c773 100644
+index f6c678c3db146675e9c7b28b066f69ef0f4bcaaf..7bbd8d9d48ada8a64ee829da0cbecb12dfe389f3 100644
 --- a/lib/core/services/native_sheet_bridge.dart
 +++ b/lib/core/services/native_sheet_bridge.dart
 @@ -118,6 +118,7 @@ class NativeSheetRoutes {
@@ -5321,11 +5321,11 @@ index 03fddaba6e31f58d326dcc7060896a88ceebc8ba..48229b28f8a6ee04cf129497a11fc02f
    static const personalConnections = 'open-personal-connections';
    static const scheduledTasks = 'open-scheduled-tasks';
 diff --git a/lib/core/utils/native_sheet_utils.dart b/lib/core/utils/native_sheet_utils.dart
-index b9626e6c6b9eeec595038bdca0269a82855173cb..2691d27f87238f8d1e8ee06245db6fb6adedeef3 100644
+index f7bebaefc1ec5d5f2e3c4ed9d79e7f358ef9d12a..a07e552c86ec527d3b7567fc0f31d75413c6901a 100644
 --- a/lib/core/utils/native_sheet_utils.dart
 +++ b/lib/core/utils/native_sheet_utils.dart
-@@ -398,6 +398,15 @@ NativeSheetDetailConfig buildNativeAccountsDetail(
-           ),
+@@ -495,6 +495,15 @@ NativeSheetDetailConfig buildNativeAccountsDetail(
+         ),
        NativeSheetSectionConfig(
          items: [
 +          NativeSheetItemConfig(
@@ -5365,11 +5365,11 @@ index b3d76f008aeebd347a772e6e1947c988e122a400..7dee41e50ef29037fc019e8607bc9072
      if (!eligibility.canStart) {
        throw StateError(eligibility.errorMessage!);
 diff --git a/lib/features/chat/voice_mode/chat_voice_mode_overlay.dart b/lib/features/chat/voice_mode/chat_voice_mode_overlay.dart
-index 0a6b419feb44a50cfd3948303d8d07843bbc1505..081a8e9a0d731e9a192b3a9e45b9815094f98874 100644
+index bc8f25575017babb1cca62fcdc9227e0d331447a..5547c501a8c9463bb2efb8db48436b59c9144150 100644
 --- a/lib/features/chat/voice_mode/chat_voice_mode_overlay.dart
 +++ b/lib/features/chat/voice_mode/chat_voice_mode_overlay.dart
-@@ -11,6 +11,11 @@ import '../../../shared/utils/adaptive_glass.dart';
- import '../../../shared/utils/ui_utils.dart';
+@@ -13,6 +13,11 @@ import '../../../shared/utils/ui_utils.dart';
+ import '../../../shared/widgets/native_chrome_visibility.dart';
  import 'chat_voice_mode_controller.dart';
  import 'voice_mode_error_text.dart';
 +import 'voice_avatar_view.dart';
@@ -5380,10 +5380,11 @@ index 0a6b419feb44a50cfd3948303d8d07843bbc1505..081a8e9a0d731e9a192b3a9e45b98150
  
  class ChatVoiceModeOverlay extends ConsumerWidget {
    const ChatVoiceModeOverlay({super.key, required this.bottomOffset});
-@@ -37,10 +42,26 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
+@@ -39,7 +44,22 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
      }
  
      final bottom = bottomOffset + Spacing.sm;
+-    if (PlatformUiCapabilities.usesNativeIOS26) {
 +    final hasAvatar =
 +        snapshot.isActive &&
 +        snapshot.phase != ChatVoiceModePhase.starting &&
@@ -5399,7 +5400,11 @@ index 0a6b419feb44a50cfd3948303d8d07843bbc1505..081a8e9a0d731e9a192b3a9e45b98150
 +        snapshot.isCollapsed ||
 +        (hasAvatar &&
 +            !voiceAvatarHasRoom(available, media.textScaler.scale(1)));
-     return Positioned(
++    if (!hasAvatar && PlatformUiCapabilities.usesNativeIOS26) {
+       return Positioned(
+         left: Spacing.inputPadding,
+         right: Spacing.inputPadding,
+@@ -51,6 +71,7 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
        left: Spacing.inputPadding,
        right: Spacing.inputPadding,
        bottom: bottom,
@@ -5407,7 +5412,7 @@ index 0a6b419feb44a50cfd3948303d8d07843bbc1505..081a8e9a0d731e9a192b3a9e45b98150
        child: AnimatedSize(
          key: const ValueKey('voice-mode-surface-size'),
          duration: context.motionDuration(const Duration(milliseconds: 180)),
-@@ -55,7 +76,11 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
+@@ -65,7 +86,11 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
            layoutBuilder: (currentChild, previousChildren) {
              return Stack(
                alignment: Alignment.bottomCenter,
@@ -5420,7 +5425,7 @@ index 0a6b419feb44a50cfd3948303d8d07843bbc1505..081a8e9a0d731e9a192b3a9e45b98150
              );
            },
            transitionBuilder: (child, animation) {
-@@ -78,14 +103,38 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
+@@ -88,14 +113,38 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
                ),
              );
            },
@@ -5460,23 +5465,19 @@ index 0a6b419feb44a50cfd3948303d8d07843bbc1505..081a8e9a0d731e9a192b3a9e45b98150
                  ),
          ),
        ),
-@@ -94,9 +143,14 @@ class ChatVoiceModeOverlay extends ConsumerWidget {
- }
- 
- class _ExpandedVoicePanel extends ConsumerWidget {
--  const _ExpandedVoicePanel({super.key, required this.snapshot});
-+  const _ExpandedVoicePanel({
-+    super.key,
-+    required this.snapshot,
-+    required this.hasAvatar,
-+  });
+@@ -270,9 +319,11 @@ class _ExpandedVoicePanel extends ConsumerWidget {
+     super.key,
+     required this.snapshot,
+     this.onGlass = false,
++    this.hasAvatar = false,
+   });
  
    final ChatVoiceModeSnapshot snapshot;
 +  final bool hasAvatar;
  
-   @override
-   Widget build(BuildContext context, WidgetRef ref) {
-@@ -107,7 +161,7 @@ class _ExpandedVoicePanel extends ConsumerWidget {
+   /// Whether the panel is the island's content, which keeps one height and
+   /// shows no transcript or reply: room for an error sits under the header.
+@@ -431,7 +482,7 @@ class _ExpandedVoicePanel extends ConsumerWidget {
      return DecoratedBox(
        key: const ValueKey('voice-overlay-expanded'),
        decoration: BoxDecoration(
@@ -5485,7 +5486,7 @@ index 0a6b419feb44a50cfd3948303d8d07843bbc1505..081a8e9a0d731e9a192b3a9e45b98150
          borderRadius: BorderRadius.circular(8),
          border: Border.all(color: theme.cardBorder),
          boxShadow: ConduitShadows.messageBubble(context),
-@@ -115,7 +169,7 @@ class _ExpandedVoicePanel extends ConsumerWidget {
+@@ -439,11 +490,17 @@ class _ExpandedVoicePanel extends ConsumerWidget {
        child: Padding(
          padding: const EdgeInsets.all(Spacing.md),
          child: Column(
@@ -5493,10 +5494,7 @@ index 0a6b419feb44a50cfd3948303d8d07843bbc1505..081a8e9a0d731e9a192b3a9e45b98150
 +          mainAxisSize: hasAvatar ? MainAxisSize.max : MainAxisSize.min,
            crossAxisAlignment: CrossAxisAlignment.start,
            children: [
-             Row(
-@@ -154,6 +208,12 @@ class _ExpandedVoicePanel extends ConsumerWidget {
-               ],
-             ),
+             header,
              const SizedBox(height: Spacing.sm),
 +            if (hasAvatar)
 +              Expanded(
@@ -5505,8 +5503,8 @@ index 0a6b419feb44a50cfd3948303d8d07843bbc1505..081a8e9a0d731e9a192b3a9e45b98150
 +            else
 +              VoiceAvatarView(snapshot: snapshot),
              _VoiceText(snapshot: snapshot),
-             if (snapshot.errorMessage != null) ...[
-               const SizedBox(height: Spacing.xs),
+             if (error != null) ...[const SizedBox(height: Spacing.xs), error],
+             const SizedBox(height: Spacing.md),
 diff --git a/lib/features/chat/voice_mode/voice_avatar_binding.dart b/lib/features/chat/voice_mode/voice_avatar_binding.dart
 new file mode 100644
 index 0000000000000000000000000000000000000000..01b42de731d3941809de6c5a148eb8006bed4ac2
@@ -6256,7 +6254,7 @@ index 0000000000000000000000000000000000000000..15d7731e1749bc57215d0f0c66a38d8f
 +  javaScriptBridgeEnabled: false,
 +);
 diff --git a/packages/conduit_core/lib/features/chat/voice_mode/chat_voice_mode_controller.dart b/packages/conduit_core/lib/features/chat/voice_mode/chat_voice_mode_controller.dart
-index 97029cf309ee53db7f3a6180e6dfc448565ab7b3..92ce67386e1027861aa4e13870d5cbe577e7b582 100644
+index 97d5193705ad75e546cbc7d55e26d82d714fcf9e..dc399840567ef64139e24e0cd91f05f658478f48 100644
 --- a/packages/conduit_core/lib/features/chat/voice_mode/chat_voice_mode_controller.dart
 +++ b/packages/conduit_core/lib/features/chat/voice_mode/chat_voice_mode_controller.dart
 @@ -158,6 +158,8 @@ class _ChatVoiceModeServiceLifecycleGate {
@@ -6371,7 +6369,7 @@ index 97029cf309ee53db7f3a6180e6dfc448565ab7b3..92ce67386e1027861aa4e13870d5cbe5
        case VoiceCallKitMuteToggled(callId: final mutedCallId, :final isMuted):
          if (mutedCallId == callId && isMuted != state.isMuted) {
 diff --git a/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart b/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart
-index 8dbf2794d3bc6820f338499506a49636c85a5fc7..8f5b68967e3905485cf47f6daecae21bd6a377dd 100644
+index 11fee7842a4ede46670623026e435e0701b7ecfc..bd4e7c8aaa7b6aaee6ac288f2b5bd86d9589402a 100644
 --- a/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart
 +++ b/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart
 @@ -364,6 +364,46 @@ void main() {
@@ -6690,7 +6688,7 @@ index 8dbf2794d3bc6820f338499506a49636c85a5fc7..8f5b68967e3905485cf47f6daecae21b
  
      test('a realtime voice that cannot start says why', () async {
 diff --git a/test/features/chat/voice_mode/chat_voice_mode_overlay_test.dart b/test/features/chat/voice_mode/chat_voice_mode_overlay_test.dart
-index 0076ce16626bc00e47033b976d467b10bbe26113..cdc5c090bf2983494ad122a1a8ea1a6399b0a448 100644
+index 1c108d624bfa49bd99cb9ff35e7199e60a12213e..c90c657615ada2f2af63681483e3bd84011a3e70 100644
 --- a/test/features/chat/voice_mode/chat_voice_mode_overlay_test.dart
 +++ b/test/features/chat/voice_mode/chat_voice_mode_overlay_test.dart
 @@ -1,5 +1,6 @@
@@ -6700,12 +6698,15 @@ index 0076ce16626bc00e47033b976d467b10bbe26113..cdc5c090bf2983494ad122a1a8ea1a63
  import 'package:conduit/l10n/app_localizations.dart';
  import 'package:conduit/l10n/conduit_localizations.dart';
  import 'package:conduit/shared/theme/app_theme.dart';
-@@ -7,8 +8,72 @@ import 'package:conduit/shared/theme/tweakcn_themes.dart';
+@@ -16,11 +17,75 @@ import 'package:cupertino_native_better/cupertino_native_better.dart'
  import 'package:material_ui/material_ui.dart';
  import 'package:flutter_riverpod/flutter_riverpod.dart';
  import 'package:flutter_test/flutter_test.dart';
 +import 'package:conduit_core/models/model.dart';
 +import 'package:conduit_core/providers/app_providers.dart';
+ 
+ import '../../../support/floating_island.dart';
+ import '../../../support/native_platform_views.dart';
  
  void main() {
 +  testWidgets(
@@ -6773,28 +6774,24 @@ index 0076ce16626bc00e47033b976d467b10bbe26113..cdc5c090bf2983494ad122a1a8ea1a63
    testWidgets('inactive overlay does not collapse a loose Stack', (
      tester,
    ) async {
-@@ -192,6 +257,7 @@ void main() {
+@@ -452,6 +517,7 @@ void main() {
  Widget _buildActiveHarness(
    ProviderContainer container, {
    bool disableAnimations = false,
 +  double keyboard = 0,
+   TextScaler textScaler = TextScaler.noScaling,
  }) {
    return UncontrolledProviderScope(
-     container: container,
-@@ -201,7 +267,11 @@ Widget _buildActiveHarness(
-       supportedLocales: AppLocalizations.supportedLocales,
+@@ -464,6 +530,8 @@ Widget _buildActiveHarness(
        home: Scaffold(
          body: MediaQuery(
--          data: MediaQueryData(disableAnimations: disableAnimations),
-+          data: MediaQueryData(
+           data: MediaQueryData(
 +            size: const Size(402, 874),
 +            viewInsets: EdgeInsets.only(bottom: keyboard),
-+            disableAnimations: disableAnimations,
-+          ),
-           child: const SizedBox(
-             width: 402,
-             height: 874,
-@@ -222,6 +292,11 @@ class _TestVoiceModeController extends ChatVoiceModeController {
+             disableAnimations: disableAnimations,
+             textScaler: textScaler,
+           ),
+@@ -487,6 +555,11 @@ class _TestVoiceModeController extends ChatVoiceModeController {
    _TestVoiceModeController(this.initialState);
  
    final ChatVoiceModeSnapshot initialState;
