@@ -9,6 +9,7 @@ import 'package:conduit_core/navigation/routes.dart';
 import 'package:conduit_core/models/server_config.dart';
 import 'package:conduit_core/providers/app_providers.dart';
 import 'package:conduit_core/providers/backend_mode_providers.dart';
+import 'package:conduit_core/providers/primary_account_providers.dart';
 
 class _ClinePreferred extends PreferredBackendController {
   @override
@@ -18,7 +19,9 @@ class _ClinePreferred extends PreferredBackendController {
 void main() {
   test('Cline cold start uses native workspace without an OWUI login', () {
     T read<T>(ProviderListenable<T> p) {
-      if (p == reviewerModeProvider) return false as T;
+      if (p == reviewerModeProvider || p == primaryBootRecoveryPendingProvider) {
+        return false as T;
+      }
       if (p == activeServerProvider)
         return const AsyncData<ServerConfig?>(null) as T;
       if (p == authNavigationStateProvider)
