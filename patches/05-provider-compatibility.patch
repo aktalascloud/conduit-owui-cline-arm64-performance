@@ -1,0 +1,1388 @@
+diff --git a/lib/features/direct_connections/controllers/direct_connection_editor_form.dart b/lib/features/direct_connections/controllers/direct_connection_editor_form.dart
+index d038a272dc0898890b041c04ab4a4dccf0bee710..4b02c2c26110dded3d6e53ae155041a8d80e460c 100644
+--- a/lib/features/direct_connections/controllers/direct_connection_editor_form.dart
++++ b/lib/features/direct_connections/controllers/direct_connection_editor_form.dart
+@@ -125,6 +125,13 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
+       _adapterKey = profile.adapterKey;
+       _providerPreset = profile.isOpenRouter
+           ? kOpenRouterProviderPreset
++          : profile.isMiniMax
++          ? (const {
++                  'api.minimax.cn',
++                  'api.minimaxi.com',
++                }.contains(Uri.parse(profile.baseUrl.trim()).host)
++                ? kMiniMaxCnProviderPreset
++                : kMiniMaxProviderPreset)
+           : profile.adapterKey;
+       _openAiApiMode = profile.openAiApiMode;
+       _authentication =
+@@ -159,6 +166,9 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
+     required String openRouterDefaultName,
+   }) {
+     if (providerPreset == value) return;
++    final wasMiniMax =
++        providerPreset == kMiniMaxProviderPreset ||
++        providerPreset == kMiniMaxCnProviderPreset;
+     _providerPreset = value;
+     _adapterKey = value == kOllamaAdapterKey
+         ? kOllamaAdapterKey
+@@ -169,15 +179,31 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
+       baseUrl.text = switch (value) {
+         kOllamaAdapterKey => 'https://ollama.com',
+         kOpenRouterProviderPreset => kOpenRouterApiBaseUrl,
++        kMiniMaxProviderPreset => kMiniMaxApiBaseUrl,
++        kMiniMaxCnProviderPreset => kMiniMaxCnApiBaseUrl,
+         _ => 'https://api.openai.com/v1',
+       };
++      if (value == kMiniMaxProviderPreset ||
++          value == kMiniMaxCnProviderPreset) {
++        if (mode.isNew && models.text.trim().isEmpty) {
++          models.text = kMiniMaxModelIds.join('\n');
++        }
++      } else if (mode.isNew &&
++          wasMiniMax &&
++          models.text == kMiniMaxModelIds.join('\n')) {
++        models.clear();
++      }
+       if (mode.isNew &&
+           (name.text == defaultName ||
+               name.text == ollamaDefaultName ||
+-              name.text == openRouterDefaultName)) {
++              name.text == openRouterDefaultName ||
++              name.text == 'MiniMax' ||
++              name.text == 'MiniMax (CN)')) {
+         name.text = switch (value) {
+           kOllamaAdapterKey => ollamaDefaultName,
+           kOpenRouterProviderPreset => openRouterDefaultName,
++          kMiniMaxProviderPreset => 'MiniMax',
++          kMiniMaxCnProviderPreset => 'MiniMax (CN)',
+           _ => defaultName,
+         };
+       }
+diff --git a/lib/features/direct_connections/views/direct_connection_editor_sections.dart b/lib/features/direct_connections/views/direct_connection_editor_sections.dart
+index 52c8a9804580e3cec6cdc5da92c5957e2beb91bd..852045e6e85b475b20db797addcd1e2f3d493239 100644
+--- a/lib/features/direct_connections/views/direct_connection_editor_sections.dart
++++ b/lib/features/direct_connections/views/direct_connection_editor_sections.dart
+@@ -111,18 +111,24 @@ final class DirectConnectionGeneralSection extends StatelessWidget {
+   }
+ }
+ 
+-List<AdaptiveDropdownOption<String>> _providerOptions(AppLocalizations l10n) =>
+-    [
+-      AdaptiveDropdownOption(
+-        value: kOpenAiCompatibleAdapterKey,
+-        label: l10n.openAICompatible,
+-      ),
+-      AdaptiveDropdownOption(
+-        value: kOpenRouterProviderPreset,
+-        label: l10n.openRouterProviderName,
+-      ),
+-      AdaptiveDropdownOption(value: kOllamaAdapterKey, label: l10n.ollama),
+-    ];
++List<AdaptiveDropdownOption<String>> _providerOptions(
++  AppLocalizations l10n,
++) => [
++  AdaptiveDropdownOption(
++    value: kOpenAiCompatibleAdapterKey,
++    label: l10n.openAICompatible,
++  ),
++  AdaptiveDropdownOption(
++    value: kOpenRouterProviderPreset,
++    label: l10n.openRouterProviderName,
++  ),
++  const AdaptiveDropdownOption(value: kMiniMaxProviderPreset, label: 'MiniMax'),
++  const AdaptiveDropdownOption(
++    value: kMiniMaxCnProviderPreset,
++    label: 'MiniMax (CN)',
++  ),
++  AdaptiveDropdownOption(value: kOllamaAdapterKey, label: l10n.ollama),
++];
+ 
+ List<AdaptiveDropdownOption<String>> _providerOptionsForForm(
+   AppLocalizations l10n,
+@@ -275,6 +281,22 @@ final class DirectConnectionProviderSection extends StatelessWidget {
+             showDivider: true,
+             onTap: () => select(kOpenRouterProviderPreset),
+           ),
++          UtilitySelectionRow(
++            leading: const _ProviderIcon(icon: Icons.api_rounded),
++            title: 'MiniMax',
++            subtitle: null,
++            selected: form.providerPreset == kMiniMaxProviderPreset,
++            showDivider: true,
++            onTap: () => select(kMiniMaxProviderPreset),
++          ),
++          UtilitySelectionRow(
++            leading: const _ProviderIcon(icon: Icons.api_rounded),
++            title: 'MiniMax (CN)',
++            subtitle: null,
++            selected: form.providerPreset == kMiniMaxCnProviderPreset,
++            showDivider: true,
++            onTap: () => select(kMiniMaxCnProviderPreset),
++          ),
+           UtilitySelectionRow(
+             leading: const _ProviderIcon(icon: Icons.computer_outlined),
+             title: l10n.ollama,
+diff --git a/packages/conduit_core/lib/features/direct_connections/controllers/direct_connection_editor_draft.dart b/packages/conduit_core/lib/features/direct_connections/controllers/direct_connection_editor_draft.dart
+index addbf166d1d921e2432b77de89fc78ac8851fc21..5331d76aad9ef6e340d2fea03d300c5bfca148b2 100644
+--- a/packages/conduit_core/lib/features/direct_connections/controllers/direct_connection_editor_draft.dart
++++ b/packages/conduit_core/lib/features/direct_connections/controllers/direct_connection_editor_draft.dart
+@@ -156,6 +156,8 @@ enum DirectDraftValidationIssue {
+ }
+ 
+ const String kOpenRouterProviderPreset = 'openrouter';
++const String kMiniMaxProviderPreset = 'minimax';
++const String kMiniMaxCnProviderPreset = 'minimax-cn';
+ 
+ List<String> parseDirectManualModelIds(String source) {
+   final seen = <String>{};
+diff --git a/packages/conduit_core/lib/features/direct_connections/models/direct_connection_profile.dart b/packages/conduit_core/lib/features/direct_connections/models/direct_connection_profile.dart
+index 7e2d2b7ecf9d99570f2e1f0b6ee89b73de3ba7ff..b9c57c4eefb01303efbf26b2fec80bb1e744740c 100644
+--- a/packages/conduit_core/lib/features/direct_connections/models/direct_connection_profile.dart
++++ b/packages/conduit_core/lib/features/direct_connections/models/direct_connection_profile.dart
+@@ -31,6 +31,16 @@ const List<String> kApplePccReasoningEfforts = <String>[
+ /// Canonical first-party OpenRouter API root.
+ const String kOpenRouterApiBaseUrl = 'https://openrouter.ai/api/v1';
+ 
++/// MiniMax direct API roots and manually discoverable models.
++const String kMiniMaxApiBaseUrl = 'https://api.minimax.io/v1';
++const String kMiniMaxCnApiBaseUrl = 'https://api.minimax.cn/v1';
++const List<String> kMiniMaxModelIds = ['MiniMax-M3.1-Flash', 'MiniMax-M3'];
++const int kMiniMaxContextLength = 1000000;
++const List<String> kOpenRouterMiniMaxModelIds = [
++  'minimax/minimax-m3.1-flash',
++  'minimax/minimax-m3',
++];
++
+ /// OpenAI-family completion protocol selected for one connection profile.
+ ///
+ /// This remains profile data rather than a separate adapter key so OpenAI,
+@@ -187,6 +197,9 @@ final class DirectConnectionProfile {
+       adapterKey == kOpenAiCompatibleAdapterKey &&
+       isOpenRouterApiBaseUrl(baseUrl);
+ 
++  bool get isMiniMax =>
++      adapterKey == kOpenAiCompatibleAdapterKey && isMiniMaxApiBaseUrl(baseUrl);
++
+   bool get supportsOpenRouterWebSearch =>
+       isOpenRouter && openAiApiMode == DirectOpenAiApiMode.chatCompletions;
+   bool get supportsOpenRouterImageGeneration => isOpenRouter;
+@@ -554,6 +567,25 @@ bool isOllamaCloudApiBaseUrl(String value) {
+   return uri.path.isEmpty || uri.path == '/';
+ }
+ 
++/// Bind provider-specific behavior to an exact first-party HTTPS API root.
++bool isMiniMaxApiBaseUrl(String value) {
++  final uri = Uri.tryParse(value.trim());
++  if (uri == null ||
++      uri.scheme.toLowerCase() != 'https' ||
++      !const {
++        'api.minimax.io',
++        'api.minimax.cn',
++        'api.minimaxi.com',
++      }.contains(uri.host.toLowerCase()) ||
++      (uri.hasPort && uri.port != 443) ||
++      uri.userInfo.isNotEmpty ||
++      uri.hasQuery ||
++      uri.hasFragment) {
++    return false;
++  }
++  return uri.path == '/v1' || uri.path == '/v1/';
++}
++
+ bool isOpenRouterApiBaseUrl(String value) {
+   final uri = Uri.tryParse(value.trim());
+   if (uri == null ||
+diff --git a/packages/conduit_core/lib/features/direct_connections/services/direct_provider_adapter.dart b/packages/conduit_core/lib/features/direct_connections/services/direct_provider_adapter.dart
+index bb1135d6e114c1c6e053f1c728c36e8a3b66a080..89c8fefa4e172bd447f83776f2ab7004cf4a3d95 100644
+--- a/packages/conduit_core/lib/features/direct_connections/services/direct_provider_adapter.dart
++++ b/packages/conduit_core/lib/features/direct_connections/services/direct_provider_adapter.dart
+@@ -89,11 +89,18 @@ List<DirectRemoteModel>? directManualModels(DirectConnectionProfile profile) =>
+     ? null
+     : List.unmodifiable([
+         for (final id in profile.manualModelIds)
+-          // Manual IDs currently carry no per-model modality metadata. Keep
++          // Manual IDs usually carry no per-model modality metadata. Keep
+           // direct v1's optimistic image support so manually configured vision
+           // models remain usable; a future adapter/profile capability override
+           // can make this conservative without changing the adapter contract.
+-          DirectRemoteModel(id: id, isMultimodal: true),
++          DirectRemoteModel(
++            id: id,
++            isMultimodal: true,
++            capabilities: {
++              if (profile.isMiniMax && kMiniMaxModelIds.contains(id))
++                'context_length': kMiniMaxContextLength,
++            },
++          ),
+       ]);
+ 
+ /// Runtime-extensible adapter registry. Persisted profiles store [String] keys
+diff --git a/packages/conduit_core/lib/features/direct_connections/services/openai_compatible_adapter.dart b/packages/conduit_core/lib/features/direct_connections/services/openai_compatible_adapter.dart
+index aec26bfa3ba317371fbcea36558111d41660a618..4455c1fdf0e8a7718c54c72a9a9cfe16c74e575c 100644
+--- a/packages/conduit_core/lib/features/direct_connections/services/openai_compatible_adapter.dart
++++ b/packages/conduit_core/lib/features/direct_connections/services/openai_compatible_adapter.dart
+@@ -125,6 +125,16 @@ final class OpenAiCompatibleAdapter implements DirectProviderAdapter {
+   ) async {
+     final manualModels = directManualModels(profile);
+     if (manualModels != null) return manualModels;
++    if (profile.isMiniMax) {
++      return [
++        for (final id in kMiniMaxModelIds)
++          DirectRemoteModel(
++            id: id,
++            isMultimodal: true,
++            capabilities: {'context_length': kMiniMaxContextLength},
++          ),
++      ];
++    }
+ 
+     final client = _client(profile);
+     final dio = client.dio;
+@@ -214,6 +224,21 @@ final class OpenAiCompatibleAdapter implements DirectProviderAdapter {
+           ),
+         );
+       }
++      if (profile.isOpenRouter) {
++        final indices = [
++          for (var i = 0; i < models.length; i++)
++            if (kOpenRouterMiniMaxModelIds.contains(models[i].id)) i,
++        ];
++        final current = [for (final i in indices) models[i]]
++          ..sort(
++            (a, b) => kOpenRouterMiniMaxModelIds
++                .indexOf(a.id)
++                .compareTo(kOpenRouterMiniMaxModelIds.indexOf(b.id)),
++          );
++        for (var i = 0; i < indices.length; i++) {
++          models[indices[i]] = current[i];
++        }
++      }
+       return models;
+     } catch (error) {
+       final normalized = normalizeDirectProviderError(error);
+@@ -238,7 +263,7 @@ final class OpenAiCompatibleAdapter implements DirectProviderAdapter {
+       if (profile.isOpenRouter) {
+         await _validateOpenRouterKey(profile);
+       }
+-      if (profile.manualModelIds.isNotEmpty) {
++      if (profile.manualModelIds.isNotEmpty || profile.isMiniMax) {
+         return await _probeManualConnection(profile);
+       }
+       final models = await listModels(profile);
+@@ -296,7 +321,9 @@ final class OpenAiCompatibleAdapter implements DirectProviderAdapter {
+           ((status >= 200 && status < 300) || status == 405)) {
+         return DirectConnectionProbe(
+           reachable: true,
+-          modelCount: profile.manualModelIds.length,
++          modelCount: profile.manualModelIds.isEmpty && profile.isMiniMax
++              ? kMiniMaxModelIds.length
++              : profile.manualModelIds.length,
+         );
+       }
+       return DirectConnectionProbe(
+@@ -1517,8 +1544,20 @@ Map<String, dynamic> _chatRequestBody(
+     ...core,
+     'stream': true,
+   };
++  if (profile.isMiniMax ||
++      (profile.isOpenRouter && request.remoteModelId.startsWith('minimax/'))) {
++    final serializedMessages = body['messages'] as List;
++    for (var i = 0; i < messages.length; i++) {
++      if (messages[i].role == 'assistant' && messages[i].reasoning != null) {
++        (serializedMessages[i] as Map)['reasoning_content'] =
++            messages[i].reasoning;
++      }
++    }
++  }
++  if (profile.isMiniMax) _validateMiniMaxRequest(body, profile);
+   if (profile.isOpenRouter) {
+     _normalizeOpenRouterReasoning(body);
++    _validateOpenRouterMiniMaxRequest(body);
+     _applyOpenRouterRequestFeatures(body, request, messages);
+   } else if (request.enableWebSearch || request.enableImageGeneration) {
+     throw const DirectProviderException(
+@@ -1730,6 +1769,21 @@ Map<String, dynamic> _responsesRequestBody(
+         item['role'] = messages[index].role;
+       }
+     }
++    if (profile.isMiniMax) {
++      core['input'] = <dynamic>[
++        for (var index = 0; index < messages.length; index++) ...[
++          if (messages[index].role == 'assistant' &&
++              messages[index].reasoning != null)
++            <String, dynamic>{
++              'type': 'reasoning',
++              'summary': [
++                {'type': 'summary_text', 'text': messages[index].reasoning},
++              ],
++            },
++          input[index],
++        ],
++      ];
++    }
+   }
+   final body = <String, dynamic>{
+     ...request.parameters,
+@@ -1752,8 +1806,10 @@ Map<String, dynamic> _responsesRequestBody(
+       ]
+       ..['parallel_tool_calls'] = false;
+   }
++  if (profile.isMiniMax) _validateMiniMaxRequest(body, profile);
+   if (profile.isOpenRouter) {
+     _normalizeOpenRouterReasoning(body);
++    _validateOpenRouterMiniMaxRequest(body);
+   }
+   if (!profile.isOpenRouter &&
+       (request.enableWebSearch || request.enableImageGeneration)) {
+@@ -1764,6 +1820,63 @@ Map<String, dynamic> _responsesRequestBody(
+   return body;
+ }
+ 
++const _miniMaxFlashEfforts = {'low', 'medium', 'high', 'xhigh', 'max'};
++
++void _validateMiniMaxRequest(
++  Map<String, dynamic> body,
++  DirectConnectionProfile profile,
++) {
++  if (!kMiniMaxModelIds.contains(body['model'])) return;
++  final responses = profile.openAiApiMode == DirectOpenAiApiMode.responses;
++  if (responses) {
++    // MiniMax does not store conversations; every round replays full input.
++    body.remove('previous_response_id');
++    body.remove('conversation');
++    body['store'] = false;
++    final effort = body.remove('reasoning_effort');
++    if (effort != null) {
++      final reasoning = body['reasoning'];
++      body['reasoning'] = <String, dynamic>{
++        if (reasoning is Map) ...Map<String, dynamic>.from(reasoning),
++        'effort': effort,
++      };
++    }
++  }
++  if (body['model'] != 'MiniMax-M3.1-Flash') return;
++  final thinking = body['thinking'];
++  final reasoning = body['reasoning'];
++  final effort = responses && reasoning is Map
++      ? reasoning['effort']
++      : body['reasoning_effort'];
++  if ((thinking != null &&
++          (thinking is! Map || thinking['type'] != 'adaptive')) ||
++      (effort != null && !_miniMaxFlashEfforts.contains(effort)) ||
++      (reasoning is Map &&
++          (reasoning['effort'] == 'none' || reasoning['enabled'] == false)) ||
++      body['reasoning_split'] == false ||
++      body.containsKey('service_tier')) {
++    throw const DirectProviderException(
++      'MiniMax-M3.1-Flash requires adaptive thinking with low, medium, high, '
++      'xhigh, or max effort, and does not support service_tier or '
++      'reasoning_split=false.',
++    );
++  }
++}
++
++void _validateOpenRouterMiniMaxRequest(Map<String, dynamic> body) {
++  if (body['model'] != kOpenRouterMiniMaxModelIds.first) return;
++  final reasoning = body['reasoning'];
++  if (reasoning is Map &&
++      (reasoning['enabled'] == false ||
++          (reasoning['effort'] != null &&
++              !_miniMaxFlashEfforts.contains(reasoning['effort'])))) {
++    throw const DirectProviderException(
++      'MiniMax-M3.1-Flash requires reasoning with low, medium, high, xhigh, '
++      'or max effort.',
++    );
++  }
++}
++
+ void _normalizeOpenRouterReasoning(Map<String, dynamic> body) {
+   final rawEffort = body.remove('reasoning_effort');
+   final existing = body['reasoning'];
+diff --git a/packages/conduit_core/lib/providers/app_providers_default_model.dart b/packages/conduit_core/lib/providers/app_providers_default_model.dart
+index 310a16263248f23320f1ad1d5317611ff59e3ac2..9cb137d7cf17580d6be0600543ce4ab73db335af 100644
+--- a/packages/conduit_core/lib/providers/app_providers_default_model.dart
++++ b/packages/conduit_core/lib/providers/app_providers_default_model.dart
+@@ -648,7 +648,7 @@ Model? _modelForPreferredBackend(
+     PreferredBackend.direct =>
+       models.where(isLocallyMintedDirectModel).firstOrNull,
+     PreferredBackend.hermes => models.where(isHermesModel).firstOrNull,
+-    PreferredBackend.owui || PreferredBackend.unset => null,
++    PreferredBackend.owui || PreferredBackend.unset || PreferredBackend.cline => null,
+   };
+ }
+ 
+@@ -682,7 +682,7 @@ Model? _accountlessSelection({
+       switch (preferredBackend) {
+         PreferredBackend.owui ||
+         PreferredBackend.unset => available.firstOrNull,
+-        PreferredBackend.direct || PreferredBackend.hermes => null,
++        PreferredBackend.direct || PreferredBackend.hermes || PreferredBackend.cline => null,
+       };
+ }
+ 
+@@ -690,6 +690,7 @@ bool _matchesPreferredBackend(Model model, PreferredBackend preferredBackend) =>
+     switch (preferredBackend) {
+       PreferredBackend.direct => isLocallyMintedDirectModel(model),
+       PreferredBackend.hermes => isHermesModel(model),
++      PreferredBackend.cline => false,
+       PreferredBackend.owui || PreferredBackend.unset =>
+         isLocallyMintedDirectModel(model) || isHermesModel(model),
+     };
+diff --git a/packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart b/packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart
+new file mode 100644
+index 0000000000000000000000000000000000000000..cebd41b3450da87dd0ad376fb9ef6f3e4cc382e3
+--- /dev/null
++++ b/packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart
+@@ -0,0 +1,570 @@
++import 'dart:convert';
++import 'dart:typed_data';
++
++import 'package:conduit_core/features/direct_connections/models/direct_completion.dart';
++import 'package:conduit_core/features/direct_connections/models/direct_connection_profile.dart';
++import 'package:conduit_core/features/direct_connections/services/openai_compatible_adapter.dart';
++import 'package:dio/dio.dart';
++import 'package:test/test.dart';
++
++void main() {
++  test(
++    'China preset uses the documented origin and preserves legacy origin',
++    () {
++      expect(kMiniMaxCnApiBaseUrl, 'https://api.minimax.cn/v1');
++      final legacy = _profile('https://api.minimaxi.com/v1');
++      expect(legacy.isMiniMax, isTrue);
++      expect(legacy.baseUrl, 'https://api.minimaxi.com/v1');
++    },
++  );
++
++  for (final baseUrl in [kMiniMaxApiBaseUrl, kMiniMaxCnApiBaseUrl]) {
++    test(
++      '$baseUrl discovers Flash first and preserves manual legacy IDs',
++      () async {
++        final transport = _Transport([]);
++        final adapter = _adapter(transport);
++        final models = await adapter.listModels(_profile(baseUrl));
++        expect(models.map((model) => model.id), kMiniMaxModelIds);
++        expect(
++          models.every(
++            (model) => model.capabilities['context_length'] == 1000000,
++          ),
++          isTrue,
++        );
++        final saved = await adapter.listModels(
++          _profile(baseUrl)
++              .copyWith(manualModelIds: ['MiniMax-M2.7', 'custom']),
++        );
++        expect(saved.map((model) => model.id), ['MiniMax-M2.7', 'custom']);
++        expect(
++          saved.every(
++            (model) => !model.capabilities.containsKey('context_length'),
++          ),
++          isTrue,
++        );
++        final manual = await adapter.listModels(
++          _profile(baseUrl)
++              .copyWith(manualModelIds: ['MiniMax-M3.1-Flash', 'custom']),
++        );
++        expect(manual.first.capabilities['context_length'], 1000000);
++        expect(manual.last.capabilities.containsKey('context_length'), isFalse);
++        expect(transport.requests, isEmpty);
++      },
++    );
++
++    test('$baseUrl sends images and assistant reasoning unchanged', () async {
++      final transport = _Transport([_completion]);
++      final events = await _run(
++        transport,
++        _profile(baseUrl),
++        parameters: const {'reasoning_effort': 'max'},
++      );
++      expect(events.whereType<DirectStreamError>(), isEmpty);
++      final request = transport.requests.single;
++      expect(request.uri.toString(), '$baseUrl/chat/completions');
++      final body = _body(request);
++      expect(body['model'], 'MiniMax-M3.1-Flash');
++      expect(body['reasoning_effort'], 'max');
++      expect(body.containsKey('service_tier'), isFalse);
++      final messages = body['messages'] as List;
++      expect(messages[0]['reasoning_content'], 'Keep this reasoning');
++      expect(messages[1]['content'][1]['image_url']['url'], _image);
++    });
++
++    for (final effort in ['low', 'medium', 'high', 'xhigh', 'max']) {
++      test('$baseUrl permits Flash effort $effort', () async {
++        final transport = _Transport([_completion]);
++        final events = await _run(
++          transport,
++          _profile(baseUrl),
++          parameters: {
++            'reasoning_effort': effort,
++            'thinking': {'type': 'adaptive'},
++          },
++        );
++        expect(events.whereType<DirectStreamError>(), isEmpty);
++        expect(_body(transport.requests.single)['reasoning_effort'], effort);
++      });
++    }
++
++    for (final parameters in [
++      {'reasoning_effort': 'none'},
++      {
++        'thinking': {'type': 'disabled'},
++      },
++      {'reasoning_split': false},
++      {'service_tier': 'priority'},
++    ]) {
++      test(
++        '$baseUrl rejects unsupported Flash controls $parameters before HTTP',
++        () async {
++          final transport = _Transport([]);
++          final events = await _run(
++            transport,
++            _profile(baseUrl),
++            parameters: parameters,
++          );
++          expect(events.whereType<DirectStreamError>().isNotEmpty, isTrue);
++          expect(transport.requests, isEmpty);
++        },
++      );
++    }
++  }
++
++  test(
++    'international Responses sends full reasoning and image history',
++    () async {
++      final transport = _Transport([
++        {
++          'id': 'resp_1',
++          'object': 'response',
++          'status': 'completed',
++          'output': [
++            {
++              'id': 'msg-1',
++              'type': 'message',
++              'role': 'assistant',
++              'status': 'completed',
++              'content': [
++                {'type': 'output_text', 'text': 'Done'},
++              ],
++            },
++          ],
++        },
++      ]);
++      final events = await _run(
++        transport,
++        _profile(kMiniMaxApiBaseUrl, mode: DirectOpenAiApiMode.responses),
++        parameters: const {
++          'reasoning_effort': 'high',
++          'store': true,
++          'previous_response_id': 'old-response',
++          'conversation': 'old-conversation',
++        },
++      );
++      expect(events.whereType<DirectStreamError>(), isEmpty);
++      final request = transport.requests.single;
++      expect(request.uri.toString(), '$kMiniMaxApiBaseUrl/responses');
++      final body = _body(request);
++      expect(body['reasoning'], {'effort': 'high'});
++      expect(body['store'], isFalse);
++      expect(body.containsKey('previous_response_id'), isFalse);
++      expect(body.containsKey('conversation'), isFalse);
++      final input = body['input'] as List;
++      expect(input.any((dynamic item) => item['type'] == 'reasoning'), isTrue);
++      expect(jsonEncode(input), contains(_image));
++    },
++  );
++
++  for (final mode in DirectOpenAiApiMode.values) {
++    test(
++      'MiniMax $mode replays tool result and reasoning on the next HTTP round',
++      () async {
++        final responses = mode == DirectOpenAiApiMode.responses;
++        final transport = _Transport([
++          if (responses)
++            {
++              'id': 'resp-tool',
++              'status': 'completed',
++              'output': [
++                {
++                  'type': 'reasoning',
++                  'id': 'reason-1',
++                  'summary': [
++                    {'type': 'summary_text', 'text': 'Need lookup'},
++                  ],
++                },
++                {
++                  'type': 'function_call',
++                  'id': 'fc-1',
++                  'call_id': 'call-1',
++                  'name': 'lookup',
++                  'arguments': '{}',
++                  'status': 'completed',
++                },
++              ],
++            }
++          else
++            {
++              'id': 'chat-tool',
++              'choices': [
++                {
++                  'index': 0,
++                  'finish_reason': 'tool_calls',
++                  'message': {
++                    'role': 'assistant',
++                    'reasoning_content': 'Need lookup',
++                    'tool_calls': [
++                      {
++                        'id': 'call-1',
++                        'type': 'function',
++                        'function': {'name': 'lookup', 'arguments': '{}'},
++                      },
++                    ],
++                  },
++                },
++              ],
++            },
++          if (responses)
++            {
++              'id': 'resp-final',
++              'status': 'completed',
++              'output': [
++                {
++                  'id': 'msg-final',
++                  'type': 'message',
++                  'role': 'assistant',
++                  'status': 'completed',
++                  'content': [
++                    {'type': 'output_text', 'text': 'Done'},
++                  ],
++                },
++              ],
++            }
++          else
++            _completion,
++        ]);
++        final run = _adapter(transport).startCompletion(
++          _profile(kMiniMaxApiBaseUrl, mode: mode),
++          DirectCompletionRequest(
++            remoteModelId: 'MiniMax-M3.1-Flash',
++            messages: [
++              DirectChatMessage(
++                role: 'user',
++                parts: const [
++                  DirectTextPart('Look up this image'),
++                  DirectImagePart(_image),
++                ],
++              ),
++            ],
++            tools: _tools(),
++          ),
++        );
++        final events = await run.events.toList();
++        await run.done;
++        expect(events.whereType<DirectStreamError>(), isEmpty);
++        expect(transport.requests, hasLength(2));
++        final first = _body(transport.requests.first);
++        final second = _body(transport.requests.last);
++        expect(first['tools'], isNotEmpty);
++        expect(jsonEncode(second), contains(_image));
++        if (responses) {
++          final input = second['input'] as List;
++          expect(
++            input.any((dynamic item) => item['type'] == 'reasoning'),
++            isTrue,
++          );
++          expect(
++            input.any(
++              (dynamic item) =>
++                  item['type'] == 'function_call' &&
++                  item['call_id'] == 'call-1',
++            ),
++            isTrue,
++          );
++          expect(
++            input.any(
++              (dynamic item) =>
++                  item['type'] == 'function_call_output' &&
++                  item['call_id'] == 'call-1' &&
++                  item['output'] == 'lookup result',
++            ),
++            isTrue,
++          );
++          expect(second.containsKey('previous_response_id'), isFalse);
++        } else {
++          final messages = second['messages'] as List;
++          expect(messages[1]['reasoning_content'], 'Need lookup');
++          expect(messages[1]['tool_calls'][0]['id'], 'call-1');
++          expect(messages[2]['tool_call_id'], 'call-1');
++          expect(messages[2]['content'], 'lookup result');
++        }
++      },
++    );
++  }
++
++  test('Responses rejects none effort before HTTP', () async {
++    final transport = _Transport([]);
++    final events = await _run(
++      transport,
++      _profile(kMiniMaxApiBaseUrl, mode: DirectOpenAiApiMode.responses),
++      parameters: const {
++        'reasoning': {'effort': 'none'},
++      },
++    );
++    expect(events.whereType<DirectStreamError>().isNotEmpty, isTrue);
++    expect(transport.requests, isEmpty);
++  });
++
++  test(
++    'M3 disabled thinking and explicit legacy/custom requests remain intact',
++    () async {
++      for (final model in ['MiniMax-M3', 'MiniMax-M2.7', 'my-custom-model']) {
++        final transport = _Transport([_completion]);
++        final events = await _run(
++          transport,
++          _profile(kMiniMaxApiBaseUrl),
++          model: model,
++          parameters: const {
++            'thinking': {'type': 'disabled'},
++            'service_tier': 'priority',
++          },
++        );
++        expect(events.whereType<DirectStreamError>(), isEmpty);
++        expect(_body(transport.requests.single)['model'], model);
++        expect(_body(transport.requests.single)['thinking'], {
++          'type': 'disabled',
++        });
++        expect(_body(transport.requests.single)['service_tier'], 'priority');
++      }
++    },
++  );
++
++  test(
++    'gateway keeps existing model choices and retains gateway metadata',
++    () async {
++      final transport = _Transport([
++        {
++          'data': [
++            {'id': 'other/provider'},
++            {'id': 'minimax/minimax-m3', 'context_length': 524288},
++            {'id': 'minimax/minimax-m2.7'},
++            {
++              'id': 'minimax/image-model',
++              'architecture': {
++                'output_modalities': ['image'],
++              },
++            },
++            {'id': 'minimax/minimax-m3.1-flash', 'context_length': 262144},
++          ],
++        },
++      ]);
++      final models = await _adapter(transport)
++          .listModels(_profile(kOpenRouterApiBaseUrl));
++      expect(models.map((model) => model.id), [
++        'other/provider',
++        'minimax/minimax-m3.1-flash',
++        'minimax/minimax-m2.7',
++        'minimax/image-model',
++        'minimax/minimax-m3',
++      ]);
++      expect(models[1].capabilities['context_length'], 262144);
++      expect(
++        models[2].capabilities.containsKey('ordinary_model_choice'),
++        false,
++      );
++      expect(
++        models[3].capabilities.containsKey('ordinary_model_choice'),
++        false,
++      );
++      expect(models[4].capabilities['context_length'], 524288);
++    },
++  );
++
++  test(
++    'gateway does not invent a Flash route absent from the catalog',
++    () async {
++      final transport = _Transport([
++        {
++          'data': [
++            {'id': 'minimax/minimax-m2.7'},
++          ],
++        },
++      ]);
++      final models = await _adapter(transport)
++          .listModels(_profile(kOpenRouterApiBaseUrl));
++      expect(models.map((model) => model.id), ['minimax/minimax-m2.7']);
++      expect(
++        models.single.capabilities.containsKey('ordinary_model_choice'),
++        isFalse,
++      );
++    },
++  );
++
++  test(
++    'gateway Flash serializes its verified route and gateway reasoning',
++    () async {
++      final transport = _Transport([_completion]);
++      final events = await _run(
++        transport,
++        _profile(kOpenRouterApiBaseUrl),
++        model: 'minimax/minimax-m3.1-flash',
++        parameters: const {'reasoning_effort': 'high'},
++      );
++      expect(events.whereType<DirectStreamError>(), isEmpty);
++      final body = _body(transport.requests.single);
++      expect(body['model'], 'minimax/minimax-m3.1-flash');
++      expect(body['reasoning'], {'effort': 'high'});
++      expect(body.containsKey('reasoning_effort'), isFalse);
++      expect(
++        (body['messages'] as List).first['reasoning_content'],
++        'Keep this reasoning',
++      );
++    },
++  );
++
++  test('gateway Flash rejects disabled reasoning before HTTP', () async {
++    final transport = _Transport([]);
++    final events = await _run(
++      transport,
++      _profile(kOpenRouterApiBaseUrl),
++      model: 'minimax/minimax-m3.1-flash',
++      parameters: const {'reasoning_effort': 'none'},
++    );
++    expect(events.whereType<DirectStreamError>().isNotEmpty, isTrue);
++    expect(transport.requests, isEmpty);
++  });
++
++  test(
++    'unrelated providers and lookalike URLs retain their controls',
++    () async {
++      for (final url in [
++        'https://example.com/v1',
++        'https://api.minimax.io.example.com/v1',
++      ]) {
++        final transport = _Transport([_completion]);
++        final events = await _run(
++          transport,
++          _profile(url),
++          parameters: const {
++            'reasoning_effort': 'none',
++            'service_tier': 'priority',
++          },
++        );
++        expect(events.whereType<DirectStreamError>(), isEmpty);
++        final body = _body(transport.requests.single);
++        expect(body['reasoning_effort'], 'none');
++        expect(body['service_tier'], 'priority');
++        expect(
++          (body['messages'] as List).first.containsKey('reasoning_content'),
++          isFalse,
++        );
++      }
++    },
++  );
++}
++
++const _image = 'data:image/png;base64,aGVsbG8=';
++const _completion = {
++  'id': 'completion-1',
++  'choices': [
++    {
++      'index': 0,
++      'message': {'role': 'assistant', 'content': 'Done'},
++      'finish_reason': 'stop',
++    },
++  ],
++};
++
++DirectConnectionProfile _profile(
++  String url, {
++  DirectOpenAiApiMode mode = DirectOpenAiApiMode.chatCompletions,
++}) => DirectConnectionProfile(
++  id: 'offline-fixture',
++  name: 'Offline fixture',
++  adapterKey: kOpenAiCompatibleAdapterKey,
++  baseUrl: url,
++  openAiApiMode: mode,
++);
++
++OpenAiCompatibleAdapter _adapter(_Transport transport) =>
++    OpenAiCompatibleAdapter(
++      dioFactory: (_) => Dio()..httpClientAdapter = transport,
++    );
++
++Future<List<DirectStreamEvent>> _run(
++  _Transport transport,
++  DirectConnectionProfile profile, {
++  String model = 'MiniMax-M3.1-Flash',
++  Map<String, dynamic> parameters = const {},
++}) async {
++  final run = _adapter(transport).startCompletion(
++    profile,
++    DirectCompletionRequest(
++      remoteModelId: model,
++      parameters: parameters,
++      messages: [
++        DirectChatMessage(
++          role: 'assistant',
++          parts: const [DirectTextPart('Previous answer')],
++          reasoning: 'Keep this reasoning',
++        ),
++        DirectChatMessage(
++          role: 'user',
++          parts: const [
++            DirectTextPart('Describe this image'),
++            DirectImagePart(_image),
++          ],
++        ),
++      ],
++    ),
++  );
++  final events = await run.events.toList();
++  await run.done;
++  return events;
++}
++
++DirectToolRuntime _tools() => DirectToolRuntime(
++  definitions: [
++    DirectToolDefinition(
++      name: 'lookup',
++      serverId: 'fixture',
++      serverName: 'Fixture',
++      remoteName: 'lookup',
++      displayName: 'Lookup',
++      description: 'Offline lookup',
++      approvalFingerprint: 'a' * 64,
++      inputSchema: const {'type': 'object'},
++    ),
++  ],
++  requestApproval: (callId, definition, arguments) => DirectToolApprovalHandle(
++    request: DirectToolApprovalRequest(
++      id: 'approval',
++      serverName: definition.serverName,
++      toolName: definition.displayName,
++      callId: callId,
++      argumentsJson: jsonEncode(arguments),
++    ),
++    decision: Future.value(DirectToolApprovalDecision.allowOnce),
++    requiresUserDecision: false,
++  ),
++  execute: (_, _) async => const DirectToolResult(text: 'lookup result'),
++);
++
++Map<String, dynamic> _body(RequestOptions request) =>
++    request.extra['serializedBody'] as Map<String, dynamic>;
++
++final class _Transport implements HttpClientAdapter {
++  _Transport(this.replies);
++  final List<Map<String, dynamic>> replies;
++  final List<RequestOptions> requests = [];
++
++  @override
++  Future<ResponseBody> fetch(
++    RequestOptions options,
++    Stream<Uint8List>? requestStream,
++    Future<void>? cancelFuture,
++  ) async {
++    requests.add(options);
++    if (requestStream != null) {
++      options.extra['serializedBody'] = jsonDecode(
++        await utf8.decoder.bind(requestStream).join(),
++      );
++    }
++    return ResponseBody.fromString(
++      jsonEncode({
++        if (options.path == 'responses') 'object': 'response',
++        if (options.path == 'responses') 'created_at': 1,
++        ...replies.removeAt(0),
++      }),
++      200,
++      headers: {
++        'content-type': ['application/json'],
++      },
++    );
++  }
++
++  @override
++  void close({bool force = false}) {}
++}
+diff --git a/test/features/direct_connections/direct_connection_editor_controller_test.dart b/test/features/direct_connections/direct_connection_editor_controller_test.dart
+index 1a1f0c5945bf20d327f0c815e38850fa2532b84b..61cdb69fe17197b5feecec13cebe429cecf17d30 100644
+--- a/test/features/direct_connections/direct_connection_editor_controller_test.dart
++++ b/test/features/direct_connections/direct_connection_editor_controller_test.dart
+@@ -11,6 +11,73 @@ import 'package:conduit_core/features/direct_connections/services/direct_connect
+ import 'package:flutter_test/flutter_test.dart';
+ 
+ void main() {
++  test(
++    'MiniMax regional presets round-trip and clear new default models on exit',
++    () {
++      final editor = _EditorHarness();
++      addTearDown(editor.dispose);
++      editor.form.hydrate(null);
++      for (final preset in [kMiniMaxProviderPreset, kMiniMaxCnProviderPreset]) {
++        editor.form.selectProviderPreset(
++          preset,
++          ollamaDefaultName: 'Ollama Cloud',
++          openRouterDefaultName: 'OpenRouter',
++        );
++        editor.form.apiKey.text = 'test-key';
++        final result = editor.form.buildDraft(
++          validateFields: true,
++          openWebUiFallbackName: 'Connection',
++        );
++        expect(result.errors.hasAny, isFalse);
++        final profile = result.profile!;
++        expect(profile.adapterKey, kOpenAiCompatibleAdapterKey);
++        expect(profile.openAiApiMode, DirectOpenAiApiMode.chatCompletions);
++        expect(
++          profile.baseUrl,
++          preset == kMiniMaxProviderPreset
++              ? kMiniMaxApiBaseUrl
++              : kMiniMaxCnApiBaseUrl,
++        );
++        expect(profile.manualModelIds, kMiniMaxModelIds);
++        editor.form.hydrate(profile);
++        expect(editor.form.providerPreset, preset);
++      }
++      editor.form.selectProviderPreset(
++        kOpenAiCompatibleAdapterKey,
++        ollamaDefaultName: 'Ollama Cloud',
++        openRouterDefaultName: 'OpenRouter',
++      );
++      expect(editor.form.models.text, isEmpty);
++    },
++  );
++
++  test('MiniMax region changes preserve saved legacy and custom model IDs', () {
++    final editor = _EditorHarness(isNew: false);
++    addTearDown(editor.dispose);
++    editor.form.hydrate(
++      DirectConnectionProfile(
++        id: 'saved',
++        name: 'My MiniMax',
++        adapterKey: kOpenAiCompatibleAdapterKey,
++        baseUrl: '$kMiniMaxApiBaseUrl/',
++        manualModelIds: ['MiniMax-M2.7', 'my-custom-model'],
++      ),
++    );
++    expect(editor.form.providerPreset, kMiniMaxProviderPreset);
++    for (final preset in [
++      kMiniMaxCnProviderPreset,
++      kMiniMaxProviderPreset,
++      kOpenAiCompatibleAdapterKey,
++    ]) {
++      editor.form.selectProviderPreset(
++        preset,
++        ollamaDefaultName: 'Ollama Cloud',
++        openRouterDefaultName: 'OpenRouter',
++      );
++      expect(editor.form.models.text, 'MiniMax-M2.7\nmy-custom-model');
++    }
++  });
++
+   test('form owns provider transitions and profile creation', () {
+     final editor = _EditorHarness();
+     addTearDown(editor.dispose);
+diff --git a/test/features/direct_connections/direct_mcp_oauth_test.dart b/test/features/direct_connections/direct_mcp_oauth_test.dart
+index 7f79bb4f416dc064f0f4c2382d598cbadeb90152..332008969f45e2f3b63e62703a90f3527298716a 100644
+--- a/test/features/direct_connections/direct_mcp_oauth_test.dart
++++ b/test/features/direct_connections/direct_mcp_oauth_test.dart
+@@ -9,7 +9,7 @@ import 'package:conduit_core/features/direct_connections/services/direct_mcp_ser
+ import 'package:crypto/crypto.dart';
+ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+ import 'package:flutter_test/flutter_test.dart';
+-import 'package:http/http.dart' as http;
++import 'package:http/io_client.dart';
+ import 'package:conduit/platform/flutter_secure_key_value_store.dart';
+ 
+ void main() {
+@@ -489,13 +489,18 @@ void main() {
+     addTearDown(coordinator.close);
+ 
+     final first = coordinator.connect(server);
+-    await firstLaunch.future.timeout(const Duration(seconds: 2));
++    await firstLaunch.future.timeout(
++      const Duration(seconds: 2),
++      onTimeout: () =>
++          throw StateError('First OAuth browser launch did not arrive'),
++    );
+     final second = coordinator.connect(server);
+ 
+     await expectLater(first, throwsA(isA<DirectMcpOAuthException>()));
+     final connected = await second;
+     final secondCallbackRejected = await repeatedCallback.future.timeout(
+       const Duration(seconds: 2),
++      onTimeout: () => throw StateError('Repeated callback did not settle'),
+     );
+     expect(connected.oauthTokens?.accessToken, 'access-one');
+     expect(fixture.tokenForms, hasLength(1));
+@@ -737,18 +742,27 @@ Future<void> _deliverCallback(
+   final redirectUri = Uri.parse(
+     authorizationUri.queryParameters['redirect_uri']!,
+   );
+-  final response = await http.get(
+-    redirectUri.replace(
+-      queryParameters: {
+-        ...extraQueryParameters,
+-        'code': 'authorization-code',
+-        'state': state ?? authorizationUri.queryParameters['state']!,
+-        'iss': ?issuer,
+-      },
+-    ),
++  // Windows can drop SYNs to a closed loopback port. Bound connection setup,
++  // while a connected callback must still satisfy the existing test deadline.
++  final client = IOClient(
++    HttpClient()..connectionTimeout = const Duration(milliseconds: 500),
+   );
+-  if (response.statusCode != HttpStatus.ok) {
+-    throw StateError('Callback was rejected.');
++  try {
++    final response = await client.get(
++      redirectUri.replace(
++        queryParameters: {
++          ...extraQueryParameters,
++          'code': 'authorization-code',
++          'state': state ?? authorizationUri.queryParameters['state']!,
++          'iss': ?issuer,
++        },
++      ),
++    );
++    if (response.statusCode != HttpStatus.ok) {
++      throw StateError('Callback was rejected.');
++    }
++  } finally {
++    client.close();
+   }
+ }
+ 
+diff --git a/test/features/direct_connections/direct_providers_test.dart b/test/features/direct_connections/direct_providers_test.dart
+index 5ec15c676eda4bcaade768d9491b7b4a3662f61f..0c597d4cd867659c8f6811310148acbbe9b35184 100644
+--- a/test/features/direct_connections/direct_providers_test.dart
++++ b/test/features/direct_connections/direct_providers_test.dart
+@@ -264,6 +264,40 @@ void main() {
+     expect(discovery.models.every((model) => model.isMultimodal), isTrue);
+   });
+ 
++  test(
++    'MiniMax manual discovery publishes known context without network',
++    () async {
++      for (final baseUrl in [kMiniMaxApiBaseUrl, kMiniMaxCnApiBaseUrl]) {
++        final adapter = _QueuedAdapter();
++        final profile = _profile(
++          baseUrl: baseUrl,
++          manualModelIds: const ['MiniMax-M3.1-Flash', 'MiniMax-M3', 'custom'],
++        );
++        FlutterSecureStorage.setMockInitialValues({
++          'direct_connection_profiles_v1': DirectConnectionProfilesDocument([
++            profile,
++          ]).encode(),
++        });
++        final container = _container(adapter);
++        try {
++          final discovery = await container.read(
++            directModelDiscoveryProvider.future,
++          );
++          expect(adapter.listCalls, 0);
++          expect(discovery.models, hasLength(3));
++          expect(discovery.models[0].capabilities?['context_length'], 1000000);
++          expect(discovery.models[1].capabilities?['context_length'], 1000000);
++          expect(
++            discovery.models[2].capabilities?.containsKey('context_length'),
++            isFalse,
++          );
++        } finally {
++          container.dispose();
++        }
++      }
++    },
++  );
++
+   test('failed refresh retains same-profile cached models', () async {
+     final adapter = _QueuedAdapter()
+       ..responses.add([DirectRemoteModel(id: 'first')])
+diff --git a/test/features/hermes/hermes_connections_page_test.dart b/test/features/hermes/hermes_connections_page_test.dart
+index 100f85039651e58b35c8de921dbe871bfaa9087f..46260fa3e1aa96416be83d05d60b8a229a6a163e 100644
+--- a/test/features/hermes/hermes_connections_page_test.dart
++++ b/test/features/hermes/hermes_connections_page_test.dart
+@@ -62,7 +62,6 @@ void main() {
+   });
+   tearDown(PreferencesStore.debugReset);
+ 
+-
+   testWidgets('lists connections, switches on tap, and opens the editor', (
+     tester,
+   ) async {
+@@ -185,11 +184,12 @@ void main() {
+     check(saved.nameSource).equals(HermesConnectionNameSource.user);
+     // Saving another connection leaves the runtime on the active one.
+     check(container.read(hermesConfigProvider).connectionId).equals(_home);
+-    check(
+-      await secrets.read(key: 'hermes_api_key_v1:$_work'),
+-    ).equals('work-key');
++    check(await secrets.read(key: 'hermes_api_key_v1:$_work'))
++        .equals('work-key');
+ 
+-    await tester.tap(find.byKey(const ValueKey<String>('hermes-use-connection')));
++    await tester.tap(
++      find.byKey(const ValueKey<String>('hermes-use-connection')),
++    );
+     await tester.pumpAndSettle();
+     check(container.read(hermesConfigProvider).connectionId).equals(_work);
+     expect(
+@@ -273,9 +273,8 @@ void main() {
+ 
+     await tester.tap(find.text('Test connection'));
+     await tester.pumpAndSettle();
+-    check(
+-      gateway.probed.single.desktopCredentials?.nativeTokens?.refreshToken,
+-    ).equals('refresh-1');
++    check(gateway.probed.single.desktopCredentials?.nativeTokens?.refreshToken)
++        .equals('refresh-1');
+   });
+ 
+   testWidgets('switching waits for the token refresh its editor started', (
+@@ -286,9 +285,12 @@ void main() {
+     addTearDown(tester.view.reset);
+     // The binding blocks real HTTP; the refresh must really be in flight.
+     final blockedHttp = HttpOverrides.current;
+-    HttpOverrides.global = _RealHttpOverrides();
++    final realHttp = _RealHttpOverrides();
++    HttpOverrides.global = realHttp;
++    addTearDown(realHttp.closeClients);
+     addTearDown(() => HttpOverrides.global = blockedHttp);
+     final gateway = (await tester.runAsync(_RotatingGateway.start))!;
++    realHttp.allowedPort = Uri.parse(gateway.baseUrl).port;
+     addTearDown(gateway.close);
+     // Hermes stays off, so no live client refreshes the tokens itself.
+     PreferencesStore.debugOverride(
+@@ -374,9 +376,8 @@ void main() {
+     check(active.connectionId).equals(_work);
+     // The switch picked up the replacement tokens; the spent ones would
+     // sign the connection out at its next refresh.
+-    check(
+-      active.desktopCredentials?.nativeTokens?.refreshToken,
+-    ).equals('refresh-1');
++    check(active.desktopCredentials?.nativeTokens?.refreshToken)
++        .equals('refresh-1');
+     final stored = HermesDesktopCredentials.fromJson(
+       jsonDecode(
+         (await secrets.read(key: 'hermes_desktop_credentials_v1:$_work'))!,
+@@ -384,8 +385,10 @@ void main() {
+     );
+     check(stored.nativeTokens?.refreshToken).equals('refresh-1');
+ 
+-    // The editor lists the now active connection's profiles again; closing
+-    // the gateway ends that request with the test.
++    // Dispose the editor/client before its real loopback server. This keeps
++    // a reconnect to the closed fixture from leaking fake connect timers.
++    await tester.pumpWidget(const SizedBox.shrink());
++    realHttp.closeClients();
+     await tester.runAsync(gateway.close);
+     for (var i = 0; i < 5; i++) {
+       await settleIo();
+@@ -400,9 +403,12 @@ void main() {
+     addTearDown(tester.view.reset);
+     // The binding blocks real HTTP; the refresh must really be in flight.
+     final blockedHttp = HttpOverrides.current;
+-    HttpOverrides.global = _RealHttpOverrides();
++    final realHttp = _RealHttpOverrides();
++    HttpOverrides.global = realHttp;
++    addTearDown(realHttp.closeClients);
+     addTearDown(() => HttpOverrides.global = blockedHttp);
+     final gateway = (await tester.runAsync(_RotatingGateway.start))!;
++    realHttp.allowedPort = Uri.parse(gateway.baseUrl).port;
+     addTearDown(gateway.close);
+     PreferencesStore.debugOverride(
+       InMemoryKeyValueStore(<String, Object?>{
+@@ -487,9 +493,9 @@ void main() {
+       final stored = await secrets.read(
+         key: 'hermes_desktop_credentials_v1:$_work',
+       );
+-      return HermesDesktopCredentials.fromJson(
+-        jsonDecode(stored!),
+-      ).nativeTokens?.refreshToken;
++      return HermesDesktopCredentials.fromJson(jsonDecode(stored!))
++          .nativeTokens
++          ?.refreshToken;
+     }
+ 
+     for (var i = 0; i < 100 && await storedRefreshToken() != 'refresh-1'; i++) {
+@@ -622,9 +628,9 @@ void main() {
+     // The edited connection stops being active, and reading its stored
+     // baseline fails (reads of Hermes secrets retry once).
+     flaky.failures = 2;
+-    await container.read(hermesConfigProvider.notifier).setActiveConnection(
+-      _work,
+-    );
++    await container
++        .read(hermesConfigProvider.notifier)
++        .setActiveConnection(_work);
+     await tester.pumpAndSettle();
+     expect(retry, findsOneWidget);
+     check(save().onPressed).isNull();
+@@ -700,9 +706,8 @@ void main() {
+ 
+     check(container.read(hermesConnectionsProvider)).isEmpty();
+     // With nothing left, a Hermes-only install goes back to the chooser.
+-    check(
+-      container.read(preferredBackendProvider),
+-    ).equals(PreferredBackend.unset);
++    check(container.read(preferredBackendProvider))
++        .equals(PreferredBackend.unset);
+     check(tester.takeException()).isNull();
+   });
+ 
+@@ -802,7 +807,52 @@ final class _BlockingCookieJar extends NullCookieJarPort {
+   Future<bool> clearForOrigin(String origin) => release.future;
+ }
+ 
+-class _RealHttpOverrides extends HttpOverrides {}
++class _RealHttpOverrides extends HttpOverrides {
++  final _clients = <HttpClient>[];
++  final _connections = <ConnectionTask<Socket>>[];
++  int? allowedPort;
++  bool _closed = false;
++
++  void closeClients() {
++    _closed = true;
++    for (final connection in _connections) {
++      connection.cancel();
++    }
++    _connections.clear();
++    for (final client in _clients) {
++      client.close(force: true);
++    }
++    _clients.clear();
++  }
++
++  @override
++  HttpClient createHttpClient(SecurityContext? context) {
++    final client = super.createHttpClient(context);
++    _clients.add(client);
++    client.findProxy = (_) => 'DIRECT';
++    client.connectionFactory = (uri, proxyHost, proxyPort) async {
++      if (_closed ||
++          uri.port != allowedPort ||
++          uri.scheme != 'http' ||
++          uri.host != '127.0.0.1') {
++        throw const SocketException(
++          'Only the loopback fixture may receive HTTP',
++        );
++      }
++      final connection = await Socket.startConnect(
++        InternetAddress.loopbackIPv4,
++        uri.port,
++      );
++      if (_closed) {
++        connection.cancel();
++      } else {
++        _connections.add(connection);
++      }
++      return connection;
++    };
++    return client;
++  }
++}
+ 
+ /// A Desktop gateway whose first token refresh waits for [release]. Each
+ /// refresh spends the refresh token it replaces.

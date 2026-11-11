@@ -1,0 +1,597 @@
+diff --git a/android/app/build.gradle.kts b/android/app/build.gradle.kts
+index 21133cb41ffd349fba738d687a4190363f318417..ff9c06b22b5fa9928b8232e991b5d92eaa7d201e 100644
+--- a/android/app/build.gradle.kts
++++ b/android/app/build.gradle.kts
+@@ -15,11 +15,15 @@ if (keystorePropertiesFile.exists()) {
+ 
+ android {
+     namespace = "app.cogwheel.conduit"
+-    compileSdk = 37
++    compileSdk {
++        version = release(providers.gradleProperty("avx1ApiLevel").orElse("37").get().toInt()) {
++            minorApiLevel = providers.gradleProperty("avx1MinorApiLevel").orElse("2").get().toInt()
++        }
++    }
+     ndkVersion = "29.0.14206865"
+ 
+     defaultConfig {
+-        applicationId = "app.cogwheel.conduit"
++        applicationId = "io.github.aktalascloud.conduit"
+         minSdk = flutter.minSdkVersion
+         targetSdk = flutter.targetSdkVersion
+         versionCode = flutter.versionCode
+@@ -45,6 +49,7 @@ android {
+     signingConfigs {
+         if (keystorePropertiesFile.exists()) {
+             create("release") {
++                storeType = "PKCS12"
+                 storeFile = file(keystoreProperties["storeFile"] as String)
+                 storePassword = keystoreProperties["storePassword"] as String
+                 keyAlias = keystoreProperties["keyAlias"] as String
+diff --git a/android/app/src/main/AndroidManifest.xml b/android/app/src/main/AndroidManifest.xml
+index d258c1bce616d06ee3ae650fb544f3d26b4341ad..5bccfcd806e9b827218ed391ace84b89cbc99b92 100644
+--- a/android/app/src/main/AndroidManifest.xml
++++ b/android/app/src/main/AndroidManifest.xml
+@@ -51,7 +51,7 @@
+          ForegroundServiceDidNotStartInTimeException. This ensures channels exist before
+          any foreground service attempts to use them. -->
+     <application
+-        android:label="Conduit"
++        android:label="Conduit · OWUI + Cline"
+         android:name=".ConduitApplication"
+         android:icon="@mipmap/ic_launcher"
+         android:allowBackup="false"
+@@ -138,7 +138,7 @@
+         <activity
+             android:name=".ProcessTextActivity"
+             android:exported="true"
+-            android:label="Ask Conduit"
++            android:label="Conduit · OWUI + Cline"
+             android:noHistory="true">
+             <intent-filter>
+                 <action android:name="android.intent.action.PROCESS_TEXT" />
+diff --git a/android/build.gradle.kts b/android/build.gradle.kts
+index 50fb94cf07d8a3e86d4693e0d71f898fc9cf2d72..199ac78d36969141582c38a68c74ebd367955712 100644
+--- a/android/build.gradle.kts
++++ b/android/build.gradle.kts
+@@ -1,3 +1,15 @@
++// Only the source-built ONNX AAR from the verified recipe may satisfy this module.
++allprojects {
++    repositories {
++        exclusiveContent {
++            forRepository {
++                maven { url = uri(rootProject.projectDir.resolve("../.avx1-work/native/maven")) }
++            }
++            filter { includeModule("com.microsoft.onnxruntime", "onnxruntime-android") }
++        }
++    }
++}
++
+ allprojects {
+     repositories {
+         google()
+diff --git a/packages/conduit_core/lib/features/release_notes/release_notes_coordination.dart b/packages/conduit_core/lib/features/release_notes/release_notes_coordination.dart
+index 067a743da9fb6e5ab1ce5e4514f1cd947c2aa833..61314848e656ca52bdb20e9b05150b0135648681 100644
+--- a/packages/conduit_core/lib/features/release_notes/release_notes_coordination.dart
++++ b/packages/conduit_core/lib/features/release_notes/release_notes_coordination.dart
+@@ -18,6 +18,7 @@ bool canPresentReleaseNotes(
+     return true;
+   }
+   return switch (preferredBackend) {
++    PreferredBackend.cline => true,
+     PreferredBackend.direct =>
+       PreferencesStore.getBool(PreferenceKeys.directConnectionsConfigured) ==
+           true,
+diff --git a/packages/conduit_core/pubspec.yaml b/packages/conduit_core/pubspec.yaml
+index f91e48e31c937113fb7b0d56de65dbeaa61548c3..0e23362ff989232da92a8f71774a62d7dc55fe2a 100644
+--- a/packages/conduit_core/pubspec.yaml
++++ b/packages/conduit_core/pubspec.yaml
+@@ -11,6 +11,7 @@ environment:
+   sdk: ">=3.13.0 <4.0.0"
+ 
+ dependencies:
++  dartssh2: 4.1.0
+   # `QueryExecutor` is part of the DatabaseOpener port's signature. The core
+   # owns the schema, so drift belongs here rather than in the front-ends.
+   archive: ^4.0.9
+diff --git a/pubspec.lock b/pubspec.lock
+index 02a79e250cc3ab268c3cf6719bc76418cb118613..204ceaa199b77282fb32b23a6d8dfe90452ea16f 100644
+--- a/pubspec.lock
++++ b/pubspec.lock
+@@ -73,6 +73,14 @@ packages:
+       url: "https://pub.dev"
+     source: hosted
+     version: "2.7.0"
++  asn1lib:
++    dependency: transitive
++    description:
++      name: asn1lib
++      sha256: "9a8f69025044eb466b9b60ef3bc3ac99b4dc6c158ae9c56d25eeccf5bc56d024"
++      url: "https://pub.dev"
++    source: hosted
++    version: "1.6.5"
+   async:
+     dependency: transitive
+     description:
+@@ -345,6 +353,14 @@ packages:
+       url: "https://pub.dev"
+     source: hosted
+     version: "1.8.2"
++  dartssh2:
++    dependency: transitive
++    description:
++      name: dartssh2
++      sha256: "39359aceafcf5940b868249e3c9c6d86e4e0f989eec7417d033c943157c84c51"
++      url: "https://pub.dev"
++    source: hosted
++    version: "4.1.0"
+   dbus:
+     dependency: transitive
+     description:
+@@ -1651,6 +1667,14 @@ packages:
+       url: "https://pub.dev"
+     source: hosted
+     version: "7.0.2"
++  pinenacl:
++    dependency: transitive
++    description:
++      name: pinenacl
++      sha256: "57e907beaacbc3c024a098910b6240758e899674de07d6949a67b52fd984cbdf"
++      url: "https://pub.dev"
++    source: hosted
++    version: "0.6.0"
+   platform:
+     dependency: transitive
+     description:
+@@ -1667,6 +1691,14 @@ packages:
+       url: "https://pub.dev"
+     source: hosted
+     version: "2.1.8"
++  pointycastle:
++    dependency: transitive
++    description:
++      name: pointycastle
++      sha256: "92aa3841d083cc4b0f4709b5c74fd6409a3e6ba833ffc7dc6a8fee096366acf5"
++      url: "https://pub.dev"
++    source: hosted
++    version: "4.0.0"
+   pool:
+     dependency: transitive
+     description:
+diff --git a/pubspec.yaml b/pubspec.yaml
+index 34d69bce275223afe2fd86ca7677e33660c3ba9c..2d42ee3c62b532792962a916ee7ecbf2a0f84af0 100644
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -1,212 +1,223 @@
+-name: conduit
+-description: Open-source mobile client for Open-WebUI
+-version: 4.2.2+153
+-publish_to: 'none'
+-
+-environment:
+-  sdk: ">=3.13.0 <4.0.0"
+-  flutter: ">=3.47.0"
+-
+-# Pub workspace. The Flutter mobile app stays the workspace root so
+-# `flutter run`/`flutter test` keep working from here with no extra flags;
+-# the shared packages resolve against the same single lockfile, which is what
+-# stops the app and the packages from drifting onto different versions.
+-#
+-# Members declare `resolution: workspace`. Add new members here *and* there —
+-# pub fails loudly if only one side is updated.
+-workspace:
+-  - packages/conduit_core
+-  - packages/conduit_ddgs
+-  - packages/conduit_markdown
+-  - packages/conduit_theme
+-
+-dependencies:
+-  flutter:
+-    sdk: flutter
+-  flutter_localizations:
+-    sdk: flutter
+-  material_ui: ^1.0.0
++name: conduit
++description: Unofficial OWUI + Cline mobile client with secure remote sessions
++version: 4.2.2+153
++publish_to: 'none'
++
++environment:
++  sdk: ">=3.13.0 <4.0.0"
++  flutter: ">=3.47.0"
++
++# Pub workspace. The Flutter mobile app stays the workspace root so
++# `flutter run`/`flutter test` keep working from here with no extra flags;
++# the shared packages resolve against the same single lockfile, which is what
++# stops the app and the packages from drifting onto different versions.
++#
++# Members declare `resolution: workspace`. Add new members here *and* there —
++# pub fails loudly if only one side is updated.
++workspace:
++  - packages/conduit_core
++  - packages/conduit_ddgs
++  - packages/conduit_markdown
++  - packages/conduit_theme
++
++dependencies:
++  flutter:
++    sdk: flutter
++  flutter_localizations:
++    sdk: flutter
++  material_ui: ^1.0.0
+   cupertino_ui: ^1.1.5
+-  flutter_driver:
+-    sdk: flutter
+-  
+-  # Shared desktop/mobile packages (pub workspace members).
+-  conduit_core:
+-    path: packages/conduit_core
+-  conduit_markdown:
+-    path: packages/conduit_markdown
+-  conduit_theme:
+-    path: packages/conduit_theme
+-
+-  # State Management
+-  flutter_riverpod: ^3.4.3
+-  # Non-UI code imports the Flutter-free Riverpod directly, so that those
+-  # files can move into packages/conduit_core unchanged.
+-  riverpod: ^3.4.3
+-  
+-  # Navigation
+-  go_router: ^18.0.1
+-  
+-  # Network & API
+-  dio: ^5.9.0
+-  ollama_dart: ^2.4.0
+-  openai_dart: ^8.1.0
+-  mcp_dart: ^2.4.0
+-  http_parser: ^4.0.2
+-  
+-  
+-  # Storage
+-  flutter_secure_storage: ^11.1.1
+-  hive_ce: ^2.14.0
+-  hive_ce_flutter: ^2.3.2
+-  shared_preferences: ^2.3.2
+-  synchronized: ^3.4.1
+-  
+-  # UI Components - Markdown Rendering
+-  markdown: ^7.3.0
+-  pdfrx: ^2.4.7
+-  archive: ^4.0.9
+-  xml: ^7.0.1
+-  flutter_inappwebview: ^6.2.0-beta.3
+-  flutter_svg: ^2.3.0
+-  # Native Mermaid renderer. These unpublished workspace packages are pinned
+-  # as submodules under third_party/.
+-  mermaid_core:
+-    path: third_party/mermaid/packages/mermaid_core
+-  mermaid_flutter:
+-    path: third_party/mermaid/packages/mermaid_flutter
+-  socket_io_client: ^3.1.2
+-  yaml: ^3.1.2
+-  
+-  
+-  
+-  # Modern Animations
+-  flutter_animate: ^4.5.0
+-  stupid_simple_sheet: ^0.9.1+1
+-  
+-  # Platform Features
+-  # vad 0.0.8 with Silero v5's frame context restored; see its README.
+-  vad:
+-    path: third_party/vad
+-  record: ^7.1.1
+-  audio_session: ^0.2.2
+-  permission_handler: ^13.0.2
+-  image_picker: ^1.2.3
+-  file_picker: ^13.0.0
+-  receive_sharing_intent: ^1.9.0
+-  flutter_image_compress: ^2.5.1
+-  path_provider: ^2.1.4
+-  
+-  # Utilities
+-  clock: ^1.1.2
+-  collection: ^1.19.1
+-  meta: ^1.16.0
+-  path: ^1.9.0
+-  uuid: ^4.6.0
+-  crypto: ^3.0.3
+-  package_info_plus: ^10.2.1
+-  url_launcher: ^6.3.0
+-  intl: ^0.20.2
+-
+-  # Icons & Theming
+-  cupertino_icons: ^1.0.8
+-  json_annotation: ^4.12.0
+-  freezed_annotation: ^3.0.0
+-  wakelock_plus: ^1.7.0
++  flutter_driver:
++    sdk: flutter
++  
++  # Shared desktop/mobile packages (pub workspace members).
++  conduit_core:
++    path: packages/conduit_core
++  conduit_markdown:
++    path: packages/conduit_markdown
++  conduit_theme:
++    path: packages/conduit_theme
++
++  # State Management
++  flutter_riverpod: ^3.4.3
++  # Non-UI code imports the Flutter-free Riverpod directly, so that those
++  # files can move into packages/conduit_core unchanged.
++  riverpod: ^3.4.3
++  
++  # Navigation
++  go_router: ^18.0.1
++  
++  # Network & API
++  dio: ^5.9.0
++  ollama_dart: ^2.4.0
++  openai_dart: ^8.1.0
++  mcp_dart: ^2.4.0
++  http_parser: ^4.0.2
++  
++  
++  # Storage
++  flutter_secure_storage: ^11.1.1
++  hive_ce: ^2.14.0
++  hive_ce_flutter: ^2.3.2
++  shared_preferences: ^2.3.2
++  synchronized: ^3.4.1
++  
++  # UI Components - Markdown Rendering
++  markdown: ^7.3.0
++  pdfrx: ^2.4.7
++  archive: ^4.0.9
++  xml: ^7.0.1
++  flutter_inappwebview: ^6.2.0-beta.3
++  flutter_svg: ^2.3.0
++  # Native Mermaid renderer. These unpublished workspace packages are pinned
++  # as submodules under third_party/.
++  mermaid_core:
++    path: third_party/mermaid/packages/mermaid_core
++  mermaid_flutter:
++    path: third_party/mermaid/packages/mermaid_flutter
++  socket_io_client: ^3.1.2
++  yaml: ^3.1.2
++  
++  
++  
++  # Modern Animations
++  flutter_animate: ^4.5.0
++  stupid_simple_sheet: ^0.9.1+1
++  
++  # Platform Features
++  # vad 0.0.8 with Silero v5's frame context restored; see its README.
++  vad:
++    path: third_party/vad
++  record: ^7.1.1
++  audio_session: ^0.2.2
++  permission_handler: ^13.0.2
++  image_picker: ^1.2.3
++  file_picker: ^13.0.0
++  receive_sharing_intent: ^1.9.0
++  flutter_image_compress: ^2.5.1
++  path_provider: ^2.1.4
++  
++  # Utilities
++  clock: ^1.1.2
++  collection: ^1.19.1
++  meta: ^1.16.0
++  path: ^1.9.0
++  uuid: ^4.6.0
++  crypto: ^3.0.3
++  package_info_plus: ^10.2.1
++  url_launcher: ^6.3.0
++  intl: ^0.20.2
++
++  # Icons & Theming
++  cupertino_icons: ^1.0.8
++  json_annotation: ^4.12.0
++  freezed_annotation: ^3.0.0
++  wakelock_plus: ^1.7.0
+   share_plus: ^13.3.1
+-  riverpod_annotation: ^4.0.7
+-  flutter_local_notifications: ^22.1.0
+-  connectivity_plus: ^7.3.0
+-  flutter_cache_manager: ^3.4.1
+-  http: ^1.5.0
+-  flutter_callkit_incoming: ^3.1.6
+-  quick_actions: ^1.1.0
+-  html_unescape: ^2.0.0
+-  home_widget: ^0.9.3
+-  flutter_highlight: ^0.7.0
+-  just_audio: ^0.10.5
++  riverpod_annotation: ^4.0.7
++  flutter_local_notifications: ^22.1.0
++  connectivity_plus: ^7.3.0
++  flutter_cache_manager: ^3.4.1
++  http: ^1.5.0
++  flutter_callkit_incoming: ^3.1.6
++  quick_actions: ^1.1.0
++  html_unescape: ^2.0.0
++  home_widget: ^0.9.3
++  flutter_highlight: ^0.7.0
++  just_audio: ^0.10.5
+   cupertino_native_better: ^1.8.2
+-  flutter_tex: ^5.2.6
+-  xterm: ^4.0.0
+-  web_socket: ^1.0.1
+-  web_socket_channel: ^3.0.3
+-  cached_network_image_ce: ^4.6.4
+-  jovial_svg: ^1.1.29
+-  highlight: ^0.7.0
+-  geolocator: ^14.0.2
+-  drift: ^2.34.2
+-  drift_flutter: ^0.3.1
+-  fleather: ^1.27.0
+-  # Document model + markdown/HTML codecs backing the Fleather note editor.
+-  parchment: ^1.27.0
+-  flutter_webrtc: ^1.6.2+hotfix.4
+-  video_player: ^2.14.1
+-
+-# Required while mermaid_flutter declares mermaid_core from the hosted source:
+-# Pub cannot combine that source with Conduit's unpublished path package, even
+-# though both versions are 0.1.0. Remove once the upstream dependency is hosted
+-# or points to the adjacent workspace package.
+-dependency_overrides:
+-  mermaid_core:
+-    path: third_party/mermaid/packages/mermaid_core
+-  # objective_c 9.6.1's build hook references Architecture.arm64e, which no
+-  # published code_assets release defines, so native-assets compilation fails
+-  # on macOS for every flutter test/run. Drop once a code_assets with arm64e
+-  # ships (or objective_c stops referencing it).
+-  objective_c: 9.6.0
+-
+-dev_dependencies:
+-  analyzer: ^13.3.0
+-  flutter_test:
+-    sdk: flutter
+-  flutter_lints: ^6.0.0
+-  build_runner: ^2.15.1
+-  freezed: ^4.0.1
+-  json_serializable: ^6.11.1
+-  flutter_native_splash: ^2.4.6
+-  riverpod_generator: ^4.0.9
+-  riverpod_lint: ^3.1.9
+-  mocktail: ^1.0.4
+-  checks: ^0.3.1
+-  drift_dev: ^2.34.0
+-  fake_async: ^1.3.3
+-  # Used only in tests to mock the microphone permission platform channel.
+-  permission_handler_platform_interface: ^4.3.0
+-  plugin_platform_interface: ^2.1.8
+-  # Used only in tests to fake the video player platform.
+-  video_player_platform_interface: ^6.9.0
+-
+-flutter:
+-  config:
+-    enable-swift-package-manager: true
+-  uses-material-design: true
+-  generate: true
+-  # Localization
+-  # ARB files live in lib/l10n (configured via l10n.yaml)
+-  
+-  assets:
+-    - THIRD_PARTY_NOTICES.md
+-    - assets/icons/
+-    - assets/model_logos/
+-    - assets/release_notes/
+-    - assets/chartjs.min.js
+-    - assets/flutter_tex.js
+-    - assets/flutter_tex.css
+-    - assets/vad/
+-
+-flutter_native_splash:
+-  # Splash background matches the light theme; `color_dark` handles dark mode.
+-  color: "#FFFFFF"
+-  color_dark: "#000000"
+-  # Image to display on the splash screen
+-  image: assets/icons/icon.png
+-
+-  
+-  # Android specific settings
+-  android_12:
+-    color: "#FFFFFF"
+-    color_dark: "#000000"
+-  
+-  # Web specific settings
+-  web: false
+-    
++  flutter_tex: ^5.2.6
++  xterm: ^4.0.0
++  web_socket: ^1.0.1
++  web_socket_channel: ^3.0.3
++  cached_network_image_ce: ^4.6.4
++  jovial_svg: ^1.1.29
++  highlight: ^0.7.0
++  geolocator: ^14.0.2
++  drift: ^2.34.2
++  drift_flutter: ^0.3.1
++  fleather: ^1.27.0
++  # Document model + markdown/HTML codecs backing the Fleather note editor.
++  parchment: ^1.27.0
++  flutter_webrtc: ^1.6.2+hotfix.4
++  video_player: ^2.14.1
++
++# Required while mermaid_flutter declares mermaid_core from the hosted source:
++# Pub cannot combine that source with Conduit's unpublished path package, even
++# though both versions are 0.1.0. Remove once the upstream dependency is hosted
++# or points to the adjacent workspace package.
++dependency_overrides:
++  mermaid_core:
++    path: third_party/mermaid/packages/mermaid_core
++  # objective_c 9.6.1's build hook references Architecture.arm64e, which no
++  # published code_assets release defines, so native-assets compilation fails
++  # on macOS for every flutter test/run. Drop once a code_assets with arm64e
++  # ships (or objective_c stops referencing it).
++  objective_c: 9.6.0
++
++dev_dependencies:
++  analyzer: ^13.3.0
++  flutter_test:
++    sdk: flutter
++  flutter_lints: ^6.0.0
++  build_runner: ^2.15.1
++  freezed: ^4.0.1
++  json_serializable: ^6.11.1
++  flutter_native_splash: ^2.4.6
++  riverpod_generator: ^4.0.9
++  riverpod_lint: ^3.1.9
++  mocktail: ^1.0.4
++  checks: ^0.3.1
++  drift_dev: ^2.34.0
++  fake_async: ^1.3.3
++  # Used only in tests to mock the microphone permission platform channel.
++  permission_handler_platform_interface: ^4.3.0
++  plugin_platform_interface: ^2.1.8
++  # Used only in tests to fake the video player platform.
++  video_player_platform_interface: ^6.9.0
++
++flutter:
++  config:
++    enable-swift-package-manager: true
++  uses-material-design: true
++  generate: true
++  # Localization
++  # ARB files live in lib/l10n (configured via l10n.yaml)
++  
++  assets:
++    - THIRD_PARTY_NOTICES.md
++    - assets/icons/
++    - assets/model_logos/
++    - assets/release_notes/
++    - assets/chartjs.min.js
++    - assets/flutter_tex.js
++    - assets/flutter_tex.css
++    - assets/vad/
++    - assets/voice_avatar/
++
++flutter_native_splash:
++  # Splash background matches the light theme; `color_dark` handles dark mode.
++  color: "#FFFFFF"
++  color_dark: "#000000"
++  # Image to display on the splash screen
++  image: assets/icons/icon.png
++
++  
++  # Android specific settings
++  android_12:
++    color: "#FFFFFF"
++    color_dark: "#000000"
++  
++  # Web specific settings
++  web: false
++    
++
++# The verified recipe packages its source-built SQLite in Android jniLibs.
++hooks:
++  user_defines:
++    sqlite3:
++      source:
++        android: system
++        default: sqlite3
++      name:
++        android: sqlite3

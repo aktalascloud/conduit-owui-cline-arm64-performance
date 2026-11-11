@@ -1,0 +1,233 @@
+diff --git a/.avx1/PATCHES.json b/.avx1/PATCHES.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..11049def6e7bff000afcc10d40e70ec54673ef86
+--- /dev/null
++++ b/.avx1/PATCHES.json
+@@ -0,0 +1,216 @@
++[
++  {
++    "id": "APK-001",
++    "description": "ARM64-only Flutter release AOT with icon tree shaking, Dart obfuscation and existing R8/resource shrinking.",
++    "source": "local recipe; R8/resource shrinking already enabled upstream"
++  },
++  {
++    "id": "APK-002",
++    "description": "One permanent fork application ID and persistent private signing key; one latest ARM64 APK, with upgrades from the previous stable fork APK.",
++    "source": "local"
++  },
++  {
++    "id": "APK-003",
++    "description": "Use stable Flutter 3.47.8 and latest stable Android SDK 37.2/build-tools 37.0.0; verify exact SDK pins, ARM64 ABI, persistent APK signature and the complete Flutter test suite.",
++    "source": "Official Flutter release manifest and Google Android SDK repository metadata."
++  },
++  {
++    "id": "APK-004",
++    "description": "Complete Russian workspace and MCP dialogs, preserve credential-warning meaning and interpolation; restore Russian ARB parameter metadata.",
++    "source": "Reviewed Russian translation in this fork; source key/placeholder gate."
++  },
++  {
++    "id": "APK-005",
++    "description": "Rebuild SQLite 3.53.4, dartjni 1.0.3 and ONNX Runtime/JNI 1.22.0 with NDK O3 ARMv8-A ThinLTO, preserving API/JNI exports and CPU/NNAPI/XNNPACK providers; record all native libraries and unchanged vendor builds.",
++    "source": "Pinned corresponding sources and verified package/ABI provenance; .avx1/native-arm64.json."
++  },
++  {
++    "id": "APK-006",
++    "description": "Preserve model default filters on new chats, display MCP tool images and fix Direct/Hermes account selection and channel thread scrolling.",
++    "source": "Official upstream merge #870.",
++    "url": "https://github.com/cogwheel0/conduit/pull/870"
++  },
++  {
++    "id": "APK-007",
++    "description": "Recognize and play video attachments instead of treating them as images; preserve authenticated file origin handling.",
++    "source": "Official upstream merge #869.",
++    "url": "https://github.com/cogwheel0/conduit/pull/869"
++  },
++  {
++    "id": "APK-008",
++    "description": "Keep late server dictation when Stop overlaps transcription; retain tests for repeated Stop and detached call consumers.",
++    "source": "Now included in official upstream #873, including stop/restart races; retain upstream regressions.",
++    "url": "https://github.com/cogwheel0/conduit/pull/873",
++    "upstream_head": "831301e86ac86e695af2c666559092e1204b92d6"
++  },
++  {
++    "id": "APK-009",
++    "description": "OWUI + Cline: private saved SSH profile, mandatory Ed25519 host-key pin, encrypted loopback dashboard transport, project context for new sessions, unchanged approval frames, bounded gateway without shell/SFTP/arbitrary forwarding.",
++    "source": "Local integration with the separately installed Cline CLI/Hub; no Cline credentials or binaries are bundled.",
++    "verification": [
++      "Python SSH allow/deny integration tests",
++      "Dart-to-Python SSH interoperability and changed-key rejection",
++      "Pinned actual Cline session/context contract and approval-frame tests",
++      "Russian and English UI"
++    ]
++  },
++  {
++    "id": "APK-010",
++    "description": "Transfer phone images/documents through one fixed SSH upload RPC with SHA256 verification, content-addressed deduplication, bounded inbox and no shell/SFTP/arbitrary destination paths. Files attach only to the next explicit user message.",
++    "source": "Local OWUI + Cline integration; approvals and text-provider selection remain unchanged."
++  },
++  {
++    "id": "APK-011",
++    "description": "Visible Cline via SSH entry on the initial backend chooser and Accounts screens, including native sheets. Opens without OWUI/Hermes login and returns with Android Back. Preserve distinct public NAT and local SSH ports.",
++    "source": "Local fix following device feedback; Android/Russian onboarding widget and route tests."
++  },
++  {
++    "id": "APK-012",
++    "description": "Native Flutter Cline chat over pinned SSH and typed JSON: streamed Markdown, session/project navigation, new-chat model selection, Plan/Act, explicit tool approvals, Stop and attachments. Preserve existing context; never replay uncertain sends or route Cline uploads/voice into OWUI.",
++    "source": "Local replacement of the embedded dashboard after device feedback; pinned actual Cline session/event mapper, native widget/routing tests and read-only live history probe."
++  },
++  {
++    "id": "APK-013",
++    "description": "Official Android assistant startup, unread state sync, tap-to-load video and attachment fixes; preserve native Cline routing and SSH safety.",
++    "source": "Official upstream #872, #874, #875, #876, #877 and #878.",
++    "urls": [
++      "https://github.com/cogwheel0/conduit/pull/872",
++      "https://github.com/cogwheel0/conduit/pull/874",
++      "https://github.com/cogwheel0/conduit/pull/875",
++      "https://github.com/cogwheel0/conduit/pull/876",
++      "https://github.com/cogwheel0/conduit/pull/877",
++      "https://github.com/cogwheel0/conduit/pull/878"
++    ]
++  },
++  {
++    "id": "APK-014",
++    "description": "Accept the qualified WebUI 0.12.4 API range while retaining the guard for newer unqualified versions; validate native API config/model/chat decoding against an isolated server without inference or writes.",
++    "source": "Local compatibility maintenance after real Conduit SDK canary; scoped version/provider/widget regressions, unchanged coverage inherited from the 5097-test immutable baseline."
++  },
++  {
++    "id": "APK-015",
++    "description": "Cline-only visual polish: readable neutral Plan/Act pills on every light/dark palette and a single composer surface without a nested focused outline. Keep global themes and saved palette unchanged.",
++    "source": "Local device feedback; 14 native widget checks include all five palettes in both brightness modes, control behavior and keyboard/large-text layouts."
++  },
++  {
++    "id": "APK-016",
++    "description": "Fourth primary Cline sidebar destination alongside Chats, Notes and Terminal. Keep independent SSH session, native chat drafts, attachment queue and scroll position while switching; no command replay. Cline-only theme-aware buttons, model/project pickers, Plan/Act icons and approval actions reuse Conduit shapes and colors.",
++    "source": "Local user-requested navigation and UI integration; targeted state/transport/contrast/narrow-screen regressions plus current upstream suite."
++  },
++  {
++    "id": "APK-017",
++    "description": "Official 4.2.2: preserve trailing dictation, explicit consent before function-driven model changes, opt-in reasoning effort and Android chat-list Back navigation.",
++    "source": "Official upstream #893, #890, #871 and #892; upstream regression tests retained.",
++    "urls": [
++      "https://github.com/cogwheel0/conduit/pull/893",
++      "https://github.com/cogwheel0/conduit/pull/890",
++      "https://github.com/cogwheel0/conduit/pull/871",
++      "https://github.com/cogwheel0/conduit/pull/892"
++    ]
++  },
++  {
++    "id": "APK-018",
++    "description": "Compact native Cline chat only: one unified composer, single-row mode/model/project controls, model subtitle, inline message copy and overflow cues. Preserve SSH/session/draft/scroll/approval behavior and all global palettes.",
++    "source": "User-requested native UI refinement;18 focused widget tests across five palettes, both brightness modes, large text and keyboard. No phone-speed percentage claimed."
++  },
++  {
++    "id": "VOICE-AVATAR-001",
++    "description": "Local offline VRM0/1 viewport in native OWUI voice calls. Authenticated bounded file download, embedded resource/texture budgets, assistant-only animation: Standard TTS playback-state fallback and Realtime output level, blink, background disposal, blocked network/files/Native Messaging. Existing Cline chat and unavailable Cline voice unchanged. Personal avatar assets are not distributed.",
++    "source": "local; Three.js0.186.1 and three-vrm3.5.5 MIT"
++  },
++  {
++    "id": "VOICE-AVATAR-002",
++    "description": "Android offline document served from bundled HTML; ignore non-main-frame blocked resource errors; await renderer bootstrap and the first real WebGL frame. Start graphics only after native audio initialization. Stock microphone/STT/TTS/filter routing, voice selection and audio settings unchanged.",
++    "source": "User-reported Android avatar/voice regression; document-origin/resource-isolation and native voice lifecycle regressions. No physical-phone claim from desktop Chromium."
++  },
++  {
++    "id": "VOICE-AVATAR-003",
++    "description": "Android starts the packaged viewer through the native AndroidX WebViewAssetLoader at its HTTPS appassets origin; no synthetic network document or one-shot navigation flag. Keep strict CSP, blocked external network/files, no JS bridge and native audio ownership. Show bounded ASSET/BOOT/FETCH/TRANSFER/RENDER codes without tokens, model bytes or raw error text.",
++    "source": "User confirmed prior3e4f0727 still failed; actual APK contains the correct asset/CSP, but no VRM content request reaches the backend. Native plugin source inspected, real asset-origin/CSP Chromium flow and all3 personal rigs passed; phone confirmation remains required."
++  },
++  {
++    "id": "VOICE-AVATAR-004",
++    "description": "Sharper phone avatars: up to native3x device pixel ratio, bounded2MP/GPU dimensions; up to4x anisotropy and closer portrait framing. Native asset-loader security,30fps and stock audio remain. Personal outfit assets are server-side and are not distributed in this APK.",
++    "verification": [
++      "Pixel-budget/density regression",
++      "Offline CSP/security tests",
++      "Three real rig/expression renders at device scale3:1080x1200 buffer; no physical-phone performance claim"
++    ]
++  },
++  {
++    "id": "VOICE-AVATAR-005",
++    "description": "Full-body adaptive voice panel; bounded high-resolution VRM texture loading; private 100 MiB server/account/file cache with SHA256 validation and authenticated metadata checks. Stock audio unchanged.",
++    "verification": [
++      "12 targeted cache/policy/overlay tests",
++      "Real Chromium avatar-loader import and full-body WebGL fixture",
++      "ARM64 release AOT; existing 8 native libraries reused; signature/16KiB checks"
++    ]
++  },
++  {
++    "id": "APK-015",
++    "description": "PR914 long-chat scrollbar stability; adaptive voice panel; compact Act-only Cline composer, one header and automatic pinned-SSH reconnect with backoff, retained drafts/history and no command replay. Drain independent socket completion errors on Windows.",
++    "urls": [
++      "https://github.com/cogwheel0/conduit/pull/914"
++    ],
++    "verification": "Targeted regressions plus exact-source package/privacy/security/startup gates; final CI receipt records actual scope."
++  },
++  {
++    "id": "APK-016",
++    "description": "Reconnect also retains explicit new-chat project/provider/model/reasoning before any session exists; scope is bound to the account identity. Do not attach an unrelated last session or replay an uncertain send.",
++    "verification": "Real native-client configuration regressions: changed defaults, account separation and no send/approval frames."
++  },
++  {
++    "id": "APK-VOICE-CLINE-1101",
++    "description": "Restore model selection in existing idle Cline sessions through an owned SDK adapter; remove folder controls; follow final chat layout without fighting user scroll; prioritize voice hang-up over blocked work.",
++    "source": "Local fixes with targeted model/protocol/widget/lifecycle regressions; existing native optimizations unchanged."
++  },
++  {
++    "id": "APK-AVATAR-REFRESH-UI",
++    "description": "Refresh current avatar binding from the server on call/resume and during foreground calls; validate cache against server SHA256; use compact responsive Cline components with common Conduit theme tokens.",
++    "verification": "Targeted cache/binding/lifecycle/voice-overlay and Cline palette/narrow-screen tests; widget preview reviewed, physical phone pending."
++  },
++  {
++    "id": "APK-LIVE-AVATAR-CONTROLS",
++    "description": "Native bounded rotation/pinch/pan/wheel gestures and accessible zoom/reset buttons during voice calls. One-way graphics-only numeric commands; call-end remains outside the gesture region.",
++    "verification": "Native gesture/hang-up hit-test regression, 7 renderer/CSP/resource tests, Russian labels; physical phone confirmation pending."
++  },
++  {
++    "id": "APK-COMPOSER-915",
++    "description": "PR915: cap expanded composer at8 visible lines and keep actions outside scrolling text; retain scaled minimum editor height under suggestions.",
++    "url": "https://github.com/cogwheel0/conduit/pull/915",
++    "upstream_head": "cacd31878d852eb1345aa3c12a5a4f2b44ffda6c",
++    "verification": "122 focused composer tests; synthetic Android/iOS variants, not physical phone proof."
++  },
++  {
++    "id": "APK-MINIMAX-733",
++    "description": "PR733 regional MiniMax global/CN presets, Flash thinking validation and preserved tool/reasoning history; Responses replays client-held history. Adapt to current public model catalog: no invented :free route, no hidden existing models. Known direct M3/Flash contexts from primary provider docs; saved/custom model IDs and FreeLLM unchanged. New CN presets use the current documented api.minimax.cn origin; existing api.minimaxi.com profiles keep their original URL. Known context metadata also reaches manual discovery without network calls.",
++    "url": "https://github.com/cogwheel0/conduit/pull/733",
++    "upstream_head": "046668331618c4707710ad7e15454e1050347a5a",
++    "verification": "Targeted transport/editor/manual-discovery tests and Dart analysis; broader Direct checks and inherited OAuth test-fixture diagnosis recorded in maintenance receipt. MCP callback tests bound TCP connect phase on Windows without extending assertions. No real inference or regional Responses availability claim."
++  },
++  {
++    "id": "APK-PERSISTENCE-717",
++    "description": "Safe current-layout adaptation of PR717: canonicalize only assistant display content exactly reproduced from retained structured output. Preserve literal user/assistant examples, fences, unknown/partial formats, versions, metadata and raw output; add missing output to legacy createConversation payloads. Project outbound copies only, leaving local mapper/rows unchanged.",
++    "url": "https://github.com/cogwheel0/conduit/pull/717",
++    "upstream_head": "110c3101290a04ecadbdcb4444611bc33127a1c7",
++    "queue_compatibility": "Keep stored createChatContentHash unchanged. Pull crash-heal can compare the recorded local snapshot plus projected body before atomically claiming a pending create; inFlight/parked queues stay excluded. No schema migration and no replay of a recovered create. Transient projection digests are reused only for active pending sequence/hash pairs, pruned on queue changes and freshly revalidated before a claim; changed queued snapshot hashes invalidate the memo.",
++    "verification": "112 projection/API,37 push-sync,78 pull/remap and117 outbox/DAO tests passed across named groups; changed-file Dart analysis clean. These are selected core groups, not the complete Flutter/workspace suite. Stock update_chat_by_id may re-derive display content on changed output; canonical egress is not a claim of permanent server-side HTML removal."
++  },
++  {
++    "id": "APK-WITHDRAW-914",
++    "description": "Remove the earlier PR914 experimental timeline/Markdown patch after its author closed914 and918 for failed performance acceptance and an unresolved preparation-gate issue. The exact inverse patch restores3 production files to upstream0f5c598a; other fork features and data formats are preserved. This is a withdrawal, not a new scrolling acceleration or scrollbar correctness claim.",
++    "urls": [
++      "https://github.com/cogwheel0/conduit/pull/914",
++      "https://github.com/cogwheel0/conduit/pull/918"
++    ],
++    "withdrawn_head": "ff7f54a298e6e8f46f72da01af82ba2d990d6406",
++    "prior_candidate": "afa3f0f59b123ac7027f29205337e221c519f9dc",
++    "verification": "167 stock timeline/Markdown cases pass and changed-source analysis is clean after materializing exact pinned Mermaid/KaTeX submodules. Original withdrawn fixture retained in prior Git history and maintenance evidence; its160-paragraph case still fails the completed-extent invariant on both synthetic iOS/Android variants against upstream behavior. No real-device or frame-time acceptance.",
++    "known_limitation": "Upstream long-chat provisional extent/scrollbar instability remains open. Do not hide that failure behind stock-suite success or reintroduce an unaccepted estimate cache as a speed fix."
++  },
++  {
++    "id": "APK-LOCALE-FIXTURE-QUALIFICATION",
++    "description": "Complete the7 missing Polish labels for existing avatar/Cline controls. Keep Hermes refresh/switch assertions unchanged while limiting its real HTTP fixture to its owned loopback port and closing clients plus pending connection tasks before teardown. Production auth timeouts and account behavior are unchanged.",
++    "verification": "32 combined Polish/Hermes/SSH cases pass with the pinned test Python;3 platform-lint cases pass with the actual Dart SDK binary on PATH. A broader local Windows run initially had5241 passes/16 failures; remaining Windows filesystem/privilege differences require the mandatory Ubuntu CI full suite, not suppressed assertions."
++  }
++]
+diff --git a/.avx1/measurements/latest.json b/.avx1/measurements/latest.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..87ea693cc86686ee5c26c82b59af94a259bd1a07
+--- /dev/null
++++ b/.avx1/measurements/latest.json
+@@ -0,0 +1,5 @@
++{
++  "scope": "current selected checks; final package and deployment receipts are recorded after CI",
++  "inference_speedup_percent": null,
++  "model_required_for_build": false
++}

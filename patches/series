@@ -1,4 +1,13 @@
-01-runtime.patch
-02-build.patch
-03-tests.patch
-04-documentation.patch
+01-cline-ssh-gateway.patch
+02-cline-client.patch
+03-cline-navigation.patch
+04-voice-vrm.patch
+05-provider-compatibility.patch
+06-chat-persistence.patch
+07-localization.patch
+08-arm64-native.patch
+09-android-package.patch
+10-portable-install.patch
+11-ci-build.patch
+12-project-docs.patch
+13-fork-records.patch

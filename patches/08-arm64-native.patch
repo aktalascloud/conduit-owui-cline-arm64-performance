@@ -1,0 +1,1653 @@
+diff --git a/.avx1/android_sdk.py b/.avx1/android_sdk.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..81cd1e22f117a086b3819069fe8ff2569804ef15
+--- /dev/null
++++ b/.avx1/android_sdk.py
+@@ -0,0 +1,43 @@
++"""Resolve stable Android SDK packages from Google's official repository metadata."""
++import json
++import os
++from pathlib import Path
++import re
++import subprocess
++import urllib.request
++import xml.etree.ElementTree as ET
++
++
++def resolve_flutter():
++    with urllib.request.urlopen("https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json", timeout=90) as response:
++        data = json.load(response)
++    release = next(item for item in data["releases"] if item["hash"] == data["current_release"]["stable"])
++    return {"flutter_sha": release["hash"], "flutter_version": release["version"]}
++
++
++def resolve():
++    with urllib.request.urlopen("https://dl.google.com/android/repository/repository2-3.xml", timeout=90) as response:
++        root = ET.fromstring(response.read())
++    packages = [node for node in root if node.tag.endswith("remotePackage") and
++                any(child.tag.endswith("channelRef") and child.attrib.get("ref") == "channel-0" for child in node)]
++    def newest(prefix, pattern):
++        candidates = [node.attrib["path"] for node in packages if node.attrib["path"].startswith(prefix)
++                      and re.fullmatch(pattern, node.attrib["path"].split(";", 1)[1])]
++        return max(candidates, key=lambda value: tuple(map(int, value.split(";", 1)[1].removeprefix("android-").split("."))))
++    platform = newest("platforms;", r"android-\d+(?:\.\d+)?")
++    version = platform.split("android-", 1)[1].split(".")
++    return {"platform": platform, "api_level": int(version[0]), "minor_api_level": int(version[1]) if len(version) > 1 else 0,
++            "build_tools": newest("build-tools;", r"\d+\.\d+\.\d+"),
++            "commandline_tools": newest("cmdline-tools;", r"\d+\.\d+"),
++            "ndk": "ndk;29.0.14206865", "metadata": "https://dl.google.com/android/repository/repository2-3.xml"}
++
++
++if __name__ == "__main__":
++    root = Path(__file__).resolve().parents[1]
++    pins = json.loads((root / ".avx1/toolchains.json").read_text("utf-8"))["android"]
++    sdk = Path(os.environ.get("ANDROID_SDK_ROOT") or os.environ["ANDROID_HOME"])
++    original = sdk / "cmdline-tools/latest/bin/sdkmanager"
++    subprocess.run([str(original), pins["commandline_tools"]], check=True)
++    manager = sdk / "cmdline-tools" / pins["commandline_tools"].split(";", 1)[1] / "bin/sdkmanager"
++    subprocess.run([str(manager), "--licenses"], input="y\n" * 100, text=True, check=True)
++    subprocess.run([str(manager), pins["platform"], pins["build_tools"], pins["ndk"]], check=True)
+diff --git a/.avx1/licenses/Apache-2.0.txt b/.avx1/licenses/Apache-2.0.txt
+new file mode 100644
+index 0000000000000000000000000000000000000000..d645695673349e3947e8e5ae42332d0ac3164cd7
+--- /dev/null
++++ b/.avx1/licenses/Apache-2.0.txt
+@@ -0,0 +1,202 @@
++
++                                 Apache License
++                           Version 2.0, January 2004
++                        http://www.apache.org/licenses/
++
++   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
++
++   1. Definitions.
++
++      "License" shall mean the terms and conditions for use, reproduction,
++      and distribution as defined by Sections 1 through 9 of this document.
++
++      "Licensor" shall mean the copyright owner or entity authorized by
++      the copyright owner that is granting the License.
++
++      "Legal Entity" shall mean the union of the acting entity and all
++      other entities that control, are controlled by, or are under common
++      control with that entity. For the purposes of this definition,
++      "control" means (i) the power, direct or indirect, to cause the
++      direction or management of such entity, whether by contract or
++      otherwise, or (ii) ownership of fifty percent (50%) or more of the
++      outstanding shares, or (iii) beneficial ownership of such entity.
++
++      "You" (or "Your") shall mean an individual or Legal Entity
++      exercising permissions granted by this License.
++
++      "Source" form shall mean the preferred form for making modifications,
++      including but not limited to software source code, documentation
++      source, and configuration files.
++
++      "Object" form shall mean any form resulting from mechanical
++      transformation or translation of a Source form, including but
++      not limited to compiled object code, generated documentation,
++      and conversions to other media types.
++
++      "Work" shall mean the work of authorship, whether in Source or
++      Object form, made available under the License, as indicated by a
++      copyright notice that is included in or attached to the work
++      (an example is provided in the Appendix below).
++
++      "Derivative Works" shall mean any work, whether in Source or Object
++      form, that is based on (or derived from) the Work and for which the
++      editorial revisions, annotations, elaborations, or other modifications
++      represent, as a whole, an original work of authorship. For the purposes
++      of this License, Derivative Works shall not include works that remain
++      separable from, or merely link (or bind by name) to the interfaces of,
++      the Work and Derivative Works thereof.
++
++      "Contribution" shall mean any work of authorship, including
++      the original version of the Work and any modifications or additions
++      to that Work or Derivative Works thereof, that is intentionally
++      submitted to Licensor for inclusion in the Work by the copyright owner
++      or by an individual or Legal Entity authorized to submit on behalf of
++      the copyright owner. For the purposes of this definition, "submitted"
++      means any form of electronic, verbal, or written communication sent
++      to the Licensor or its representatives, including but not limited to
++      communication on electronic mailing lists, source code control systems,
++      and issue tracking systems that are managed by, or on behalf of, the
++      Licensor for the purpose of discussing and improving the Work, but
++      excluding communication that is conspicuously marked or otherwise
++      designated in writing by the copyright owner as "Not a Contribution."
++
++      "Contributor" shall mean Licensor and any individual or Legal Entity
++      on behalf of whom a Contribution has been received by Licensor and
++      subsequently incorporated within the Work.
++
++   2. Grant of Copyright License. Subject to the terms and conditions of
++      this License, each Contributor hereby grants to You a perpetual,
++      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
++      copyright license to reproduce, prepare Derivative Works of,
++      publicly display, publicly perform, sublicense, and distribute the
++      Work and such Derivative Works in Source or Object form.
++
++   3. Grant of Patent License. Subject to the terms and conditions of
++      this License, each Contributor hereby grants to You a perpetual,
++      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
++      (except as stated in this section) patent license to make, have made,
++      use, offer to sell, sell, import, and otherwise transfer the Work,
++      where such license applies only to those patent claims licensable
++      by such Contributor that are necessarily infringed by their
++      Contribution(s) alone or by combination of their Contribution(s)
++      with the Work to which such Contribution(s) was submitted. If You
++      institute patent litigation against any entity (including a
++      cross-claim or counterclaim in a lawsuit) alleging that the Work
++      or a Contribution incorporated within the Work constitutes direct
++      or contributory patent infringement, then any patent licenses
++      granted to You under this License for that Work shall terminate
++      as of the date such litigation is filed.
++
++   4. Redistribution. You may reproduce and distribute copies of the
++      Work or Derivative Works thereof in any medium, with or without
++      modifications, and in Source or Object form, provided that You
++      meet the following conditions:
++
++      (a) You must give any other recipients of the Work or
++          Derivative Works a copy of this License; and
++
++      (b) You must cause any modified files to carry prominent notices
++          stating that You changed the files; and
++
++      (c) You must retain, in the Source form of any Derivative Works
++          that You distribute, all copyright, patent, trademark, and
++          attribution notices from the Source form of the Work,
++          excluding those notices that do not pertain to any part of
++          the Derivative Works; and
++
++      (d) If the Work includes a "NOTICE" text file as part of its
++          distribution, then any Derivative Works that You distribute must
++          include a readable copy of the attribution notices contained
++          within such NOTICE file, excluding those notices that do not
++          pertain to any part of the Derivative Works, in at least one
++          of the following places: within a NOTICE text file distributed
++          as part of the Derivative Works; within the Source form or
++          documentation, if provided along with the Derivative Works; or,
++          within a display generated by the Derivative Works, if and
++          wherever such third-party notices normally appear. The contents
++          of the NOTICE file are for informational purposes only and
++          do not modify the License. You may add Your own attribution
++          notices within Derivative Works that You distribute, alongside
++          or as an addendum to the NOTICE text from the Work, provided
++          that such additional attribution notices cannot be construed
++          as modifying the License.
++
++      You may add Your own copyright statement to Your modifications and
++      may provide additional or different license terms and conditions
++      for use, reproduction, or distribution of Your modifications, or
++      for any such Derivative Works as a whole, provided Your use,
++      reproduction, and distribution of the Work otherwise complies with
++      the conditions stated in this License.
++
++   5. Submission of Contributions. Unless You explicitly state otherwise,
++      any Contribution intentionally submitted for inclusion in the Work
++      by You to the Licensor shall be under the terms and conditions of
++      this License, without any additional terms or conditions.
++      Notwithstanding the above, nothing herein shall supersede or modify
++      the terms of any separate license agreement you may have executed
++      with Licensor regarding such Contributions.
++
++   6. Trademarks. This License does not grant permission to use the trade
++      names, trademarks, service marks, or product names of the Licensor,
++      except as required for reasonable and customary use in describing the
++      origin of the Work and reproducing the content of the NOTICE file.
++
++   7. Disclaimer of Warranty. Unless required by applicable law or
++      agreed to in writing, Licensor provides the Work (and each
++      Contributor provides its Contributions) on an "AS IS" BASIS,
++      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
++      implied, including, without limitation, any warranties or conditions
++      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
++      PARTICULAR PURPOSE. You are solely responsible for determining the
++      appropriateness of using or redistributing the Work and assume any
++      risks associated with Your exercise of permissions under this License.
++
++   8. Limitation of Liability. In no event and under no legal theory,
++      whether in tort (including negligence), contract, or otherwise,
++      unless required by applicable law (such as deliberate and grossly
++      negligent acts) or agreed to in writing, shall any Contributor be
++      liable to You for damages, including any direct, indirect, special,
++      incidental, or consequential damages of any character arising as a
++      result of this License or out of the use or inability to use the
++      Work (including but not limited to damages for loss of goodwill,
++      work stoppage, computer failure or malfunction, or any and all
++      other commercial damages or losses), even if such Contributor
++      has been advised of the possibility of such damages.
++
++   9. Accepting Warranty or Additional Liability. While redistributing
++      the Work or Derivative Works thereof, You may choose to offer,
++      and charge a fee for, acceptance of support, warranty, indemnity,
++      or other liability obligations and/or rights consistent with this
++      License. However, in accepting such obligations, You may act only
++      on Your own behalf and on Your sole responsibility, not on behalf
++      of any other Contributor, and only if You agree to indemnify,
++      defend, and hold each Contributor harmless for any liability
++      incurred by, or claims asserted against, such Contributor by reason
++      of your accepting any such warranty or additional liability.
++
++   END OF TERMS AND CONDITIONS
++
++   APPENDIX: How to apply the Apache License to your work.
++
++      To apply the Apache License to your work, attach the following
++      boilerplate notice, with the fields enclosed by brackets "[]"
++      replaced with your own identifying information. (Don't include
++      the brackets!)  The text should be enclosed in the appropriate
++      comment syntax for the file format. We also recommend that a
++      file or class name and description of purpose be included on the
++      same "printed page" as the copyright notice for easier
++      identification within third-party archives.
++
++   Copyright [yyyy] [name of copyright owner]
++
++   Licensed under the Apache License, Version 2.0 (the "License");
++   you may not use this file except in compliance with the License.
++   You may obtain a copy of the License at
++
++       http://www.apache.org/licenses/LICENSE-2.0
++
++   Unless required by applicable law or agreed to in writing, software
++   distributed under the License is distributed on an "AS IS" BASIS,
++   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++   See the License for the specific language governing permissions and
++   limitations under the License.
+diff --git a/.avx1/licenses/Silero-VAD-MIT.txt b/.avx1/licenses/Silero-VAD-MIT.txt
+new file mode 100644
+index 0000000000000000000000000000000000000000..0bf5e90cac691b999d4a35044f97167d7bbbf0b9
+--- /dev/null
++++ b/.avx1/licenses/Silero-VAD-MIT.txt
+@@ -0,0 +1,21 @@
++MIT License
++
++Copyright (c) 2020-present Silero Team
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+\ No newline at end of file
+diff --git a/.avx1/measurements/onnx-qualified-reference.json b/.avx1/measurements/onnx-qualified-reference.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..ed3a4bc287cef1a7c87352e10d1345e4dad68928
+--- /dev/null
++++ b/.avx1/measurements/onnx-qualified-reference.json
+@@ -0,0 +1,23 @@
++{
++  "schema": 1,
++  "run_id": 40821699974,
++  "source_commit": "11cae6e436e48b51fde41efdaaca015c63866d57",
++  "qualification_scope": "Native compilation/flags/exports/AArch64/16KiB completed successfully; the separate Flutter candidate failed an onLoadStop return-type check. Not an APK qualification.",
++  "policy_sha256": "3d2070ea5202ff26f3ea094ec22ce9a3ef7807acee701cccebe6cd8700f5f694",
++  "toolchains_sha256": "52842762d4313e288c0f5e70c972ea25764ebd17b0f9ab7caa4e6d99db06d6e9",
++  "compilation_signature": "96f27b69c53aee2cb6b9428cf3a1700398b0fd3de4bd29b067f26807fa549377",
++  "compiler": "Android (13989888, +pgo, +bolt, +lto, +mlgo, based on r563880c) clang version 21.0.0 (https://android.googlesource.com/toolchain/llvm-project 5e96669f06077099aa41290cdb4c5e6fa0f59349)",
++  "compile_database_sha256": "05ff91c601d0719385906414ad22b86e8e00d7ed4221e824b05725625d50e0fb",
++  "binaries": {
++    "libonnxruntime.so": "8b388eadf807d245646e2fe5be314c8e86dde15e6a11fb819a6b818fd2aafc62",
++    "libonnxruntime4j_jni.so": "bdb5d81569cd0b1a7a97281dca3a473224959c88acd43e5eb412338edc4c0fd7"
++  },
++  "also_qualified_apk_source": "73237e92505bec1da6ad61b84edb34a7830bfebc",
++  "also_qualified_apk_run": 40666979951,
++  "lockfile_sha256": "b289bb22df93352a6ea5717e0b02b88d17783955b5145a5fdaaabae8f8c5866e",
++  "reviewed_non_native_lock_change": {
++    "previous_lockfile_sha256": "6184cbff0d285327854af0f7924b046d4a2421d6c1a04164dd2e88f177231f83",
++    "scope": "Only cupertino_native_better1.6.0->1.8.2,cupertino_ui1.0.2->1.1.5,share_plus13.3.0->13.3.1; ONNX/JNI/SQLite/vad versions and source/compiler/flags unchanged",
++    "upstream_commit": "7a5391a34721bff7bc22c1eda05538f88d6404bb"
++  }
++}
+diff --git a/.avx1/native-arm64.json b/.avx1/native-arm64.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..ee91d0a7b5312a7c7bb105dc5b413bda4e83f391
+--- /dev/null
++++ b/.avx1/native-arm64.json
+@@ -0,0 +1,759 @@
++{
++  "abi": "arm64-v8a",
++  "baseline": "armv8-a",
++  "pgo": false,
++  "jni": {
++    "package": "jni",
++    "version": "1.0.3",
++    "url": "https://pub.dev/api/archives/jni-1.0.3.tar.gz",
++    "sha256": "f038e58b4dc2c9037f50e233175086337e0b305e356d28211bf55f21c504cbd3"
++  },
++  "sqlite": {
++    "version": "3.53.4",
++    "url": "https://sqlite.org/2026/sqlite-amalgamation-3530400.zip",
++    "sha256": "1e71ddf93849c6a6ecf58b827c0692073d2dd7ee40196158068f7b29f422e87d",
++    "member": "sqlite-amalgamation-3530400/sqlite3.c",
++    "source_id": "2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
++    "package_version": "3.6.0"
++  },
++  "onnx": {
++    "version": "1.22.0",
++    "tag": "v1.22.0",
++    "repository": "https://github.com/microsoft/onnxruntime.git",
++    "commit": "f217402897f40ebba457e2421bc0a4702771968e",
++    "aar_url": "https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.aar",
++    "aar_sha256": "04a4617a9c797cf49225595e45b5546081cb34c86ac817581141577d3b7dbfe2",
++    "pom_url": "https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.22.0/onnxruntime-android-1.22.0.pom",
++    "pom_sha256": "4ee6416dd018508bc95f12ea8d52896d920af8844cc0b85cdf01d9786c9d94e5"
++  },
++  "other_libraries": {
++    "libapp.so": {
++      "kind": "source-built Dart AOT",
++      "source": "Conduit release source commit",
++      "optimization": "Flutter release AOT, tree shaking, obfuscation; C/C++ O3 flags do not control Dart AOT"
++    },
++    "libflutter.so": {
++      "kind": "prebuilt",
++      "source": "Official engine from pinned Flutter SDK",
++      "reason": "Official Flutter 3.47.8 engine retained; the packaged binary must equal the hash-verified official artifact after NDK stripping. No C/C++ O3 claim."
++    },
++    "libdatastore_shared_counter.so": {
++      "kind": "prebuilt",
++      "version": "AndroidX Datastore 1.1.7",
++      "source": "https://android.googlesource.com/platform/frameworks/support/",
++      "reason": "Pinned AndroidX AAR; exact release native source/build mapping not supplied by the Kotlin package",
++      "expected_packaged_sha256": "d3e48717c9aa147e0ab21063ba0e8e0211cabf8bf40b222640829519edbf58e1"
++    },
++    "libjingle_peerconnection_so.so": {
++      "kind": "prebuilt",
++      "version": "io.github.webrtc-sdk:android:150.7871.01",
++      "source": "https://github.com/webrtc-sdk/android",
++      "reason": "Pinned WebRTC vendor build and JNI ABI retained; Chromium/depot_tools build is not the NDK-only pipeline",
++      "expected_packaged_sha256": "7b299113fcd743de7dc5559686b21fc2681b2c8598347d8dc0743d2e004995ca"
++    },
++    "libpdfium.so": {
++      "kind": "prebuilt",
++      "version": "chromium/7811",
++      "source": "https://github.com/bblanchon/pdfium-binaries/releases/tag/chromium%2F7811",
++      "reason": "Pinned PDFium Chromium build retained; its GN/depot_tools toolchain is not the NDK-only pipeline",
++      "expected_packaged_sha256": "ef8c440d29e2a0820a65554487d23020bd88756ee2d6aad8f8fb59bab3b2eb14"
++    }
++  },
++  "expected_exports": {
++    "libsqlite3.so": [
++      "sqlite3_aggregate_context",
++      "sqlite3_auto_extension",
++      "sqlite3_autovacuum_pages",
++      "sqlite3_backup_finish",
++      "sqlite3_backup_init",
++      "sqlite3_backup_pagecount",
++      "sqlite3_backup_remaining",
++      "sqlite3_backup_step",
++      "sqlite3_bind_blob",
++      "sqlite3_bind_blob64",
++      "sqlite3_bind_double",
++      "sqlite3_bind_int",
++      "sqlite3_bind_int64",
++      "sqlite3_bind_null",
++      "sqlite3_bind_parameter_count",
++      "sqlite3_bind_parameter_index",
++      "sqlite3_bind_parameter_name",
++      "sqlite3_bind_pointer",
++      "sqlite3_bind_text",
++      "sqlite3_bind_text16",
++      "sqlite3_bind_text64",
++      "sqlite3_bind_value",
++      "sqlite3_bind_zeroblob",
++      "sqlite3_bind_zeroblob64",
++      "sqlite3_blob_bytes",
++      "sqlite3_blob_close",
++      "sqlite3_blob_open",
++      "sqlite3_blob_read",
++      "sqlite3_blob_reopen",
++      "sqlite3_blob_write",
++      "sqlite3_busy_handler",
++      "sqlite3_busy_timeout",
++      "sqlite3_cancel_auto_extension",
++      "sqlite3_changes",
++      "sqlite3_changes64",
++      "sqlite3_clear_bindings",
++      "sqlite3_close",
++      "sqlite3_close_v2",
++      "sqlite3_collation_needed",
++      "sqlite3_collation_needed16",
++      "sqlite3_column_blob",
++      "sqlite3_column_bytes",
++      "sqlite3_column_bytes16",
++      "sqlite3_column_count",
++      "sqlite3_column_double",
++      "sqlite3_column_int",
++      "sqlite3_column_int64",
++      "sqlite3_column_name",
++      "sqlite3_column_name16",
++      "sqlite3_column_text",
++      "sqlite3_column_text16",
++      "sqlite3_column_type",
++      "sqlite3_column_value",
++      "sqlite3_commit_hook",
++      "sqlite3_compileoption_get",
++      "sqlite3_compileoption_used",
++      "sqlite3_complete",
++      "sqlite3_complete16",
++      "sqlite3_config",
++      "sqlite3_context_db_handle",
++      "sqlite3_create_collation",
++      "sqlite3_create_collation16",
++      "sqlite3_create_collation_v2",
++      "sqlite3_create_filename",
++      "sqlite3_create_function",
++      "sqlite3_create_function16",
++      "sqlite3_create_function_v2",
++      "sqlite3_create_module",
++      "sqlite3_create_module_v2",
++      "sqlite3_create_window_function",
++      "sqlite3_data_count",
++      "sqlite3_data_directory",
++      "sqlite3_database_file_object",
++      "sqlite3_db_cacheflush",
++      "sqlite3_db_config",
++      "sqlite3_db_filename",
++      "sqlite3_db_handle",
++      "sqlite3_db_mutex",
++      "sqlite3_db_name",
++      "sqlite3_db_readonly",
++      "sqlite3_db_release_memory",
++      "sqlite3_db_status",
++      "sqlite3_db_status64",
++      "sqlite3_declare_vtab",
++      "sqlite3_deserialize",
++      "sqlite3_drop_modules",
++      "sqlite3_enable_load_extension",
++      "sqlite3_errcode",
++      "sqlite3_errmsg",
++      "sqlite3_errmsg16",
++      "sqlite3_error_offset",
++      "sqlite3_errstr",
++      "sqlite3_exec",
++      "sqlite3_expanded_sql",
++      "sqlite3_extended_errcode",
++      "sqlite3_extended_result_codes",
++      "sqlite3_file_control",
++      "sqlite3_filename_database",
++      "sqlite3_filename_journal",
++      "sqlite3_filename_wal",
++      "sqlite3_finalize",
++      "sqlite3_free",
++      "sqlite3_free_filename",
++      "sqlite3_free_table",
++      "sqlite3_get_autocommit",
++      "sqlite3_get_auxdata",
++      "sqlite3_get_clientdata",
++      "sqlite3_get_table",
++      "sqlite3_hard_heap_limit64",
++      "sqlite3_initialize",
++      "sqlite3_interrupt",
++      "sqlite3_is_interrupted",
++      "sqlite3_keyword_check",
++      "sqlite3_keyword_count",
++      "sqlite3_keyword_name",
++      "sqlite3_last_insert_rowid",
++      "sqlite3_libversion",
++      "sqlite3_libversion_number",
++      "sqlite3_limit",
++      "sqlite3_load_extension",
++      "sqlite3_log",
++      "sqlite3_malloc",
++      "sqlite3_malloc64",
++      "sqlite3_memory_highwater",
++      "sqlite3_memory_used",
++      "sqlite3_mprintf",
++      "sqlite3_msize",
++      "sqlite3_mutex_alloc",
++      "sqlite3_mutex_enter",
++      "sqlite3_mutex_free",
++      "sqlite3_mutex_leave",
++      "sqlite3_mutex_try",
++      "sqlite3_next_stmt",
++      "sqlite3_open",
++      "sqlite3_open16",
++      "sqlite3_open_v2",
++      "sqlite3_os_end",
++      "sqlite3_os_init",
++      "sqlite3_overload_function",
++      "sqlite3_prepare",
++      "sqlite3_prepare16",
++      "sqlite3_prepare16_v2",
++      "sqlite3_prepare16_v3",
++      "sqlite3_prepare_v2",
++      "sqlite3_prepare_v3",
++      "sqlite3_preupdate_blobwrite",
++      "sqlite3_preupdate_count",
++      "sqlite3_preupdate_depth",
++      "sqlite3_preupdate_hook",
++      "sqlite3_preupdate_new",
++      "sqlite3_preupdate_old",
++      "sqlite3_randomness",
++      "sqlite3_realloc",
++      "sqlite3_realloc64",
++      "sqlite3_release_memory",
++      "sqlite3_reset",
++      "sqlite3_reset_auto_extension",
++      "sqlite3_result_blob",
++      "sqlite3_result_blob64",
++      "sqlite3_result_double",
++      "sqlite3_result_error",
++      "sqlite3_result_error16",
++      "sqlite3_result_error_code",
++      "sqlite3_result_error_nomem",
++      "sqlite3_result_error_toobig",
++      "sqlite3_result_int",
++      "sqlite3_result_int64",
++      "sqlite3_result_null",
++      "sqlite3_result_pointer",
++      "sqlite3_result_subtype",
++      "sqlite3_result_text",
++      "sqlite3_result_text16",
++      "sqlite3_result_text16be",
++      "sqlite3_result_text16le",
++      "sqlite3_result_text64",
++      "sqlite3_result_value",
++      "sqlite3_result_zeroblob",
++      "sqlite3_result_zeroblob64",
++      "sqlite3_rollback_hook",
++      "sqlite3_rtree_geometry_callback",
++      "sqlite3_rtree_query_callback",
++      "sqlite3_serialize",
++      "sqlite3_set_auxdata",
++      "sqlite3_set_clientdata",
++      "sqlite3_set_errmsg",
++      "sqlite3_set_last_insert_rowid",
++      "sqlite3_setlk_timeout",
++      "sqlite3_shutdown",
++      "sqlite3_sleep",
++      "sqlite3_snprintf",
++      "sqlite3_soft_heap_limit",
++      "sqlite3_soft_heap_limit64",
++      "sqlite3_sourceid",
++      "sqlite3_sql",
++      "sqlite3_status",
++      "sqlite3_status64",
++      "sqlite3_step",
++      "sqlite3_stmt_busy",
++      "sqlite3_stmt_explain",
++      "sqlite3_stmt_isexplain",
++      "sqlite3_stmt_readonly",
++      "sqlite3_stmt_status",
++      "sqlite3_str_append",
++      "sqlite3_str_appendall",
++      "sqlite3_str_appendchar",
++      "sqlite3_str_appendf",
++      "sqlite3_str_errcode",
++      "sqlite3_str_finish",
++      "sqlite3_str_free",
++      "sqlite3_str_length",
++      "sqlite3_str_new",
++      "sqlite3_str_reset",
++      "sqlite3_str_truncate",
++      "sqlite3_str_value",
++      "sqlite3_str_vappendf",
++      "sqlite3_strglob",
++      "sqlite3_stricmp",
++      "sqlite3_strlike",
++      "sqlite3_strnicmp",
++      "sqlite3_system_errno",
++      "sqlite3_table_column_metadata",
++      "sqlite3_temp_directory",
++      "sqlite3_test_control",
++      "sqlite3_threadsafe",
++      "sqlite3_total_changes",
++      "sqlite3_total_changes64",
++      "sqlite3_txn_state",
++      "sqlite3_update_hook",
++      "sqlite3_uri_boolean",
++      "sqlite3_uri_int64",
++      "sqlite3_uri_key",
++      "sqlite3_uri_parameter",
++      "sqlite3_user_data",
++      "sqlite3_value_blob",
++      "sqlite3_value_bytes",
++      "sqlite3_value_bytes16",
++      "sqlite3_value_double",
++      "sqlite3_value_dup",
++      "sqlite3_value_encoding",
++      "sqlite3_value_free",
++      "sqlite3_value_frombind",
++      "sqlite3_value_int",
++      "sqlite3_value_int64",
++      "sqlite3_value_nochange",
++      "sqlite3_value_numeric_type",
++      "sqlite3_value_pointer",
++      "sqlite3_value_subtype",
++      "sqlite3_value_text",
++      "sqlite3_value_text16",
++      "sqlite3_value_text16be",
++      "sqlite3_value_text16le",
++      "sqlite3_value_type",
++      "sqlite3_version",
++      "sqlite3_vfs_find",
++      "sqlite3_vfs_register",
++      "sqlite3_vfs_unregister",
++      "sqlite3_vmprintf",
++      "sqlite3_vsnprintf",
++      "sqlite3_vtab_collation",
++      "sqlite3_vtab_config",
++      "sqlite3_vtab_distinct",
++      "sqlite3_vtab_in",
++      "sqlite3_vtab_in_first",
++      "sqlite3_vtab_in_next",
++      "sqlite3_vtab_nochange",
++      "sqlite3_vtab_on_conflict",
++      "sqlite3_vtab_rhs_value",
++      "sqlite3_wal_autocheckpoint",
++      "sqlite3_wal_checkpoint",
++      "sqlite3_wal_checkpoint_v2",
++      "sqlite3_wal_hook",
++      "sqlite3changegroup_add",
++      "sqlite3changegroup_add_change",
++      "sqlite3changegroup_add_strm",
++      "sqlite3changegroup_change_begin",
++      "sqlite3changegroup_change_blob",
++      "sqlite3changegroup_change_double",
++      "sqlite3changegroup_change_finish",
++      "sqlite3changegroup_change_int64",
++      "sqlite3changegroup_change_null",
++      "sqlite3changegroup_change_text",
++      "sqlite3changegroup_config",
++      "sqlite3changegroup_delete",
++      "sqlite3changegroup_new",
++      "sqlite3changegroup_output",
++      "sqlite3changegroup_output_strm",
++      "sqlite3changegroup_schema",
++      "sqlite3changeset_apply",
++      "sqlite3changeset_apply_strm",
++      "sqlite3changeset_apply_v2",
++      "sqlite3changeset_apply_v2_strm",
++      "sqlite3changeset_apply_v3",
++      "sqlite3changeset_apply_v3_strm",
++      "sqlite3changeset_concat",
++      "sqlite3changeset_concat_strm",
++      "sqlite3changeset_conflict",
++      "sqlite3changeset_finalize",
++      "sqlite3changeset_fk_conflicts",
++      "sqlite3changeset_invert",
++      "sqlite3changeset_invert_strm",
++      "sqlite3changeset_new",
++      "sqlite3changeset_next",
++      "sqlite3changeset_old",
++      "sqlite3changeset_op",
++      "sqlite3changeset_pk",
++      "sqlite3changeset_start",
++      "sqlite3changeset_start_strm",
++      "sqlite3changeset_start_v2",
++      "sqlite3changeset_start_v2_strm",
++      "sqlite3rebaser_configure",
++      "sqlite3rebaser_create",
++      "sqlite3rebaser_delete",
++      "sqlite3rebaser_rebase",
++      "sqlite3rebaser_rebase_strm",
++      "sqlite3session_attach",
++      "sqlite3session_changeset",
++      "sqlite3session_changeset_size",
++      "sqlite3session_changeset_strm",
++      "sqlite3session_config",
++      "sqlite3session_create",
++      "sqlite3session_delete",
++      "sqlite3session_diff",
++      "sqlite3session_enable",
++      "sqlite3session_indirect",
++      "sqlite3session_isempty",
++      "sqlite3session_memory_used",
++      "sqlite3session_object_config",
++      "sqlite3session_patchset",
++      "sqlite3session_patchset_strm",
++      "sqlite3session_table_filter"
++    ],
++    "libdartjni.so": [
++      "DartException__ctor",
++      "Dart_CloseNativePort_DL",
++      "Dart_CurrentIsolate_DL",
++      "Dart_DeleteFinalizableHandle_DL",
++      "Dart_DeletePersistentHandle_DL",
++      "Dart_DeleteWeakPersistentHandle_DL",
++      "Dart_EnterIsolate_DL",
++      "Dart_EnterScope_DL",
++      "Dart_ErrorGetException_DL",
++      "Dart_ErrorGetStackTrace_DL",
++      "Dart_ErrorHasException_DL",
++      "Dart_ExitIsolate_DL",
++      "Dart_ExitScope_DL",
++      "Dart_GetCurrentThreadOwnsIsolate_DL",
++      "Dart_GetError_DL",
++      "Dart_GetMainPortId_DL",
++      "Dart_HandleFromPersistent_DL",
++      "Dart_HandleFromWeakPersistent_DL",
++      "Dart_InitializeApiDL",
++      "Dart_IsApiError_DL",
++      "Dart_IsCompilationError_DL",
++      "Dart_IsError_DL",
++      "Dart_IsFatalError_DL",
++      "Dart_IsNull_DL",
++      "Dart_IsUnhandledExceptionError_DL",
++      "Dart_NewApiError_DL",
++      "Dart_NewCompilationError_DL",
++      "Dart_NewFinalizableHandle_DL",
++      "Dart_NewNativePort_DL",
++      "Dart_NewPersistentHandle_DL",
++      "Dart_NewSendPortEx_DL",
++      "Dart_NewSendPort_DL",
++      "Dart_NewUnhandledExceptionError_DL",
++      "Dart_NewWeakPersistentHandle_DL",
++      "Dart_Null_DL",
++      "Dart_PostCObject_DL",
++      "Dart_PostInteger_DL",
++      "Dart_Post_DL",
++      "Dart_PropagateError_DL",
++      "Dart_SendPortGetIdEx_DL",
++      "Dart_SendPortGetId_DL",
++      "Dart_SetPersistentHandle_DL",
++      "Dart_UpdateExternalSize_DL",
++      "Dart_UpdateExternalSize_Deprecated",
++      "Dart_UpdateFinalizableExternalSize_DL",
++      "Dart_UpdateFinalizableExternalSize_Deprecated",
++      "FindClass",
++      "FindClassUnchecked",
++      "FindFunctionPointer",
++      "GetClassLoader",
++      "GetCurrentIsolateId",
++      "GetExceptionDetails",
++      "GetGlobalEnv",
++      "GetJavaVM",
++      "GetJniContextPtr",
++      "GetJniEnv",
++      "GetMainPortId",
++      "InitDartApiDL",
++      "JNI_OnUnload",
++      "Java_com_github_dart_1lang_jni_JniPlugin_setClassLoader",
++      "Java_com_github_dart_1lang_jni_JniUtils_fromReferenceAddress",
++      "Java_com_github_dart_1lang_jni_PortCleaner_clean",
++      "Java_com_github_dart_1lang_jni_PortContinuation__1resumeWith",
++      "Java_com_github_dart_1lang_jni_PortProxyBuilder__1cleanUp",
++      "Java_com_github_dart_1lang_jni_PortProxyBuilder__1invoke",
++      "PortContinuation__ctor",
++      "__emutls_get_address",
++      "__emutls_t.jniEnv",
++      "__emutls_v.jniEnv",
++      "_c_DartException",
++      "_c_Long",
++      "_c_Object",
++      "_c_PortContinuation",
++      "_m_DartException__ctor",
++      "_m_Long_init",
++      "_m_PortContinuation__ctor",
++      "captureStackTraceOnRelease",
++      "deinit",
++      "deleteFinalizableHandle",
++      "doNotFinalize",
++      "exceptionMethods",
++      "finalizeBlockingResult",
++      "finalizeGlobal",
++      "finalizeLocal",
++      "finalizeWeakGlobal",
++      "freeBoolean",
++      "freeStackTracePtr",
++      "getCaptureStackTraceOnRelease",
++      "globalEnv_AllocObject",
++      "globalEnv_CallBooleanMethod",
++      "globalEnv_CallBooleanMethodA",
++      "globalEnv_CallByteMethod",
++      "globalEnv_CallByteMethodA",
++      "globalEnv_CallCharMethod",
++      "globalEnv_CallCharMethodA",
++      "globalEnv_CallDoubleMethod",
++      "globalEnv_CallDoubleMethodA",
++      "globalEnv_CallFloatMethod",
++      "globalEnv_CallFloatMethodA",
++      "globalEnv_CallIntMethod",
++      "globalEnv_CallIntMethodA",
++      "globalEnv_CallLongMethod",
++      "globalEnv_CallLongMethodA",
++      "globalEnv_CallNonvirtualBooleanMethod",
++      "globalEnv_CallNonvirtualBooleanMethodA",
++      "globalEnv_CallNonvirtualByteMethod",
++      "globalEnv_CallNonvirtualByteMethodA",
++      "globalEnv_CallNonvirtualCharMethod",
++      "globalEnv_CallNonvirtualCharMethodA",
++      "globalEnv_CallNonvirtualDoubleMethod",
++      "globalEnv_CallNonvirtualDoubleMethodA",
++      "globalEnv_CallNonvirtualFloatMethod",
++      "globalEnv_CallNonvirtualFloatMethodA",
++      "globalEnv_CallNonvirtualIntMethod",
++      "globalEnv_CallNonvirtualIntMethodA",
++      "globalEnv_CallNonvirtualLongMethod",
++      "globalEnv_CallNonvirtualLongMethodA",
++      "globalEnv_CallNonvirtualObjectMethod",
++      "globalEnv_CallNonvirtualObjectMethodA",
++      "globalEnv_CallNonvirtualShortMethod",
++      "globalEnv_CallNonvirtualShortMethodA",
++      "globalEnv_CallNonvirtualVoidMethod",
++      "globalEnv_CallNonvirtualVoidMethodA",
++      "globalEnv_CallObjectMethod",
++      "globalEnv_CallObjectMethodA",
++      "globalEnv_CallShortMethod",
++      "globalEnv_CallShortMethodA",
++      "globalEnv_CallStaticBooleanMethod",
++      "globalEnv_CallStaticBooleanMethodA",
++      "globalEnv_CallStaticByteMethod",
++      "globalEnv_CallStaticByteMethodA",
++      "globalEnv_CallStaticCharMethod",
++      "globalEnv_CallStaticCharMethodA",
++      "globalEnv_CallStaticDoubleMethod",
++      "globalEnv_CallStaticDoubleMethodA",
++      "globalEnv_CallStaticFloatMethod",
++      "globalEnv_CallStaticFloatMethodA",
++      "globalEnv_CallStaticIntMethod",
++      "globalEnv_CallStaticIntMethodA",
++      "globalEnv_CallStaticLongMethod",
++      "globalEnv_CallStaticLongMethodA",
++      "globalEnv_CallStaticObjectMethod",
++      "globalEnv_CallStaticObjectMethodA",
++      "globalEnv_CallStaticShortMethod",
++      "globalEnv_CallStaticShortMethodA",
++      "globalEnv_CallStaticVoidMethod",
++      "globalEnv_CallStaticVoidMethodA",
++      "globalEnv_CallVoidMethod",
++      "globalEnv_CallVoidMethodA",
++      "globalEnv_DefineClass",
++      "globalEnv_DeleteGlobalRef",
++      "globalEnv_DeleteLocalRef",
++      "globalEnv_DeleteWeakGlobalRef",
++      "globalEnv_EnsureLocalCapacity",
++      "globalEnv_ExceptionCheck",
++      "globalEnv_ExceptionClear",
++      "globalEnv_ExceptionDescribe",
++      "globalEnv_ExceptionOccurred",
++      "globalEnv_FatalError",
++      "globalEnv_FindClass",
++      "globalEnv_FromReflectedField",
++      "globalEnv_FromReflectedMethod",
++      "globalEnv_GetArrayLength",
++      "globalEnv_GetBooleanArrayElement",
++      "globalEnv_GetBooleanArrayElements",
++      "globalEnv_GetBooleanArrayRegion",
++      "globalEnv_GetBooleanField",
++      "globalEnv_GetByteArrayElement",
++      "globalEnv_GetByteArrayElements",
++      "globalEnv_GetByteArrayRegion",
++      "globalEnv_GetByteField",
++      "globalEnv_GetCharArrayElement",
++      "globalEnv_GetCharArrayElements",
++      "globalEnv_GetCharArrayRegion",
++      "globalEnv_GetCharField",
++      "globalEnv_GetDirectBufferAddress",
++      "globalEnv_GetDirectBufferCapacity",
++      "globalEnv_GetDoubleArrayElement",
++      "globalEnv_GetDoubleArrayElements",
++      "globalEnv_GetDoubleArrayRegion",
++      "globalEnv_GetDoubleField",
++      "globalEnv_GetFieldID",
++      "globalEnv_GetFloatArrayElement",
++      "globalEnv_GetFloatArrayElements",
++      "globalEnv_GetFloatArrayRegion",
++      "globalEnv_GetFloatField",
++      "globalEnv_GetIntArrayElement",
++      "globalEnv_GetIntArrayElements",
++      "globalEnv_GetIntArrayRegion",
++      "globalEnv_GetIntField",
++      "globalEnv_GetJavaVM",
++      "globalEnv_GetLongArrayElement",
++      "globalEnv_GetLongArrayElements",
++      "globalEnv_GetLongArrayRegion",
++      "globalEnv_GetLongField",
++      "globalEnv_GetMethodID",
++      "globalEnv_GetObjectArrayElement",
++      "globalEnv_GetObjectClass",
++      "globalEnv_GetObjectField",
++      "globalEnv_GetObjectRefType",
++      "globalEnv_GetPrimitiveArrayCritical",
++      "globalEnv_GetShortArrayElement",
++      "globalEnv_GetShortArrayElements",
++      "globalEnv_GetShortArrayRegion",
++      "globalEnv_GetShortField",
++      "globalEnv_GetStaticBooleanField",
++      "globalEnv_GetStaticByteField",
++      "globalEnv_GetStaticCharField",
++      "globalEnv_GetStaticDoubleField",
++      "globalEnv_GetStaticFieldID",
++      "globalEnv_GetStaticFloatField",
++      "globalEnv_GetStaticIntField",
++      "globalEnv_GetStaticLongField",
++      "globalEnv_GetStaticMethodID",
++      "globalEnv_GetStaticObjectField",
++      "globalEnv_GetStaticShortField",
++      "globalEnv_GetStringChars",
++      "globalEnv_GetStringCritical",
++      "globalEnv_GetStringLength",
++      "globalEnv_GetStringRegion",
++      "globalEnv_GetStringUTFChars",
++      "globalEnv_GetStringUTFLength",
++      "globalEnv_GetStringUTFRegion",
++      "globalEnv_GetSuperclass",
++      "globalEnv_GetVersion",
++      "globalEnv_IsAssignableFrom",
++      "globalEnv_IsInstanceOf",
++      "globalEnv_IsSameObject",
++      "globalEnv_MonitorEnter",
++      "globalEnv_MonitorExit",
++      "globalEnv_NewBooleanArray",
++      "globalEnv_NewByteArray",
++      "globalEnv_NewCharArray",
++      "globalEnv_NewDirectByteBuffer",
++      "globalEnv_NewDoubleArray",
++      "globalEnv_NewFloatArray",
++      "globalEnv_NewGlobalRef",
++      "globalEnv_NewIntArray",
++      "globalEnv_NewLocalRef",
++      "globalEnv_NewLongArray",
++      "globalEnv_NewObject",
++      "globalEnv_NewObjectA",
++      "globalEnv_NewObjectArray",
++      "globalEnv_NewShortArray",
++      "globalEnv_NewString",
++      "globalEnv_NewStringUTF",
++      "globalEnv_NewWeakGlobalRef",
++      "globalEnv_PopLocalFrame",
++      "globalEnv_PushLocalFrame",
++      "globalEnv_RegisterNatives",
++      "globalEnv_ReleaseBooleanArrayElements",
++      "globalEnv_ReleaseByteArrayElements",
++      "globalEnv_ReleaseCharArrayElements",
++      "globalEnv_ReleaseDoubleArrayElements",
++      "globalEnv_ReleaseFloatArrayElements",
++      "globalEnv_ReleaseIntArrayElements",
++      "globalEnv_ReleaseLongArrayElements",
++      "globalEnv_ReleasePrimitiveArrayCritical",
++      "globalEnv_ReleaseShortArrayElements",
++      "globalEnv_ReleaseStringChars",
++      "globalEnv_ReleaseStringCritical",
++      "globalEnv_ReleaseStringUTFChars",
++      "globalEnv_SetBooleanArrayElement",
++      "globalEnv_SetBooleanArrayRegion",
++      "globalEnv_SetBooleanField",
++      "globalEnv_SetByteArrayElement",
++      "globalEnv_SetByteArrayRegion",
++      "globalEnv_SetByteField",
++      "globalEnv_SetCharArrayElement",
++      "globalEnv_SetCharArrayRegion",
++      "globalEnv_SetCharField",
++      "globalEnv_SetDoubleArrayElement",
++      "globalEnv_SetDoubleArrayRegion",
++      "globalEnv_SetDoubleField",
++      "globalEnv_SetFloatArrayElement",
++      "globalEnv_SetFloatArrayRegion",
++      "globalEnv_SetFloatField",
++      "globalEnv_SetIntArrayElement",
++      "globalEnv_SetIntArrayRegion",
++      "globalEnv_SetIntField",
++      "globalEnv_SetLongArrayElement",
++      "globalEnv_SetLongArrayRegion",
++      "globalEnv_SetLongField",
++      "globalEnv_SetObjectArrayElement",
++      "globalEnv_SetObjectField",
++      "globalEnv_SetShortArrayElement",
++      "globalEnv_SetShortArrayRegion",
++      "globalEnv_SetShortField",
++      "globalEnv_SetStaticBooleanField",
++      "globalEnv_SetStaticByteField",
++      "globalEnv_SetStaticCharField",
++      "globalEnv_SetStaticDoubleField",
++      "globalEnv_SetStaticFloatField",
++      "globalEnv_SetStaticIntField",
++      "globalEnv_SetStaticLongField",
++      "globalEnv_SetStaticObjectField",
++      "globalEnv_SetStaticShortField",
++      "globalEnv_Throw",
++      "globalEnv_ThrowNew",
++      "globalEnv_ToReflectedField",
++      "globalEnv_ToReflectedMethod",
++      "globalEnv_UnregisterNatives",
++      "globalJniEnv",
++      "init",
++      "jni",
++      "jni_context",
++      "newBooleanFinalizableHandle",
++      "newJObjectFinalizableHandle",
++      "newStackTraceFinalizableHandle",
++      "resultFor",
++      "setCaptureStackTraceOnRelease",
++      "spawnLock",
++      "tlsKey"
++    ]
++  },
++  "eigen": {
++    "repository": "https://github.com/eigen-mirror/eigen.git",
++    "commit": "1d8b82b0740839c0de7f1242a3585e3390ff5f33",
++    "upstream": "https://gitlab.com/libeigen/eigen",
++    "origin": "Exact commit pinned in ONNX Runtime v1.22.0 cmake/deps.txt; no archive checksum weakened"
++  },
++  "datastore_version": "1.1.7",
++  "pdfium_vendor": {
++    "url": "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/7811/pdfium-android-arm64.tgz",
++    "sha256": "f51539cadeb5135534305b8bdf8685ce2fbe9991dbbc5b35f553108411b9ed14",
++    "encoded_release": "chromium%2F7811"
++  },
++  "webrtc_vendor": {
++    "version": "150.7871.01",
++    "source_commit": "7b6390fb098303b31af76906bf15f7decaa4ef95",
++    "licenses": [
++      {
++        "url": "https://raw.githubusercontent.com/webrtc-sdk/android/7b6390fb098303b31af76906bf15f7decaa4ef95/LICENSE",
++        "sha256": "e6b282fe6c0fb353928923470457f31b44cbab203effd60c0cde4a5bb96c8aec",
++        "name": "LICENSE",
++        "bytes": 1068
++      },
++      {
++        "url": "https://raw.githubusercontent.com/webrtc-sdk/android/7b6390fb098303b31af76906bf15f7decaa4ef95/Licenses/WEBRTC.md",
++        "sha256": "d1f9382c6878ac024155fd6d44a5977329108bb8b0a01cea40e4a2f1d7de252e",
++        "name": "WEBRTC.md",
++        "bytes": 788358
++      }
++    ]
++  },
++  "flutter_engine": {
++    "framework_commit": "737ba8f885dc774b53b442759999a312c9461e4e",
++    "engine_commit": "cf636b1dfb818dd6a3ff16e390e93b1a036969c8",
++    "url": "https://storage.googleapis.com/flutter_infra_release/flutter/cf636b1dfb818dd6a3ff16e390e93b1a036969c8/android-arm64-release/artifacts.zip",
++    "sha256": "977a76c68861eb29af4fd210673a62134680c3248c9fbd59f2eca92975a4d578",
++    "unstripped_sha256": "44f30b3530fe8f806fb71b1bd79124ae7537d10b66e13c3af2b6250223cf9931"
++  },
++  "bundled_vad": {
++    "version": "5.1",
++    "commit": "84768cefdf5a3852400e9d8237f7315d14b64a08",
++    "repository": "https://github.com/snakers4/silero-vad",
++    "model_source_path": "src/silero_vad/data/silero_vad.onnx",
++    "bundled_path": "assets/vad/silero_vad_v5.onnx",
++    "model_git_blob": "b3e3a900c0d70e67b5e2b90a33ad856ee7947930",
++    "model_sha256": "2623a2953f6ff3d2c1e61740c6cdb7168133479b267dfef114a4a3cc5bdd788f",
++    "license_url": "https://raw.githubusercontent.com/snakers4/silero-vad/84768cefdf5a3852400e9d8237f7315d14b64a08/LICENSE",
++    "license_sha256": "2e63e9a38b6e8fc0c7bc37ce174caca1862870856c6daf5697cfb785e925520b"
++  }
++}
+diff --git a/.avx1/native_arm64.py b/.avx1/native_arm64.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..94319b6e9597c99c77fc4330bafbf0516dd4ecbd
+--- /dev/null
++++ b/.avx1/native_arm64.py
+@@ -0,0 +1,339 @@
++"""Source-built Android ARMv8-A libraries with per-binary provenance and ABI gates."""
++from __future__ import annotations
++import hashlib
++import io
++import json
++import os
++from pathlib import Path
++import re
++import shutil
++import shlex
++import subprocess
++import tarfile
++import tempfile
++import zipfile
++from common import ROOT,WORK,download,run,sha256
++
++FLAGS=['-O3','-DNDEBUG','-march=armv8-a','-flto=thin','-ffunction-sections','-fdata-sections','-fno-fast-math',
++       '-fstack-protector-strong','-D_FORTIFY_SOURCE=2']
++LINK=['-flto=thin','-Wl,--lto-O3','-Wl,--gc-sections','-Wl,-z,max-page-size=16384','-Wl,--build-id=sha1',
++      '-Wl,-z,relro','-Wl,-z,now','-Wl,-z,noexecstack']
++NATIVE=WORK/'native'
++POLICY=ROOT/'.avx1/native-arm64.json'
++
++def policy():return json.loads(POLICY.read_text('utf-8'))
++
++def package_folder(name):
++    from urllib.parse import urljoin,urlparse,unquote
++    config=ROOT/'.dart_tool/package_config.json'
++    entry=next(x for x in json.loads(config.read_text('utf-8'))['packages'] if x['name']==name)
++    return Path(unquote(urlparse(urljoin(config.resolve().as_uri(),entry['rootUri'])).path))
++
++def vendor_notices():
++    pins=policy();target=ROOT/'android/app/src/main/assets/avx1-native-notices';target.mkdir(parents=True,exist_ok=True)
++    vad=pins['bundled_vad']
++    if sha256(ROOT/vad['bundled_path'])!=vad['model_sha256']:
++        raise RuntimeError('Bundled upstream VAD detector changed; review model provenance')
++    license_file=ROOT/'.avx1/licenses/Silero-VAD-MIT.txt'
++    if sha256(license_file)!=vad['license_sha256']:raise RuntimeError('Silero VAD MIT notice differs')
++    shutil.copy2(license_file,target/'Silero-VAD-MIT.txt')
++    for package,version in (('jni',pins['jni']['version']),('sqlite3',pins['sqlite']['package_version'])):
++        text=(package_folder(package)/'pubspec.yaml').read_text('utf-8')
++        actual=re.search(r'(?m)^version:\s*[\'\"]?([^\s\'\"]+)',text)
++        if not actual or actual.group(1)!=version:raise RuntimeError('Native Dart binding version changed: '+package)
++    gradle=(package_folder('flutter_webrtc')/'android/build.gradle').read_text('utf-8')
++    if 'io.github.webrtc-sdk:android:'+pins['webrtc_vendor']['version'] not in gradle:
++        raise RuntimeError('WebRTC vendor version changed; review native provenance')
++    pdfium=(package_folder('pdfium_dart')/'hook/build.dart').read_text('utf-8')
++    if pins['pdfium_vendor']['encoded_release'] not in pdfium:raise RuntimeError('PDFium vendor revision changed')
++    for item in pins['webrtc_vendor']['licenses']:
++        path=target/('WebRTC-'+item['name']);download(item['url'],path,item['sha256'])
++    pin=pins['pdfium_vendor'];archive=NATIVE/'pdfium-notices.tgz'
++    if not archive.exists():download(pin['url'],archive,pin['sha256'])
++    if sha256(archive)!=pin['sha256']:raise RuntimeError('PDFium vendor source archive hash changed')
++    count=0
++    with tarfile.open(archive) as stream:
++        for member in stream:
++            if member.isfile() and any(x in member.name.lower() for x in ('license','notice')):
++                name='PDFium-'+re.sub('[^A-Za-z0-9._-]','_',member.name)
++                (target/name).write_bytes(stream.extractfile(member).read());count+=1
++    if count<2:raise RuntimeError('PDFium third-party license bundle is missing')
++    (target/'AndroidX-DataStore-NOTICE.txt').write_text(
++        'AndroidX DataStore '+pins['datastore_version']+'\nThe Android Open Source Project\nApache License 2.0; full text in dartjni-android-Apache-2.0.txt.\nSource: https://android.googlesource.com/platform/frameworks/support/\n',encoding='utf-8')
++
++def extract_tar(archive,target):
++    target.mkdir(parents=True,exist_ok=True)
++    with tarfile.open(archive) as stream:stream.extractall(target,filter='data')
++
++def pub_source(pin):
++    target=NATIVE/'sources'/f"{pin['package']}-{pin['version']}"
++    archive=target.with_name(target.name+'.tar.gz')
++    if not archive.exists():download(pin['url'],archive,pin['sha256'])
++    if sha256(archive)!=pin['sha256']:raise RuntimeError('Native pub source hash mismatch')
++    if not target.exists():extract_tar(archive,target)
++    return target
++
++def toolchain():
++    pins=json.loads((ROOT/'.avx1/toolchains.json').read_text('utf-8'))
++    sdk=Path(os.environ.get('ANDROID_SDK_ROOT') or os.environ['ANDROID_HOME'])
++    ndk=sdk/'ndk'/pins['android']['ndk'].split(';')[1]
++    tools=ndk/'toolchains/llvm/prebuilt/linux-x86_64/bin'
++    clang=tools/'aarch64-linux-android24-clang'
++    if not clang.is_file():raise RuntimeError('Pinned ARM64 NDK compiler is missing')
++    return sdk,ndk,tools,clang
++
++def symbols(binary,tools):
++    result=run(tools/'llvm-nm','--dynamic','--defined-only',binary,capture=True).stdout
++    return {line.split()[-1].split('@')[0] for line in result.splitlines() if line.split()}
++
++def verify_elf(binary,tools):
++    header=run(tools/'llvm-readelf','-h',binary,capture=True).stdout
++    if 'AArch64' not in header:raise RuntimeError('Native binary is not AArch64: '+binary.name)
++    segments=run(tools/'llvm-readelf','-lW',binary,capture=True).stdout
++    loads=[line.split() for line in segments.splitlines() if line.lstrip().startswith('LOAD ')]
++    if not loads or any(int(line[-1],16)<16384 for line in loads):
++        raise RuntimeError('Native binary lacks Android 16 KiB page alignment: '+binary.name)
++
++def build_id(binary,tools):
++    notes=run(tools/'llvm-readelf','-n',binary,capture=True).stdout
++    match=re.search(r'Build ID:\s*([a-f0-9]+)',notes)
++    if not match:raise RuntimeError('Rebuilt native binary lacks a build ID')
++    return match.group(1)
++
++def flutter_reference(tools):
++    pin=policy()['flutter_engine']
++    framework=json.loads((ROOT/'.avx1/toolchains.json').read_text('utf-8'))
++    engine=(WORK/'flutter/bin/internal/engine.version').read_text('utf-8').strip()
++    if framework['flutter_sha']!=pin['framework_commit'] or engine!=pin['engine_commit']:
++        raise RuntimeError('Flutter engine changed; review the official native artifact')
++    archive=NATIVE/'flutter-engine.zip'
++    if not archive.exists():download(pin['url'],archive,pin['sha256'])
++    if sha256(archive)!=pin['sha256']:raise RuntimeError('Official Flutter engine archive hash mismatch')
++    with zipfile.ZipFile(archive) as outer,zipfile.ZipFile(io.BytesIO(outer.read('flutter.jar'))) as jar:
++        data=jar.read('lib/arm64-v8a/libflutter.so')
++    if hashlib.sha256(data).hexdigest()!=pin['unstripped_sha256']:
++        raise RuntimeError('Official Flutter engine binary hash mismatch')
++    target=NATIVE/'official-libflutter.so';target.write_bytes(data)
++    run(tools/'llvm-strip','--strip-unneeded',target)
++    return {'engine_commit':engine,'official_artifact':pin['url'],'official_artifact_sha256':pin['sha256'],
++            'official_unstripped_sha256':pin['unstripped_sha256'],'expected_packaged_sha256':sha256(target),
++            'build_id':build_id(target,tools)}
++
++def onnx_compile_evidence(build):
++    path=build/'Release/compile_commands.json'
++    entries=json.loads(path.read_text('utf-8'))
++    core=[e for e in entries if '/onnxruntime/core/' in str(e['file']).replace('\\','/')]
++    cxx=[e for e in core if Path(e['file']).suffix.lower() in ('.c','.cc','.cpp','.cxx')]
++    jni=[e for e in entries if '/java/src/main/native/' in str(e['file']).replace('\\','/')]
++    selected=cxx+jni
++    if not cxx or not jni:raise RuntimeError('ONNX core/JNI compiler command evidence is missing')
++    commands=[e.get('arguments') or shlex.split(e['command']) for e in selected]
++    for args in commands:
++        optimizations=[a for a in args if re.fullmatch('-O[0123szgfast]+',a)]
++        lto=[a for a in args if a.startswith('-flto') or a=='-fno-lto']
++        if not optimizations or optimizations[-1]!='-O3' or not lto or lto[-1]!='-flto=thin':
++            raise RuntimeError('Effective ONNX core compilation differs from O3 ThinLTO')
++        if '-ffast-math' in args or '-mcpu=native' in args:
++            raise RuntimeError('Unsupported ONNX core optimization flag')
++    return {'core_translation_units_checked':len(cxx),'jni_translation_units_checked':len(jni),
++            'assembly_translation_units':sum(Path(e['file']).suffix.lower()=='.s' for e in core),
++            'assembly_note':'Handwritten MLAS assembly produces native objects; LLVM bitcode ThinLTO does not apply to assembly.',
++            'compile_database_sha256':sha256(path),
++            'effective_core_and_jni_optimization':'-O3 -flto=thin','fast_math':False,
++            'architecture_policy':'ARMv8-A generic code; optional upstream MLAS kernel flags and CPU feature dispatch are preserved, not forced on the whole library.',
++            'cpu_dispatch_source':'onnxruntime/core/mlas/lib/platform.cpp at the pinned ONNX commit',
++            'architecture_flags':sorted({a for args in commands for a in args if a.startswith(('-march=','-mcpu='))})}
++
++def compile_c(name,sources,includes,defines,output,extra_libraries):
++    _,_,tools,clang=toolchain()
++    args=[clang,'-std=gnu17','-shared','-fPIC',*FLAGS,*['-I'+str(p) for p in includes],
++          *['-D'+d for d in defines],*sources,*LINK,'-Wl,-soname,'+name,*extra_libraries,'-o',output]
++    run(*args)
++    verify_elf(output,tools)
++    required=set(policy()['expected_exports'].get(name,[]))
++    if not required or not required.issubset(symbols(output,tools)):
++        raise RuntimeError('Source-built native API surface differs: '+name)
++    return {'kind':'source-built','compiler':run(clang,'--version',capture=True).stdout.splitlines()[0],
++            'compile_flags':FLAGS,'link_flags':LINK,'sources':[Path(p).name for p in sources],
++            'sha256_before_android_strip':sha256(output),'build_id':build_id(output,tools)}
++
++def sqlite_native(receipt):
++    pin=policy()['sqlite'];archive=NATIVE/'sqlite-amalgamation.zip'
++    if not archive.exists():download(pin['url'],archive,pin['sha256'])
++    if sha256(archive)!=pin['sha256']:raise RuntimeError('SQLite source hash mismatch')
++    with zipfile.ZipFile(archive) as z:source=z.read(pin['member'])
++    if pin['source_id'].encode() not in source:raise RuntimeError('SQLite source identity mismatch')
++    path=NATIVE/'sqlite3.c';path.write_bytes(source)
++    package=ROOT/'.dart_tool/package_config.json'
++    config=json.loads(package.read_text('utf-8'))
++    from urllib.parse import urljoin,urlparse,unquote
++    entry=next(x for x in config['packages'] if x['name']=='sqlite3')
++    uri=urljoin(package.resolve().as_uri(),entry['rootUri'])
++    pkg=Path(unquote(urlparse(uri).path))
++    description=(pkg/'lib/src/hook/compile/description.dart').read_text('utf-8')
++    match=re.search(r"const _defaultDefines = '''(.*?)''';",description,re.S)
++    if not match:raise RuntimeError('SQLite compile options changed; review before building')
++    defines=match.group(1).split()
++    target=ROOT/'android/app/src/main/jniLibs/arm64-v8a/libsqlite3.so';target.parent.mkdir(parents=True,exist_ok=True)
++    item=compile_c(target.name,[path],[],defines,target,['-lm','-ldl'])
++    # The same amalgamation/options must retain database semantics before cross-compilation is shipped.
++    host=NATIVE/'libsqlite3-host.so'
++    run('cc','-std=gnu17','-shared','-fPIC','-O3','-fno-fast-math',*['-D'+d for d in defines],path,'-lm','-ldl','-o',host)
++    run('python',ROOT/'.avx1/test_native_sqlite.py',host)
++    receipt[target.name]={**item,'version':pin['version'],'source':pin['url'],'source_sha256':pin['sha256'],
++                          'source_id':pin['source_id'],'license':'Public domain; preserved amalgamation notice',
++                          'checks':['host SQL transactions/FTS5/JSON/integrity','AArch64 ELF','16 KiB pages']}
++    notices=ROOT/'android/app/src/main/assets/avx1-native-notices';notices.mkdir(parents=True,exist_ok=True)
++    (notices/'sqlite-public-domain.txt').write_text(source[:1800].decode('utf-8',errors='replace')+'\nSource: '+pin['url']+'\n',encoding='utf-8')
++
++def jni_native(receipt):
++    pin=policy()['jni'];source=pub_source(pin)/'src'
++    config=ROOT/'.dart_tool/package_config.json'
++    from urllib.parse import urljoin,urlparse,unquote
++    entry=next(x for x in json.loads(config.read_text('utf-8'))['packages'] if x['name']=='jni')
++    package=Path(unquote(urlparse(urljoin(config.resolve().as_uri(),entry['rootUri'])).path))
++    gradle=package/'android/build.gradle';text=gradle.read_text('utf-8')
++    needle='    externalNativeBuild {';start=text.find(needle)
++    if start<0:raise RuntimeError('JNI Android build recipe changed; no blind patch')
++    brace=text.find('{',start);depth=1;end=brace+1
++    while depth:
++        depth+=(text[end]=='{')-(text[end]=='}');end+=1
++    gradle.write_text(text[:start]+'    // Native ARM64 library is built by the verified fork recipe.\n'+text[end:],encoding='utf-8',newline='\n')
++    target=package/'android/src/main/jniLibs/arm64-v8a/libdartjni.so';target.parent.mkdir(parents=True,exist_ok=True)
++    item=compile_c(target.name,[source/'dartjni.c',source/'third_party/global_jni_env.c',source/'include/dart_api_dl.c'],
++                   [source,source/'include'],['DART_SHARED_LIB'],target,['-llog','-ldl'])
++    receipt[target.name]={**item,'version':pin['version'],'source':pin['url'],'source_sha256':pin['sha256'],
++                          'license':'BSD-3-Clause plus Apache-2.0 Android JNI definitions; notices retained','checks':['AArch64 ELF','16 KiB pages']}
++    shutil.copy2(source.parent/'LICENSE',ROOT/'android/app/src/main/assets/avx1-native-notices/dartjni-LICENSE')
++    shutil.copy2(ROOT/'.avx1/licenses/Apache-2.0.txt',ROOT/'android/app/src/main/assets/avx1-native-notices/dartjni-android-Apache-2.0.txt')
++    (ROOT/'android/app/src/main/assets/avx1-native-notices/dartjni-android-NOTICE.txt').write_text(
++        'Generated JNI environment bindings include Android JNI header definitions.\nCopyright (C) 2006 The Android Open Source Project.\nLicensed under Apache License 2.0; full license included alongside.\n',encoding='utf-8')
++
++def onnx_native(receipt):
++    pin=policy()['onnx'];source=NATIVE/'onnxruntime'
++    if not source.exists():
++        run('git','clone','--depth','1','--branch',pin['tag'],'--recurse-submodules','--shallow-submodules',pin['repository'],source)
++    if run('git','rev-parse','HEAD',cwd=source,capture=True).stdout.strip()!=pin['commit']:
++        raise RuntimeError('ONNX source differs from the pinned commit')
++    run('git','diff','--exit-code',cwd=source)
++    # The historical GitLab ZIP no longer matches the immutable ORT deps hash.
++    # Fetch the identical upstream Git commit via its mirror, retaining source identity.
++    eigen_pin=policy()['eigen'];eigen=NATIVE/'eigen'
++    if not eigen.exists():
++        run('git','init',eigen)
++        run('git','remote','add','origin',eigen_pin['repository'],cwd=eigen)
++        run('git','fetch','--depth','1','origin',eigen_pin['commit'],cwd=eigen)
++        run('git','checkout','--detach','FETCH_HEAD',cwd=eigen)
++    if run('git','rev-parse','HEAD',cwd=eigen,capture=True).stdout.strip()!=eigen_pin['commit']:
++        raise RuntimeError('Eigen source differs from the exact ONNX dependency commit')
++    run('git','diff','--exit-code',cwd=eigen)
++    sdk,ndk,tools,clang=toolchain()
++    build=NATIVE/'ort-build'
++    release_flags=' '.join([*FLAGS])
++    from native_cache_proof import verify_cache
++    cache = verify_cache(ROOT, build, run(clang,'--version',capture=True).stdout.splitlines()[0])
++    print('ONNX_NATIVE_CACHE='+json.dumps(cache),flush=True)
++    if cache['status'] != 'reused':
++      run('python',source/'tools/ci_build/build.py','--build_dir',build,'--config','Release','--android',
++        '--android_abi','arm64-v8a','--android_api','24','--android_sdk_path',sdk,'--android_ndk_path',ndk,
++        '--build_shared_lib','--build_java','--use_nnapi','--use_xnnpack','--enable_lto','--skip_tests',
++        '--parallel','2','--cmake_generator','Ninja','--compile_no_warning_as_error',
++        '--cmake_extra_defines','CMAKE_C_FLAGS_RELEASE='+release_flags,'CMAKE_CXX_FLAGS_RELEASE='+release_flags,
++        'CMAKE_SHARED_LINKER_FLAGS='+' '.join(LINK),'CMAKE_EXPORT_COMPILE_COMMANDS=ON',
++        'onnxruntime_BUILD_UNIT_TESTS=OFF',
++        'ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON','ANDROID_STL=c++_static',
++        'CMAKE_MAKE_PROGRAM='+shutil.which('ninja'),'FETCHCONTENT_SOURCE_DIR_EIGEN3='+str(eigen),cwd=source)
++    compiler_evidence=onnx_compile_evidence(build)
++    archive=NATIVE/'onnxruntime-original.aar';pom=NATIVE/'onnxruntime-original.pom'
++    if not archive.exists():download(pin['aar_url'],archive,pin['aar_sha256'])
++    if sha256(archive)!=pin['aar_sha256']:raise RuntimeError('Original ONNX AAR hash mismatch')
++    if not pom.exists():download(pin['pom_url'],pom,pin['pom_sha256'])
++    if sha256(pom)!=pin['pom_sha256']:raise RuntimeError('Original ONNX POM hash mismatch')
++    replacements={}
++    for name in ('libonnxruntime.so','libonnxruntime4j_jni.so'):
++        paths=sorted(build.rglob(name),key=lambda p:len(str(p)))
++        if not paths:raise RuntimeError('ONNX native output missing: '+name)
++        target=paths[0];verify_elf(target,tools)
++        with zipfile.ZipFile(archive) as original:
++            before=NATIVE/('original-'+name);before.write_bytes(original.read('jni/arm64-v8a/'+name))
++        required=symbols(before,tools)
++        if name.endswith('4j_jni.so'):required={x for x in required if x.startswith(('Java_','JNI_'))}
++        else:required={x for x in required if x.startswith('Ort')}
++        if not required or not required.issubset(symbols(target,tools)):
++            raise RuntimeError('ONNX public API/JNI exports changed: '+name)
++        replacements['jni/arm64-v8a/'+name]=target.read_bytes()
++        receipt[name]={'kind':'source-built','version':pin['version'],'source':pin['repository'],
++                       'source_commit':pin['commit'],'compile_flags':FLAGS,'link_flags':LINK,
++                       'compiler_command_evidence':compiler_evidence,'qualified_binary_cache':cache,
++                       'providers':['CPU','NNAPI','XNNPACK'],'full_operator_build':True,
++                       'checks':['original public API/JNI exports preserved','AArch64 ELF','16 KiB pages'],
++                       'sha256_before_android_strip':sha256(target),'build_id':build_id(target,tools),
++                       'license':'MIT and upstream ThirdPartyNotices preserved',
++                       'third_party_sources':{'Eigen':{**eigen_pin,'license':'MPL-2.0; exact source commit retained'}}}
++    repo=NATIVE/'maven/com/microsoft/onnxruntime/onnxruntime-android'/pin['version'];repo.mkdir(parents=True,exist_ok=True)
++    aar=repo/f"onnxruntime-android-{pin['version']}.aar"
++    with zipfile.ZipFile(archive) as original,zipfile.ZipFile(aar,'w',zipfile.ZIP_DEFLATED) as output:
++        for entry in original.infolist():
++            if entry.filename.startswith('jni/') and not entry.filename.startswith('jni/arm64-v8a/'):continue
++            output.writestr(entry.filename,replacements.get(entry.filename,original.read(entry)))
++    shutil.copy2(pom,repo/f"onnxruntime-android-{pin['version']}.pom")
++    notices=ROOT/'android/app/src/main/assets/avx1-native-notices';notices.mkdir(parents=True,exist_ok=True)
++    for name in ('LICENSE','ThirdPartyNotices.txt','ThirdPartyNotices.md'):
++        p=source/name
++        if p.is_file():shutil.copy2(p,notices/('onnxruntime-'+name))
++    shutil.copy2(eigen/'COPYING.MPL2',notices/'Eigen-COPYING.MPL2')
++    (notices/'Eigen-source.txt').write_text(eigen_pin['repository']+'\nCommit: '+eigen_pin['commit']+'\n',encoding='utf-8')
++
++def prepare():
++    NATIVE.mkdir(parents=True,exist_ok=True)
++    vendor_notices()
++    receipt={}
++    for builder in (sqlite_native,jni_native,onnx_native):
++        builder(receipt)
++        (NATIVE/'build-receipt.json').write_text(json.dumps(receipt,indent=2),encoding='utf-8')
++    return receipt
++
++def inventory(apk,receipt):
++    _,_,tools,_=toolchain();pins=policy()
++    result={}
++    with zipfile.ZipFile(apk) as archive:
++        required_notices={'assets/avx1-native-notices/'+n for n in ('WebRTC-WEBRTC.md','PDFium-LICENSE',
++            'dartjni-LICENSE','dartjni-android-Apache-2.0.txt','onnxruntime-LICENSE','Eigen-COPYING.MPL2','Silero-VAD-MIT.txt')}
++        if not required_notices.issubset(archive.namelist()):raise RuntimeError('APK native license notices are missing')
++        if archive.read('META-INF/androidx.datastore_datastore-core.version').decode().strip()!=pins['datastore_version']:
++            raise RuntimeError('DataStore native component version changed')
++        for member in archive.namelist():
++            if not member.startswith('lib/arm64-v8a/') or not member.endswith('.so'):continue
++            name=Path(member).name;binary=NATIVE/('packaged-'+name);binary.write_bytes(archive.read(member))
++            verify_elf(binary,tools)
++            item=receipt.get(name)
++            if item is None:
++                item=pins['other_libraries'].get(name)
++                if item is None:raise RuntimeError('Unreviewed native APK library: '+name)
++                item=dict(item)
++                if name in ('libflutter.so','libapp.so'):
++                    toolchains=json.loads((ROOT/'.avx1/toolchains.json').read_text('utf-8'))
++                    item.update(flutter_version=toolchains['flutter_version'],flutter_source_commit=toolchains['flutter_sha'])
++                if name=='libflutter.so':item.update(flutter_reference(tools))
++            elif build_id(binary,tools)!=item['build_id']:
++                raise RuntimeError('APK contains a different native build: '+name)
++            required=set(pins['expected_exports'].get(name,[]))
++            if required and not required.issubset(symbols(binary,tools)):
++                raise RuntimeError('Packaged native exports changed: '+name)
++            result[name]={**item,'packaged_sha256':sha256(binary),'packaged_bytes':binary.stat().st_size}
++            expected=item.get('expected_packaged_sha256')
++            if expected and result[name]['packaged_sha256']!=expected:
++                raise RuntimeError('Unchanged vendor native binary changed; review provenance: '+name)
++    if not set(receipt).issubset(result):raise RuntimeError('A rebuilt library was not packaged')
++    platform={'libc.so','libm.so','libdl.so','liblog.so','libandroid.so','libz.so','libEGL.so','libGLESv2.so',
++              'libGLESv3.so','libOpenSLES.so','libvulkan.so','libaaudio.so','libjnigraphics.so'}
++    for name in receipt:
++        dynamic=run(tools/'llvm-readelf','-d',NATIVE/('packaged-'+name),capture=True).stdout
++        needed=re.findall(r'\(NEEDED\).*?\[([^\]]+)\]',dynamic)
++        if set(needed)-platform-set(result):raise RuntimeError('Rebuilt native library has an unbundled dependency: '+name)
++        result[name]['needed_libraries']=needed
++    return {'abi':'arm64-v8a','baseline':'ARMv8-A','pgo':False,'fast_math_requested':False,
++            'source_built_native_libraries':sorted(receipt),'libraries':result,
++            'vendor_notice_sources':{'WebRTC':pins['webrtc_vendor'],'PDFium':pins['pdfium_vendor']},
++            'bundled_upstream_vad':pins['bundled_vad'],
++            'physical_device_speedup_percent':None}
+diff --git a/.avx1/native_cache_key.py b/.avx1/native_cache_key.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..fbff8defd39720af5f7c7d2b1f70f4a92037aad2
+--- /dev/null
++++ b/.avx1/native_cache_key.py
+@@ -0,0 +1,8 @@
++import hashlib,json,os,platform,subprocess
++from pathlib import Path
++r=Path(__file__).resolve().parents[1]
++p=json.loads((r/'.avx1/native-arm64.json').read_text())
++t=json.loads((r/'.avx1/toolchains.json').read_text())
++tools=platform.python_version()+os.environ.get('JAVA_HOME','')+subprocess.check_output(['cmake','--version'],text=True)
++prefix='native-arm64-v2-'+os.environ.get('GITHUB_REPOSITORY','local').replace('/','-')+'-'+t['android']['ndk'].split(';')[1]+'-'+p['onnx']['commit']+'-'+p['eigen']['commit']+'-'+hashlib.sha256(tools.encode()).hexdigest()[:12]
++with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as f:f.write('prefix='+prefix+'\n')
+diff --git a/.avx1/native_cache_proof.py b/.avx1/native_cache_proof.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..6969f44dd74c1223ca29745130b731c885a0e7dd
+--- /dev/null
++++ b/.avx1/native_cache_proof.py
+@@ -0,0 +1,63 @@
++"""Reuse only exact ONNX outputs with immutable per-binary compiler evidence."""
++import ast
++import hashlib
++import json
++from pathlib import Path
++
++
++def file_hash(path):
++    with Path(path).open('rb') as stream:
++        return hashlib.file_digest(stream, 'sha256').hexdigest()
++
++
++def compilation_signature(path):
++    tree = ast.parse(Path(path).read_text('utf-8'))
++    functions = {n.name:n for n in tree.body if isinstance(n, ast.FunctionDef)}
++    calls = [n for n in ast.walk(functions['onnx_native']) if isinstance(n, ast.Call)
++             and isinstance(n.func, ast.Name) and n.func.id == 'run' and n.args
++             and isinstance(n.args[0], ast.Constant) and n.args[0].value == 'python']
++    if len(calls) != 1:
++        raise ValueError('ONNX compilation entry point changed')
++    # ast.dump changes its empty-field formatting between Python3.12/3.13.
++    # Encode semantic fields ourselves so maintenance/CI fingerprints agree.
++    def canonical(node):
++        if isinstance(node, ast.AST):
++            return {'type':type(node).__name__, 'fields':{
++                key:canonical(value) for key,value in ast.iter_fields(node)
++                if value is not None and value != []}}
++        if isinstance(node, list): return [canonical(value) for value in node]
++        return node
++    parts = [canonical(calls[0])]
++    for name in ('toolchain', 'onnx_compile_evidence', 'verify_elf', 'symbols', 'build_id'):
++        parts.append(canonical(functions[name]))
++    for node in tree.body:
++        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id in ('FLAGS','LINK') for t in node.targets):
++            parts.append(canonical(node))
++    return hashlib.sha256(json.dumps(parts,sort_keys=True,separators=(',',':')).encode()).hexdigest()
++
++
++def verify_cache(root, build, compiler):
++    root, build = Path(root), Path(build)
++    reference = root / '.avx1/measurements/onnx-qualified-reference.json'
++    try:
++        proof = json.loads(reference.read_text('utf-8'))
++        exact = (proof['policy_sha256'] == file_hash(root/'.avx1/native-arm64.json') and
++                 proof['toolchains_sha256'] == file_hash(root/'.avx1/toolchains.json') and
++                 proof['lockfile_sha256'] == file_hash(root/'pubspec.lock') and
++                 proof['compilation_signature'] == compilation_signature(root/'.avx1/native_arm64.py') and
++                 proof['compiler'] == compiler and
++                 proof['compile_database_sha256'] == file_hash(build/'Release/compile_commands.json'))
++        if not exact:
++            return {'status':'miss','reason':'native inputs/compiler/evidence changed'}
++        for name, expected in proof['binaries'].items():
++            paths = sorted(build.rglob(name), key=lambda p:len(str(p)))
++            if not paths or paths[0].is_symlink() or file_hash(paths[0]) != expected:
++                return {'status':'miss','reason':'native output missing or checksum changed'}
++        if set(proof['binaries']) != {'libonnxruntime.so','libonnxruntime4j_jni.so'}:
++            return {'status':'miss','reason':'incomplete ONNX output set'}
++        return {'status':'reused','reference_run':proof['run_id'],
++                'reference_source':proof['source_commit'],
++                'reference_sha256':file_hash(reference),
++                'scope':'Exact source/toolchain/flags/recipe/compiler/commands and both binary SHA256; ABI/exports/ELF/package gates still run'}
++    except (OSError, KeyError, ValueError, TypeError, SyntaxError):
++        return {'status':'miss','reason':'qualified native evidence unavailable'}
+diff --git a/.avx1/test_native_cache_proof.py b/.avx1/test_native_cache_proof.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..a108192dd9969d5c4afee63230de5d3f7d834f3b
+--- /dev/null
++++ b/.avx1/test_native_cache_proof.py
+@@ -0,0 +1,67 @@
++import json
++from pathlib import Path
++import shutil
++import tempfile
++import unittest
++from native_cache_proof import file_hash, compilation_signature, verify_cache
++
++ROOT = Path(__file__).resolve().parents[1]
++
++
++class ExactNativeCache(unittest.TestCase):
++    def setUp(self):
++        self.tmp = tempfile.TemporaryDirectory()
++        self.addCleanup(self.tmp.cleanup)
++        self.root = Path(self.tmp.name)
++        self.build = self.root/'build'
++        (self.build/'Release').mkdir(parents=True)
++        (self.root/'.avx1/measurements').mkdir(parents=True)
++        for name in ('native_arm64.py','native-arm64.json','toolchains.json'):
++            shutil.copyfile(ROOT/'.avx1'/name, self.root/'.avx1'/name)
++        shutil.copyfile(ROOT/'pubspec.lock', self.root/'pubspec.lock')
++        (self.build/'Release/compile_commands.json').write_text('[]')
++        self.names = ('libonnxruntime.so','libonnxruntime4j_jni.so')
++        for name in self.names: (self.build/'Release'/name).write_bytes(name.encode())
++        self.reference = self.root/'.avx1/measurements/onnx-qualified-reference.json'
++        self.proof = {'run_id':1,'source_commit':'a'*40,'compiler':'NDK Clang exact version',
++            'policy_sha256':file_hash(self.root/'.avx1/native-arm64.json'),
++            'toolchains_sha256':file_hash(self.root/'.avx1/toolchains.json'),
++            'lockfile_sha256':file_hash(self.root/'pubspec.lock'),
++            'compilation_signature':compilation_signature(self.root/'.avx1/native_arm64.py'),
++            'compile_database_sha256':file_hash(self.build/'Release/compile_commands.json'),
++            'binaries':{n:file_hash(self.build/'Release'/n) for n in self.names}}
++        self.save()
++
++    def save(self): self.reference.write_text(json.dumps(self.proof))
++    def verify(self, compiler='NDK Clang exact version'):
++        return verify_cache(self.root,self.build,compiler)['status']
++
++    def test_exact_verified_outputs_reuse(self): self.assertEqual(self.verify(),'reused')
++    def test_compiler_change_rejects(self): self.assertEqual(self.verify('different compiler'),'miss')
++    def test_corrupt_or_missing_output_rejects(self):
++        (self.build/'Release'/self.names[0]).write_bytes(b'changed')
++        self.assertEqual(self.verify(),'miss')
++        (self.build/'Release'/self.names[0]).unlink()
++        self.assertEqual(self.verify(),'miss')
++    def test_changed_inputs_reject(self):
++        for name in ('native-arm64.json','toolchains.json'):
++            p=self.root/'.avx1'/name
++            before=p.read_bytes();p.write_bytes(before+b' ')
++            self.assertEqual(self.verify(),'miss');p.write_bytes(before)
++    def test_flags_or_recipe_change_rejects(self):
++        p=self.root/'.avx1/native_arm64.py'
++        p.write_text(p.read_text().replace("'-O3'","'-O2'",1))
++        self.assertEqual(self.verify(),'miss')
++    def test_command_evidence_change_rejects(self):
++        (self.build/'Release/compile_commands.json').write_text('[{}]')
++        self.assertEqual(self.verify(),'miss')
++    def test_dependency_lock_change_rejects(self):
++        (self.root/'pubspec.lock').write_text('changed dependency graph')
++        self.assertEqual(self.verify(),'miss')
++    def test_missing_or_incomplete_reference_rejects(self):
++        self.proof['binaries'].pop(self.names[0]);self.save()
++        self.assertEqual(self.verify(),'miss')
++        self.reference.unlink();self.assertEqual(self.verify(),'miss')
++
++
++if __name__ == '__main__': unittest.main()
+diff --git a/.avx1/test_native_sqlite.py b/.avx1/test_native_sqlite.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..7d8412197f9e5acdb189a99a6aae4a361edb15d7
+--- /dev/null
++++ b/.avx1/test_native_sqlite.py
+@@ -0,0 +1,27 @@
++"""Exercise the source-built SQLite amalgamation without touching user databases."""
++import ctypes as c
++import sys
++
++db=c.c_void_p();lib=c.CDLL(sys.argv[1])
++lib.sqlite3_open.argtypes=[c.c_char_p,c.POINTER(c.c_void_p)]
++lib.sqlite3_exec.argtypes=[c.c_void_p,c.c_char_p,c.c_void_p,c.c_void_p,c.POINTER(c.c_char_p)]
++lib.sqlite3_get_table.argtypes=[c.c_void_p,c.c_char_p,c.POINTER(c.POINTER(c.c_char_p)),c.POINTER(c.c_int),c.POINTER(c.c_int),c.POINTER(c.c_char_p)]
++lib.sqlite3_free_table.argtypes=[c.POINTER(c.c_char_p)]
++assert lib.sqlite3_open(b':memory:',c.byref(db))==0
++def execute(sql):
++    error=c.c_char_p();code=lib.sqlite3_exec(db,sql.encode(),None,None,c.byref(error))
++    if code:raise RuntimeError('Source-built SQLite query failed: '+str(error.value))
++def scalar(sql):
++    table=c.POINTER(c.c_char_p)();rows=c.c_int();cols=c.c_int();error=c.c_char_p()
++    assert lib.sqlite3_get_table(db,sql.encode(),c.byref(table),c.byref(rows),c.byref(cols),c.byref(error))==0
++    try:return table[cols.value].decode()
++    finally:lib.sqlite3_free_table(table)
++try:
++    execute("CREATE TABLE t(k INTEGER PRIMARY KEY,v TEXT); BEGIN; INSERT INTO t VALUES(1,'kept'); COMMIT; BEGIN; INSERT INTO t VALUES(2,'rolled back'); ROLLBACK;")
++    assert scalar('SELECT count(*) FROM t')=='1'
++    assert scalar("SELECT json_extract('{\"x\":7}', '$.x')")=='7'
++    execute("CREATE VIRTUAL TABLE documents USING fts5(body); INSERT INTO documents VALUES('agent tool result');")
++    assert scalar("SELECT count(*) FROM documents WHERE documents MATCH 'agent'")=='1'
++    assert scalar('PRAGMA integrity_check')=='ok'
++    print('SOURCE_SQLITE_TRANSACTIONS_FTS5_JSON_INTEGRITY_PASSED')
++finally:lib.sqlite3_close(db)
+diff --git a/.avx1/test_terminal.py b/.avx1/test_terminal.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..1ec126684bc9f321e9e9b492c742cdb32b933d4a
+--- /dev/null
++++ b/.avx1/test_terminal.py
+@@ -0,0 +1,34 @@
++"""Behavior tests for the fork's child-environment and MCP fixes."""
++import os
++import subprocess
++import sys
++import types
++import unittest
++from unittest.mock import patch
++
++
++class TerminalTests(unittest.TestCase):
++    def test_child_cannot_read_inherited_terminal_credentials(self):
++        from open_terminal.env import sanitized_environ
++        environment = {**os.environ, "OPEN_TERMINAL_API_KEY": "synthetic-secret",
++                       "open_terminal_private": "synthetic-secret", "KEEP_APPLICATION_SETTING": "kept"}
++        with patch.dict(os.environ, environment, clear=True):
++            child_env = sanitized_environ({"EXTRA_SETTING": "extra"})
++        result = subprocess.run([sys.executable, "-c", "import os; assert not any(k.upper().startswith('OPEN_TERMINAL_') for k in os.environ); assert os.environ['KEEP_APPLICATION_SETTING']=='kept'; assert os.environ['EXTRA_SETTING']=='extra'"],
++                                env=child_env, capture_output=True)
++        self.assertEqual(result.returncode, 0)
++
++    def test_stdio_passes_no_network_arguments(self):
++        from click.testing import CliRunner
++        from open_terminal.cli import main
++        received = []
++        fake = types.ModuleType("open_terminal.mcp_server")
++        fake.mcp = types.SimpleNamespace(run=lambda **kwargs: received.append(kwargs))
++        with patch.dict(sys.modules, {"open_terminal.mcp_server": fake}), patch("open_terminal.config.init", return_value={}):
++            result = CliRunner().invoke(main, ["mcp", "--transport", "stdio"])
++        self.assertEqual(result.exit_code, 0, repr(result.exception))
++        self.assertEqual(received, [{"transport": "stdio"}])
++
++
++if __name__ == "__main__":
++    unittest.main()

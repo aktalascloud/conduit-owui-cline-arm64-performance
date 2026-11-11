@@ -1,0 +1,871 @@
+diff --git a/.avx1/build.py b/.avx1/build.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..d13be5fa6de0c3349bda0c12446b393e297c0610
+--- /dev/null
++++ b/.avx1/build.py
+@@ -0,0 +1,306 @@
++"""Build one exact source revision. Outputs contain no local configuration."""
++from __future__ import annotations
++import base64
++import datetime as dt
++import json
++import os
++from pathlib import Path
++import re
++import shutil
++import sys
++import time
++import tomllib
++import zipfile
++import subprocess
++
++from common import ROOT, WORK, OUT, SecretPatternError, download, run, sha256, verify_archive, write_json, zip_folder
++
++
++def license_files(destination):
++    destination.mkdir(parents=True, exist_ok=True)
++    paths = [path for path in ROOT.iterdir() if path.is_file() and
++             any(word in path.name.upper() for word in ("LICENSE", "NOTICE", "COPYING", "CONTRIBUTOR_LICENSE"))]
++    if not any(path.name.upper().startswith(("LICENSE", "COPYING")) for path in paths):
++        raise RuntimeError("Project license missing")
++    for path in paths:
++        shutil.copy2(path, destination / path.name)
++
++
++def audit_python(wheels, manifest):
++    target = WORK / "audit-packages"
++    run(sys.executable, "-m", "pip", "install", "--no-cache-dir", "--target", target, *wheels)
++    run(sys.executable, "-m", "pip", "install", "pip-audit")
++    report = WORK / "pip-audit.json"
++    # A missing advisory service or unresolved advisory blocks publication.
++    audit=subprocess.run([sys.executable,'-m','pip_audit','--path',str(target),'--strict','--format','json','--output',str(report)],cwd=ROOT)
++    if audit.returncode not in {0,1} or not report.exists():raise RuntimeError('Dependency audit unavailable; publication blocked')
++    data = json.loads(report.read_text("utf-8"))
++    if manifest['project']=='webui':
++        from security_scope import review
++        assessment=review(data,ROOT)
++    else:
++        if any(item.get('vulns') for item in data['dependencies']):
++            raise RuntimeError('Dependency advisory blocks this package')
++        assessment={'status':'passed; no dependency advisories','exceptions':[]}
++    write_json(WORK/'security-review.json',assessment)
++    manifest["security"] = {"python_audit": "passed with explicit applicability review", "dependencies": len(data["dependencies"]),
++                            'assessment':assessment}
++    manifest["resolved_dependencies"] = [{"name": item["name"], "version": item["version"]} for item in data["dependencies"]]
++    return target
++
++
++def build_python(project, package, manifest):
++    wheels = package / "wheels"
++    wheels.mkdir()
++    environment = dict(os.environ, CYPRESS_INSTALL_BINARY="0", HUSKY="0", PIP_DISABLE_PIP_VERSION_CHECK="1")
++    run(sys.executable, "-m", "pip", "install", "build", "hatchling", "wheel")
++    if project == "webui":
++        run("node", "--experimental-strip-types", "--test", ROOT / ".avx1/test_suggestions.mjs", env=environment)
++        run("node", "--test", ROOT / ".avx1/frontend_contract.test.mjs", env=environment)
++        # The reviewed hatch hook uses npm ci and the checked-in lockfile.
++        run(sys.executable, "-m", "build", "--wheel", "--no-isolation", "--outdir", wheels, env=environment)
++        run("npm", "audit", "--omit=dev", "--audit-level=high", env=environment)
++        from native_json import build
++        manifest["native_json"] = build(wheels)
++        policy = json.loads((ROOT / ".avx1/native-policy.json").read_text("utf-8"))
++        if policy["default"] not in ("stock", "optimized"):
++            raise RuntimeError("Unknown native JSON selection policy")
++        manifest["native_json"].update(policy)
++    else:
++        run(sys.executable, "-m", "build", "--wheel", "--no-isolation", "--outdir", wheels, env=environment)
++    wheel_paths = list(wheels.glob("*.whl"))
++    for path in wheel_paths:
++        verify_archive(path)
++    audit_target = audit_python(wheel_paths, manifest)
++    def checked_script(script, *arguments):
++        # --target installs do not process .pth files through PYTHONPATH alone.
++        # pywin32 uses one to register its win32 paths and DLL directory.
++        launcher = "import runpy,site,sys;from pathlib import Path;site.addsitedir(sys.argv[1]);sys.argv=sys.argv[2:];sys.path.insert(0,str(Path(sys.argv[0]).resolve().parent));runpy.run_path(sys.argv[0],run_name='__main__')"
++        run(sys.executable, "-c", launcher, audit_target, script, *arguments)
++    if project == "terminal":
++        checked_script(ROOT / ".avx1/test_terminal.py")
++        measurement=WORK/'grep-preview-measurement.json'
++        if measurement.exists():manifest['context_guard']=json.loads(measurement.read_text('utf-8'))
++    else:
++        checked_script(ROOT / ".avx1/test_mcp_compat.py", "--source", ROOT / "backend/open_webui")
++        checked_script(ROOT / ".avx1/bench_json.py")
++        checked_script(ROOT / ".avx1/test_brotli.py")
++        checked_script(ROOT / ".avx1/test_frontend_browser.py")
++        manifest['security']['browser_smoke']='Chromium rendered the packaged login form without JavaScript page errors'
++    bootstrap = package / "bootstrap"
++    bootstrap.mkdir()
++    run(sys.executable, "-m", "pip", "download", "--no-deps", "--only-binary=:all:", "pip", "--dest", bootstrap)
++    manifest["python"] = json.loads((ROOT / ".avx1/toolchains.json").read_text("utf-8"))["python"]
++    manifest["optimization_scope"] = (
++        "orjson experiment: Rust O3 + LTO for Ivy Bridge, no PGO; stock wheel is the measured faster default; Python/TypeScript retain normal semantics"
++        if project == "webui" else "Pure Python application; native compiler flags do not optimize Python bytecode"
++    )
++
++
++def build_desktop(package, manifest):
++    environment = dict(os.environ, npm_config_build_from_source="true", CSC_IDENTITY_AUTO_DISCOVERY="false")
++    # MSVC O2 is its highest standard optimization level; /fp:precise preserves numerical semantics.
++    environment["CL"] = "/O2 /Ob3 /GL /arch:AVX /fp:precise"
++    environment["_LINK_"] = "/LTCG"
++    run("npm", "ci", "--no-audit", "--no-fund", env=environment)
++    run("npm", "audit", "--omit=dev", "--audit-level=high", env=environment)
++    run("npm", "run", "build", env=environment)
++    original=json.loads((ROOT/'package.json').read_text('utf-8'))['version']
++    major,minor,patch=original.split('-')[0].split('.')
++    version=f"{major}.{minor}.{int(patch)+1}-avx1.{manifest['day']}.{os.environ.get('GITHUB_RUN_NUMBER','1')}"
++    manifest['desktop_version']=version
++    run("npx", "--no-install", "electron-builder", "--win", "nsis", "--x64", "--publish", "never",
++        "-c.win.signAndEditExecutable=false",'-c.extraMetadata.version='+version, env=environment)
++    shutil.copytree(ROOT / "dist/win-unpacked", package / "desktop", ignore=shutil.ignore_patterns("*.pdb", "*.map"))
++    installers=list((ROOT/'dist').glob('*-setup.exe'))
++    if len(installers)!=1:raise RuntimeError('Exactly one NSIS installer is required')
++    installer_dir=package/'installer';installer_dir.mkdir()
++    shutil.copy2(installers[0],installer_dir/'Open-WebUI-AVX1-Setup.exe')
++    smoke=WORK/'nsis-smoke-install'
++    run(installers[0],'/S','/D='+str(smoke))
++    if not (smoke/'open-webui.exe').is_file():raise RuntimeError('NSIS installation failed')
++    for relative in ('resources/app.asar','resources/app.asar.unpacked/node_modules/node-pty/build/Release/pty.node'):
++        if sha256(smoke/relative)!=sha256(package/'desktop'/relative):raise RuntimeError('Installed NSIS content differs from the qualified app')
++    test_tools=WORK/'test-tools'
++    run('npm','install','--prefix',test_tools,'--ignore-scripts','--no-package-lock','--no-save','playwright@1.58.2')
++    ui_environment=dict(os.environ,TEST_PLAYWRIGHT=str(test_tools/'node_modules/playwright'),EXPECTED_DESKTOP_VERSION=version)
++    run('node',ROOT/'.avx1/test_desktop_ui.cjs',smoke/'open-webui.exe',WORK/'desktop-test-profile',env=ui_environment)
++    manifest['installer_test']='NSIS installed in an isolated directory; app/PTY digests matched; Russian onboarding rendered without page errors'
++    manifest["security"] = {"npm_runtime_audit": "passed; high/critical gate"}
++    manifest["optimization_scope"] = "node-pty rebuilt with MSVC O2/GL/LTCG/AVX; Electron/Chromium use upstream prebuilt engines"
++    manifest["authenticode"] = "Unsigned community build"
++
++
++def build_conduit(package, manifest, channel):
++    # Build tools and downloaded dependency code never receive the signing secrets.
++    signing_material = os.environ.pop("CONDUIT_KEYSTORE_BASE64")
++    password = os.environ.pop("CONDUIT_KEYSTORE_PASSWORD")
++    run('node', ROOT / '.avx1/test_cline_contract.mjs')
++    run(sys.executable, '-m', 'pip', 'install', '-r', ROOT / 'remote/requirements.txt')
++    run(sys.executable, '-m', 'pip', 'install', 'pip-audit==2.10.1')
++    run(sys.executable, '-m', 'pip_audit', '--strict', '-r', ROOT / 'remote/requirements.txt',
++        '--format', 'json', '--output', WORK / 'gateway-audit.json')
++    run(sys.executable, '-B', '-m', 'unittest', 'discover', '-s', ROOT / 'remote', '-q')
++    os.environ['CONDUIT_SSH_TEST_PYTHON'] = sys.executable
++    os.environ['PUB_CACHE'] = str(WORK/'pub-cache')
++    toolchains = json.loads((ROOT / ".avx1/toolchains.json").read_text("utf-8"))
++    flutter_root = WORK / "flutter"
++    run("git", "init", flutter_root)
++    run("git", "-C", flutter_root, "remote", "add", "origin", "https://github.com/flutter/flutter.git")
++    run("git", "-C", flutter_root, "fetch", "--depth=1", "origin", toolchains["flutter_sha"])
++    run("git", "-C", flutter_root, "checkout", "--detach", "FETCH_HEAD")
++    run("git", "-C", flutter_root, "fetch", "--depth=1", "origin",
++        f"refs/tags/{toolchains['flutter_version']}:refs/tags/{toolchains['flutter_version']}")
++    if run("git", "-C", flutter_root, "rev-parse", f"{toolchains['flutter_version']}^{{commit}}", capture=True).stdout.strip() != toolchains["flutter_sha"]:
++        raise RuntimeError("Flutter tag/hash mismatch")
++    run("git", "-C", flutter_root, "switch", "--create", "stable")
++    flutter = flutter_root / "bin/flutter"
++    dart = flutter_root / "bin/dart"
++    os.environ["PATH"] = str(flutter_root / 'bin') + os.pathsep + os.environ['PATH']
++    run(flutter, "--version")
++    run("git", "submodule", "update", "--init", "--recursive", "--depth", "1", "third_party/katex", "third_party/mermaid")
++    run(flutter, "pub", "get", "--enforce-lockfile")
++    from native_arm64 import prepare as prepare_native, inventory as native_inventory
++    # Workspace members must finish their code generation before the app.
++    for parent in (ROOT / "packages", ROOT / "apps"):
++        if parent.exists():
++            for folder in sorted(parent.iterdir()):
++                pubspec = folder / "pubspec.yaml"
++                if pubspec.exists() and re.search(r"(?m)^  build_runner:", pubspec.read_text("utf-8")):
++                    run(dart, "run", "build_runner", "build", "--delete-conflicting-outputs", cwd=folder)
++    run(dart, "run", "build_runner", "build", "--delete-conflicting-outputs")
++    from check_plan import plan as select_checks
++    run(sys.executable, ROOT / '.avx1/test_check_plan.py')
++    run(sys.executable, ROOT / '.avx1/test_native_cache_proof.py')
++    checks = select_checks(ROOT)
++    write_json(WORK / 'check-plan.json', checks)
++    run(flutter, "analyze", "--no-pub", "--no-fatal-infos", "--no-fatal-warnings", *checks['analysis'])
++    # Catch native-view fixture lifecycle failures before the full shared-core suite.
++    if checks['mode'] == 'full':
++        run(flutter, "test", "--no-pub", "test/shared/widgets/platform_ui/settings_switch_semantics_test.dart")
++        run(flutter, "test", "--no-pub", "test/features/navigation/widgets/cline_sidebar_mainstream_test.dart",
++            "test/features/navigation/widgets/sidebar_workspace_tabs_test.dart", "--plain-name", "Cline")
++    run(flutter, "test", "--no-pub", *checks['tests'])
++    run(flutter, "test", "--no-pub", "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart")
++    persistence_tests = [
++        "packages/conduit_core/test/utils/openwebui_persistence_projection_test.dart",
++        "packages/conduit_core/test/services/api_service_chat_completion_test.dart",
++        "packages/conduit_core/test/sync/push_sync_test.dart",
++        "packages/conduit_core/test/sync/pull_sync_test.dart",
++        "packages/conduit_core/test/sync/id_remapper_test.dart",
++        "packages/conduit_core/test/database/daos/outbox_dao_test.dart",
++        "packages/conduit_core/test/database/daos/chats_dao_outbox_test.dart",
++    ]
++    run(flutter, "test", "--no-pub", *persistence_tests)
++    manifest['check_scope'] = {**checks, 'selected_checks': 'passed'}
++    manifest['check_scope']['extra_core_tests'] = [
++        "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart", *persistence_tests,
++    ]
++    native_receipt = prepare_native()
++    outdated = run(flutter, "pub", "outdated", "--json", capture=True).stdout
++    (WORK / "dependency-review.json").write_text(outdated, encoding="utf-8")
++    key = WORK / "conduit-signing.p12"
++    properties = ROOT / "android/key.properties"
++    key.write_bytes(base64.b64decode(signing_material, validate=True))
++    properties.write_text(f"storeFile={key.as_posix()}\nstorePassword={password}\nkeyPassword={password}\nkeyAlias=conduit\n", encoding="utf-8")
++    android = toolchains["android"]
++    environment = dict(os.environ,
++                       ORG_GRADLE_PROJECT_avx1ApiLevel=str(android["api_level"]),
++                       ORG_GRADLE_PROJECT_avx1MinorApiLevel=str(android["minor_api_level"]))
++    manifest["android_sdk"] = android
++    try:
++        symbols = WORK / "private-symbols"
++        run(flutter, "build", "apk", "--release", "--split-per-abi", "--target-platform", "android-arm64",
++            "--tree-shake-icons", "--obfuscate", f"--split-debug-info={symbols}",
++            f"--build-number={int(time.time())}", env=environment)
++    finally:
++        properties.unlink(missing_ok=True)
++        key.unlink(missing_ok=True)
++    apk = ROOT / "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk"
++    if not apk.is_file():
++        raise RuntimeError("ARM64 APK missing")
++    manifest['native_arm64'] = native_inventory(apk,native_receipt)
++    sdk = Path(os.environ.get("ANDROID_SDK_ROOT") or os.environ["ANDROID_HOME"])
++    apksigner = sorted((sdk / "build-tools").glob("*/apksigner"))[-1]
++    signing = run(apksigner, "verify", "--verbose", "--print-certs", apk, capture=True).stdout
++    manifest["apk_signing"] = signing.strip().splitlines()
++    with zipfile.ZipFile(apk) as archive:
++        abis = {item.split("/")[1] for item in archive.namelist() if item.startswith("lib/")}
++        if abis != {"arm64-v8a"}:
++            raise RuntimeError(f"Unexpected APK architectures: {abis}")
++    shutil.copy2(apk, package / f"conduit-{channel}-arm64-v8a.apk")
++    manifest["optimization_scope"] = "Flutter release AOT, ARM64, R8/tree shaking; SQLite/dartjni/ONNX Runtime+JNI rebuilt with O3 ARMv8-A ThinLTO; remaining vendor libraries explicitly inventoried"
++    manifest["security"] = {"flutter_tests": checks["mode"] + " checks passed", "apk_signature": "verified",
++                            "dependency_review": "outdated report; not a complete vulnerability audit"}
++    manifest["application_id"] = "io.github.aktalascloud.conduit"
++    manifest['cline_integration'] = {'transport':'pinned SSH and typed native Cline JSON',
++        'ui':'native Flutter with Conduit Markdown','webview':False,'native_client_tests':'passed',
++        'native_client_tests_scope':('current full suite' if checks['mode']=='full' else 'current selected suite' if 'test/features/cline' in checks['tests'] else 'inherited from qualified '+checks['baseline_source']+'; Cline inputs unchanged'),
++        'host_key_verification':'mandatory Ed25519 SHA256 pin','gateway_security_tests':'passed',
++        'gateway_dependency_audit':'passed; no unresolved advisories',
++        'pinned_cline_protocol_contract':'passed','dart_ssh_interoperability':'included in passed Flutter suite',
++        'shell':False,'sftp':False,'arbitrary_tcp_forwarding':False,'automatic_command_replay':False,
++        'file_transfer':'fixed upload RPC; SHA256, 64 MiB/file, 1 GiB inbox, 4 attachments/message; user-triggered sends only'}
++    manifest["device_performance"] = "Not measured on a physical Android device"
++
++
++def reusable_native_cache(project):
++    if project!='conduit' or WORK.is_symlink() or not WORK.is_dir():return False
++    if {p.name for p in WORK.iterdir()}!={'native'}:return False
++    folder=WORK/'native'
++    return folder.is_dir() and not folder.is_symlink() and {p.name for p in folder.iterdir()}.issubset({'onnxruntime','eigen','ort-build'})
++
++
++def main():
++    project = json.loads((ROOT / ".avx1/project.json").read_text("utf-8"))
++    channel = os.environ.get("BUILD_CHANNEL", "latest")
++    day = os.environ.get("BUILD_DAY") or dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d")
++    if channel != "latest" or not re.fullmatch(r"\d{8}", day):
++        raise ValueError("Invalid build channel/date")
++    if OUT.exists() or (WORK.exists() and not reusable_native_cache(project['id'])):
++        raise RuntimeError("Use a fresh checkout for each build")
++    WORK.mkdir(exist_ok=True)
++    OUT.mkdir()
++    run(sys.executable, ROOT / '.avx1/test_public_gate.py')
++    run(sys.executable, ROOT / '.avx1/test_locales.py')
++    if project['id']=='webui':run(sys.executable, ROOT / '.avx1/test_security_scope.py')
++    package = WORK / "package"
++    package.mkdir()
++    manifest = {"schema": 1, "project": project["id"], "upstream": project["upstream"],
++                "repository": project["repository"], "channel": channel, "day": day,
++                "source_commit": run("git", "rev-parse", "HEAD", capture=True).stdout.strip(),
++                "upstream_commit": project["upstream_commit"], "stable_tag": project["stable_tag"],
++                "built_utc": dt.datetime.now(dt.timezone.utc).isoformat(), "llm_weights_included": False,
++                "llm_speedup_percent": None}
++    license_files(package / "licenses")
++    helper_files=(['Install.cmd','Install.ps1'] if project['id'] in ('webui','terminal') else [])
++    if project['id']=='webui':helper_files.append('bench_json.py')
++    for name in helper_files:
++        shutil.copy2(ROOT / ".avx1" / name, package / name)
++    if project["id"] in {"webui", "terminal"}:
++        build_python(project["id"], package, manifest)
++    elif project["id"] == "desktop":
++        build_desktop(package, manifest)
++    else:
++        build_conduit(package, manifest, channel)
++    shutil.copy2(ROOT / ".avx1/PATCHES.json", package / "PATCHES.json")
++    # Exact corresponding source accompanies every binary; all upstream notices remain in it.
++    source = package / "corresponding-source.tar.gz"
++    run("git", "archive", "--format=tar.gz", "--output", source, "HEAD")
++    manifest["files"] = [{"path": path.relative_to(package).as_posix(), "sha256": sha256(path), "bytes": path.stat().st_size}
++                         for path in sorted(package.rglob("*")) if path.is_file()]
++    write_json(package / "manifest.json", manifest)
++    name = f"{project['slug']}-{channel}-{day}-{manifest['source_commit'][:8]}.zip"
++    archive = OUT / name
++    zip_folder(package, archive)
++    write_json(OUT / f"{name}.manifest.json", {**manifest, "archive": name, "archive_sha256": sha256(archive)})
++    (OUT / f"{name}.sha256").write_text(f"{sha256(archive)}  {name}\n", encoding="ascii")
++    print(f"Candidate verified: {name}")
++
++
++if __name__ == "__main__":
++    try:
++        main()
++    except SecretPatternError as error:
++        write_json(WORK/'security-gate.json',error.metadata)
++        raise
+diff --git a/.avx1/check-baseline.json b/.avx1/check-baseline.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..62ce567f81ebf8a171f2b7957b8722f10cf5e391
+--- /dev/null
++++ b/.avx1/check-baseline.json
+@@ -0,0 +1,13 @@
++{
++  "source_commit": "21add09800e25d228d59bc72511419de35ea6b4e",
++  "full_flutter_tests": 5224,
++  "verified_run_id": 40433734689,
++  "reviewed_verification_only_recipe_sha256": "2c0a9c6dc621ded7cddb67e13253463d06bc866ebb70890d1741af43f00ec84f",
++  "scope": "Qualified immutable 4.2.2 APK: full 5224-test Flutter suite, permanent signing identity and nine-library ARM64/ABI/16KiB gates passed. Subsequent narrow navigation changes use affected suites; shared/native/runtime changes still require broad coverage.",
++  "reviewed_native_cache_files": {
++    ".avx1/native_arm64.py": "bf706561df4cf7274c85bd7cbeb60d9f3a416d8288b5b34087bcb6fe95ed2a2f",
++    ".avx1/native_cache_proof.py": "964d6740b6e722372157bba816ebb73c3d0f9cb2dc05d6e20894003d8b79078d",
++    ".avx1/test_native_cache_proof.py": "d19f6f0177260b23ab47c8735f56641a13822bd88512f6efb9823669e62f537d"
++  },
++  "native_cache_scope": "Only exact ONNX binary/compiler/source-policy/toolchain/flags/recipe/compile-database hashes reuse; all ELF/API/JNI/16KiB/package gates remain. Unknown native changes select full coverage."
++}
+diff --git a/.avx1/check_plan.py b/.avx1/check_plan.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..2c066135532b0325fbabe72ce655404f2e95d6bc
+--- /dev/null
++++ b/.avx1/check_plan.py
+@@ -0,0 +1,123 @@
++"""Conservative Flutter check selection against a qualified immutable baseline."""
++import hashlib
++import json
++from pathlib import Path
++import re
++import subprocess
++
++ROOT = Path(__file__).resolve().parents[1]
++SMOKE = ['test/core/providers/backend_mode_providers_test.dart',
++         'test/core/providers/chat_entry_readiness_providers_test.dart']
++DOC_SUFFIXES = ('.md', '.txt', '.png', '.jpg', '.svg')
++
++
++def select(changed, root, *, recipe_allowed=False, avatar_assets_only=False, reviewed_native_cache=False):
++    targets = set(SMOKE)
++    analysis = set()
++    for path in changed:
++        if path in {'Build.cmd', '.avx1/portable_build.py'}:
++            continue  # Entry points only; pinned build recipe and package gates remain unchanged.
++        if path in {'lib/features/chat/widgets/chat_timeline_viewport.dart',
++                    'lib/shared/widgets/markdown/renderer/chunked_block_column.dart',
++                    'lib/shared/widgets/markdown/streaming_markdown_widget.dart'}:
++            targets.update(['test/features/chat/widgets', 'test/shared/widgets/markdown', 'test/features/cline'])
++            analysis.add(path)
++            continue
++        if path == '.gitignore':
++            continue  # Privacy/package gates still run; no runtime code.
++        if path.startswith(('assets/voice_avatar/', 'tool/voice_avatar/')) or (path == 'pubspec.yaml' and avatar_assets_only):
++            targets.add('test/features/chat/voice_mode')
++            continue  # Offline JS build/audit/security checks are mandatory in CI.
++        if path in {'packages/conduit_core/lib/utils/server_version_compat.dart',
++                    'packages/conduit_core/test/utils/server_version_compat_test.dart'}:
++            targets.update(['packages/conduit_core/test/utils/server_version_compat_test.dart',
++                            'test/core/providers/server_incompatible_provider_test.dart',
++                            'test/shared/widgets/server_version_warning_card_test.dart'])
++            if (root / path).is_file():
++                analysis.add(path)
++            continue
++        if path == '.avx1/build.py' and recipe_allowed:
++            continue
++        if path in ('.avx1/native_arm64.py', '.avx1/native_cache_proof.py', '.avx1/test_native_cache_proof.py') and reviewed_native_cache:
++            continue  # Exact binary cache only; unchanged native flags and all ABI gates.
++        if path.startswith(('.avx1/measurements/', '.github/', 'docs/')) or path.endswith('.md'):
++            continue
++        if path.startswith('remote/') and Path(path).suffix in {'.py','.ts','.cmd','.ps1','.json'}:
++            continue  # Separate gateway tests; not part of the Android executable.
++        if path.startswith('packages/conduit_core/test/features/chat/voice_mode/'):
++            targets.add('packages/conduit_core/test/features/chat/voice_mode')
++            continue
++        if path.startswith('.avx1/'):
++            if Path(path).name in {'check_plan.py', 'test_check_plan.py', 'check-baseline.json', 'project.json', 'PATCHES.json'}:
++                continue
++            return 'full', [], [], 'native/toolchain or verification recipe changed: ' + path
++        if path.endswith('.arb') and path.startswith('lib/l10n/'):
++            targets.update(['test/l10n'])
++            continue
++        if path.startswith('test/') and path.endswith('_test.dart'):
++            if not (root / path).is_file():
++                return 'full', [], [], 'deleted test requires broad coverage'
++            targets.add(path)
++            analysis.add(path)
++            continue
++        if path.startswith(('lib/features/', 'packages/conduit_core/lib/features/')) and path.endswith('.dart'):
++            feature = path.split('/features/', 1)[1].split('/')[0]
++            folder = 'test/features/' + feature
++            if not (root / folder).is_dir():
++                return 'full', [], [], 'no affected feature suite: ' + feature
++            targets.add(folder)
++            if '/chat/voice_mode/' in path:
++                targets.add('packages/conduit_core/test/features/chat/voice_mode')
++            if (root / path).is_file():
++                analysis.add(path)
++            continue
++        # Shared navigation/providers, native code, lockfiles, SDK and unknown files
++        # can affect every backend. Never silently narrow their coverage.
++        return 'full', [], [], 'shared or unclassified input changed: ' + path
++    existing = {p for p in targets if (root / p).exists()}
++    targets = sorted(p for p in existing if not any(
++        parent != p and (root / parent).is_dir() and p.startswith(parent.rstrip('/') + '/')
++        for parent in existing))
++    if not targets:
++        return 'full', [], [], 'required smoke tests are missing'
++    return 'targeted', targets, sorted(analysis), 'qualified unchanged shared inputs; affected feature suites plus backend smoke'
++
++
++def plan(root=ROOT):
++    baseline = json.loads((root / '.avx1/check-baseline.json').read_text('utf-8'))
++    source = baseline['source_commit']
++    if not re.fullmatch('[0-9a-f]{40}', source) or baseline.get('full_flutter_tests', 0) < 1:
++        raise RuntimeError('Invalid qualified check baseline')
++    def git(*args):
++        return subprocess.run(['git', *args], cwd=root, capture_output=True, text=True, encoding='utf-8', check=True).stdout.strip()
++    try:
++        try:
++            git('cat-file', '-e', source + '^{commit}')
++        except subprocess.CalledProcessError:
++            git('fetch', '--no-tags', '--depth=1', 'origin', source)
++        if git('rev-parse', source + '^{commit}') != source:
++            raise RuntimeError('Baseline source changed')
++        changed = git('diff', '--name-only', source, 'HEAD').splitlines()
++        current_recipe = hashlib.sha256((root / '.avx1/build.py').read_bytes()).hexdigest()
++        allowed = current_recipe == baseline.get('reviewed_verification_only_recipe_sha256')
++        old_pubspec = git('show', source + ':pubspec.yaml')
++        current_pubspec = (root / 'pubspec.yaml').read_text('utf-8').strip()
++        asset_line = '    - assets/voice_avatar/\n'
++        asset_only = current_pubspec.count(asset_line) == 1 and current_pubspec.replace(asset_line, '', 1) == old_pubspec
++        cache_files = baseline.get('reviewed_native_cache_files', {})
++        native_cache_allowed = bool(cache_files) and all(
++            (root / name).is_file() and hashlib.sha256((root / name).read_bytes()).hexdigest() == digest
++            for name, digest in cache_files.items())
++        mode, tests, analysis, reason = select(changed, root, recipe_allowed=allowed,
++            avatar_assets_only=asset_only, reviewed_native_cache=native_cache_allowed)
++        return {'mode': mode, 'tests': tests, 'analysis': analysis, 'reason': reason,
++                'baseline_source': source, 'baseline_full_flutter_tests': baseline['full_flutter_tests'],
++                'source_commit': git('rev-parse', 'HEAD'), 'changed_paths': changed,
++                'full_suite': 'selected' if mode == 'full' else 'not run; unchanged coverage inherited from qualified baseline'}
++    except (subprocess.CalledProcessError, RuntimeError) as error:
++        return {'mode': 'full', 'tests': [], 'analysis': [], 'reason': 'trusted baseline unavailable: ' + type(error).__name__,
++                'baseline_source': source, 'full_suite': 'selected'}
++
++
++if __name__ == '__main__':
++    print(json.dumps(plan(), indent=2))
+diff --git a/.avx1/common.py b/.avx1/common.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..e874280cb0d73c156847d9c271a8253fad0fe854
+--- /dev/null
++++ b/.avx1/common.py
+@@ -0,0 +1,121 @@
++"""Small, dependency-free helpers shared by the public build recipes."""
++from __future__ import annotations
++
++import hashlib
++import json
++import os
++from pathlib import Path
++import re
++import shutil
++import subprocess
++import urllib.request
++import zipfile
++
++ROOT = Path(__file__).resolve().parents[1]
++WORK = ROOT / ".avx1-work"
++OUT = ROOT / ".avx1-out"
++
++
++def run(*args, cwd=ROOT, env=None, capture=False):
++    command = [str(arg) for arg in args]
++    command[0] = shutil.which(command[0]) or command[0]
++    return subprocess.run(command, cwd=cwd, env=env, check=True,
++                          text=True, encoding="utf-8", errors="replace",
++                          stdout=subprocess.PIPE if capture else None,
++                          stderr=subprocess.PIPE if capture else None)
++
++
++def sha256(path):
++    with Path(path).open("rb") as stream:
++        return hashlib.file_digest(stream, "sha256").hexdigest()
++
++
++def download(url, path, expected=None):
++    if not url.startswith("https://"):
++        raise ValueError("HTTPS required")
++    path = Path(path)
++    path.parent.mkdir(parents=True, exist_ok=True)
++    with urllib.request.urlopen(url, timeout=120) as response, path.open("wb") as stream:
++        shutil.copyfileobj(response, stream)
++    if expected and sha256(path) != expected:
++        path.unlink()
++        raise ValueError("Download checksum mismatch")
++    return path
++
++
++def write_json(path, value):
++    Path(path).parent.mkdir(parents=True, exist_ok=True)
++    Path(path).write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
++
++
++SECRET_PATTERNS = [
++    rb"-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----",
++    rb"(?<![A-Za-z0-9_-])gh[pousr]_[A-Za-z0-9]{30,}",
++    rb"(?<![A-Za-z0-9_-])github_pat_[A-Za-z0-9_]{40,}",
++    rb"(?<![A-Za-z0-9_-])sk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{24,}",
++    rb"(?<![A-Za-z0-9_-])hf_[A-Za-z0-9]{30,}",
++    rb"[0-9]{8,12}:[A-Za-z0-9_-]{30,}",
++]
++SECRET_PREFIXES = [(b'-----BEGIN ',),(b'ghp_',b'gho_',b'ghu_',b'ghs_',b'ghr_'),
++                   (b'github_pat_',),(b'sk-',),(b'hf_',),None]
++FORBIDDEN_PARTS = {".git", "__pycache__", ".venv", "node_modules", "logs", "cache", "uploads"}
++FORBIDDEN_SUFFIXES = {".db", ".sqlite", ".sqlite3", ".log", ".pdb", ".jks", ".p12", ".pem", ".key", ".gguf", ".safetensors"}
++
++
++class SecretPatternError(ValueError):
++    def __init__(self, label, number, matched):
++        self.metadata = {'file':label,'pattern_index':number,'length':len(matched),
++                         'match_sha256':hashlib.sha256(matched).hexdigest()}
++        super().__init__(f'Secret pattern in {label}; pattern={number}; length={len(matched)}; contents withheld')
++
++
++def scan_bytes(data, label):
++    for content in (data, data.replace(b"\x00", b"")):
++        for number, pattern in enumerate(SECRET_PATTERNS):
++            expression=re.compile(pattern)
++            prefixes=SECRET_PREFIXES[number]
++            if prefixes is None:
++                # Telegram's numeric ID is before ':'. Match only those candidate positions.
++                colon=content.find(b':')
++                while colon>=0:
++                    for width in range(8,13):
++                        if colon>=width:
++                            match=expression.match(content,colon-width)
++                            if match:raise SecretPatternError(label,number,match.group(0))
++                    colon=content.find(b':',colon+1)
++            else:
++                for prefix in prefixes:
++                    position=content.find(prefix)
++                    while position>=0:
++                        match=expression.match(content,position)
++                        if match:raise SecretPatternError(label,number,match.group(0))
++                        position=content.find(prefix,position+1)
++
++
++def verify_archive(path):
++    with zipfile.ZipFile(path) as archive:
++        bad = archive.testzip()
++        if bad:
++            raise ValueError(f"Archive CRC failure: {bad}")
++        for entry in archive.infolist():
++            parts = Path(entry.filename.replace("\\", "/")).parts
++            if entry.filename.startswith(("/", "\\")) or ".." in parts:
++                raise ValueError("Unsafe archive member")
++            forbidden = set(parts) & FORBIDDEN_PARTS
++            if entry.filename.startswith("desktop/resources/app.asar.unpacked/node_modules/"):
++                forbidden.discard("node_modules")
++            if forbidden or Path(entry.filename).suffix.lower() in FORBIDDEN_SUFFIXES:
++                raise ValueError(f"Private/runtime residue: {entry.filename}")
++            if not entry.is_dir():
++                scan_bytes(archive.read(entry), entry.filename)
++
++
++def zip_folder(folder, target):
++    with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
++        for path in sorted(Path(folder).rglob("*")):
++            if path.is_symlink():
++                raise ValueError("Symlink in package")
++            if path.is_file():
++                scan_bytes(path.read_bytes(), path.name)
++                archive.write(path, path.relative_to(folder).as_posix())
++    verify_archive(target)
+diff --git a/.avx1/project.json b/.avx1/project.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..40fc967a7f55db7dc55dff3a8e332bcaed167a35
+--- /dev/null
++++ b/.avx1/project.json
+@@ -0,0 +1,13 @@
++{
++  "id": "conduit",
++  "slug": "conduit-owui-cline-arm64-performance",
++  "upstream": "cogwheel0/conduit",
++  "development": "main",
++  "runner": "ubuntu-24.04",
++  "description": "Conduit for OWUI + Cline: signed ARM64 APK, SSH access to Cline sessions/projects, O3 ThinLTO native libraries; extended Russian UI / дополненный русский перевод.",
++  "repository": "aktalascloud/conduit-owui-cline-arm64-performance",
++  "channel": "latest",
++  "upstream_commit": "5d8c74ef44e2e1f324c09e35463ca170dad75849",
++  "stable_tag": "v4.2.2",
++  "distribution": "single unified latest"
++}
+diff --git a/.avx1/test_check_plan.py b/.avx1/test_check_plan.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..9f88a31ecb306c7b0877cc3a9601ae71594ee9cf
+--- /dev/null
++++ b/.avx1/test_check_plan.py
+@@ -0,0 +1,79 @@
++"""Guard against narrowing checks after risky or unrecognized changes."""
++import tempfile
++from pathlib import Path
++import unittest
++from check_plan import select
++
++
++class CheckSelection(unittest.TestCase):
++    def setUp(self):
++        self.temp = tempfile.TemporaryDirectory()
++        self.addCleanup(self.temp.cleanup)
++        self.root = Path(self.temp.name)
++        for p in ['test/core/providers/backend_mode_providers_test.dart',
++                  'test/core/providers/chat_entry_readiness_providers_test.dart',
++                  'test/features/cline/client_test.dart', 'lib/features/cline/client.dart']:
++            path = self.root / p
++            path.parent.mkdir(parents=True, exist_ok=True)
++            path.write_text('', encoding='utf-8')
++
++    def test_native_cline_change_keeps_the_whole_feature_suite(self):
++        mode, tests, _, _ = select(['lib/features/cline/client.dart'], self.root)
++        self.assertEqual(mode, 'targeted')
++        self.assertIn('test/features/cline', tests)
++        self.assertIn('test/core/providers/backend_mode_providers_test.dart', tests)
++
++    def test_changed_shared_or_unknown_inputs_force_full_suite(self):
++        for path in ['pubspec.lock', 'packages/conduit_core/lib/providers/auth.dart',
++                     'packages/conduit_core/lib/utils/unknown.dart',
++                     'android/app/build.gradle.kts', '.avx1/native_arm64.py', '.avx1/toolchains.json', 'unknown.file']:
++            with self.subTest(path=path):
++                self.assertEqual(select([path], self.root)[0], 'full')
++
++    def test_version_gate_uses_specific_core_provider_and_widget_coverage(self):
++        for name in ['packages/conduit_core/test/utils/server_version_compat_test.dart',
++                     'test/core/providers/server_incompatible_provider_test.dart',
++                     'test/shared/widgets/server_version_warning_card_test.dart']:
++            p = self.root / name
++            p.parent.mkdir(parents=True, exist_ok=True)
++            p.write_text('', encoding='utf-8')
++        mode, tests, _, _ = select(['packages/conduit_core/lib/utils/server_version_compat.dart'], self.root)
++        self.assertEqual(mode, 'targeted')
++        self.assertIn('test/shared/widgets/server_version_warning_card_test.dart', tests)
++        self.assertIn('packages/conduit_core/test/utils/server_version_compat_test.dart', tests)
++
++    def test_missing_feature_suite_does_not_silently_skip_tests(self):
++        self.assertEqual(select(['lib/features/new_feature/main.dart'], self.root)[0], 'full')
++
++    def test_unreviewed_build_recipe_forces_full_suite(self):
++        self.assertEqual(select(['.avx1/build.py'], self.root)[0], 'full')
++        self.assertEqual(select(['.avx1/build.py'], self.root, recipe_allowed=True)[0], 'targeted')
++
++    def test_deleted_test_requires_full_suite(self):
++        self.assertEqual(select(['test/features/cline/deleted_test.dart'], self.root)[0], 'full')
++
++    def test_docs_do_not_expand_runtime_coverage(self):
++        mode, tests, _, _ = select(['README.md', '.avx1/measurements/receipt.json'], self.root)
++        self.assertEqual(mode, 'targeted')
++        self.assertEqual(len(tests), 2)
++
++    def test_offline_avatar_assets_keep_voice_regressions(self):
++        p = self.root / 'test/features/chat/voice_mode/test.dart'
++        p.parent.mkdir(parents=True, exist_ok=True)
++        p.write_text('')
++        mode, tests, _, _ = select(['assets/voice_avatar/viewer.html',
++            'tool/voice_avatar/renderer.js', 'pubspec.yaml'], self.root,
++            avatar_assets_only=True)
++        self.assertEqual(mode, 'targeted')
++        self.assertIn('test/features/chat/voice_mode', tests)
++        self.assertEqual(select(['pubspec.yaml'], self.root)[0], 'full')
++
++    def test_feature_folder_does_not_run_its_changed_test_twice(self):
++        mode, tests, _, _ = select(['lib/features/cline/client.dart', 'test/features/cline/client_test.dart'], self.root)
++        self.assertEqual(mode, 'targeted')
++        self.assertIn('test/features/cline', tests)
++        self.assertNotIn('test/features/cline/client_test.dart', tests)
++
++
++if __name__ == '__main__':
++    unittest.main()
+diff --git a/.avx1/test_public_gate.py b/.avx1/test_public_gate.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..47c838c134e28d50bc0af648203721f193559e63
+--- /dev/null
++++ b/.avx1/test_public_gate.py
+@@ -0,0 +1,18 @@
++import unittest
++from common import scan_bytes
++
++
++class PublicGateTests(unittest.TestCase):
++    def test_tailwind_mask_classes_are_not_api_keys(self):
++        scan_bytes(b'.mask-linear-from-transparent-to-transparent{mask-type:luminance}', 'fixture.css')
++
++    def test_real_token_shapes_and_utf16_private_keys_still_fail_closed(self):
++        for prefix, length in ((b'sk-', 48), (b'sk-proj-', 64), (b'ghp_', 40), (b'hf_', 36)):
++            value = b'"' + prefix + b'a' * length + b'"'
++            with self.subTest(prefix=prefix):
++                with self.assertRaises(ValueError): scan_bytes(value, 'credential fixture')
++                with self.assertRaises(ValueError): scan_bytes(value.decode().encode('utf-16-le'), 'UTF16 fixture')
++
++
++if __name__ == '__main__':
++    unittest.main()
+diff --git a/.avx1/toolchains.json b/.avx1/toolchains.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..fba6ab53c8451fd1fd6e73922b23eb26ac3249da
+--- /dev/null
++++ b/.avx1/toolchains.json
+@@ -0,0 +1,19 @@
++{
++  "python": {
++    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261021/cpython-3.12.15%2B20261021-x86_64-pc-windows-msvc-install_only.tar.gz",
++    "sha256": "be7f14464d1d66f84429ad27e01f6d1482963afff64a2fb5256b2a51c7b5d398",
++    "source": "https://github.com/astral-sh/python-build-standalone",
++    "asset": "cpython-3.12.15+20261021-x86_64-pc-windows-msvc-install_only.tar.gz"
++  },
++  "flutter_sha": "737ba8f885dc774b53b442759999a312c9461e4e",
++  "android": {
++    "platform": "platforms;android-37.2",
++    "api_level": 37,
++    "minor_api_level": 2,
++    "build_tools": "build-tools;37.0.0",
++    "commandline_tools": "cmdline-tools;23.0",
++    "ndk": "ndk;29.0.14206865",
++    "metadata": "https://dl.google.com/android/repository/repository2-3.xml"
++  },
++  "flutter_version": "3.47.8"
++}
+diff --git a/.gitattributes b/.gitattributes
+new file mode 100644
+index 0000000000000000000000000000000000000000..7a3bfaee6e584eab99fbc48ba372a01202b247ce
+--- /dev/null
++++ b/.gitattributes
+@@ -0,0 +1,4 @@
++
++README.md merge=ours
++README.ru.md merge=ours
++.avx1/project.json merge=ours
+diff --git a/.github/workflows/avx1-build.yml b/.github/workflows/avx1-build.yml
+new file mode 100644
+index 0000000000000000000000000000000000000000..819201c3a9f8a1e6671c73bf17d3d4c0aac0dd83
+--- /dev/null
++++ b/.github/workflows/avx1-build.yml
+@@ -0,0 +1,94 @@
++name: AVX1 verified candidates
++on:
++  workflow_dispatch:
++    inputs:
++      day:
++        description: Build date YYYYMMDD
++        required: true
++        type: string
++permissions:
++  contents: read
++concurrency:
++  group: avx1-candidates
++  cancel-in-progress: false
++jobs:
++  build:
++    runs-on: ubuntu-24.04
++    timeout-minutes: 180
++    steps:
++      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
++        with:
++          ref: ${{ github.sha }}
++          persist-credentials: false
++      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
++        with:
++          python-version: '3.12.15'
++      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
++        with:
++          node-version: '22'
++      - name: Reclaim unused hosted toolchains for native builds
++        # The avatar viewport is an offline, reproducibly bundled graphics asset.
++        run: |
++          test "$RUNNER_OS" = Linux
++          sudo rm -rf -- /usr/share/dotnet /opt/ghc /usr/local/.ghcup
++      - name: Verify offline avatar renderer and dependency advisories
++        working-directory: tool/voice_avatar
++        run: |
++          npm ci --ignore-scripts --no-fund --no-audit
++          npm audit --omit=dev --audit-level=high
++          npm run build
++          npm test
++          git diff --exit-code -- ../../assets/voice_avatar
++      - name: Install native build tools
++        run: python -m pip install 'cmake>=3.31,<4' ninja
++      - name: Identify native source and toolchain cache
++        id: native-pins
++        run: python .avx1/native_cache_key.py
++      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
++        id: native-cache
++        with:
++          path: |
++            .avx1-work/native/onnxruntime
++            .avx1-work/native/eigen
++            .avx1-work/native/ort-build
++          key: ${{ steps.native-pins.outputs.prefix }}-${{ hashFiles('.avx1/native-arm64.json', '.avx1/native_arm64.py') }}
++          restore-keys: ${{ steps.native-pins.outputs.prefix }}-
++      - name: Install pinned current Android SDK
++        run: python .avx1/android_sdk.py
++      - name: Build, test, audit and package
++        env:
++          BUILD_CHANNEL: latest
++          BUILD_DAY: ${{ inputs.day }}
++          CONDUIT_KEYSTORE_BASE64: ${{ secrets.CONDUIT_KEYSTORE_BASE64 }}
++          CONDUIT_KEYSTORE_PASSWORD: ${{ secrets.CONDUIT_KEYSTORE_PASSWORD }}
++        run: python .avx1/build.py
++      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
++        with:
++          name: candidate-latest
++          path: .avx1-out/*
++          if-no-files-found: error
++          retention-days: 7
++          include-hidden-files: true
++      - name: Upload safe diagnostics
++        if: always()
++        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
++        with:
++          name: diagnostics-latest
++          path: |
++            .avx1-work/pip-audit.json
++            .avx1-work/security-gate.json
++            .avx1-work/native/build-receipt.json
++            .avx1-work/native/ort-build/Release/CMakeCache.txt
++            .avx1-work/native/ort-build/Release/compile_commands.json
++          if-no-files-found: ignore
++          include-hidden-files: true
++          retention-days: 3
++      - name: Preserve native compiler progress for retries
++        if: always() && steps.native-cache.outputs.cache-hit != 'true' && steps.native-cache.outputs.cache-primary-key != ''
++        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
++        with:
++          path: |
++            .avx1-work/native/onnxruntime
++            .avx1-work/native/eigen
++            .avx1-work/native/ort-build
++          key: ${{ steps.native-cache.outputs.cache-primary-key }}
+diff --git a/.gitignore b/.gitignore
+index 81193904c45d84d22a13ab3c802059cdf94a3fc8..f44b762e41524236ecbb0671aba43409bf479024 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -162,3 +162,16 @@ GoogleService-Info.plist
+ !**/ios/**/default.pbxuser
+ !**/ios/**/default.perspectivev3
+ !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
++
++# Fork build outputs and private material
++.avx1-work/
++.avx1-out/
++*.p12
++*.jks
++android/key.properties
++__pycache__/
++*.py[cod]
++remote/private/
++remote/.venv/
++tool/voice_avatar/node_modules/
++.bun-cache/
