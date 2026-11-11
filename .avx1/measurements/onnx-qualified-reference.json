@@ -21,7 +21,7 @@
     "upstream_commit": "7a5391a34721bff7bc22c1eda05538f88d6404bb"
   },
   "compatible_lockfile_sha256": [
-    "c742480d34bf076825af156f0ca480dfb9e5d5c6c66ba9f85a6b94d9a5fecb6b"
+    "1de61500210a0d47b52d36dab1ac681e477d33a21658defc7eaa09a385eb7eda"
   ],
-  "compatible_lockfile_scope": "2026-11-11 mainstream Dart lock refresh; JNI/SQLite/PDFium/WebRTC package versions and archive hashes unchanged. ONNX C/C++ inputs and qualified binary evidence unchanged."
+  "compatible_lockfile_scope": "2026-11-11 Dart lock refresh. JNI/SQLite/PDFium/WebRTC and compatible Android SharedPreferences archives retain qualified versions. ONNX compiler inputs and binary evidence unchanged."
 }

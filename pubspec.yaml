@@ -152,6 +152,7 @@ dependency_overrides:
   # Keep the already qualified Android native ABI and vendor binaries.
   jni: "1.0.3"
   jni_flutter: "1.0.3"
+  shared_preferences_android: "2.4.28"
   sqlite3: "3.6.0"
   flutter_webrtc: "1.6.2+hotfix.4"
   pdfrx: "2.6.1"
