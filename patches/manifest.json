@@ -4,8 +4,8 @@
   "ownership": "applied-downstream-only",
   "project": "conduit",
   "upstream": "c22b3ad2f86bd4dfbb5972c465f046bbb5086a0e",
-  "snapshot_source": "0714096a364126ed236d279732fa2bbb0f36765b",
-  "downstream_tree_without_patches": "acf8454ddfe1214b855ba384742356a4139c9744",
+  "snapshot_source": "2f585dc61cb653c98ab983d62a3e3bf6150d2f3d",
+  "downstream_tree_without_patches": "994351d71b2d42ae4166462cf69b10bd45617fda",
   "groups": [
     {
       "patch": "01-cline-ssh-gateway.patch",
@@ -79,7 +79,7 @@
         "test/features/navigation/widgets/sidebar_page_test.dart",
         "test/features/navigation/widgets/sidebar_workspace_tabs_test.dart"
       ],
-      "sha256": "a0fa6e489e889c52eacd25d6dce507a0711a0aded1072180e5bcda7b34bcd639"
+      "sha256": "13a9bcea5eac40c3b363cec7538b874ed4b9fe6ebf7a2fc550e3a940c6b95741"
     },
     {
       "patch": "04-voice-vrm.patch",
@@ -260,7 +260,7 @@
   "files": {
     "01-cline-ssh-gateway.patch": "0e7af9805e42f895892ee07c81efccf727120df040bda2022b16e33769096b7a",
     "02-cline-client.patch": "2e4d9937e92f6c74b761bf8b3910da4096e4387ac41ae0e54d3d2c26280e74c4",
-    "03-cline-navigation.patch": "a0fa6e489e889c52eacd25d6dce507a0711a0aded1072180e5bcda7b34bcd639",
+    "03-cline-navigation.patch": "13a9bcea5eac40c3b363cec7538b874ed4b9fe6ebf7a2fc550e3a940c6b95741",
     "04-voice-vrm.patch": "4828657633429e3148e652b5e06ea330e1ce6d28a75dfa85870766f693ecf367",
     "05-provider-compatibility.patch": "50b478febb1300fb6c7104a9344f871df0a711623ad00ec304abb9652358ecab",
     "06-chat-persistence.patch": "5d281faa968b3604d23faba2fe14d076e6e09e06b1e3eeeb6831df2e3150a023",
@@ -273,6 +273,6 @@
     "13-fork-records.patch": "10d25f732aec0e27ebe9ab74ecb2b6bacc505c00a3b35e6486b6d11be572c530",
     ".gitattributes": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",
     "series": "8225bb5291e2e2e00fcf2cbbbabe94eeaaf07bc596564f383d1bee6a45cb0554",
-    "README.md": "11170a404fff05c87c74704bbae8e2e1bd1df3ae8629c1e2a8de5909ad04563b"
+    "README.md": "7d69489d4aa29a2dda998deb86973c5e89737e99fea443b861e9be6b727be097"
   }
 }

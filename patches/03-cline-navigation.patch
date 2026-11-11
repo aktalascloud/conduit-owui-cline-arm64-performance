@@ -2706,7 +2706,7 @@ index 83c383f1554ecf80530e951ae55c1ab6ff809175..cdb12062d6fc838fbd14e279c5986acf
          routerConfig: router,
 diff --git a/test/features/cline/cline_backend_routing_test.dart b/test/features/cline/cline_backend_routing_test.dart
 new file mode 100644
-index 0000000000000000000000000000000000000000..2fc932b0388f5c6eb91a55fd391df2d3fdcaa4ab
+index 0000000000000000000000000000000000000000..e05ac5019655744a27e1a4b5d88720d25971342e
 --- /dev/null
 +++ b/test/features/cline/cline_backend_routing_test.dart
 @@ -0,0 +1,49 @@
@@ -2721,7 +2721,7 @@ index 0000000000000000000000000000000000000000..2fc932b0388f5c6eb91a55fd391df2d3
 +import 'package:conduit_core/models/server_config.dart';
 +import 'package:conduit_core/providers/app_providers.dart';
 +import 'package:conduit_core/providers/backend_mode_providers.dart';
-+import 'package:conduit_core/providers/primary_account_providers.dart';
++import 'package:conduit_core/providers/primary_account_switcher.dart';
 +
 +class _ClinePreferred extends PreferredBackendController {
 +  @override
