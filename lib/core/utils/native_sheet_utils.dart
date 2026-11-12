@@ -23,6 +23,10 @@ import 'package:conduit_core/providers/app_providers.dart'
 
 import '../../features/hermes/widgets/hermes_connection_switcher.dart'
     show hermesConnectionSummary;
+import 'package:conduit_core/features/push/models/push_status.dart';
+import 'package:conduit_core/features/push/models/push_target.dart';
+import '../../features/push/widgets/push_target_actions.dart'
+    show pushStatusText, pushTargetBusy, pushTargetNeedsAttention;
 import 'account_display.dart';
 import 'message_action_settings.dart';
 import 'tts_voice_utils.dart';
@@ -110,6 +114,7 @@ class NativeProfileRootVisibility {
     this.showScheduledTasks = false,
     this.showPersonalConnections = false,
     this.showChatDataControls = false,
+    this.showNotificationsWithoutAccount = false,
     this.showLibreChatPersonalization = false,
   });
 
@@ -118,6 +123,10 @@ class NativeProfileRootVisibility {
   final bool showScheduledTasks;
   final bool showPersonalConnections;
   final bool showChatDataControls;
+
+  /// Whether Notifications is listed when there is no Open WebUI account
+  /// (with one it always is): a Hermes connection is saved, or push is on.
+  final bool showNotificationsWithoutAccount;
 
   /// LibreChat is in charge, with no Open WebUI account: its memories are
   /// on the Flutter Personalization page, as the Flutter Settings page has
@@ -132,6 +141,8 @@ class NativeProfileRootVisibility {
       other.showScheduledTasks == showScheduledTasks &&
       other.showPersonalConnections == showPersonalConnections &&
       other.showChatDataControls == showChatDataControls &&
+      other.showNotificationsWithoutAccount ==
+          showNotificationsWithoutAccount &&
       other.showLibreChatPersonalization == showLibreChatPersonalization;
 
   @override
@@ -141,6 +152,7 @@ class NativeProfileRootVisibility {
     showScheduledTasks,
     showPersonalConnections,
     showChatDataControls,
+    showNotificationsWithoutAccount,
     showLibreChatPersonalization,
   );
 }
@@ -189,6 +201,11 @@ List<NativeSheetSectionConfig> buildNativeProfileRootSections(
   int? otherAccountCount = 0,
 }) {
   final hasAccount = account != null;
+  final notificationsItem = NativeSheetItemConfig(
+    id: NativeSheetRoutes.notificationSettings,
+    title: l10n.notificationsTitle,
+    sfSymbol: 'bell',
+  );
   final cardItems = <NativeSheetItemConfig>[
     NativeSheetItemConfig(
       id: hasAccount ? NativeSheetRoutes.profile : nativeAccountsDetailId,
@@ -219,11 +236,7 @@ List<NativeSheetSectionConfig> buildNativeProfileRootSections(
   // system symbol's header is solid.
   final accountItems = <NativeSheetItemConfig>[
     if (hasAccount) ...[
-      NativeSheetItemConfig(
-        id: NativeSheetRoutes.notificationSettings,
-        title: l10n.notificationsTitle,
-        sfSymbol: 'bell',
-      ),
+      notificationsItem,
       NativeSheetItemConfig(
         id: NativeSheetRoutes.aiMemory,
         title: nativeAiMemoryTitle(l10n),
@@ -263,6 +276,10 @@ List<NativeSheetSectionConfig> buildNativeProfileRootSections(
       title: l10n.voice,
       sfSymbol: 'waveform',
     ),
+    // Device-level notifications, as the Flutter Settings page lists them
+    // without an account.
+    if (!hasAccount && visibility.showNotificationsWithoutAccount)
+      notificationsItem,
   ];
   // Everyday server places: things to open and use, not to configure.
   final placeItems = <NativeSheetItemConfig>[
@@ -1441,6 +1458,115 @@ NativeSheetSectionConfig buildNativeNotificationTargetsSection(
   return NativeSheetSectionConfig(
     footer: l10n.notificationTargetsDescription,
     items: [buildNativeNotificationTargetsItem(l10n, count: count)],
+  );
+}
+
+/// Control id of the native push switch.
+const nativePushEnabledId = 'push-enabled';
+
+/// Control id a native push target row sends, with the target's scope as its
+/// value, to open that target's Flutter detail sheet.
+const nativePushTargetActionId = 'push-target';
+
+/// Control id the native "How push stays private" row sends.
+const nativePushPrivacyActionId = 'push-privacy';
+
+/// The Push notifications group of the native Notifications sheet: the
+/// switch, and while push is on, a row into the per-target detail. [push] is
+/// null where push was never turned on.
+NativeSheetSectionConfig buildNativePushSection(
+  AppLocalizations l10n,
+  PushState? push,
+) {
+  final available = push?.available ?? true;
+  final enabled = push?.enabled ?? false;
+  // On while push can no longer work here, the switch still turns it off.
+  final switchable = available || enabled;
+  final attention = [
+    for (final target in push?.targets.values ?? const <PushTargetState>[])
+      if (pushTargetNeedsAttention(target)) target,
+  ];
+  return NativeSheetSectionConfig(
+    title: l10n.pushSectionTitle,
+    items: [
+      NativeSheetItemConfig(
+        id: nativePushEnabledId,
+        title: l10n.pushEnabledTitle,
+        subtitle: available
+            ? l10n.pushEnabledDescription
+            : l10n.pushUnavailableBuild,
+        sfSymbol: 'bell.badge',
+        kind: switchable
+            ? NativeSheetItemKind.toggle
+            : NativeSheetItemKind.info,
+        value: enabled,
+      ),
+      if (enabled && push != null)
+        NativeSheetItemConfig(
+          id: NativeSheetRoutes.pushTargets,
+          // Each account and connection, with its push status.
+          title: l10n.accountsTitle,
+          subtitle: attention.isEmpty
+              ? null
+              : l10n.pushAttentionChip,
+          sfSymbol: attention.isEmpty
+              ? 'checkmark.circle'
+              : 'exclamationmark.triangle',
+        ),
+      NativeSheetItemConfig(
+        id: nativePushPrivacyActionId,
+        title: l10n.pushPrivacyTitle,
+        sfSymbol: 'lock.shield',
+        dismissOnSelect: true,
+        actionId: nativePushPrivacyActionId,
+      ),
+    ],
+  );
+}
+
+/// The native list of push targets: each row says its status and opens the
+/// target's Flutter detail sheet, which has the one-tap fixes.
+NativeSheetDetailConfig buildNativePushTargetsDetail(
+  AppLocalizations l10n,
+  PushState push, {
+  required String Function(PushTarget target) titleOf,
+}) {
+  NativeSheetItemConfig row(PushTargetState target) => NativeSheetItemConfig(
+    id: '$nativePushTargetActionId:${target.scope}',
+    title: titleOf(target.target),
+    subtitle: pushStatusText(l10n, target),
+    sfSymbol: pushTargetBusy(target)
+        ? 'hourglass'
+        : pushTargetNeedsAttention(target)
+        ? 'exclamationmark.triangle'
+        : target.status == PushStatus.on
+        ? 'checkmark.circle'
+        : 'bell.slash',
+    dismissOnSelect: true,
+    actionId: nativePushTargetActionId,
+    actionValue: target.scope,
+  );
+
+  return NativeSheetDetailConfig(
+    id: NativeSheetRoutes.pushTargets,
+    title: l10n.accountsTitle,
+    sections: [
+      if (push.enabled && push.permissionDenied)
+        NativeSheetSectionConfig(
+          items: [
+            NativeSheetItemConfig(
+              id: 'push-permission-denied',
+              title: l10n.pushStatusPermissionDenied,
+              subtitle: l10n.pushExplainPermissionDenied,
+              sfSymbol: 'bell.slash',
+              kind: NativeSheetItemKind.info,
+            ),
+          ],
+        ),
+      NativeSheetSectionConfig(
+        items: [for (final target in push.targets.values) row(target)],
+      ),
+    ],
   );
 }
 

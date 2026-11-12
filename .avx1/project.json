@@ -7,7 +7,7 @@
   "description": "Conduit for OWUI + Cline: signed ARM64 APK, SSH access to Cline sessions/projects, O3 ThinLTO native libraries; extended Russian UI / дополненный русский перевод.",
   "repository": "aktalascloud/conduit-owui-cline-arm64-performance",
   "channel": "latest",
-  "upstream_commit": "c22b3ad2f86bd4dfbb5972c465f046bbb5086a0e",
+  "upstream_commit": "f9655575c92297161d0099d8a5a1f0eb9525d0d2",
   "stable_tag": "v4.3.1",
   "distribution": "single unified latest"
 }

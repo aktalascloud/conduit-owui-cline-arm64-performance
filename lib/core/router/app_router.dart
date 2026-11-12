@@ -49,6 +49,7 @@ import '../../features/profile/views/profile_page.dart';
 import '../../features/cline/views/cline_remote_page.dart';
 import '../../features/cline/views/cline_workspace_page.dart';
 import '../../features/notifications/views/notification_settings_page.dart';
+import '../../features/push/views/push_privacy_page.dart';
 import '../../features/workspace/views/workspace_page.dart';
 import '../../features/workspace/workspace_navigation.dart';
 
@@ -460,6 +461,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         state: state,
         child: const NotificationSettingsPage(),
       ),
+    ),
+    GoRoute(
+      path: Routes.pushPrivacy,
+      name: RouteNames.pushPrivacy,
+      pageBuilder: (context, state) =>
+          _buildPlatformPage(state: state, child: const PushPrivacyPage()),
     ),
     GoRoute(
       path: Routes.personalConnections,

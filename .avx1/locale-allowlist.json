@@ -44,5 +44,8 @@
   "directMcpAuthOAuth": "OAuth",
   "calendarRangeLabel": "{start} – {end}",
   "chatComparisonSlotLabel": "{model} · {number}",
-  "libreChatTitle": "LibreChat"
+  "libreChatTitle": "LibreChat",
+  "pushDeliveryFcm": "Google (FCM)",
+  "pushDeliveryUnifiedPush": "UnifiedPush",
+  "pushPrivacyUnifiedPushTitle": "UnifiedPush"
 }
