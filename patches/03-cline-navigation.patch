@@ -78,7 +78,7 @@ index 0000000000000000000000000000000000000000..3e502d53fc1a0cfeaf64474a5073c369
 +  assert.equal(voice.emoji('спасибо'), '😊');
 +});
 diff --git a/lib/core/router/app_router.dart b/lib/core/router/app_router.dart
-index 477a79c839d42513cfd950ffffbca985c9db02e4..79223504e5a3a7e5d3fcf6ca0a744e7489101224 100644
+index c918b307366b45307b2f830e94ae478c333b5746..594d9f05ca93d1b7d230885d4aa0d58edc9f4397 100644
 --- a/lib/core/router/app_router.dart
 +++ b/lib/core/router/app_router.dart
 @@ -46,6 +46,8 @@ import '../../features/hermes/views/hermes_hidden_sessions_page.dart';
@@ -88,9 +88,9 @@ index 477a79c839d42513cfd950ffffbca985c9db02e4..79223504e5a3a7e5d3fcf6ca0a744e74
 +import '../../features/cline/views/cline_remote_page.dart';
 +import '../../features/cline/views/cline_workspace_page.dart';
  import '../../features/notifications/views/notification_settings_page.dart';
+ import '../../features/push/views/push_privacy_page.dart';
  import '../../features/workspace/views/workspace_page.dart';
- import '../../features/workspace/workspace_navigation.dart';
-@@ -344,6 +346,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
+@@ -345,6 +347,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
        pageBuilder: (context, state) =>
            _buildPlatformPage(state: state, child: const ProfilePage()),
      ),
@@ -2298,10 +2298,10 @@ index 1c2d3a653a106fa912a09c6b2f0250d5953c3c57..7cd0f7b23b558cce28cdd9c1c350abdd
      return SidebarTabId.notes;
    }
 diff --git a/lib/features/profile/views/manage_accounts_page.dart b/lib/features/profile/views/manage_accounts_page.dart
-index 7da9fc128edfb94d67a8d31897637e05e89a05d0..0954964b9c43ac99d678eef53489001c9f413bc3 100644
+index b03feac7c1a8f99d468c148b09be6318dcf6163a..c9e28d604e85eaa216ca2526e67fed5e2a735217 100644
 --- a/lib/features/profile/views/manage_accounts_page.dart
 +++ b/lib/features/profile/views/manage_accounts_page.dart
-@@ -55,6 +55,24 @@ class ManageAccountsPage extends ConsumerWidget {
+@@ -57,6 +57,24 @@ class ManageAccountsPage extends ConsumerWidget {
              settingsSectionGap,
            ],
          ),
@@ -2327,10 +2327,10 @@ index 7da9fc128edfb94d67a8d31897637e05e89a05d0..0954964b9c43ac99d678eef53489001c
          const _HermesCard(),
          settingsSectionGap,
 diff --git a/lib/features/profile/views/profile_page.dart b/lib/features/profile/views/profile_page.dart
-index 83ec8d763bed0eb773e172e44c3695f8d926f75d..f62505e539c3602e8e69c39aee8fc9a8e333336f 100644
+index 6503c1735e0eee45202eb768bb4249b6df41fdb8..a8230329819112574974d62f79acc781bc169c87 100644
 --- a/lib/features/profile/views/profile_page.dart
 +++ b/lib/features/profile/views/profile_page.dart
-@@ -448,6 +448,14 @@ class ProfilePage extends ConsumerWidget {
+@@ -456,6 +456,14 @@ class ProfilePage extends ConsumerWidget {
      // Single-line settings rows, so each title and its
      // icon carry the meaning without a descriptive subtitle.
      final appItems = <Widget>[
@@ -2346,10 +2346,10 @@ index 83ec8d763bed0eb773e172e44c3695f8d926f75d..f62505e539c3602e8e69c39aee8fc9a8
          context,
          icon: UiUtils.platformIcon(
 diff --git a/lib/main.dart b/lib/main.dart
-index 30bfecfe5eedbba1c6edbf4e6aef8bde49df9686..4b936961e6997ca101e0ed16df5ff0ddbff37c70 100644
+index c0dd83cbc9128e1ae51960f6e3d582e15b878374..4e311f1d5a04b84a089c7b0936968d3874b7e365 100644
 --- a/lib/main.dart
 +++ b/lib/main.dart
-@@ -1138,6 +1138,10 @@ class _ConduitAppState extends ConsumerState<ConduitApp> {
+@@ -1177,6 +1177,10 @@ class _ConduitAppState extends ConsumerState<ConduitApp> {
        }
  
        switch (event.id) {
@@ -2429,7 +2429,7 @@ index a63b805cceb5e5f8108b0b424afae3845c175639..9e513b29755adfdef4560403a6f85090
  /// Data-only capability snapshot used to decide which destinations exist.
  @immutable
 diff --git a/packages/conduit_core/lib/navigation/route_redirect.dart b/packages/conduit_core/lib/navigation/route_redirect.dart
-index 7c3cc5435229ed17577c2d6140d25115b1e0e957..e5af5c7e53b7b9bca9e164aaa1e9901d115f0e57 100644
+index 5434ba4a9ce45ff3d3a1b84caadf391b0f9749d6..bacac572251227bd53c839efff25e9f90dcb22c1 100644
 --- a/packages/conduit_core/lib/navigation/route_redirect.dart
 +++ b/packages/conduit_core/lib/navigation/route_redirect.dart
 @@ -54,6 +54,7 @@ bool isHermesOnlyAppLocation(String location) =>
@@ -2440,7 +2440,7 @@ index 7c3cc5435229ed17577c2d6140d25115b1e0e957..e5af5c7e53b7b9bca9e164aaa1e9901d
        // The saved accounts are on the device: switching to one still
        // signed in needs no session on the active account.
        location == Routes.accounts ||
-@@ -131,6 +132,20 @@ String? resolveRouteRedirect(String location, ProviderRead read) {
+@@ -135,6 +136,20 @@ String? resolveRouteRedirect(String location, ProviderRead read) {
    final activeServerAsync = read(activeServerProvider);
    final authState = read(authNavigationStateProvider);
    final preferredBackend = read(preferredBackendProvider);
@@ -2461,7 +2461,7 @@ index 7c3cc5435229ed17577c2d6140d25115b1e0e957..e5af5c7e53b7b9bca9e164aaa1e9901d
    final hermesConfig = read(hermesConfigProvider);
    final hermesUsable = hermesConfig.isUsable;
    final hermesSecretsLoading = read(hermesSecretsLoadingProvider);
-@@ -147,6 +162,7 @@ String? resolveRouteRedirect(String location, ProviderRead read) {
+@@ -151,6 +166,7 @@ String? resolveRouteRedirect(String location, ProviderRead read) {
    );
    final isLocalBackendSetup =
        location == Routes.backendChooser ||
@@ -2470,7 +2470,7 @@ index 7c3cc5435229ed17577c2d6140d25115b1e0e957..e5af5c7e53b7b9bca9e164aaa1e9901d
        isHermesSettingsLocation(location) ||
        isDirectConnectionsLocation(location);
 diff --git a/packages/conduit_core/lib/navigation/routes.dart b/packages/conduit_core/lib/navigation/routes.dart
-index 51130550b2c434cbc88cad83c0d81e5791c6b82c..bd791057f1988c7e02a345ed59232828f3307b86 100644
+index 52aa5e2e11a61689e060fb2866d1dee53ab40222..9c69f3f8cd2ec96fc592f40dba83de31d92ec1ef 100644
 --- a/packages/conduit_core/lib/navigation/routes.dart
 +++ b/packages/conduit_core/lib/navigation/routes.dart
 @@ -19,6 +19,9 @@ class Routes {
@@ -2483,7 +2483,7 @@ index 51130550b2c434cbc88cad83c0d81e5791c6b82c..bd791057f1988c7e02a345ed59232828
    static const String personalization = '/profile/personalization';
    static const String audioSettings = '/profile/audio';
    static const String voiceProviderSettings = '/profile/audio/voice-provider';
-@@ -78,6 +81,7 @@ class Routes {
+@@ -79,6 +82,7 @@ class Routes {
  
  /// Friendly names for GoRouter routes to support context.pushNamed.
  class RouteNames {
@@ -2491,7 +2491,7 @@ index 51130550b2c434cbc88cad83c0d81e5791c6b82c..bd791057f1988c7e02a345ed59232828
    static const String splash = 'splash';
    static const String chat = 'chat';
    static const String folder = 'folder';
-@@ -91,6 +95,7 @@ class RouteNames {
+@@ -92,6 +96,7 @@ class RouteNames {
    static const String ssoAuth = 'sso-auth';
    static const String proxyAuth = 'proxy-auth';
    static const String profile = 'profile';

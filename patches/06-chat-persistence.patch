@@ -1,5 +1,5 @@
 diff --git a/packages/conduit_core/lib/database/daos/outbox_dao.dart b/packages/conduit_core/lib/database/daos/outbox_dao.dart
-index eb98cad140fee9e8578616fe364063aa21c3601d..d3148e022d25f475ae0d1b76a1ee28c28a99cfb6 100644
+index 40ecadb5a6b133b5a05857d722305869cdf9eaba..c3ab610b79e00ac06389808c7eb27a3049580ee1 100644
 --- a/packages/conduit_core/lib/database/daos/outbox_dao.dart
 +++ b/packages/conduit_core/lib/database/daos/outbox_dao.dart
 @@ -485,6 +485,19 @@ class OutboxDao extends DatabaseAccessor<AppDatabase> with _$OutboxDaoMixin {
@@ -45,7 +45,7 @@ index eb98cad140fee9e8578616fe364063aa21c3601d..d3148e022d25f475ae0d1b76a1ee28c2
          ? null
          : await attachedDatabase.chatsDao.getChatParams(op.chatId!);
      final frozen = OpenWebUiChatSettingsSnapshot(
-@@ -828,7 +842,10 @@ class OutboxDao extends DatabaseAccessor<AppDatabase> with _$OutboxDaoMixin {
+@@ -843,7 +857,10 @@ class OutboxDao extends DatabaseAccessor<AppDatabase> with _$OutboxDaoMixin {
              survivorSeq: update.seq,
              mergedPayload: payload.isEmpty
                  ? null
@@ -180,7 +180,7 @@ index c5446bfcb9231e7f13a7ca142b5933c1d9ad6732..8a7f891f28c507485e6ac98db2c94c7a
      ..remove('timestamp')
      ..remove('id');
 diff --git a/packages/conduit_core/lib/sync/pull_sync.dart b/packages/conduit_core/lib/sync/pull_sync.dart
-index b0416a060b47445e43f87416cc37407f7b4b26a1..c98179dc37cb79c65f0ab4221ca07599e7ad7ef0 100644
+index 61efa7e90d73c298d0115dc5388ef954a88c4cd7..104ebf549359d7c600ca18793e38aab723135626 100644
 --- a/packages/conduit_core/lib/sync/pull_sync.dart
 +++ b/packages/conduit_core/lib/sync/pull_sync.dart
 @@ -281,6 +281,9 @@ class PullSync {
@@ -193,7 +193,7 @@ index b0416a060b47445e43f87416cc37407f7b4b26a1..c98179dc37cb79c65f0ab4221ca07599
  
    /// [ChatsDao.modelListVersion] when each raw response was requested.
    final _modelListVersionsAtFetch = Expando<int>();
-@@ -823,14 +826,55 @@ class PullSync {
+@@ -886,14 +889,55 @@ class PullSync {
      final hasPendingCreate =
          hasPendingCreateHashes ??
          await _db.outboxDao.hasPendingCreateContentHashes();
@@ -251,7 +251,7 @@ index b0416a060b47445e43f87416cc37407f7b4b26a1..c98179dc37cb79c65f0ab4221ca07599
      if (op == null) return false;
      final localId = op.chatId;
      if (localId == null) {
-@@ -898,6 +942,17 @@ class PullSync {
+@@ -961,6 +1005,17 @@ class PullSync {
      return healed;
    }
  
@@ -270,7 +270,7 @@ index b0416a060b47445e43f87416cc37407f7b4b26a1..c98179dc37cb79c65f0ab4221ca07599
      final id = item['id'];
      final updatedAt = _asEpochSeconds(item['updated_at']);
 diff --git a/packages/conduit_core/lib/sync/push_sync.dart b/packages/conduit_core/lib/sync/push_sync.dart
-index bcbc54b5e31464548d6d1d45ada7daa2c4968234..bc24ae383840915c48936f8e61bf569ccf7a6681 100644
+index 065473a0ae3b8f66afb83aa109e3c4202c5c82cf..a2c579d10a5e7980c8bd2b197de4d73ae881ef81 100644
 --- a/packages/conduit_core/lib/sync/push_sync.dart
 +++ b/packages/conduit_core/lib/sync/push_sync.dart
 @@ -7,6 +7,7 @@ import 'package:conduit_core/database/mappers/chat_blob_mapper.dart';
@@ -281,7 +281,7 @@ index bcbc54b5e31464548d6d1d45ada7daa2c4968234..bc24ae383840915c48936f8e61bf569c
  
  import 'package:conduit_core/sync/chat_locks.dart';
  
-@@ -107,7 +108,8 @@ class PushSync {
+@@ -112,7 +113,8 @@ class PushSync {
        }
        final messages = await _db.messagesDao.getForChat(localId);
        final rows = chatRowsFromDb(chat, messages);
@@ -291,7 +291,7 @@ index bcbc54b5e31464548d6d1d45ada7daa2c4968234..bc24ae383840915c48936f8e61bf569c
        if (chat.folderId != null && chat.folderId!.startsWith('local:')) {
          DebugLogger.log(
            'create-defer-local-folder',
-@@ -211,7 +213,7 @@ class PushSync {
+@@ -217,7 +219,7 @@ class PushSync {
        final messages = await _db.messagesDao.getForChat(chatId);
        final capturedMessageIds = [for (final m in messages) m.id];
        final rows = chatRowsFromDb(chat, messages);
@@ -696,10 +696,10 @@ index d87dea7ca6c99457e70603ab94ffbdf16681ad71..82692584cdc1665367ec373cf01d1f6e
    });
  
 diff --git a/packages/conduit_core/test/sync/push_sync_test.dart b/packages/conduit_core/test/sync/push_sync_test.dart
-index 3725a7fe12699a2510bd5199a8797d1102e5f0e0..bd7fa998294312ee349dd08a3f12387df61b85b2 100644
+index b8ab502e6fde6ade2e0e680d2cb9c67d8b250390..990740fabfe1a145b5acc33905b3e4e16f010fd5 100644
 --- a/packages/conduit_core/test/sync/push_sync_test.dart
 +++ b/packages/conduit_core/test/sync/push_sync_test.dart
-@@ -14,6 +14,8 @@ import 'package:drift/native.dart';
+@@ -18,6 +18,8 @@ import 'package:drift/native.dart';
  import 'package:test/test.dart';
  
  import 'package:conduit_core/testing.dart';
@@ -708,7 +708,7 @@ index 3725a7fe12699a2510bd5199a8797d1102e5f0e0..bd7fa998294312ee349dd08a3f12387d
  
  class FakeSyncClock implements SyncClock {
    int now = 0;
-@@ -21,6 +23,28 @@ class FakeSyncClock implements SyncClock {
+@@ -25,6 +27,28 @@ class FakeSyncClock implements SyncClock {
    int nowEpochSeconds() => now;
  }
  
@@ -737,7 +737,7 @@ index 3725a7fe12699a2510bd5199a8797d1102e5f0e0..bd7fa998294312ee349dd08a3f12387d
  class _DeleteAfterArchiveToggleClient extends FakeSyncApiClient {
    _DeleteAfterArchiveToggleClient(super.server);
  
-@@ -201,6 +225,100 @@ void main() {
+@@ -287,6 +311,100 @@ void main() {
    });
  
    group('pushCreateChat', () {

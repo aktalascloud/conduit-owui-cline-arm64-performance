@@ -5309,7 +5309,7 @@ index 0be912dbedf5db0ff834e2e853b5b2676985b0c3..087015f8b01fcfbad86fc02d3c16e71f
        filePath: filePath,
        fileName: fileName,
 diff --git a/lib/core/services/native_sheet_bridge.dart b/lib/core/services/native_sheet_bridge.dart
-index f6c678c3db146675e9c7b28b066f69ef0f4bcaaf..7bbd8d9d48ada8a64ee829da0cbecb12dfe389f3 100644
+index 6c65deb2679604edb14163720b31c08537d60f27..42b171a87f2388b14a162900ef340af033e1faf9 100644
 --- a/lib/core/services/native_sheet_bridge.dart
 +++ b/lib/core/services/native_sheet_bridge.dart
 @@ -118,6 +118,7 @@ class NativeSheetRoutes {
@@ -5321,10 +5321,10 @@ index f6c678c3db146675e9c7b28b066f69ef0f4bcaaf..7bbd8d9d48ada8a64ee829da0cbecb12
    static const personalConnections = 'open-personal-connections';
    static const scheduledTasks = 'open-scheduled-tasks';
 diff --git a/lib/core/utils/native_sheet_utils.dart b/lib/core/utils/native_sheet_utils.dart
-index f7bebaefc1ec5d5f2e3c4ed9d79e7f358ef9d12a..a07e552c86ec527d3b7567fc0f31d75413c6901a 100644
+index e1377614956793fd5511f1b3c136da5b18eaf195..26aa120ecb4e785c3ec6c841047669932faa2a3d 100644
 --- a/lib/core/utils/native_sheet_utils.dart
 +++ b/lib/core/utils/native_sheet_utils.dart
-@@ -495,6 +495,15 @@ NativeSheetDetailConfig buildNativeAccountsDetail(
+@@ -512,6 +512,15 @@ NativeSheetDetailConfig buildNativeAccountsDetail(
          ),
        NativeSheetSectionConfig(
          items: [

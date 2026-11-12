@@ -1,8 +1,8 @@
 diff --git a/README.md b/README.md
-index b834717cb8c68222892a268619eca2e9fc6a0a47..f89155c92caf10e54fd0ce7d13bf65e1d07301fb 100644
+index 04b2e0aed11231489bd52e3e05b52610ddf93bed..f89155c92caf10e54fd0ce7d13bf65e1d07301fb 100644
 --- a/README.md
 +++ b/README.md
-@@ -1,365 +1,38 @@
+@@ -1,368 +1,38 @@
 -<h1 align="center">Conduit</h1>
 +# Conduit OWUI + Cline ARM64
  
@@ -305,11 +305,14 @@ index b834717cb8c68222892a268619eca2e9fc6a0a47..f89155c92caf10e54fd0ce7d13bf65e1
 -  Android.
 -- No third-party analytics or advertising SDKs.
 -- Diagnostic logging is local and transient.
--- No developer-operated backend receives your data. Traffic goes from your
--  device to the server or provider you configured. Optional push notifications
--  are encrypted on your own server and pass through an open-source relay that
--  cannot read them ([what each party sees](docs/push/THREAT_MODEL.md)).
--  On Android you can use UnifiedPush instead and skip the relay.
+-- No developer-operated backend receives your chats or other content. Traffic
+-  goes from your device to the server or provider you configured. The one
+-  developer-operated service is for optional push notifications: they are
+-  encrypted on your own server and pass through an open-source relay we run,
+-  which cannot read them and sees only delivery details such as your server's
+-  IP address and the time
+-  ([what each party sees](docs/push/THREAT_MODEL.md)). On Android you can use
+-  UnifiedPush instead and skip the relay.
 -- Signing out lets you choose what stays behind. Clearing everything clears
 -  on-device chats too, and fails safely rather than half-deleting.
 -
