@@ -7396,6 +7396,7 @@
   "directImagesPerRequestSaveFailed": "Nie udało się zapisać ustawienia Obrazy na żądanie. Spróbuj ponownie.",
   "directModelTooManyImages": "Ten model przyjmuje mniej obrazów na żądanie, niż wysłał ten czat. Zmniejsz Obrazy na żądanie w ustawieniach Połączeń bezpośrednich, a następnie spróbuj ponownie. Jeśli już sama ta wiadomość ma więcej obrazów, niż model przyjmuje, wyślij ją ponownie z mniejszą liczbą obrazów.",
   "directToolLoopNoAnswer": "Model wciąż używał narzędzi, nie udzielając odpowiedzi. Spróbuj ponownie lub wyłącz wyszukiwanie w sieci i narzędzia.",
+  "heldReplyStillRunning": "Serwer wciąż pracuje nad tą odpowiedzią. Otwórz ten czat ponownie później, aby ją zobaczyć.",
   "directContextLimitOllamaNote": "W przypadku modeli Ollama na własnym serwerze wybrany tutaj limit jest też rozmiarem okna kontekstu, z jakim Ollama ładuje model. Większe okno zużywa więcej pamięci.",
   "directContextCompactionModelCount": "{count, plural, one{{count} model} few{{count} modele} many{{count} modeli} other{{count} modelu}}",
   "@directContextCompactionModelCount": {
@@ -9603,6 +9604,38 @@
   "hermesJobCreatedNotifyFailed": "Utworzono zadanie, ale nie udało się włączyć dla niego powiadomień.",
   "hermesJobUpdatedNotifyFailed": "Zapisano zadanie, ale nie udało się zmienić jego powiadomień.",
   "hermesJobNotifyNeedsScheduled": "Aby z tego korzystać, włącz Zaplanowane zadania w Powiadomieniach.",
+  "hermesShowScheduledRuns": "Pokazuj zaplanowane uruchomienia",
+  "hermesShowScheduledRunsDescription": "Każde uruchomienie zaplanowanego agenta tworzy osobny czat. Wyłącz to, aby pominąć te czaty na liście Hermes. Przypięte pozostaną.",
+  "hermesScheduledRunsHidden": "{count, plural, one{Ukryto 1 zaplanowane uruchomienie} few{Ukryto {count} zaplanowane uruchomienia} many{Ukryto {count} zaplanowanych uruchomień} other{Ukryto {count} zaplanowanego uruchomienia}}",
+  "@hermesScheduledRunsHidden": {
+    "description": "Row in the Hermes chat list, shown while Show Scheduled Runs is off, saying how many chats that scheduled agents started were left out of the list.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "hermesShowScheduledRunsAction": "Pokaż",
+  "voiceCallLibreChatUnavailable": "Połączenia głosowe nie są dostępne w czatach LibreChat.",
+  "messageHintTextForModel": "Zapytaj {modelName}",
+  "@messageHintTextForModel": {
+    "description": "Placeholder in the chat message input naming the chat's selected model (its display name, cut short with an ellipsis after 24 characters). Falls back to messageHintText when no model is chosen.",
+    "placeholders": {
+      "modelName": {
+        "type": "String",
+        "example": "Research Assistant"
+      }
+    }
+  },
+  "showModelNameInComposer": "Pokazuj nazwę modelu w polu wiadomości",
+  "@showModelNameInComposer": {
+    "description": "Switch in Settings > Chat, with the message box settings: whether the empty message box names the selected model instead of Conduit."
+  },
+  "showModelNameInComposerDescription": "Puste pole wiadomości podaje nazwę wybranego modelu zamiast Conduit.",
+  "@showModelNameInComposerDescription": {
+    "description": "Explains the Show Model Name in Message Box switch in Settings > Chat."
+  },
   "clineRemoteTitle": "Cline przez SSH",
   "clineRemoteDescription": "Connect to your PC through an encrypted SSH tunnel. Agent sessions and project files stay on the PC. Import the private connection document created there.",
   "clineImportConnection": "Import connection",

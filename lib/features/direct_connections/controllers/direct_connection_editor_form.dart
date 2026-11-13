@@ -45,6 +45,7 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
   String _adapterKey = kOpenAiCompatibleAdapterKey;
   String _providerPreset = kOpenAiCompatibleAdapterKey;
   DirectOpenAiApiMode _openAiApiMode = DirectOpenAiApiMode.chatCompletions;
+  bool _openAiApiModePicked = false;
   DirectAuthenticationMode _authentication = DirectAuthenticationMode.bearer;
   bool _enabled = true;
   bool _apiKeyDirty = false;
@@ -113,6 +114,7 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
       if (profile == null) {
         name.text = defaultName;
         baseUrl.text = 'https://api.openai.com/v1';
+        _followBaseUrlApiMode();
         return;
       }
       name.text = profile.name;
@@ -175,6 +177,7 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
         : kOpenAiCompatibleAdapterKey;
     _authentication = DirectAuthenticationMode.bearer;
     _openAiApiMode = DirectOpenAiApiMode.chatCompletions;
+    _openAiApiModePicked = false;
     _updateTextFields(() {
       baseUrl.text = switch (value) {
         kOllamaAdapterKey => 'https://ollama.com',
@@ -193,6 +196,7 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
           models.text == kMiniMaxModelIds.join('\n')) {
         models.clear();
       }
+      _followBaseUrlApiMode();
       if (mode.isNew &&
           (name.text == defaultName ||
               name.text == ollamaDefaultName ||
@@ -225,9 +229,25 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
   }
 
   void setOpenAiApiMode(DirectOpenAiApiMode value) {
+    _openAiApiModePicked = true;
     if (openAiApiMode == value) return;
     _openAiApiMode = value;
     _draftChanged();
+  }
+
+  /// A new OpenAI-compatible connection to the OpenAI platform starts on
+  /// Responses, which takes a reasoning effort beside tools; any other server
+  /// starts on Chat Completions. Saved connections and a mode the person
+  /// picked are left alone.
+  void _followBaseUrlApiMode() {
+    if (!mode.isNew ||
+        _openAiApiModePicked ||
+        adapterKey != kOpenAiCompatibleAdapterKey) {
+      return;
+    }
+    _openAiApiMode = isOpenAiPlatformBaseUrl(baseUrl.text)
+        ? DirectOpenAiApiMode.responses
+        : DirectOpenAiApiMode.chatCompletions;
   }
 
   void setShowApiKey(bool value) {
@@ -307,6 +327,7 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
   void _baseUrlTextChanged() {
     if (_updatingTextFields) return;
     _originSecretsConfirmed = false;
+    _followBaseUrlApiMode();
     _generalTextChanged();
   }
 

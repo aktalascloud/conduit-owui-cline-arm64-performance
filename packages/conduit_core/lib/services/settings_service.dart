@@ -777,6 +777,10 @@ class SettingsService {
       computerEnabled: get<bool>(PreferenceKeys.computerEnabled) ?? true,
       showComposerNotesButton:
           get<bool>(PreferenceKeys.showComposerNotesButton) ?? true,
+      showModelNameInComposer:
+          get<bool>(PreferenceKeys.showModelNameInComposer) ?? false,
+      hermesShowScheduledSessions:
+          get<bool>(PreferenceKeys.hermesShowScheduledSessions) ?? true,
       darkMode: get<bool>(_darkModeKey) ?? true,
       slidingSidebarEnabled:
           get<bool>(PreferenceKeys.slidingSidebarEnabled) ?? false,
@@ -926,6 +930,14 @@ class AppSettings {
   final bool highContrast;
   final bool computerEnabled;
   final bool showComposerNotesButton;
+
+  /// Whether an empty message box names the selected model ("Ask" and its
+  /// name) rather than saying "Ask Conduit". Off by default.
+  final bool showModelNameInComposer;
+
+  /// Whether the Hermes chat list shows the sessions scheduled jobs (cron)
+  /// start, one per run. On by default.
+  final bool hermesShowScheduledSessions;
   final bool darkMode;
   final bool slidingSidebarEnabled;
   final String? defaultModel;
@@ -988,6 +1000,8 @@ class AppSettings {
     this.highContrast = false,
     this.computerEnabled = true,
     this.showComposerNotesButton = true,
+    this.showModelNameInComposer = false,
+    this.hermesShowScheduledSessions = true,
     this.darkMode = true,
     this.slidingSidebarEnabled = false,
     this.defaultModel,
@@ -1041,6 +1055,8 @@ class AppSettings {
     bool? highContrast,
     bool? computerEnabled,
     bool? showComposerNotesButton,
+    bool? showModelNameInComposer,
+    bool? hermesShowScheduledSessions,
     bool? darkMode,
     bool? slidingSidebarEnabled,
     Object? defaultModel = const _DefaultValue(),
@@ -1095,6 +1111,10 @@ class AppSettings {
       computerEnabled: computerEnabled ?? this.computerEnabled,
       showComposerNotesButton:
           showComposerNotesButton ?? this.showComposerNotesButton,
+      showModelNameInComposer:
+          showModelNameInComposer ?? this.showModelNameInComposer,
+      hermesShowScheduledSessions:
+          hermesShowScheduledSessions ?? this.hermesShowScheduledSessions,
       darkMode: darkMode ?? this.darkMode,
       slidingSidebarEnabled:
           slidingSidebarEnabled ?? this.slidingSidebarEnabled,
@@ -1183,6 +1203,8 @@ class AppSettings {
         other.highContrast == highContrast &&
         other.computerEnabled == computerEnabled &&
         other.showComposerNotesButton == showComposerNotesButton &&
+        other.showModelNameInComposer == showModelNameInComposer &&
+        other.hermesShowScheduledSessions == hermesShowScheduledSessions &&
         other.darkMode == darkMode &&
         other.slidingSidebarEnabled == slidingSidebarEnabled &&
         other.defaultModel == defaultModel &&
@@ -1239,6 +1261,8 @@ class AppSettings {
       highContrast,
       computerEnabled,
       showComposerNotesButton,
+      showModelNameInComposer,
+      hermesShowScheduledSessions,
       darkMode,
       slidingSidebarEnabled,
       defaultModel,
@@ -1473,6 +1497,24 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     state = state.copyWith(showComposerNotesButton: value);
     await SettingsService._putPreference(
       PreferenceKeys.showComposerNotesButton,
+      value,
+    );
+  }
+
+  Future<void> setShowModelNameInComposer(bool value) async {
+    if (!await _awaitHydration()) return;
+    state = state.copyWith(showModelNameInComposer: value);
+    await SettingsService._putPreference(
+      PreferenceKeys.showModelNameInComposer,
+      value,
+    );
+  }
+
+  Future<void> setHermesShowScheduledSessions(bool value) async {
+    if (!await _awaitHydration()) return;
+    state = state.copyWith(hermesShowScheduledSessions: value);
+    await SettingsService._putPreference(
+      PreferenceKeys.hermesShowScheduledSessions,
       value,
     );
   }
@@ -1777,6 +1819,14 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     await SettingsService._putOrRemove(PreferenceKeys.computerEnabled, null);
     await SettingsService._putOrRemove(
       PreferenceKeys.showComposerNotesButton,
+      null,
+    );
+    await SettingsService._putOrRemove(
+      PreferenceKeys.showModelNameInComposer,
+      null,
+    );
+    await SettingsService._putOrRemove(
+      PreferenceKeys.hermesShowScheduledSessions,
       null,
     );
     await SettingsService.saveSettings(defaultSettings);

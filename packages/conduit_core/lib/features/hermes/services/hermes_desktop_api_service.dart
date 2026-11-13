@@ -41,6 +41,8 @@ import 'package:conduit_core/features/hermes/services/hermes_history_edit.dart';
 import 'package:conduit_core/features/hermes/services/hermes_message_mapper.dart';
 import 'package:conduit_core/features/hermes/services/hermes_json_guard.dart';
 import 'package:conduit_core/features/hermes/services/hermes_pending_decision_store.dart';
+import 'package:conduit_core/features/hermes/models/hermes_session.dart'
+    show kHermesScheduledSessionSource;
 
 part 'hermes_desktop_administration.dart';
 part 'hermes_desktop_audio.dart';
@@ -534,7 +536,9 @@ final class HermesDesktopApiService
     cancelToken: cancelToken,
   );
   @override
-  Future<List<Map<String, dynamic>>> listSessions() => _runtimeListSessions();
+  Future<List<Map<String, dynamic>>> listSessions({
+    bool excludeScheduledRuns = false,
+  }) => _runtimeListSessions(excludeScheduledRuns: excludeScheduledRuns);
   @override
   Future<List<Map<String, dynamic>>> getSessionMessages(
     String id, {
@@ -975,4 +979,20 @@ final class HermesDesktopApiService
   void _emitDesktopContract(int value) {
     if (!_closed) _desktopContractChanges.add(value);
   }
+}
+
+/// Writes a pending decision down without waiting for it. The store refuses
+/// writes while the app signs out, and a write can fail outright; started
+/// from an event handler, nothing would catch either. Only the error's type
+/// is logged: a decision's prompt may hold what the user typed.
+void _persistPendingQuietly(Future<void> write) {
+  unawaited(
+    write.catchError((Object error) {
+      DebugLogger.warning(
+        'pending-decision-write-failed',
+        scope: 'hermes/desktop',
+        data: {'error': error.runtimeType.toString()},
+      );
+    }),
+  );
 }

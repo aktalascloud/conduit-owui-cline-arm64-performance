@@ -3707,6 +3707,7 @@
   "directImagesPerRequestSaveFailed": "无法保存“每次请求的图片数”。请重试。",
   "directModelTooManyImages": "此模型每次请求接受的图片少于此聊天发送的数量。请在“直接连接”设置中调低“每次请求的图片数”，然后重试。如果这条消息本身包含的图片就超过模型可接受的数量，请减少图片后重新发送。",
   "directToolLoopNoAnswer": "模型一直在使用工具，没有给出回答。请重试，或关闭网页搜索和工具。",
+  "heldReplyStillRunning": "服务器仍在处理此回复。请稍后重新打开此对话查看。",
   "directContextLimitOllamaNote": "对于你自己服务器上的 Ollama 模型，在此选择的上限也是 Ollama 加载模型时使用的上下文窗口。窗口越大，占用的内存越多。",
   "directContextCompactionModelCount": "{count, plural, other{{count} 个模型}}",
   "@directContextCompactionModelCount": {"placeholders": {"count": {"type": "int", "example": "42"}}},
@@ -4910,5 +4911,29 @@
   "pushHermesCommandLatest": "这会安装插件最新发布的版本。",
   "hermesJobCreatedNotifyFailed": "定时任务已创建，但无法为其开启通知。",
   "hermesJobUpdatedNotifyFailed": "定时任务已保存，但无法更改其通知。",
-  "hermesJobNotifyNeedsScheduled": "要使用此功能，请在“通知”中开启“计划任务”。"
+  "hermesJobNotifyNeedsScheduled": "要使用此功能，请在“通知”中开启“计划任务”。",
+  "hermesShowScheduledRuns": "显示定时运行",
+  "hermesShowScheduledRunsDescription": "定时智能体每次运行都会新建一个聊天。关闭后，这些聊天不会显示在 Hermes 列表中。已置顶的仍会保留。",
+  "hermesScheduledRunsHidden": "{count, plural, other{已隐藏 {count} 个定时运行}}",
+  "@hermesScheduledRunsHidden": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "hermesShowScheduledRunsAction": "显示",
+  "voiceCallLibreChatUnavailable": "LibreChat 聊天不支持语音通话。",
+  "messageHintTextForModel": "问 {modelName}",
+  "@messageHintTextForModel": {
+    "placeholders": {
+      "modelName": {
+        "type": "String",
+        "example": "Research Assistant"
+      }
+    }
+  },
+  "showModelNameInComposer": "在消息框中显示模型名称",
+  "showModelNameInComposerDescription": "空消息框将显示所选模型的名称，而不是 Conduit。"
 }

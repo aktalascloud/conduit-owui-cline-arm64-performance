@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:riverpod/riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -31,6 +32,7 @@ import 'package:conduit_core/providers/backend_mode_providers.dart';
 import 'package:conduit_core/providers/storage_providers.dart';
 
 import 'package:conduit_core/services/secure_credential_storage.dart';
+import 'package:conduit_core/services/settings_service.dart';
 
 import 'package:conduit_core/utils/debug_logger.dart';
 
@@ -2313,24 +2315,26 @@ final hermesApiServiceProvider = Provider<HermesBackendService?>((ref) {
 /// Authoritative Desktop turn state. Responses mode remains on its existing
 /// dispatcher and therefore always exposes the neutral idle state here.
 final hermesDesktopTurnStateProvider =
-    StreamProvider.autoDispose<HermesDesktopTurnState>((ref) async* {
-      final service = ref.watch(hermesApiServiceProvider);
-      if (service is! HermesDesktopApiService) {
-        yield HermesDesktopTurnState.idle;
-        return;
-      }
-      final conversation = ref.watch(activeConversationProvider);
-      if (!isNativeHermesConversation(conversation)) {
-        yield HermesDesktopTurnState.idle;
-        return;
-      }
-      final storedId = conversation?.metadata['hermesSessionId']?.toString();
-      if (storedId == null || storedId.isEmpty) {
-        yield HermesDesktopTurnState.idle;
-        return;
-      }
-      yield* service.turnStatesFor(storedId);
-    });
+    StreamProvider.autoDispose<HermesDesktopTurnState>(_hermesDesktopTurnState);
+
+Stream<HermesDesktopTurnState> _hermesDesktopTurnState(Ref ref) async* {
+  final service = ref.watch(hermesApiServiceProvider);
+  if (service is! HermesDesktopApiService) {
+    yield HermesDesktopTurnState.idle;
+    return;
+  }
+  final conversation = ref.watch(activeConversationProvider);
+  if (!isNativeHermesConversation(conversation)) {
+    yield HermesDesktopTurnState.idle;
+    return;
+  }
+  final storedId = conversation?.metadata['hermesSessionId']?.toString();
+  if (storedId == null || storedId.isEmpty) {
+    yield HermesDesktopTurnState.idle;
+    return;
+  }
+  yield* service.turnStatesFor(storedId);
+}
 
 /// One change to a Desktop chat's stored transcript, by its stored id.
 /// Each change is its own event (no value equality): a provider drops a
@@ -2545,6 +2549,19 @@ final hermesSessionNavigationEpochProvider =
       HermesSessionNavigationEpoch.new,
     );
 
+/// This library's share of a chat session scope (`ChatSessionScope` in the
+/// chat library): the Hermes state that belongs to the chat on screen rather
+/// than to the connection. The connection, its service, sessions list and
+/// run registry stay shared.
+List<Override> chatSessionScopedHermesOverrides() => <Override>[
+  hermesSessionNavigationEpochProvider.overrideWith(
+    HermesSessionNavigationEpoch.new,
+  ),
+  hermesActiveSessionProvider.overrideWith(HermesActiveSession.new),
+  hermesFastTierSelectionProvider.overrideWith(HermesFastTierSelection.new),
+  hermesDesktopTurnStateProvider.overrideWith(_hermesDesktopTurnState),
+];
+
 /// Aligns a fork's freshly inserted rows with its source history. Any shape,
 /// order, role, content, or identity mismatch rejects the entire mapping so
 /// provenance can never slide onto a merely similar prompt.
@@ -2638,7 +2655,12 @@ class HermesSessionsController
   Future<List<HermesSessionSummary>> build() async {
     final service = ref.watch(hermesApiServiceProvider);
     if (service == null) return const [];
-    final raw = await service.listSessions();
+    final showScheduled = ref.watch(
+      appSettingsProvider.select((s) => s.hermesShowScheduledSessions),
+    );
+    final raw = await service.listSessions(
+      excludeScheduledRuns: !showScheduled,
+    );
     return [
       for (final session in _hermesSessionSummaries(raw))
         if (!session.archived && !session.hidden) session,
@@ -2707,6 +2729,7 @@ class HermesSessionsController
             archived:
                 setAside == HermesSetAsideKind.hidden &&
                 (archived ?? session.archived),
+            source: session.source,
           );
     if (record != null) await HermesSetAsideSessionStore.remember(record);
     // A failed change keeps the record: Hermes may have applied it before
@@ -3454,6 +3477,7 @@ Future<List<HermesSessionSummary>> _hermesSetAsideSessions(
             title: session!.title,
             kind: actual,
             archived: actual == HermesSetAsideKind.hidden && session.archived,
+            source: session.source ?? record.source,
           ),
         );
       }

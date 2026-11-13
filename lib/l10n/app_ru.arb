@@ -3970,6 +3970,7 @@
   "directImagesPerRequestSaveFailed": "Не удалось сохранить «Изображений в запросе». Повторите попытку.",
   "directModelTooManyImages": "Эта модель принимает в одном запросе меньше изображений, чем отправил этот чат. Уменьшите «Изображений в запросе» в настройках прямых подключений и повторите попытку. Если уже в этом сообщении больше изображений, чем принимает модель, отправьте его снова с меньшим числом изображений.",
   "directToolLoopNoAnswer": "Модель продолжала использовать инструменты, не давая ответа. Повторите попытку или отключите веб-поиск и инструменты.",
+  "heldReplyStillRunning": "Сервер ещё работает над этим ответом. Откройте этот чат позже, чтобы увидеть его.",
   "directContextLimitOllamaNote": "Для моделей Ollama на вашем собственном сервере выбранный здесь лимит также задаёт размер контекста, с которым Ollama загружает модель. Чем больше контекст, тем больше памяти он использует.",
   "directContextCompactionModelCount": "{count, plural, one{{count} модель} few{{count} модели} many{{count} моделей} other{{count} модели}}",
   "@directContextCompactionModelCount": {
@@ -5535,6 +5536,30 @@
   "hermesJobCreatedNotifyFailed": "Задание создано, но включить для него уведомления не удалось.",
   "hermesJobUpdatedNotifyFailed": "Задание сохранено, но изменить его уведомления не удалось.",
   "hermesJobNotifyNeedsScheduled": "Чтобы пользоваться этим, включите «Запланированные задачи» в уведомлениях.",
+  "hermesShowScheduledRuns": "Показывать запланированные запуски",
+  "hermesShowScheduledRunsDescription": "Каждый запуск запланированного агента создаёт отдельный чат. Отключите, чтобы не показывать такие чаты в списке Hermes. Закреплённые останутся.",
+  "hermesScheduledRunsHidden": "{count, plural, one{Скрыт {count} запланированный запуск} few{Скрыто {count} запланированных запуска} many{Скрыто {count} запланированных запусков} other{Скрыто {count} запланированного запуска}}",
+  "@hermesScheduledRunsHidden": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "hermesShowScheduledRunsAction": "Показать",
+  "voiceCallLibreChatUnavailable": "Голосовые звонки недоступны в чатах LibreChat.",
+  "messageHintTextForModel": "Спросите {modelName}",
+  "@messageHintTextForModel": {
+    "placeholders": {
+      "modelName": {
+        "type": "String",
+        "example": "Research Assistant"
+      }
+    }
+  },
+  "showModelNameInComposer": "Показывать название модели в поле сообщения",
+  "showModelNameInComposerDescription": "В пустом поле сообщения указывается выбранная модель вместо Conduit.",
   "@ok": {
     "description": "Generic OK button label."
   },

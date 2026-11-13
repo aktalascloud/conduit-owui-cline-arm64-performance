@@ -3707,6 +3707,7 @@
   "directImagesPerRequestSaveFailed": "Impossible d'enregistrer Images par requête. Réessayez.",
   "directModelTooManyImages": "Ce modèle accepte moins d'images par requête que cette discussion n'en a envoyé. Réduisez Images par requête dans les réglages Connexions directes, puis réessayez. Si ce message contient à lui seul plus d'images que le modèle n'en accepte, renvoyez-le avec moins d'images.",
   "directToolLoopNoAnswer": "Le modèle a continué d'utiliser des outils sans donner de réponse. Réessayez ou désactivez la recherche Web et les outils.",
+  "heldReplyStillRunning": "Le serveur travaille encore sur cette réponse. Rouvrez ce chat plus tard pour la voir.",
   "directContextLimitOllamaNote": "Pour les modèles Ollama de votre propre serveur, la limite choisie ici est aussi la fenêtre de contexte avec laquelle Ollama charge le modèle. Une fenêtre plus grande utilise plus de mémoire.",
   "directContextCompactionModelCount": "{count, plural, =1{1 modèle} other{{count} modèles}}",
   "@directContextCompactionModelCount": {"placeholders": {"count": {"type": "int", "example": "42"}}},
@@ -4910,5 +4911,29 @@
   "pushHermesCommandLatest": "Cela installe la dernière version publiée du plugin.",
   "hermesJobCreatedNotifyFailed": "Tâche créée, mais ses notifications n'ont pas pu être activées.",
   "hermesJobUpdatedNotifyFailed": "Tâche enregistrée, mais ses notifications n'ont pas pu être modifiées.",
-  "hermesJobNotifyNeedsScheduled": "Activez Tâches planifiées dans Notifications pour l'utiliser."
+  "hermesJobNotifyNeedsScheduled": "Activez Tâches planifiées dans Notifications pour l'utiliser.",
+  "hermesShowScheduledRuns": "Afficher les exécutions planifiées",
+  "hermesShowScheduledRunsDescription": "Chaque exécution d’un agent planifié démarre sa propre conversation. Désactivez cette option pour retirer ces conversations de la liste Hermes. Celles qui sont épinglées restent.",
+  "hermesScheduledRunsHidden": "{count, plural, =1{1 exécution planifiée masquée} other{{count} exécutions planifiées masquées}}",
+  "@hermesScheduledRunsHidden": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "hermesShowScheduledRunsAction": "Afficher",
+  "voiceCallLibreChatUnavailable": "Les appels vocaux ne sont pas disponibles dans les discussions LibreChat.",
+  "messageHintTextForModel": "Demander à {modelName}",
+  "@messageHintTextForModel": {
+    "placeholders": {
+      "modelName": {
+        "type": "String",
+        "example": "Research Assistant"
+      }
+    }
+  },
+  "showModelNameInComposer": "Afficher le nom du modèle dans la zone de message",
+  "showModelNameInComposerDescription": "La zone de message vide indique le nom du modèle sélectionné au lieu de Conduit."
 }

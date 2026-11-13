@@ -5630,6 +5630,7 @@
   "directImagesPerRequestSaveFailed": "Nastavenie Obrázky na požiadavku sa nepodarilo uložiť. Skúste to znova.",
   "directModelTooManyImages": "Tento model prijíma v jednej požiadavke menej obrázkov, než tento chat odoslal. Znížte Obrázky na požiadavku v nastaveniach Priame pripojenia a skúste to znova. Ak samotná táto správa obsahuje viac obrázkov, než model prijíma, odošlite ju znova s menším počtom obrázkov.",
   "directToolLoopNoAnswer": "Model stále používal nástroje bez toho, aby odpovedal. Skúste to znova alebo vypnite vyhľadávanie na webe a nástroje.",
+  "heldReplyStillRunning": "Server na tejto odpovedi stále pracuje. Otvorte tento chat neskôr znova, aby ste ju videli.",
   "directContextLimitOllamaNote": "Pri modeloch Ollama na vašom vlastnom serveri je tu zvolený limit zároveň veľkosťou kontextového okna, s ktorou Ollama model načíta. Väčšie okno spotrebuje viac pamäte.",
   "directContextCompactionModelCount": "{count, plural, one{{count} model} few{{count} modely} many{{count} modelu} other{{count} modelov}}",
   "@directContextCompactionModelCount": {"placeholders": {"count": {"type": "int", "example": "42"}}},
@@ -6833,5 +6834,29 @@
   "pushHermesCommandLatest": "Týmto sa nainštaluje najnovšia zverejnená verzia pluginu.",
   "hermesJobCreatedNotifyFailed": "Úloha bola vytvorená, ale upozornenia pre ňu sa nepodarilo zapnúť.",
   "hermesJobUpdatedNotifyFailed": "Úloha bola uložená, ale jej upozornenia sa nepodarilo zmeniť.",
-  "hermesJobNotifyNeedsScheduled": "Ak to chcete použiť, zapnite v Upozorneniach Naplánované úlohy."
+  "hermesJobNotifyNeedsScheduled": "Ak to chcete použiť, zapnite v Upozorneniach Naplánované úlohy.",
+  "hermesShowScheduledRuns": "Zobrazovať naplánované spustenia",
+  "hermesShowScheduledRunsDescription": "Každé spustenie naplánovaného agenta vytvorí vlastný chat. Vypnutím tieto chaty vynecháte zo zoznamu Hermes. Pripnuté zostanú.",
+  "hermesScheduledRunsHidden": "{count, plural, one{Skryté 1 naplánované spustenie} few{Skryté {count} naplánované spustenia} other{Skrytých {count} naplánovaných spustení}}",
+  "@hermesScheduledRunsHidden": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "hermesShowScheduledRunsAction": "Zobraziť",
+  "voiceCallLibreChatUnavailable": "Hlasové hovory nie sú v chatoch LibreChat k dispozícii.",
+  "messageHintTextForModel": "Opýtať sa modelu {modelName}",
+  "@messageHintTextForModel": {
+    "placeholders": {
+      "modelName": {
+        "type": "String",
+        "example": "Research Assistant"
+      }
+    }
+  },
+  "showModelNameInComposer": "Zobrazovať názov modelu v poli správy",
+  "showModelNameInComposerDescription": "Prázdne pole správy uvádza názov vybraného modelu namiesto Conduitu."
 }
