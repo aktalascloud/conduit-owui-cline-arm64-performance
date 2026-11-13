@@ -1,5 +1,5 @@
 diff --git a/packages/conduit_core/lib/database/daos/outbox_dao.dart b/packages/conduit_core/lib/database/daos/outbox_dao.dart
-index 40ecadb5a6b133b5a05857d722305869cdf9eaba..c3ab610b79e00ac06389808c7eb27a3049580ee1 100644
+index 0d27e93088bf376b6c637dc90e0f00dcb3bc4085..bb70bb81d905375472aad27e62ec23acdb9f4a4e 100644
 --- a/packages/conduit_core/lib/database/daos/outbox_dao.dart
 +++ b/packages/conduit_core/lib/database/daos/outbox_dao.dart
 @@ -485,6 +485,19 @@ class OutboxDao extends DatabaseAccessor<AppDatabase> with _$OutboxDaoMixin {
@@ -45,7 +45,7 @@ index 40ecadb5a6b133b5a05857d722305869cdf9eaba..c3ab610b79e00ac06389808c7eb27a30
          ? null
          : await attachedDatabase.chatsDao.getChatParams(op.chatId!);
      final frozen = OpenWebUiChatSettingsSnapshot(
-@@ -843,7 +857,10 @@ class OutboxDao extends DatabaseAccessor<AppDatabase> with _$OutboxDaoMixin {
+@@ -875,7 +889,10 @@ class OutboxDao extends DatabaseAccessor<AppDatabase> with _$OutboxDaoMixin {
              survivorSeq: update.seq,
              mergedPayload: payload.isEmpty
                  ? null
@@ -58,7 +58,7 @@ index 40ecadb5a6b133b5a05857d722305869cdf9eaba..c3ab610b79e00ac06389808c7eb27a30
          }
          return const _CoalesceDecision(insert: true);
 diff --git a/packages/conduit_core/lib/features/chat/providers/chat_providers.dart b/packages/conduit_core/lib/features/chat/providers/chat_providers.dart
-index 6d8ca0563b3ddcb51bf830d4aeec043f0fdeaa37..e2eab1defd67b610dc882a37688d9b6bb2e4bd58 100644
+index 30e068df9e844af328b525938ba77fad386f3d29..7559e6506326e29ae3b07c6b6f9bd44d81c07bd3 100644
 --- a/packages/conduit_core/lib/features/chat/providers/chat_providers.dart
 +++ b/packages/conduit_core/lib/features/chat/providers/chat_providers.dart
 @@ -13,6 +13,9 @@
@@ -72,7 +72,7 @@ index 6d8ca0563b3ddcb51bf830d4aeec043f0fdeaa37..e2eab1defd67b610dc882a37688d9b6b
  import 'dart:collection';
  import 'dart:convert';
 diff --git a/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart b/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart
-index 179f52a1847cb3d1967750f2d3bdf2e7aa13083d..51ea54c157365095934fa8d1be20716cd1b5db94 100644
+index d46ded1050a351c233b67011c528401eea6b751e..dc40ab4d0535bba5bbdea8d1751b1bce68888b6a 100644
 --- a/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart
 +++ b/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart
 @@ -12,6 +12,15 @@ Future<void> _sendMessageInternal(
@@ -376,7 +376,7 @@ index c16ad3910f115b6917a869c5da6c5d2384a3d9dd..7e190c00dd18d68584a3ef04501911e2
  /// Serializers for message fields OpenWebUI persists inside chat blobs.
  ///
 diff --git a/packages/conduit_core/test/services/api_service_chat_completion_test.dart b/packages/conduit_core/test/services/api_service_chat_completion_test.dart
-index b7bab0f565be2a644ecbf28ebf6854dbebe3e6a7..f6b4bcfea81f77287589ec1aa6f6144ab782b3fc 100644
+index 8c48147257a0dba61497b9e9d87f63c819611559..40e6e596293d1bb9529f5b2a89fac70f2730423d 100644
 --- a/packages/conduit_core/test/services/api_service_chat_completion_test.dart
 +++ b/packages/conduit_core/test/services/api_service_chat_completion_test.dart
 @@ -12,6 +12,8 @@ import 'package:conduit_core/services/moa_completion.dart';
@@ -388,7 +388,7 @@ index b7bab0f565be2a644ecbf28ebf6854dbebe3e6a7..f6b4bcfea81f77287589ec1aa6f6144a
  import 'package:dio/dio.dart';
  import 'package:test/test.dart';
  
-@@ -179,6 +181,62 @@ Map<String, dynamic> _legacyChatPayload({
+@@ -220,6 +222,62 @@ Map<String, dynamic> _legacyChatPayload({
  }
  
  void main() {
@@ -696,7 +696,7 @@ index d87dea7ca6c99457e70603ab94ffbdf16681ad71..82692584cdc1665367ec373cf01d1f6e
    });
  
 diff --git a/packages/conduit_core/test/sync/push_sync_test.dart b/packages/conduit_core/test/sync/push_sync_test.dart
-index b8ab502e6fde6ade2e0e680d2cb9c67d8b250390..990740fabfe1a145b5acc33905b3e4e16f010fd5 100644
+index f456c4dae6317f657954c5c43551d24ea06d080f..9ae961a81ea2712eadf80d21d381606c1d2b4222 100644
 --- a/packages/conduit_core/test/sync/push_sync_test.dart
 +++ b/packages/conduit_core/test/sync/push_sync_test.dart
 @@ -18,6 +18,8 @@ import 'package:drift/native.dart';

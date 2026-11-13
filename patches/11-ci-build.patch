@@ -608,7 +608,7 @@ index 0000000000000000000000000000000000000000..e874280cb0d73c156847d9c271a8253f
 +    verify_archive(target)
 diff --git a/.avx1/project.json b/.avx1/project.json
 new file mode 100644
-index 0000000000000000000000000000000000000000..204cd965aca19462ae6422311f30343748ccc307
+index 0000000000000000000000000000000000000000..6a0af96e3ee2bfc76dd16450116ab8a7d97bffff
 --- /dev/null
 +++ b/.avx1/project.json
 @@ -0,0 +1,13 @@
@@ -621,7 +621,7 @@ index 0000000000000000000000000000000000000000..204cd965aca19462ae6422311f303437
 +  "description": "Conduit for OWUI + Cline: signed ARM64 APK, SSH access to Cline sessions/projects, O3 ThinLTO native libraries; extended Russian UI / дополненный русский перевод.",
 +  "repository": "aktalascloud/conduit-owui-cline-arm64-performance",
 +  "channel": "latest",
-+  "upstream_commit": "f9655575c92297161d0099d8a5a1f0eb9525d0d2",
++  "upstream_commit": "50a9ae4e3644e710e67852d0f2a48671f5b1d750",
 +  "stable_tag": "v4.3.1",
 +  "distribution": "single unified latest"
 +}

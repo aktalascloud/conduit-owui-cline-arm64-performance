@@ -2346,7 +2346,7 @@ index 6503c1735e0eee45202eb768bb4249b6df41fdb8..a8230329819112574974d62f79acc781
          context,
          icon: UiUtils.platformIcon(
 diff --git a/lib/main.dart b/lib/main.dart
-index c0dd83cbc9128e1ae51960f6e3d582e15b878374..4e311f1d5a04b84a089c7b0936968d3874b7e365 100644
+index d5cc1bfe80171a27c99b360114dff3252765f402..990dffe50b5266b811c0df6d4bdd2774d5ca0c5b 100644
 --- a/lib/main.dart
 +++ b/lib/main.dart
 @@ -1177,6 +1177,10 @@ class _ConduitAppState extends ConsumerState<ConduitApp> {

@@ -5341,7 +5341,7 @@ index e1377614956793fd5511f1b3c136da5b18eaf195..26aa120ecb4e785c3ec6c84104766993
              id: 'accounts-hermes',
              title: l10n.hermesAgentSettingsTitle,
 diff --git a/lib/features/chat/voice_call/presentation/voice_call_launcher.dart b/lib/features/chat/voice_call/presentation/voice_call_launcher.dart
-index b3d76f008aeebd347a772e6e1947c988e122a400..7dee41e50ef29037fc019e8607bc90725b90d163 100644
+index 0a387db5fd736fd5ad3ec2c424e0f76d06cbabef..cf8f8c54cb1d2157cc4f4521d51df0b3e1f81b32 100644
 --- a/lib/features/chat/voice_call/presentation/voice_call_launcher.dart
 +++ b/lib/features/chat/voice_call/presentation/voice_call_launcher.dart
 @@ -3,6 +3,8 @@ import 'dart:async';
@@ -5361,9 +5361,9 @@ index b3d76f008aeebd347a772e6e1947c988e122a400..7dee41e50ef29037fc019e8607bc9072
 +      final context=NavigationService.context;
 +      throw VoiceCallStartException(kind:null,message:context==null?'Cline voice calls are unavailable.':AppLocalizations.of(context)!.clineVoiceUnavailable);
 +    }
+     _refuseOpenLibreChatChat(startNewConversation);
      final eligibility = await resolveVoiceCallEligibility(_ref);
      if (!eligibility.canStart) {
-       throw StateError(eligibility.errorMessage!);
 diff --git a/lib/features/chat/voice_mode/chat_voice_mode_overlay.dart b/lib/features/chat/voice_mode/chat_voice_mode_overlay.dart
 index bc8f25575017babb1cca62fcdc9227e0d331447a..5547c501a8c9463bb2efb8db48436b59c9144150 100644
 --- a/lib/features/chat/voice_mode/chat_voice_mode_overlay.dart
@@ -6254,7 +6254,7 @@ index 0000000000000000000000000000000000000000..15d7731e1749bc57215d0f0c66a38d8f
 +  javaScriptBridgeEnabled: false,
 +);
 diff --git a/packages/conduit_core/lib/features/chat/voice_mode/chat_voice_mode_controller.dart b/packages/conduit_core/lib/features/chat/voice_mode/chat_voice_mode_controller.dart
-index 97d5193705ad75e546cbc7d55e26d82d714fcf9e..dc399840567ef64139e24e0cd91f05f658478f48 100644
+index b855660616aabb3ad349a96bfd23686feb04d8e8..5a210e37f34848df12bc7ef3c99ac9aec70bc401 100644
 --- a/packages/conduit_core/lib/features/chat/voice_mode/chat_voice_mode_controller.dart
 +++ b/packages/conduit_core/lib/features/chat/voice_mode/chat_voice_mode_controller.dart
 @@ -158,6 +158,8 @@ class _ChatVoiceModeServiceLifecycleGate {
@@ -6327,7 +6327,7 @@ index 97d5193705ad75e546cbc7d55e26d82d714fcf9e..dc399840567ef64139e24e0cd91f05f6
          state = state.copyWith(phase: ChatVoiceModePhase.speaking);
          return;
        }
-@@ -981,12 +994,13 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
+@@ -1001,12 +1014,13 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
  
    Future<void> toggleSpeakerphone() {
      return _enqueue(() async {
@@ -6342,7 +6342,7 @@ index 97d5193705ad75e546cbc7d55e26d82d714fcf9e..dc399840567ef64139e24e0cd91f05f6
        // A route the platform refused leaves audio where it was, so the button
        // stays where it was too rather than promising a route nobody is hearing.
        // That holds both ways: the coordinator reads the route back on and off
-@@ -1000,6 +1014,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
+@@ -1020,6 +1034,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
  
    Future<void> cancelSpeaking() {
      return _enqueue(() async {
@@ -6350,7 +6350,7 @@ index 97d5193705ad75e546cbc7d55e26d82d714fcf9e..dc399840567ef64139e24e0cd91f05f6
        final realtime = _realtime;
        if (realtime != null) {
          realtime.interrupt();
-@@ -1009,7 +1024,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
+@@ -1029,7 +1044,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
        if (tts == null) return;
        await tts.stopStreamingTts();
        await tts.stop();
@@ -6359,7 +6359,7 @@ index 97d5193705ad75e546cbc7d55e26d82d714fcf9e..dc399840567ef64139e24e0cd91f05f6
        _streamingTtsStarted = false;
        _assistantFinalized = true;
        if (state.isActive && !state.isMuted) {
-@@ -1092,7 +1107,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
+@@ -1112,7 +1127,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
          if (endedCallId == callId) {
            _stoppingFromCallKit = true;
            _cancelStart();
@@ -6369,10 +6369,10 @@ index 97d5193705ad75e546cbc7d55e26d82d714fcf9e..dc399840567ef64139e24e0cd91f05f6
        case VoiceCallKitMuteToggled(callId: final mutedCallId, :final isMuted):
          if (mutedCallId == callId && isMuted != state.isMuted) {
 diff --git a/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart b/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart
-index 11fee7842a4ede46670623026e435e0701b7ecfc..bd4e7c8aaa7b6aaee6ac288f2b5bd86d9589402a 100644
+index c26e5f61e91f2d2fa3f1f96e8710204b0f945160..0318781be13b192b267b5f7efe2e5b94a5780ee9 100644
 --- a/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart
 +++ b/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart
-@@ -364,6 +364,46 @@ void main() {
+@@ -365,6 +365,46 @@ void main() {
      check(snapshot.activeCallId).isNull();
    });
  
@@ -6419,7 +6419,7 @@ index 11fee7842a4ede46670623026e435e0701b7ecfc..bd4e7c8aaa7b6aaee6ac288f2b5bd86d
    test('stop cancels a start during voice input initialization', () async {
      final input = _FakeVoiceInputService()..initializeGate = Completer<bool>();
      final container = ProviderContainer(
-@@ -2716,62 +2756,66 @@ void main() {
+@@ -2747,62 +2787,66 @@ void main() {
        return container;
      }
  
@@ -6539,7 +6539,7 @@ index 11fee7842a4ede46670623026e435e0701b7ecfc..bd4e7c8aaa7b6aaee6ac288f2b5bd86d
  
      test('opening another chat ends a realtime call', () async {
        // Direct chats, which this container keeps open.
-@@ -2788,8 +2832,7 @@ void main() {
+@@ -2819,8 +2863,7 @@ void main() {
        await container
            .read(chatVoiceModeControllerProvider.notifier)
            .start(startNewConversation: false, admittedModel: _model);
@@ -6549,7 +6549,7 @@ index 11fee7842a4ede46670623026e435e0701b7ecfc..bd4e7c8aaa7b6aaee6ac288f2b5bd86d
  
        active.set(chat('direct-local:b'));
        await _until(
-@@ -2818,44 +2861,48 @@ void main() {
+@@ -2849,44 +2892,48 @@ void main() {
        check(audio.stopped).isTrue();
        check(await starting).equals(ChatVoiceModeStartResult.cancelled);
        await stopping;
@@ -6626,7 +6626,7 @@ index 11fee7842a4ede46670623026e435e0701b7ecfc..bd4e7c8aaa7b6aaee6ac288f2b5bd86d
        await controller.pause();
        await controller.toggleMute();
  
-@@ -2872,27 +2919,29 @@ void main() {
+@@ -2903,27 +2950,29 @@ void main() {
        await controller.stop();
      });
  
@@ -6642,15 +6642,6 @@ index 11fee7842a4ede46670623026e435e0701b7ecfc..bd4e7c8aaa7b6aaee6ac288f2b5bd86d
 -      final container = realtimeContainer();
 -      final active = container.read(activeConversationProvider.notifier)
 -        ..set(chat('direct-local:a'));
--
--      final starting = container
--          .read(chatVoiceModeControllerProvider.notifier)
--          .start(startNewConversation: false, admittedModel: _model);
--      active.set(chat('direct-local:b'));
--
--      check(await starting).equals(ChatVoiceModeStartResult.cancelled);
--      check(bridge.opened).isFalse();
--    });
 +    test(
 +      'a chat opened right after the call is asked for cancels it',
 +      () async {
@@ -6664,12 +6655,19 @@ index 11fee7842a4ede46670623026e435e0701b7ecfc..bd4e7c8aaa7b6aaee6ac288f2b5bd86d
 +        final container = realtimeContainer();
 +        final active = container.read(activeConversationProvider.notifier)
 +          ..set(chat('direct-local:a'));
-+
+ 
+-      final starting = container
+-          .read(chatVoiceModeControllerProvider.notifier)
+-          .start(startNewConversation: false, admittedModel: _model);
+-      active.set(chat('direct-local:b'));
 +        final starting = container
 +            .read(chatVoiceModeControllerProvider.notifier)
 +            .start(startNewConversation: false, admittedModel: _model);
 +        active.set(chat('direct-local:b'));
-+
+ 
+-      check(await starting).equals(ChatVoiceModeStartResult.cancelled);
+-      check(bridge.opened).isFalse();
+-    });
 +        check(await starting).equals(ChatVoiceModeStartResult.cancelled);
 +        check(bridge.opened).isFalse();
 +      },
@@ -6677,7 +6675,7 @@ index 11fee7842a4ede46670623026e435e0701b7ecfc..bd4e7c8aaa7b6aaee6ac288f2b5bd86d
  
      test('a chat opened while the call sets up cancels it', () async {
        // Direct chats, which this container keeps open.
-@@ -2921,8 +2970,7 @@ void main() {
+@@ -2952,8 +3001,7 @@ void main() {
  
        check(await starting).equals(ChatVoiceModeStartResult.cancelled);
        check(bridge.opened).isFalse();

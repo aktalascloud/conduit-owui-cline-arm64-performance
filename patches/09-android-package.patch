@@ -29,7 +29,7 @@ index 0af1af6b4bdbc89450c6189d58c17c5678196a75..1692eb68e054ef068b279340ebc34197
                  storePassword = keystoreProperties["storePassword"] as String
                  keyAlias = keystoreProperties["keyAlias"] as String
 diff --git a/android/app/src/main/AndroidManifest.xml b/android/app/src/main/AndroidManifest.xml
-index 29479d9186cf6ab9d2b429196c5dc5fbaebc81bb..b3588751060a00f6f59aa9765ce4001f38f79277 100644
+index 5e91bb18d0ae529e7060e02741623d351548760a..4e3c96fb88546bf3195dd95ee521c15442c4b016 100644
 --- a/android/app/src/main/AndroidManifest.xml
 +++ b/android/app/src/main/AndroidManifest.xml
 @@ -51,7 +51,7 @@

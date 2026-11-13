@@ -3,9 +3,9 @@
   "grouping_version": 3,
   "ownership": "applied-downstream-only",
   "project": "conduit",
-  "upstream": "f9655575c92297161d0099d8a5a1f0eb9525d0d2",
-  "snapshot_source": "0796f5f29dcbaebbbc26b862d7ef52642d94395f",
-  "downstream_tree_without_patches": "8d6d0c294e827a1aa289710b2370534bb7020fa0",
+  "upstream": "50a9ae4e3644e710e67852d0f2a48671f5b1d750",
+  "snapshot_source": "60d0e01f25ca2cdb8b828608fab9c27222197158",
+  "downstream_tree_without_patches": "44aecec3f60532df80664345cbef622ac8c97604",
   "groups": [
     {
       "patch": "01-cline-ssh-gateway.patch",
@@ -79,7 +79,7 @@
         "test/features/navigation/widgets/sidebar_page_test.dart",
         "test/features/navigation/widgets/sidebar_workspace_tabs_test.dart"
       ],
-      "sha256": "75105ae348834343374077198348c5acc81179101e26e27f1c65dc7996bd31db"
+      "sha256": "257a2212a095613b45c337d0845bf65b9828739722bfe1279f631dbd47a0eed6"
     },
     {
       "patch": "04-voice-vrm.patch",
@@ -112,7 +112,7 @@
         "tool/voice_avatar/test.mjs",
         "tool/voice_avatar/texture-loader.js"
       ],
-      "sha256": "8fa9cdc98defd5f9b0b88f0e96f7f543961a8ca86d7d36c45fc0d721af031aae"
+      "sha256": "663cc0033eea14d7145f6607e4b66100c3db1bf61b6a73ad08103c0166c2facc"
     },
     {
       "patch": "05-provider-compatibility.patch",
@@ -131,7 +131,7 @@
         "test/features/direct_connections/direct_providers_test.dart",
         "test/features/hermes/hermes_connections_page_test.dart"
       ],
-      "sha256": "50b478febb1300fb6c7104a9344f871df0a711623ad00ec304abb9652358ecab"
+      "sha256": "acc9325bb25e5eebc88d2e03c82ecb78c50eeb0090f47c272b53c32ffd55c892"
     },
     {
       "patch": "06-chat-persistence.patch",
@@ -152,7 +152,7 @@
         "packages/conduit_core/test/utils/openwebui_persistence_projection_test.dart",
         "packages/conduit_core/test/utils/server_version_compat_test.dart"
       ],
-      "sha256": "1fc7dabeb714b756404c8aecd1e18e4d374c65618cfd4da560fa86bfc71ff548"
+      "sha256": "2711130fb64c5333b875b76e806e1ec916bcf271a2f93c99fdf01092ca76b92c"
     },
     {
       "patch": "07-localization.patch",
@@ -175,7 +175,7 @@
         "lib/l10n/app_zh.arb",
         "lib/l10n/app_zh_Hant.arb"
       ],
-      "sha256": "6d05de8d555e70618a7ff5700da31e0b02cd2a5f4d2bc5f3696211744eb8d58e"
+      "sha256": "0706ec9f9cf364811deb9753395486289b880fd6c5d9d4a11dd83cebac65d958"
     },
     {
       "patch": "08-arm64-native.patch",
@@ -207,7 +207,7 @@
         "pubspec.lock",
         "pubspec.yaml"
       ],
-      "sha256": "6035ef3860773b4556d0812a72f3fbfaeff1ab35c17d681de5095c1d4a73a1be"
+      "sha256": "ad863369271bf4b0c1a4f57a479e065107eddcef5bb17e3ab6651202efe30aeb"
     },
     {
       "patch": "10-portable-install.patch",
@@ -236,7 +236,7 @@
         ".github/workflows/avx1-build.yml",
         ".gitignore"
       ],
-      "sha256": "fb7b9fabcd678dba48f28f16b5d318151d26c6d052021c7de9705f750ff45ecd"
+      "sha256": "e08c97b53e84abc20dc6f36daa2dadbb006284a7b65a7f90e9f850812b012c2e"
     },
     {
       "patch": "12-project-docs.patch",
@@ -260,19 +260,19 @@
   "files": {
     "01-cline-ssh-gateway.patch": "0e7af9805e42f895892ee07c81efccf727120df040bda2022b16e33769096b7a",
     "02-cline-client.patch": "2e4d9937e92f6c74b761bf8b3910da4096e4387ac41ae0e54d3d2c26280e74c4",
-    "03-cline-navigation.patch": "75105ae348834343374077198348c5acc81179101e26e27f1c65dc7996bd31db",
-    "04-voice-vrm.patch": "8fa9cdc98defd5f9b0b88f0e96f7f543961a8ca86d7d36c45fc0d721af031aae",
-    "05-provider-compatibility.patch": "50b478febb1300fb6c7104a9344f871df0a711623ad00ec304abb9652358ecab",
-    "06-chat-persistence.patch": "1fc7dabeb714b756404c8aecd1e18e4d374c65618cfd4da560fa86bfc71ff548",
-    "07-localization.patch": "6d05de8d555e70618a7ff5700da31e0b02cd2a5f4d2bc5f3696211744eb8d58e",
+    "03-cline-navigation.patch": "257a2212a095613b45c337d0845bf65b9828739722bfe1279f631dbd47a0eed6",
+    "04-voice-vrm.patch": "663cc0033eea14d7145f6607e4b66100c3db1bf61b6a73ad08103c0166c2facc",
+    "05-provider-compatibility.patch": "acc9325bb25e5eebc88d2e03c82ecb78c50eeb0090f47c272b53c32ffd55c892",
+    "06-chat-persistence.patch": "2711130fb64c5333b875b76e806e1ec916bcf271a2f93c99fdf01092ca76b92c",
+    "07-localization.patch": "0706ec9f9cf364811deb9753395486289b880fd6c5d9d4a11dd83cebac65d958",
     "08-arm64-native.patch": "8c6a798df1b3da57115196746a15521f5df03d79f51570937242e556849f7da0",
-    "09-android-package.patch": "6035ef3860773b4556d0812a72f3fbfaeff1ab35c17d681de5095c1d4a73a1be",
+    "09-android-package.patch": "ad863369271bf4b0c1a4f57a479e065107eddcef5bb17e3ab6651202efe30aeb",
     "10-portable-install.patch": "a5f4c34a7c7c47f8f56c4bebdee4b03422237c66a6b0445f57c1f5d3aceeb4c9",
-    "11-ci-build.patch": "fb7b9fabcd678dba48f28f16b5d318151d26c6d052021c7de9705f750ff45ecd",
+    "11-ci-build.patch": "e08c97b53e84abc20dc6f36daa2dadbb006284a7b65a7f90e9f850812b012c2e",
     "12-project-docs.patch": "2bd7668cdd939c3a7667cb86afd2e41ca86404154446d23f3b0d46b9359e5d0a",
     "13-fork-records.patch": "10d25f732aec0e27ebe9ab74ecb2b6bacc505c00a3b35e6486b6d11be572c530",
     ".gitattributes": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",
     "series": "8225bb5291e2e2e00fcf2cbbbabe94eeaaf07bc596564f383d1bee6a45cb0554",
-    "README.md": "34175457b5f54d6bbef06aff2b8518fe107b9ef58aeb52582042fa28fc1f6bf9"
+    "README.md": "ac072b48d59bb71627d2b0dffec0d1006e62209f4804366ffa58fd837f6b39a5"
   }
 }

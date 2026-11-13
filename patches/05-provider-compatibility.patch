@@ -1,8 +1,8 @@
 diff --git a/lib/features/direct_connections/controllers/direct_connection_editor_form.dart b/lib/features/direct_connections/controllers/direct_connection_editor_form.dart
-index d038a272dc0898890b041c04ab4a4dccf0bee710..4b02c2c26110dded3d6e53ae155041a8d80e460c 100644
+index 07a063eb6fef7bb61f865a6a3341d02f0b7afba9..8d4bdb4503bf5c2dc1fbe7ace12af07b01a67089 100644
 --- a/lib/features/direct_connections/controllers/direct_connection_editor_form.dart
 +++ b/lib/features/direct_connections/controllers/direct_connection_editor_form.dart
-@@ -125,6 +125,13 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
+@@ -127,6 +127,13 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
        _adapterKey = profile.adapterKey;
        _providerPreset = profile.isOpenRouter
            ? kOpenRouterProviderPreset
@@ -16,7 +16,7 @@ index d038a272dc0898890b041c04ab4a4dccf0bee710..4b02c2c26110dded3d6e53ae155041a8
            : profile.adapterKey;
        _openAiApiMode = profile.openAiApiMode;
        _authentication =
-@@ -159,6 +166,9 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
+@@ -161,6 +168,9 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
      required String openRouterDefaultName,
    }) {
      if (providerPreset == value) return;
@@ -26,7 +26,7 @@ index d038a272dc0898890b041c04ab4a4dccf0bee710..4b02c2c26110dded3d6e53ae155041a8
      _providerPreset = value;
      _adapterKey = value == kOllamaAdapterKey
          ? kOllamaAdapterKey
-@@ -169,15 +179,31 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
+@@ -172,16 +182,32 @@ final class DirectConnectionEditorForm extends ChangeNotifier {
        baseUrl.text = switch (value) {
          kOllamaAdapterKey => 'https://ollama.com',
          kOpenRouterProviderPreset => kOpenRouterApiBaseUrl,
@@ -44,6 +44,7 @@ index d038a272dc0898890b041c04ab4a4dccf0bee710..4b02c2c26110dded3d6e53ae155041a8
 +          models.text == kMiniMaxModelIds.join('\n')) {
 +        models.clear();
 +      }
+       _followBaseUrlApiMode();
        if (mode.isNew &&
            (name.text == defaultName ||
                name.text == ollamaDefaultName ||
@@ -137,7 +138,7 @@ index addbf166d1d921e2432b77de89fc78ac8851fc21..5331d76aad9ef6e340d2fea03d300c5b
  List<String> parseDirectManualModelIds(String source) {
    final seen = <String>{};
 diff --git a/packages/conduit_core/lib/features/direct_connections/models/direct_connection_profile.dart b/packages/conduit_core/lib/features/direct_connections/models/direct_connection_profile.dart
-index e5633ae520e25a6765dc87c762a747a570abc539..1bac97ba4f51646bc6f21959817a07394c88dd5b 100644
+index a63c2b6e03339a5b3b8db312a94729ce9b949a20..3c61acc6c39ebe72be92ba62b653bff70270eb63 100644
 --- a/packages/conduit_core/lib/features/direct_connections/models/direct_connection_profile.dart
 +++ b/packages/conduit_core/lib/features/direct_connections/models/direct_connection_profile.dart
 @@ -34,6 +34,16 @@ const List<String> kApplePccReasoningEfforts = <String>[
@@ -157,17 +158,16 @@ index e5633ae520e25a6765dc87c762a747a570abc539..1bac97ba4f51646bc6f21959817a0739
  /// OpenAI-family completion protocol selected for one connection profile.
  ///
  /// This remains profile data rather than a separate adapter key so OpenAI,
-@@ -190,6 +200,9 @@ final class DirectConnectionProfile {
+@@ -190,6 +200,8 @@ final class DirectConnectionProfile {
        adapterKey == kOpenAiCompatibleAdapterKey &&
        isOpenRouterApiBaseUrl(baseUrl);
  
 +  bool get isMiniMax =>
 +      adapterKey == kOpenAiCompatibleAdapterKey && isMiniMaxApiBaseUrl(baseUrl);
-+
-   bool get supportsOpenRouterWebSearch =>
-       isOpenRouter && openAiApiMode == DirectOpenAiApiMode.chatCompletions;
-   bool get supportsOpenRouterImageGeneration => isOpenRouter;
-@@ -557,6 +570,25 @@ bool isOllamaCloudApiBaseUrl(String value) {
+   /// The OpenAI platform itself (`api.openai.com` or a regional
+   /// `*.api.openai.com` host), as opposed to a compatible server.
+   bool get isOpenAiPlatform =>
+@@ -563,6 +575,25 @@ bool isOllamaCloudApiBaseUrl(String value) {
    return uri.path.isEmpty || uri.path == '/';
  }
  
@@ -219,7 +219,7 @@ index bb1135d6e114c1c6e053f1c728c36e8a3b66a080..89c8fefa4e172bd447f83776f2ab7004
  
  /// Runtime-extensible adapter registry. Persisted profiles store [String] keys
 diff --git a/packages/conduit_core/lib/features/direct_connections/services/openai_compatible_adapter.dart b/packages/conduit_core/lib/features/direct_connections/services/openai_compatible_adapter.dart
-index a1c486b9800f852818f8aa3d902ac8ea809f33af..128412c1a4ef0d36daf91c70d42105e39c6fdaec 100644
+index 06a745a52a6f76f0d4ee227024242bc5e1996187..6d63261cfc7e8937c0b5cef36a0acf8f4f439c03 100644
 --- a/packages/conduit_core/lib/features/direct_connections/services/openai_compatible_adapter.dart
 +++ b/packages/conduit_core/lib/features/direct_connections/services/openai_compatible_adapter.dart
 @@ -127,6 +127,16 @@ final class OpenAiCompatibleAdapter implements DirectProviderAdapter {
@@ -281,7 +281,7 @@ index a1c486b9800f852818f8aa3d902ac8ea809f33af..128412c1a4ef0d36daf91c70d42105e3
          );
        }
        return DirectConnectionProbe(
-@@ -1638,8 +1665,20 @@ Map<String, dynamic> _chatRequestBody(
+@@ -1647,8 +1674,20 @@ Map<String, dynamic> _chatRequestBody(
      ...core,
      'stream': true,
    };
@@ -302,7 +302,7 @@ index a1c486b9800f852818f8aa3d902ac8ea809f33af..128412c1a4ef0d36daf91c70d42105e3
      _applyOpenRouterRequestFeatures(body, request, messages);
    } else if (request.enableWebSearch || request.enableImageGeneration) {
      throw const DirectProviderException(
-@@ -1851,6 +1890,21 @@ Map<String, dynamic> _responsesRequestBody(
+@@ -1883,6 +1922,21 @@ Map<String, dynamic> _responsesRequestBody(
          item['role'] = messages[index].role;
        }
      }
@@ -324,7 +324,7 @@ index a1c486b9800f852818f8aa3d902ac8ea809f33af..128412c1a4ef0d36daf91c70d42105e3
    }
    final body = <String, dynamic>{
      ...request.parameters,
-@@ -1873,8 +1927,10 @@ Map<String, dynamic> _responsesRequestBody(
+@@ -1906,8 +1960,10 @@ Map<String, dynamic> _responsesRequestBody(
        ]
        ..['parallel_tool_calls'] = false;
    }
@@ -332,10 +332,10 @@ index a1c486b9800f852818f8aa3d902ac8ea809f33af..128412c1a4ef0d36daf91c70d42105e3
    if (profile.isOpenRouter) {
      _normalizeOpenRouterReasoning(body);
 +    _validateOpenRouterMiniMaxRequest(body);
+   } else {
+     _nestResponsesReasoningEffort(body);
    }
-   if (!profile.isOpenRouter &&
-       (request.enableWebSearch || request.enableImageGeneration)) {
-@@ -1885,6 +1941,63 @@ Map<String, dynamic> _responsesRequestBody(
+@@ -1920,6 +1976,63 @@ Map<String, dynamic> _responsesRequestBody(
    return body;
  }
  
@@ -396,9 +396,9 @@ index a1c486b9800f852818f8aa3d902ac8ea809f33af..128412c1a4ef0d36daf91c70d42105e3
 +  }
 +}
 +
- void _normalizeOpenRouterReasoning(Map<String, dynamic> body) {
-   final rawEffort = body.remove('reasoning_effort');
-   final existing = body['reasoning'];
+ /// The Responses API takes the effort as `reasoning.effort`; the top-level
+ /// `reasoning_effort` shorthand belongs to Chat Completions.
+ void _nestResponsesReasoningEffort(Map<String, dynamic> body) {
 diff --git a/packages/conduit_core/lib/providers/app_providers_default_model.dart b/packages/conduit_core/lib/providers/app_providers_default_model.dart
 index eb92f08c75a60a74f21af6c9562c839483a83ed9..1f88d02274d8d7018973f1c6354bbb56f93fb33a 100644
 --- a/packages/conduit_core/lib/providers/app_providers_default_model.dart
@@ -1006,7 +1006,7 @@ index 0000000000000000000000000000000000000000..cebd41b3450da87dd0ad376fb9ef6f3e
 +  void close({bool force = false}) {}
 +}
 diff --git a/test/features/direct_connections/direct_connection_editor_controller_test.dart b/test/features/direct_connections/direct_connection_editor_controller_test.dart
-index 1a1f0c5945bf20d327f0c815e38850fa2532b84b..61cdb69fe17197b5feecec13cebe429cecf17d30 100644
+index a206f001d5c612705f592ac939e353364df6922d..bed6a04495aea30a93f07eb2d8d6366df2496128 100644
 --- a/test/features/direct_connections/direct_connection_editor_controller_test.dart
 +++ b/test/features/direct_connections/direct_connection_editor_controller_test.dart
 @@ -11,6 +11,73 @@ import 'package:conduit_core/features/direct_connections/services/direct_connect
@@ -1156,10 +1156,10 @@ index 7f79bb4f416dc064f0f4c2382d598cbadeb90152..332008969f45e2f3b63e62703a90f352
  }
  
 diff --git a/test/features/direct_connections/direct_providers_test.dart b/test/features/direct_connections/direct_providers_test.dart
-index 5ca78f2db989ff05f09ac3425de540f97f5e58b8..451d6949394d37cd6d98621e2e68da6b59afd3c6 100644
+index 2d4083446480783a367c7078b6d88cb0adaadb00..cea0e8bb31dab7cfae5053f5fe1443cebfdf48ea 100644
 --- a/test/features/direct_connections/direct_providers_test.dart
 +++ b/test/features/direct_connections/direct_providers_test.dart
-@@ -332,6 +332,40 @@ void main() {
+@@ -340,6 +340,40 @@ void main() {
      expect(discovery.models.every((model) => model.isMultimodal), isTrue);
    });
  
@@ -1201,10 +1201,10 @@ index 5ca78f2db989ff05f09ac3425de540f97f5e58b8..451d6949394d37cd6d98621e2e68da6b
      final adapter = _QueuedAdapter()
        ..responses.add([DirectRemoteModel(id: 'first')])
 diff --git a/test/features/hermes/hermes_connections_page_test.dart b/test/features/hermes/hermes_connections_page_test.dart
-index ffa4fa1c76cbfc777e3758d6787c92e8c5492867..bc378a1feb085eb93bc2b52c0fba0414f9c7aadb 100644
+index c35196cb2867d4b388fc2ad36ae63bd5cbf364ef..e26e52ba3e96c05523ccfdbdaafd42e25e6b62e7 100644
 --- a/test/features/hermes/hermes_connections_page_test.dart
 +++ b/test/features/hermes/hermes_connections_page_test.dart
-@@ -62,7 +62,6 @@ void main() {
+@@ -63,7 +63,6 @@ void main() {
    });
    tearDown(PreferencesStore.debugReset);
  
@@ -1212,7 +1212,7 @@ index ffa4fa1c76cbfc777e3758d6787c92e8c5492867..bc378a1feb085eb93bc2b52c0fba0414
    testWidgets('lists connections, switches on tap, and opens the editor', (
      tester,
    ) async {
-@@ -221,11 +220,12 @@ void main() {
+@@ -222,11 +221,12 @@ void main() {
      check(saved.nameSource).equals(HermesConnectionNameSource.user);
      // Saving another connection leaves the runtime on the active one.
      check(container.read(hermesConfigProvider).connectionId).equals(_home);
@@ -1229,7 +1229,7 @@ index ffa4fa1c76cbfc777e3758d6787c92e8c5492867..bc378a1feb085eb93bc2b52c0fba0414
      await tester.pumpAndSettle();
      check(container.read(hermesConfigProvider).connectionId).equals(_work);
      expect(
-@@ -309,9 +309,8 @@ void main() {
+@@ -310,9 +310,8 @@ void main() {
  
      await tester.tap(find.text('Test Connection'));
      await tester.pumpAndSettle();
@@ -1241,7 +1241,7 @@ index ffa4fa1c76cbfc777e3758d6787c92e8c5492867..bc378a1feb085eb93bc2b52c0fba0414
    });
  
    testWidgets('switching waits for the token refresh its editor started', (
-@@ -322,9 +321,12 @@ void main() {
+@@ -323,9 +322,12 @@ void main() {
      addTearDown(tester.view.reset);
      // The binding blocks real HTTP; the refresh must really be in flight.
      final blockedHttp = HttpOverrides.current;
@@ -1255,7 +1255,7 @@ index ffa4fa1c76cbfc777e3758d6787c92e8c5492867..bc378a1feb085eb93bc2b52c0fba0414
      addTearDown(gateway.close);
      // Hermes stays off, so no live client refreshes the tokens itself.
      PreferencesStore.debugOverride(
-@@ -410,9 +412,8 @@ void main() {
+@@ -411,9 +413,8 @@ void main() {
      check(active.connectionId).equals(_work);
      // The switch picked up the replacement tokens; the spent ones would
      // sign the connection out at its next refresh.
@@ -1267,7 +1267,7 @@ index ffa4fa1c76cbfc777e3758d6787c92e8c5492867..bc378a1feb085eb93bc2b52c0fba0414
      final stored = HermesDesktopCredentials.fromJson(
        jsonDecode(
          (await secrets.read(key: 'hermes_desktop_credentials_v1:$_work'))!,
-@@ -420,8 +421,10 @@ void main() {
+@@ -421,8 +422,10 @@ void main() {
      );
      check(stored.nativeTokens?.refreshToken).equals('refresh-1');
  
@@ -1280,7 +1280,7 @@ index ffa4fa1c76cbfc777e3758d6787c92e8c5492867..bc378a1feb085eb93bc2b52c0fba0414
      await tester.runAsync(gateway.close);
      for (var i = 0; i < 5; i++) {
        await settleIo();
-@@ -436,9 +439,12 @@ void main() {
+@@ -437,9 +440,12 @@ void main() {
      addTearDown(tester.view.reset);
      // The binding blocks real HTTP; the refresh must really be in flight.
      final blockedHttp = HttpOverrides.current;
@@ -1294,7 +1294,7 @@ index ffa4fa1c76cbfc777e3758d6787c92e8c5492867..bc378a1feb085eb93bc2b52c0fba0414
      addTearDown(gateway.close);
      PreferencesStore.debugOverride(
        InMemoryKeyValueStore(<String, Object?>{
-@@ -523,9 +529,9 @@ void main() {
+@@ -524,9 +530,9 @@ void main() {
        final stored = await secrets.read(
          key: 'hermes_desktop_credentials_v1:$_work',
        );
@@ -1307,7 +1307,7 @@ index ffa4fa1c76cbfc777e3758d6787c92e8c5492867..bc378a1feb085eb93bc2b52c0fba0414
      }
  
      for (var i = 0; i < 100 && await storedRefreshToken() != 'refresh-1'; i++) {
-@@ -658,9 +664,9 @@ void main() {
+@@ -659,9 +665,9 @@ void main() {
      // The edited connection stops being active, and reading its stored
      // baseline fails (reads of Hermes secrets retry once).
      flaky.failures = 2;
@@ -1320,7 +1320,7 @@ index ffa4fa1c76cbfc777e3758d6787c92e8c5492867..bc378a1feb085eb93bc2b52c0fba0414
      await tester.pumpAndSettle();
      expect(retry, findsOneWidget);
      check(save().onPressed).isNull();
-@@ -736,9 +742,8 @@ void main() {
+@@ -737,9 +743,8 @@ void main() {
  
      check(container.read(hermesConnectionsProvider)).isEmpty();
      // With nothing left, a Hermes-only install goes back to the chooser.
@@ -1332,7 +1332,7 @@ index ffa4fa1c76cbfc777e3758d6787c92e8c5492867..bc378a1feb085eb93bc2b52c0fba0414
      check(tester.takeException()).isNull();
    });
  
-@@ -838,7 +843,52 @@ final class _BlockingCookieJar extends NullCookieJarPort {
+@@ -882,7 +887,52 @@ final class _BlockingCookieJar extends NullCookieJarPort {
    Future<bool> clearForOrigin(String origin) => release.future;
  }
  
