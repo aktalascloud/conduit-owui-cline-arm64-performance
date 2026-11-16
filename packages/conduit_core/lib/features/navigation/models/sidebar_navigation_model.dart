@@ -50,6 +50,7 @@ const List<SidebarTabId> sidebarTabOrder = <SidebarTabId>[
   SidebarTabId.hermes,
   SidebarTabId.notes,
   SidebarTabId.terminal,
+  SidebarTabId.cline,
   SidebarTabId.channels,
 ];
 
@@ -69,6 +70,7 @@ bool isSidebarTabVisible(
       availability.hermesOnly || availability.hermesEnabled,
     SidebarTabId.notes => openWebUi && availability.notesEnabled,
     SidebarTabId.terminal => openWebUi && availability.terminalEnabled,
+    SidebarTabId.cline => openWebUi,
     SidebarTabId.channels => openWebUi && availability.channelsEnabled,
   };
 }

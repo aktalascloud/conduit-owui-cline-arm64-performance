@@ -140,7 +140,7 @@ Widget _clineBody({required bool showBottomNavigation, required bool active, Tex
     ClineSidebarTab(active: active);
 
 bool _clineVisible(SidebarTabAvailability availability) =>
-    availability.hasOpenWebUi && !availability.hermesOnly;
+    isSidebarTabVisible(SidebarTabId.cline, availability);
 
 // The rule lives in the core, where the Mac's source list reads it too.
 bool _chatsVisible(SidebarTabAvailability availability) =>
