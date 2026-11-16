@@ -46,8 +46,17 @@ PushState pushStateWith(
 final class FakePushCoordinator extends PushCoordinator {
   FakePushCoordinator(this.initial, {this.distributorList = const []});
 
+  /// Thrown by [resetKeys].
+  Object? resetKeysError;
+
+  /// Thrown by [setAndroidTransport].
+  Object? transportError;
+
+  /// Thrown by [setTargetOptedOut].
+  Object? optOutError;
+
   final PushState initial;
-  final List<String> distributorList;
+  List<String> distributorList;
   final calls = <String>[];
   bool testArrives = true;
 
@@ -84,9 +93,14 @@ final class FakePushCoordinator extends PushCoordinator {
     return true;
   }
 
+  /// Holds [sendTest] until completed, when set.
+  Completer<void>? testGate;
+
   @override
   Future<bool> sendTest(String scope) async {
     calls.add('sendTest $scope');
+    final gate = testGate;
+    if (gate != null) await gate.future;
     return testArrives;
   }
 
@@ -108,6 +122,8 @@ final class FakePushCoordinator extends PushCoordinator {
   @override
   Future<void> setTargetOptedOut(String scope, bool optedOut) async {
     calls.add('setTargetOptedOut $scope $optedOut');
+    final error = optOutError;
+    if (error != null) throw error;
     final target = state.targets[scope]!;
     state = state.copyWith(
       targets: {
@@ -118,7 +134,11 @@ final class FakePushCoordinator extends PushCoordinator {
   }
 
   @override
-  Future<void> resetKeys() async => calls.add('resetKeys');
+  Future<void> resetKeys() async {
+    calls.add('resetKeys');
+    final error = resetKeysError;
+    if (error != null) throw error;
+  }
 
   @override
   Future<void> setAndroidTransport(
@@ -126,6 +146,8 @@ final class FakePushCoordinator extends PushCoordinator {
     String? distributor,
   }) async {
     calls.add('setAndroidTransport ${transport?.name} $distributor');
+    final error = transportError;
+    if (error != null) throw error;
     state = state.copyWith(
       androidTransport: transport,
       clearAndroidTransport: transport == null,
@@ -133,8 +155,20 @@ final class FakePushCoordinator extends PushCoordinator {
     );
   }
 
+  /// Thrown by [distributors], when set.
+  Object? distributorsError;
+
   @override
-  Future<List<String>> distributors() async => distributorList;
+  Future<List<String>> distributors({bool throwOnFailure = false}) async {
+    final error = distributorsError;
+    // As the real coordinator: a failed read counts as none, unless asked
+    // to say so.
+    if (error != null) {
+      if (throwOnFailure) throw error;
+      return const [];
+    }
+    return distributorList;
+  }
 
   /// Thrown by [setHermesJobNotify].
   Object? jobNotifyError;

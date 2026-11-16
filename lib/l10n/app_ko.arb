@@ -946,7 +946,6 @@
   "personalConnectionsTestInvalidTarget": "먼저 올바른 URL과 경로를 입력하세요.",
   "personalConnectionsTestUnsupportedAuth": "이 인증 방식은 여기서 테스트할 수 없습니다.",
   "personalConnectionsUnsupported": "이 연결은 앱에서 편집할 수 없는 설정을 사용합니다. 켜기, 끄기, 삭제는 할 수 있습니다.",
-  "personalConnectionsDeleteTitle": "연결을 삭제할까요?",
   "personalConnectionsDeleteMessage": "{name}이(가) Open WebUI 계정에서 제거됩니다.",
   "personalConnectionsUrlRequired": "URL을 입력하세요.",
   "personalConnectionsUrlInvalid": "http 또는 https로 시작하는 전체 URL을 입력하세요.",
@@ -1872,8 +1871,6 @@
   "workspaceUnsupported": "이 서버는 워크스페이스 관리를 지원하지 않습니다.",
   "workspaceLoadFailed": "워크스페이스를 불러올 수 없습니다.",
   "workspaceRetry": "다시 시도",
-  "workspaceSelectItem": "세부 정보를 보려면 항목을 선택하세요.",
-  "workspaceEditorComingSoon": "이 편집기는 다음 워크스페이스 업데이트에서 제공될 예정입니다.",
   "workspaceSearchHint": "워크스페이스 리소스 검색",
   "workspaceLoadMore": "더 불러오기",
   "workspaceAccessPublicDisabled": "이 항목을 공개로 공유할 권한이 없습니다.",
@@ -1902,8 +1899,6 @@
   "workspaceEditorDiscardMessage": "저장하지 않은 변경 사항이 사라집니다.",
   "workspaceEditorDiscardConfirm": "버리기",
   "workspaceEditorKeepEditing": "계속 편집",
-  "workspaceEditorSaveTooltip": "변경 사항 저장",
-  "workspaceEditorSaving": "저장 중…",
   "workspaceEditorMoreActions": "추가 작업",
   "workspaceImportChooseFile": "JSON 파일 선택",
   "workspaceImportPasteLabel": "또는 JSON 붙여넣기",
@@ -2116,10 +2111,6 @@
   "@workspaceModelDelete": {
     "description": "Action that deletes the model."
   },
-  "workspaceModelDeleteConfirmTitle": "모델을 삭제하시겠습니까?",
-  "@workspaceModelDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a model."
-  },
   "workspaceModelDeleteConfirmMessage": "{name}이(가) 영구적으로 삭제됩니다.",
   "@workspaceModelDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a model.",
@@ -2165,10 +2156,6 @@
   "@workspaceModelDeleted": {
     "description": "Confirmation that the model was deleted."
   },
-  "workspaceModelAddAction": "추가",
-  "@workspaceModelAddAction": {
-    "description": "Confirm button in a small add-text dialog."
-  },
   "workspaceKnowledgeCreateTitle": "새 지식 베이스",
   "@workspaceKnowledgeCreateTitle": {
     "description": "Title of the create form for a new knowledge base."
@@ -2201,10 +2188,6 @@
   "@workspaceKnowledgeDelete": {
     "description": "Overflow action that deletes the knowledge base."
   },
-  "workspaceKnowledgeDeleteConfirmTitle": "지식 베이스를 삭제하시겠습니까?",
-  "@workspaceKnowledgeDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a knowledge base."
-  },
   "workspaceKnowledgeDeleteConfirmMessage": "{name}이(가) 영구적으로 삭제되고 파일 연결이 해제됩니다.",
   "@workspaceKnowledgeDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a knowledge base.",
@@ -2217,10 +2200,6 @@
   "workspaceKnowledgeReset": "초기화",
   "@workspaceKnowledgeReset": {
     "description": "Overflow action that removes all files from a knowledge base."
-  },
-  "workspaceKnowledgeResetConfirmTitle": "지식 베이스를 초기화하시겠습니까?",
-  "@workspaceKnowledgeResetConfirmTitle": {
-    "description": "Confirmation dialog title for resetting a knowledge base."
   },
   "workspaceKnowledgeResetConfirmMessage": "{name}에서 모든 파일이 제거되지만 지식 베이스는 유지됩니다.",
   "@workspaceKnowledgeResetConfirmMessage": {
@@ -2291,22 +2270,6 @@
   "@workspaceKnowledgeFilesLoadFailed": {
     "description": "Error when the knowledge base file list fails to load."
   },
-  "workspaceKnowledgeRefreshFiles": "새로 고침",
-  "@workspaceKnowledgeRefreshFiles": {
-    "description": "Tooltip for the button that refreshes the knowledge file list."
-  },
-  "workspaceKnowledgeRoot": "루트",
-  "@workspaceKnowledgeRoot": {
-    "description": "Breadcrumb label for the top level of a knowledge base."
-  },
-  "workspaceKnowledgeAddMenu": "파일 추가",
-  "@workspaceKnowledgeAddMenu": {
-    "description": "Tooltip for the menu that adds files or folders to a knowledge base."
-  },
-  "workspaceKnowledgeUpload": "파일 업로드",
-  "@workspaceKnowledgeUpload": {
-    "description": "Menu item to upload a single local file into a knowledge base."
-  },
   "workspaceKnowledgeUploading": "{name} 업로드 중…",
   "@workspaceKnowledgeUploading": {
     "description": "Progress label shown while a file uploads into a knowledge base.",
@@ -2319,10 +2282,6 @@
   "workspaceKnowledgeUploadFailed": "파일을 업로드할 수 없습니다.",
   "@workspaceKnowledgeUploadFailed": {
     "description": "Error when uploading a file into a knowledge base fails."
-  },
-  "workspaceKnowledgeBatchAttach": "여러 파일 업로드",
-  "@workspaceKnowledgeBatchAttach": {
-    "description": "Menu item to upload several local files into a knowledge base at once."
   },
   "workspaceKnowledgeAttachExisting": "서버 파일 첨부",
   "@workspaceKnowledgeAttachExisting": {
@@ -2367,10 +2326,6 @@
   "workspaceKnowledgeDeleteFolder": "폴더 삭제",
   "@workspaceKnowledgeDeleteFolder": {
     "description": "Action to delete a knowledge base directory."
-  },
-  "workspaceKnowledgeDeleteFolderConfirmTitle": "폴더를 삭제하시겠습니까?",
-  "@workspaceKnowledgeDeleteFolderConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a knowledge base directory."
   },
   "workspaceKnowledgeDeleteFolderConfirmMessage": "{name} 안의 파일은 상위 폴더로 이동합니다.",
   "@workspaceKnowledgeDeleteFolderConfirmMessage": {
@@ -2494,18 +2449,6 @@
   "@workspacePromptContentRequired": {
     "description": "Validation error when the prompt content is empty."
   },
-  "workspacePromptWriteTab": "작성",
-  "@workspacePromptWriteTab": {
-    "description": "Toggle label for the editable prompt content view."
-  },
-  "workspacePromptPreviewTab": "미리 보기",
-  "@workspacePromptPreviewTab": {
-    "description": "Toggle label for the rendered markdown preview of the prompt content."
-  },
-  "workspacePromptPreviewEmpty": "아직 미리 볼 내용이 없습니다.",
-  "@workspacePromptPreviewEmpty": {
-    "description": "Empty-state text shown in the prompt preview when there is no content."
-  },
   "workspacePromptTags": "태그",
   "@workspacePromptTags": {
     "description": "Label for the prompt tags field."
@@ -2565,10 +2508,6 @@
   "workspacePromptDelete": "프롬프트 삭제",
   "@workspacePromptDelete": {
     "description": "Overflow action that deletes a prompt."
-  },
-  "workspacePromptDeleteConfirmTitle": "프롬프트를 삭제하시겠습니까?",
-  "@workspacePromptDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a prompt."
   },
   "workspacePromptDeleteConfirmMessage": "\"{name}\"이(가) 영구적으로 삭제됩니다.",
   "@workspacePromptDeleteConfirmMessage": {
@@ -2663,10 +2602,6 @@
   "@workspacePromptHistoryDelete": {
     "description": "Action that deletes a prompt history entry."
   },
-  "workspacePromptHistoryDeleteConfirmTitle": "버전을 삭제하시겠습니까?",
-  "@workspacePromptHistoryDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a prompt version."
-  },
   "workspacePromptHistoryDeleteConfirmMessage": "이 버전 스냅샷이 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
   "@workspacePromptHistoryDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a prompt version."
@@ -2735,18 +2670,6 @@
   "@workspaceSkillContentRequired": {
     "description": "Validation error when the skill instructions are empty."
   },
-  "workspaceSkillWriteTab": "작성",
-  "@workspaceSkillWriteTab": {
-    "description": "Toggle label for the editable skill instructions view."
-  },
-  "workspaceSkillPreviewTab": "미리 보기",
-  "@workspaceSkillPreviewTab": {
-    "description": "Toggle label for the rendered markdown preview of the skill instructions."
-  },
-  "workspaceSkillPreviewEmpty": "아직 미리 볼 내용이 없습니다.",
-  "@workspaceSkillPreviewEmpty": {
-    "description": "Empty-state text shown in the skill preview when there is no content."
-  },
   "workspaceSkillManageAccess": "접근 권한 관리",
   "@workspaceSkillManageAccess": {
     "description": "Action to open the sharing/access editor for a skill."
@@ -2779,10 +2702,6 @@
   "@workspaceSkillDelete": {
     "description": "Overflow action that deletes a skill."
   },
-  "workspaceSkillDeleteConfirmTitle": "스킬을 삭제하시겠습니까?",
-  "@workspaceSkillDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a skill."
-  },
   "workspaceSkillDeleteConfirmMessage": "\"{name}\"이(가) 영구적으로 삭제됩니다.",
   "@workspaceSkillDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a skill.",
@@ -2803,10 +2722,6 @@
   "workspaceSkillImportMarkdown": "Markdown 가져오기",
   "@workspaceSkillImportMarkdown": {
     "description": "Overflow action that imports a skill from a Markdown file into the create editor."
-  },
-  "workspaceSkillImportJson": "JSON 가져오기",
-  "@workspaceSkillImportJson": {
-    "description": "Overflow action that imports one or more skills from a JSON file."
   },
   "workspaceSkillImportMarkdownLoaded": "Markdown을 불러왔습니다. 검토한 후 저장하면 스킬이 만들어집니다.",
   "@workspaceSkillImportMarkdownLoaded": {
@@ -2846,10 +2761,8 @@
   "workspaceToolClone": "복제",
   "workspaceToolCloneSuffix": "(복제본)",
   "workspaceToolDelete": "삭제",
-  "workspaceToolDeleteConfirmTitle": "도구를 삭제하시겠습니까?",
   "workspaceToolDeleteConfirmMessage": "\"{name}\"이(가) 영구적으로 삭제됩니다.",
   "workspaceToolImport": "도구 가져오기",
-  "workspaceToolImportJson": "JSON 가져오기",
   "workspaceToolImportUrl": "URL에서 가져오기",
   "workspaceToolImportUrlTitle": "URL에서 도구 가져오기",
   "workspaceToolImportUrlHint": "도구 Python 파일의 GitHub URL을 입력하세요",
@@ -2864,7 +2777,6 @@
   "workspaceToolManifestRequiredVersion": "Open WebUI {version} 필요",
   "workspaceToolManifestFunding": "후원: {url}",
   "workspaceToolSpecs": "생성된 사양",
-  "workspaceToolDetails": "도구 세부 정보",
   "workspaceToolFunctionCount": "함수 {count}개",
   "@workspaceToolFunctionCount": {"placeholders":{"count":{"type":"int"}}},
   "workspaceToolSpecsEmpty": "이 도구에 대해 생성된 사양이 없습니다.",
@@ -4059,13 +3971,11 @@
   "personalToolSettingsSaved": "도구 설정이 저장됨",
   "personalToolSettingsLoadFailed": "도구 설정을 불러올 수 없습니다.",
   "personalToolSettingsSaveFailed": "도구 설정을 저장할 수 없습니다.",
-  "scheduledTaskDeleteTitle": "예약된 작업을 삭제할까요?",
   "scheduledTaskRunning": "실행 중…",
   "scheduledTaskRunFinished": "실행이 완료되었습니다.",
   "scheduledTaskRunFailedNotice": "실행에 실패했습니다. 자세한 내용은 기록을 확인하세요.",
   "scheduledTaskLastRunFailed": "마지막 실행 실패",
   "scheduledTaskRruleRuns": "실행: {summary}",
-  "scheduledTaskFolderSearchHint": "폴더 검색",
   "scheduledTasksEmptyHint": "아침 뉴스 요약처럼 모델이 일정에 따라 지시를 수행하게 하세요.",
   "scheduledTasksShowAll": "모든 작업 보기",
   "personalConnectionsEmptyToolServersHint": "OpenAPI 도구 서버를 추가하면 채팅에서 해당 도구를 사용할 수 있습니다.",
@@ -4553,12 +4463,209 @@
   "@hermesProcessKillFailed": {"placeholders": {"error": {"type": "String"}}},
   "modelPickerCodingAgents": "코딩 에이전트",
   "modelControlServiceTier": "서비스 등급",
-  "scheduledTaskTerminalSearchHint": "터미널 검색",
   "scheduledTaskWorkingFolderLabel": "작업 폴더",
   "scheduledTaskWorkingFolderHint": "터미널 기본값",
   "scheduledTaskTerminalRequired": "이 에이전트를 실행할 터미널을 선택하세요.",
   "scheduledTaskAgentNeedsChat": "에이전트의 결과는 새 채팅으로 전송됩니다.",
   "scheduledTaskAgentsLoading": "이 터미널의 에이전트를 불러오는 중…",
+  "personalizationMemoryGone": "이 메모리는 더 이상 서버에 없습니다. 뒤로 돌아가 메모리 목록을 확인하세요.",
+  "hermesConnectionModeTitle": "연결 모드",
+  "hermesModeResponsesApi": "Responses API",
+  "hermesProfilesNeedUrl": "먼저 Hermes 서버 URL을 입력하세요.",
+  "hermesProfilesNeedTest": "연결을 테스트한 다음 프로필 목록을 새로 고치세요.",
+  "hermesProfilesNone": "Hermes에서 반환된 프로필이 없습니다.",
+  "hermesProfilesNeedSignIn": "로그인한 다음 프로필 목록을 새로 고치세요.",
+  "hermesNativeSignInFailed": "Hermes 로그인에 실패했거나 취소되었습니다. 네이티브 PKCE가 켜져 있는지 확인한 후 다시 시도하세요.",
+  "hermesDashboardSignInTitle": "Hermes 로그인",
+  "hermesDashboardSignInLoadFailed": "Hermes 로그인을 불러올 수 없습니다.",
+  "hermesJobLastDeliveryError": "전달: {error}",
+  "@hermesJobLastDeliveryError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesJobRunsLoadFailed": "실행 기록을 불러올 수 없습니다.",
+  "hermesJobPause": "일시 중지",
+  "hermesJobResume": "재개",
+  "hermesMcpAddServer": "MCP 서버 추가",
+  "hermesMcpAddFromCatalog": "카탈로그에서 추가",
+  "hermesMcpLoadFailed": "MCP 서버를 불러올 수 없습니다.",
+  "hermesMcpNone": "구성된 MCP 서버가 없습니다.",
+  "hermesMcpTest": "테스트",
+  "hermesMcpRemove": "제거",
+  "hermesMcpRemoveMessage": "이 서버를 Hermes에서 제거합니다.",
+  "hermesMcpToolsList": "도구: {tools}",
+  "@hermesMcpToolsList": {
+    "placeholders": {
+      "tools": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpToolFilter": "도구 필터",
+  "hermesMcpToolFilterSummary": "도구 필터: {filter}",
+  "@hermesMcpToolFilterSummary": {
+    "placeholders": {
+      "filter": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpAuthenticate": "인증",
+  "hermesMcpSetApiKey": "API 키 설정",
+  "hermesMcpSetApiKeyFor": "{name}의 API 키",
+  "@hermesMcpSetApiKeyFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpHttpUrl": "HTTP URL",
+  "hermesMcpStdioCommand": "명령 (stdio)",
+  "hermesMcpArguments": "인수(한 줄에 하나씩)",
+  "hermesMcpApiKeyOptional": "API 키(선택 사항)",
+  "hermesMcpAdd": "추가",
+  "hermesMcpCatalogAsks": "{names} 입력 필요",
+  "@hermesMcpCatalogAsks": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpCatalogNeeds": "{names}이(가) 필요하지만 이 연결로는 보낼 수 없습니다. 컴퓨터의 Hermes에서 추가하세요.",
+  "@hermesMcpCatalogNeeds": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpActionFailed": "Hermes MCP 작업에 실패했습니다.",
+  "hermesMcpKeepsValues": "Hermes는 각 값을 {name}용으로 보관합니다.",
+  "@hermesMcpKeepsValues": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpValueRequired": "{name}(필수)",
+  "@hermesMcpValueRequired": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpValueOptional": "{name}(선택)",
+  "@hermesMcpValueOptional": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpFillRequired": "필수 값을 모두 입력하세요.",
+  "hermesMcpStillInstallingSignIn": "Hermes가 아직 {name}을(를) 설치하는 중입니다. 목록에 표시되면 해당 페이지의 인증으로 로그인하세요.",
+  "@hermesMcpStillInstallingSignIn": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpStillInstalling": "Hermes가 아직 {name}을(를) 설치하는 중입니다. 완료되면 목록에 표시됩니다.",
+  "@hermesMcpStillInstalling": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpAddedSignInUnfinished": "{name}을(를) 추가했지만 로그인이 완료되지 않았습니다. 해당 페이지의 인증으로 다시 시도하세요.",
+  "@hermesMcpAddedSignInUnfinished": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpResourcesPrompts": "리소스: {resources} · 프롬프트: {prompts}",
+  "@hermesMcpResourcesPrompts": {
+    "placeholders": {
+      "resources": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "hermesMcpTestConnected": "연결됨 · 도구: {tools} · 리소스: {resources} · 프롬프트: {prompts}",
+  "@hermesMcpTestConnected": {
+    "placeholders": {
+      "tools": {
+        "type": "int"
+      },
+      "resources": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "hermesMcpTestFailed": "MCP 테스트에 실패했습니다.",
+  "scheduledTasksFilterLabel": "표시",
+  "personalConnectionsTurnOn": "켜기",
+  "personalConnectionsTurnOff": "끄기",
+  "calendarDayEmpty": "일정 없음",
+  "workspaceModelCapabilityVision": "비전",
+  "@workspaceModelCapabilityVision": {
+    "description": "Model capability: understands images it is given."
+  },
+  "workspaceModelCapabilityFileUpload": "파일 업로드",
+  "@workspaceModelCapabilityFileUpload": {
+    "description": "Model capability: accepts uploaded files."
+  },
+  "workspaceModelCapabilityCitations": "인용",
+  "@workspaceModelCapabilityCitations": {
+    "description": "Model capability: cites its sources."
+  },
+  "workspaceModelCapabilityUsage": "사용량",
+  "@workspaceModelCapabilityUsage": {
+    "description": "Model capability: reports token usage."
+  },
+  "workspacePromptHistoryDiffRemovedLine": "삭제됨: {line}",
+  "@workspacePromptHistoryDiffRemovedLine": {
+    "description": "What a screen reader says for a line removed in a comparison of two prompt versions; {line} is the line.",
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "workspacePromptHistoryDiffAddedLine": "추가됨: {line}",
+  "@workspacePromptHistoryDiffAddedLine": {
+    "description": "What a screen reader says for a line added in a comparison of two prompt versions; {line} is the line.",
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaceKnowledgeSourceLabel": "출처",
+  "@workspaceKnowledgeSourceLabel": {
+    "description": "Label of the menu on the Knowledge list in Settings that filters bases by where they come from (all, local, connected)."
+  },
+  "workspaceKnowledgeUploadFiles": "파일 업로드",
+  "@workspaceKnowledgeUploadFiles": {
+    "description": "Row in a knowledge base's files in Settings that opens the file picker to upload one or more files."
+  },
   "pushFallbackTitle": "Conduit",
   "pushFallbackBody": "새 알림",
   "pushReplyTitle": "새 응답",
@@ -4684,6 +4791,15 @@
   "hermesJobCreatedNotifyFailed": "작업을 만들었지만 알림을 켜지 못했습니다.",
   "hermesJobUpdatedNotifyFailed": "작업을 저장했지만 알림을 변경하지 못했습니다.",
   "hermesJobNotifyNeedsScheduled": "사용하려면 알림에서 예약된 작업을 켜세요.",
+  "pushSettingsMenuAction": "푸시 설정",
+  "workspaceSkillCloneSaveFirst": "스킬을 복제하기 전에 변경 사항을 저장하거나 취소하세요.",
+  "@workspaceSkillCloneSaveFirst": {
+    "description": "Said on a skill's editor when Duplicate is tapped with unsaved changes: Duplicate copies the skill as saved."
+  },
+  "workspaceSkillToggleSaveFirst": "스킬을 켜거나 끄기 전에 변경 사항을 저장하거나 취소하세요.",
+  "@workspaceSkillToggleSaveFirst": {
+    "description": "Said on a skill's editor when its on/off switch is tapped with unsaved changes."
+  },
   "hermesShowScheduledRuns": "예약 실행 표시",
   "hermesShowScheduledRunsDescription": "예약된 에이전트는 실행될 때마다 새 채팅을 만듭니다. 이 설정을 끄면 해당 채팅이 Hermes 목록에 표시되지 않습니다. 고정한 채팅은 그대로 표시됩니다.",
   "hermesScheduledRunsHidden": "{count, plural, other{예약 실행 {count}개 숨김}}",
@@ -4707,5 +4823,13 @@
     }
   },
   "showModelNameInComposer": "메시지 입력란에 모델 이름 표시",
-  "showModelNameInComposerDescription": "비어 있는 메시지 입력란에 Conduit 대신 선택한 모델 이름을 표시합니다."
+  "showModelNameInComposerDescription": "비어 있는 메시지 입력란에 Conduit 대신 선택한 모델 이름을 표시합니다.",
+  "workspaceEditorAccountChanged": "로그인한 계정이 변경되어 변경 사항을 저장하지 않았습니다.",
+  "@workspaceEditorAccountChanged": {
+    "description": "Shown on a Workspace skill or tool editor read again because the signed-in account changed while a change on it (a save, switch, duplicate, delete or valve save) was under way, when that change was never sent or failed."
+  },
+  "settingsAddAction": "추가",
+  "@settingsAddAction": {
+    "description": "Read aloud for the plus button in a Settings page's bar that adds an item, such as a calendar event."
+  }
 }

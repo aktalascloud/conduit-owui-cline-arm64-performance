@@ -1168,7 +1168,6 @@
   "personalConnectionsTestInvalidTarget": "Voer eerst een geldige URL en een pad in.",
   "personalConnectionsTestUnsupportedAuth": "Deze authenticatiemodus kan hier niet worden getest.",
   "personalConnectionsUnsupported": "Deze verbinding gebruikt instellingen die de app niet kan bewerken. Je kunt haar nog wel in- of uitschakelen of verwijderen.",
-  "personalConnectionsDeleteTitle": "Verbinding verwijderen?",
   "personalConnectionsDeleteMessage": "{name} wordt verwijderd uit je Open WebUI-account.",
   "personalConnectionsUrlRequired": "Voer een URL in.",
   "personalConnectionsUrlInvalid": "Voer een volledige http- of https-URL in.",
@@ -2094,8 +2093,6 @@
   "workspaceUnsupported": "Deze server ondersteunt geen werkruimtebeheer.",
   "workspaceLoadFailed": "Kan de werkruimte niet laden.",
   "workspaceRetry": "Opnieuw proberen",
-  "workspaceSelectItem": "Selecteer een item om de details te bekijken.",
-  "workspaceEditorComingSoon": "Deze editor komt beschikbaar in de volgende mijlpaal van de werkruimte.",
   "workspaceSearchHint": "Bronnen in de werkruimte zoeken",
   "workspaceLoadMore": "Meer laden",
   "workspaceAccessPublicDisabled": "Je hebt geen toestemming om dit openbaar te delen.",
@@ -2124,8 +2121,6 @@
   "workspaceEditorDiscardMessage": "Je niet-opgeslagen wijzigingen gaan verloren.",
   "workspaceEditorDiscardConfirm": "Weggooien",
   "workspaceEditorKeepEditing": "Verder bewerken",
-  "workspaceEditorSaveTooltip": "Wijzigingen opslaan",
-  "workspaceEditorSaving": "Opslaan…",
   "workspaceEditorMoreActions": "Meer acties",
   "workspaceImportChooseFile": "JSON-bestand kiezen",
   "workspaceImportPasteLabel": "Of plak JSON",
@@ -2338,10 +2333,6 @@
   "@workspaceModelDelete": {
     "description": "Action that deletes the model."
   },
-  "workspaceModelDeleteConfirmTitle": "Model verwijderen?",
-  "@workspaceModelDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a model."
-  },
   "workspaceModelDeleteConfirmMessage": "Hiermee wordt {name} definitief verwijderd.",
   "@workspaceModelDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a model.",
@@ -2387,10 +2378,6 @@
   "@workspaceModelDeleted": {
     "description": "Confirmation that the model was deleted."
   },
-  "workspaceModelAddAction": "Toevoegen",
-  "@workspaceModelAddAction": {
-    "description": "Confirm button in a small add-text dialog."
-  },
   "workspaceKnowledgeCreateTitle": "Nieuwe kennisbank",
   "@workspaceKnowledgeCreateTitle": {
     "description": "Title of the create form for a new knowledge base."
@@ -2423,10 +2410,6 @@
   "@workspaceKnowledgeDelete": {
     "description": "Overflow action that deletes the knowledge base."
   },
-  "workspaceKnowledgeDeleteConfirmTitle": "Kennisbank verwijderen?",
-  "@workspaceKnowledgeDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a knowledge base."
-  },
   "workspaceKnowledgeDeleteConfirmMessage": "Hiermee wordt {name} definitief verwijderd en worden de bestanden ervan losgekoppeld.",
   "@workspaceKnowledgeDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a knowledge base.",
@@ -2439,10 +2422,6 @@
   "workspaceKnowledgeReset": "Resetten",
   "@workspaceKnowledgeReset": {
     "description": "Overflow action that removes all files from a knowledge base."
-  },
-  "workspaceKnowledgeResetConfirmTitle": "Kennisbank resetten?",
-  "@workspaceKnowledgeResetConfirmTitle": {
-    "description": "Confirmation dialog title for resetting a knowledge base."
   },
   "workspaceKnowledgeResetConfirmMessage": "Hiermee worden alle bestanden uit {name} verwijderd, maar de kennisbank blijft bestaan.",
   "@workspaceKnowledgeResetConfirmMessage": {
@@ -2513,22 +2492,6 @@
   "@workspaceKnowledgeFilesLoadFailed": {
     "description": "Error when the knowledge base file list fails to load."
   },
-  "workspaceKnowledgeRefreshFiles": "Vernieuwen",
-  "@workspaceKnowledgeRefreshFiles": {
-    "description": "Tooltip for the button that refreshes the knowledge file list."
-  },
-  "workspaceKnowledgeRoot": "Hoofdmap",
-  "@workspaceKnowledgeRoot": {
-    "description": "Breadcrumb label for the top level of a knowledge base."
-  },
-  "workspaceKnowledgeAddMenu": "Bestanden toevoegen",
-  "@workspaceKnowledgeAddMenu": {
-    "description": "Tooltip for the menu that adds files or folders to a knowledge base."
-  },
-  "workspaceKnowledgeUpload": "Bestand uploaden",
-  "@workspaceKnowledgeUpload": {
-    "description": "Menu item to upload a single local file into a knowledge base."
-  },
   "workspaceKnowledgeUploading": "{name} uploaden…",
   "@workspaceKnowledgeUploading": {
     "description": "Progress label shown while a file uploads into a knowledge base.",
@@ -2541,10 +2504,6 @@
   "workspaceKnowledgeUploadFailed": "Het bestand kon niet worden geüpload.",
   "@workspaceKnowledgeUploadFailed": {
     "description": "Error when uploading a file into a knowledge base fails."
-  },
-  "workspaceKnowledgeBatchAttach": "Meerdere bestanden uploaden",
-  "@workspaceKnowledgeBatchAttach": {
-    "description": "Menu item to upload several local files into a knowledge base at once."
   },
   "workspaceKnowledgeAttachExisting": "Serverbestand koppelen",
   "@workspaceKnowledgeAttachExisting": {
@@ -2589,10 +2548,6 @@
   "workspaceKnowledgeDeleteFolder": "Map verwijderen",
   "@workspaceKnowledgeDeleteFolder": {
     "description": "Action to delete a knowledge base directory."
-  },
-  "workspaceKnowledgeDeleteFolderConfirmTitle": "Map verwijderen?",
-  "@workspaceKnowledgeDeleteFolderConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a knowledge base directory."
   },
   "workspaceKnowledgeDeleteFolderConfirmMessage": "Bestanden in {name} worden naar de bovenliggende map verplaatst.",
   "@workspaceKnowledgeDeleteFolderConfirmMessage": {
@@ -2716,18 +2671,6 @@
   "@workspacePromptContentRequired": {
     "description": "Validation error when the prompt content is empty."
   },
-  "workspacePromptWriteTab": "Schrijven",
-  "@workspacePromptWriteTab": {
-    "description": "Toggle label for the editable prompt content view."
-  },
-  "workspacePromptPreviewTab": "Voorvertoning",
-  "@workspacePromptPreviewTab": {
-    "description": "Toggle label for the rendered markdown preview of the prompt content."
-  },
-  "workspacePromptPreviewEmpty": "Nog niets om te tonen.",
-  "@workspacePromptPreviewEmpty": {
-    "description": "Empty-state text shown in the prompt preview when there is no content."
-  },
   "workspacePromptTags": "Tags",
   "@workspacePromptTags": {
     "description": "Label for the prompt tags field."
@@ -2787,10 +2730,6 @@
   "workspacePromptDelete": "Prompt verwijderen",
   "@workspacePromptDelete": {
     "description": "Overflow action that deletes a prompt."
-  },
-  "workspacePromptDeleteConfirmTitle": "Prompt verwijderen?",
-  "@workspacePromptDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a prompt."
   },
   "workspacePromptDeleteConfirmMessage": "„{name}” wordt definitief verwijderd.",
   "@workspacePromptDeleteConfirmMessage": {
@@ -2885,10 +2824,6 @@
   "@workspacePromptHistoryDelete": {
     "description": "Action that deletes a prompt history entry."
   },
-  "workspacePromptHistoryDeleteConfirmTitle": "Versie verwijderen?",
-  "@workspacePromptHistoryDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a prompt version."
-  },
   "workspacePromptHistoryDeleteConfirmMessage": "Deze momentopname van de versie wordt verwijderd. Dit kan niet ongedaan worden gemaakt.",
   "@workspacePromptHistoryDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a prompt version."
@@ -2957,18 +2892,6 @@
   "@workspaceSkillContentRequired": {
     "description": "Validation error when the skill instructions are empty."
   },
-  "workspaceSkillWriteTab": "Schrijven",
-  "@workspaceSkillWriteTab": {
-    "description": "Toggle label for the editable skill instructions view."
-  },
-  "workspaceSkillPreviewTab": "Voorvertoning",
-  "@workspaceSkillPreviewTab": {
-    "description": "Toggle label for the rendered markdown preview of the skill instructions."
-  },
-  "workspaceSkillPreviewEmpty": "Nog niets om te tonen.",
-  "@workspaceSkillPreviewEmpty": {
-    "description": "Empty-state text shown in the skill preview when there is no content."
-  },
   "workspaceSkillManageAccess": "Toegang beheren",
   "@workspaceSkillManageAccess": {
     "description": "Action to open the sharing/access editor for a skill."
@@ -3001,10 +2924,6 @@
   "@workspaceSkillDelete": {
     "description": "Overflow action that deletes a skill."
   },
-  "workspaceSkillDeleteConfirmTitle": "Vaardigheid verwijderen?",
-  "@workspaceSkillDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a skill."
-  },
   "workspaceSkillDeleteConfirmMessage": "„{name}” wordt definitief verwijderd.",
   "@workspaceSkillDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a skill.",
@@ -3025,10 +2944,6 @@
   "workspaceSkillImportMarkdown": "Markdown importeren",
   "@workspaceSkillImportMarkdown": {
     "description": "Overflow action that imports a skill from a Markdown file into the create editor."
-  },
-  "workspaceSkillImportJson": "JSON importeren",
-  "@workspaceSkillImportJson": {
-    "description": "Overflow action that imports one or more skills from a JSON file."
   },
   "workspaceSkillImportMarkdownLoaded": "Markdown geladen. Controleer het en sla op om de vaardigheid te maken.",
   "@workspaceSkillImportMarkdownLoaded": {
@@ -3068,10 +2983,8 @@
   "workspaceToolClone": "Dupliceren",
   "workspaceToolCloneSuffix": "(kopie)",
   "workspaceToolDelete": "Verwijderen",
-  "workspaceToolDeleteConfirmTitle": "Tool verwijderen?",
   "workspaceToolDeleteConfirmMessage": "„{name}” wordt definitief verwijderd.",
   "workspaceToolImport": "Tools importeren",
-  "workspaceToolImportJson": "JSON importeren",
   "workspaceToolImportUrl": "Importeren via URL",
   "workspaceToolImportUrlTitle": "Tool importeren via URL",
   "workspaceToolImportUrlHint": "Voer een GitHub-URL naar het Python-bestand van een tool in",
@@ -3086,7 +2999,6 @@
   "workspaceToolManifestRequiredVersion": "Vereist Open WebUI {version}",
   "workspaceToolManifestFunding": "Financiering: {url}",
   "workspaceToolSpecs": "Gegenereerde specificaties",
-  "workspaceToolDetails": "Tooldetails",
   "workspaceToolFunctionCount": "{count, plural, =1{1 functie} other{{count} functies}}",
   "@workspaceToolFunctionCount": {"placeholders":{"count":{"type":"int"}}},
   "workspaceToolSpecsEmpty": "Er zijn geen specificaties voor deze tool gegenereerd.",
@@ -4287,13 +4199,11 @@
   "personalToolSettingsSaved": "Gereedschapsinstellingen opgeslagen",
   "personalToolSettingsLoadFailed": "Kan gereedschapsinstellingen niet laden.",
   "personalToolSettingsSaveFailed": "Kan gereedschapsinstellingen niet opslaan.",
-  "scheduledTaskDeleteTitle": "Geplande taak verwijderen?",
   "scheduledTaskRunning": "Bezig met uitvoeren…",
   "scheduledTaskRunFinished": "Uitvoering voltooid.",
   "scheduledTaskRunFailedNotice": "De uitvoering is mislukt. Zie Geschiedenis voor details.",
   "scheduledTaskLastRunFailed": "Laatste uitvoering mislukt",
   "scheduledTaskRruleRuns": "Draait: {summary}",
-  "scheduledTaskFolderSearchHint": "Mappen zoeken",
   "scheduledTasksEmptyHint": "Laat een model je instructies volgens schema uitvoeren, zoals een ochtendoverzicht van het nieuws.",
   "scheduledTasksShowAll": "Alle taken tonen",
   "personalConnectionsEmptyToolServersHint": "Voeg een OpenAPI-toolserver toe om de tools ervan in je chats te gebruiken.",
@@ -4781,12 +4691,209 @@
   "@hermesProcessKillFailed": {"placeholders": {"error": {"type": "String"}}},
   "modelPickerCodingAgents": "Codeeragents",
   "modelControlServiceTier": "Serviceniveau",
-  "scheduledTaskTerminalSearchHint": "Terminals zoeken",
   "scheduledTaskWorkingFolderLabel": "Werkmap",
   "scheduledTaskWorkingFolderHint": "Standaard van de terminal",
   "scheduledTaskTerminalRequired": "Kies de terminal waarop deze agent draait.",
   "scheduledTaskAgentNeedsChat": "De resultaten van een agent gaan naar een nieuwe chat.",
   "scheduledTaskAgentsLoading": "Agents van deze terminal laden…",
+  "personalizationMemoryGone": "Deze herinnering staat niet meer op de server. Ga terug om je herinneringen te zien.",
+  "hermesConnectionModeTitle": "Verbindingsmodus",
+  "hermesModeResponsesApi": "Responses API",
+  "hermesProfilesNeedUrl": "Voer eerst de URL van de Hermes-server in.",
+  "hermesProfilesNeedTest": "Test de verbinding en vernieuw daarna de profiellijst.",
+  "hermesProfilesNone": "Hermes gaf geen profielen terug.",
+  "hermesProfilesNeedSignIn": "Meld je aan en vernieuw daarna de profiellijst.",
+  "hermesNativeSignInFailed": "Aanmelden bij Hermes is mislukt of geannuleerd. Controleer of native PKCE is ingeschakeld en probeer het opnieuw.",
+  "hermesDashboardSignInTitle": "Aanmelden bij Hermes",
+  "hermesDashboardSignInLoadFailed": "Aanmelden bij Hermes kon niet worden geladen.",
+  "hermesJobLastDeliveryError": "Bezorging: {error}",
+  "@hermesJobLastDeliveryError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesJobRunsLoadFailed": "De uitvoergeschiedenis kon niet worden geladen.",
+  "hermesJobPause": "Pauzeren",
+  "hermesJobResume": "Hervatten",
+  "hermesMcpAddServer": "MCP-server toevoegen",
+  "hermesMcpAddFromCatalog": "Toevoegen uit catalogus",
+  "hermesMcpLoadFailed": "MCP-servers konden niet worden geladen.",
+  "hermesMcpNone": "Geen MCP-servers ingesteld.",
+  "hermesMcpTest": "Testen",
+  "hermesMcpRemove": "Verwijderen",
+  "hermesMcpRemoveMessage": "Hiermee wordt de server uit Hermes verwijderd.",
+  "hermesMcpToolsList": "Tools: {tools}",
+  "@hermesMcpToolsList": {
+    "placeholders": {
+      "tools": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpToolFilter": "Toolfilter",
+  "hermesMcpToolFilterSummary": "Toolfilter: {filter}",
+  "@hermesMcpToolFilterSummary": {
+    "placeholders": {
+      "filter": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpAuthenticate": "Authenticeren",
+  "hermesMcpSetApiKey": "API-sleutel instellen",
+  "hermesMcpSetApiKeyFor": "API-sleutel voor {name}",
+  "@hermesMcpSetApiKeyFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpHttpUrl": "HTTP-URL",
+  "hermesMcpStdioCommand": "Opdracht (stdio)",
+  "hermesMcpArguments": "Argumenten (één per regel)",
+  "hermesMcpApiKeyOptional": "API-sleutel (optioneel)",
+  "hermesMcpAdd": "Toevoegen",
+  "hermesMcpCatalogAsks": "Vraagt om {names}",
+  "@hermesMcpCatalogAsks": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpCatalogNeeds": "Vereist {names}, wat deze verbinding niet kan versturen. Voeg hem toe vanuit Hermes op je computer.",
+  "@hermesMcpCatalogNeeds": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpActionFailed": "De MCP-actie van Hermes is mislukt.",
+  "hermesMcpKeepsValues": "Hermes bewaart elke waarde voor {name}.",
+  "@hermesMcpKeepsValues": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpValueRequired": "{name} (verplicht)",
+  "@hermesMcpValueRequired": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpValueOptional": "{name} (optioneel)",
+  "@hermesMcpValueOptional": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpFillRequired": "Vul alle verplichte waarden in.",
+  "hermesMcpStillInstallingSignIn": "Hermes installeert {name} nog. Zodra hij in de lijst staat, meld je je aan met Authenticeren op zijn pagina.",
+  "@hermesMcpStillInstallingSignIn": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpStillInstalling": "Hermes installeert {name} nog. Als het klaar is, verschijnt hij in de lijst.",
+  "@hermesMcpStillInstalling": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpAddedSignInUnfinished": "{name} is toegevoegd, maar het aanmelden is niet voltooid. Gebruik Authenticeren op zijn pagina om het opnieuw te proberen.",
+  "@hermesMcpAddedSignInUnfinished": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpResourcesPrompts": "Bronnen: {resources} · Prompts: {prompts}",
+  "@hermesMcpResourcesPrompts": {
+    "placeholders": {
+      "resources": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "hermesMcpTestConnected": "Verbonden · Tools: {tools} · Bronnen: {resources} · Prompts: {prompts}",
+  "@hermesMcpTestConnected": {
+    "placeholders": {
+      "tools": {
+        "type": "int"
+      },
+      "resources": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "hermesMcpTestFailed": "De MCP-test is mislukt.",
+  "scheduledTasksFilterLabel": "Tonen",
+  "personalConnectionsTurnOn": "Inschakelen",
+  "personalConnectionsTurnOff": "Uitschakelen",
+  "calendarDayEmpty": "Geen afspraken",
+  "workspaceModelCapabilityVision": "Beeldherkenning",
+  "@workspaceModelCapabilityVision": {
+    "description": "Model capability: understands images it is given."
+  },
+  "workspaceModelCapabilityFileUpload": "Bestanden uploaden",
+  "@workspaceModelCapabilityFileUpload": {
+    "description": "Model capability: accepts uploaded files."
+  },
+  "workspaceModelCapabilityCitations": "Bronvermeldingen",
+  "@workspaceModelCapabilityCitations": {
+    "description": "Model capability: cites its sources."
+  },
+  "workspaceModelCapabilityUsage": "Gebruik",
+  "@workspaceModelCapabilityUsage": {
+    "description": "Model capability: reports token usage."
+  },
+  "workspacePromptHistoryDiffRemovedLine": "Verwijderd: {line}",
+  "@workspacePromptHistoryDiffRemovedLine": {
+    "description": "What a screen reader says for a line removed in a comparison of two prompt versions; {line} is the line.",
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "workspacePromptHistoryDiffAddedLine": "Toegevoegd: {line}",
+  "@workspacePromptHistoryDiffAddedLine": {
+    "description": "What a screen reader says for a line added in a comparison of two prompt versions; {line} is the line.",
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaceKnowledgeSourceLabel": "Bron",
+  "@workspaceKnowledgeSourceLabel": {
+    "description": "Label of the menu on the Knowledge list in Settings that filters bases by where they come from (all, local, connected)."
+  },
+  "workspaceKnowledgeUploadFiles": "Bestanden uploaden",
+  "@workspaceKnowledgeUploadFiles": {
+    "description": "Row in a knowledge base's files in Settings that opens the file picker to upload one or more files."
+  },
   "pushFallbackTitle": "Conduit",
   "pushFallbackBody": "Nieuwe melding",
   "pushReplyTitle": "Nieuw antwoord",
@@ -4912,6 +5019,15 @@
   "hermesJobCreatedNotifyFailed": "Taak gemaakt, maar de meldingen ervoor konden niet worden ingeschakeld.",
   "hermesJobUpdatedNotifyFailed": "Taak opgeslagen, maar de meldingen ervan konden niet worden gewijzigd.",
   "hermesJobNotifyNeedsScheduled": "Zet Geplande taken aan bij Meldingen om dit te gebruiken.",
+  "pushSettingsMenuAction": "Pushinstellingen",
+  "workspaceSkillCloneSaveFirst": "Sla je wijzigingen op of verwerp ze voordat je de vaardigheid dupliceert.",
+  "@workspaceSkillCloneSaveFirst": {
+    "description": "Said on a skill's editor when Duplicate is tapped with unsaved changes: Duplicate copies the skill as saved."
+  },
+  "workspaceSkillToggleSaveFirst": "Sla je wijzigingen op of verwerp ze voordat je de vaardigheid in- of uitschakelt.",
+  "@workspaceSkillToggleSaveFirst": {
+    "description": "Said on a skill's editor when its on/off switch is tapped with unsaved changes."
+  },
   "hermesShowScheduledRuns": "Geplande uitvoeringen tonen",
   "hermesShowScheduledRunsDescription": "Elke uitvoering van een geplande agent start een eigen chat. Zet dit uit om die chats uit de Hermes-lijst weg te laten. Vastgepinde chats blijven staan.",
   "hermesScheduledRunsHidden": "{count, plural, =1{1 geplande uitvoering verborgen} other{{count} geplande uitvoeringen verborgen}}",
@@ -4935,5 +5051,13 @@
     }
   },
   "showModelNameInComposer": "Modelnaam in berichtveld tonen",
-  "showModelNameInComposerDescription": "Het lege berichtveld noemt het gekozen model in plaats van Conduit."
+  "showModelNameInComposerDescription": "Het lege berichtveld noemt het gekozen model in plaats van Conduit.",
+  "workspaceEditorAccountChanged": "Het ingelogde account is gewijzigd, dus je wijziging is niet opgeslagen.",
+  "@workspaceEditorAccountChanged": {
+    "description": "Shown on a Workspace skill or tool editor read again because the signed-in account changed while a change on it (a save, switch, duplicate, delete or valve save) was under way, when that change was never sent or failed."
+  },
+  "settingsAddAction": "Toevoegen",
+  "@settingsAddAction": {
+    "description": "Read aloud for the plus button in a Settings page's bar that adds an item, such as a calendar event."
+  }
 }

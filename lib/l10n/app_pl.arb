@@ -2925,10 +2925,6 @@
   "@personalConnectionsUnsupported": {
     "description": "Explains that a connection uses settings the app cannot edit, so it can only be switched or deleted."
   },
-  "personalConnectionsDeleteTitle": "Usunąć połączenie?",
-  "@personalConnectionsDeleteTitle": {
-    "description": "Title of the confirmation for deleting a personal connection."
-  },
   "personalConnectionsDeleteMessage": "{name} zostanie usunięte z Twojego konta Open WebUI.",
   "@personalConnectionsDeleteMessage": {
     "description": "Confirmation text naming the personal connection {name} that will be deleted.",
@@ -4628,14 +4624,6 @@
   "@workspaceRetry": {
     "description": "Retry button label on the Workspace error state."
   },
-  "workspaceSelectItem": "Wybierz element, aby wyświetlić jego szczegóły.",
-  "@workspaceSelectItem": {
-    "description": "Placeholder prompting the user to select a resource to view its details."
-  },
-  "workspaceEditorComingSoon": "Ten edytor będzie dostępny w kolejnym etapie obszaru roboczego.",
-  "@workspaceEditorComingSoon": {
-    "description": "Placeholder shown for workspace section editors that are not yet implemented."
-  },
   "workspaceSearchHint": "Szukaj zasobów obszaru roboczego",
   "@workspaceSearchHint": {
     "description": "Hint text for the workspace resource search field."
@@ -4738,14 +4726,6 @@
   "workspaceEditorKeepEditing": "Kontynuuj edycję",
   "@workspaceEditorKeepEditing": {
     "description": "Cancel button label on the discard-changes dialog."
-  },
-  "workspaceEditorSaveTooltip": "Zapisz zmiany",
-  "@workspaceEditorSaveTooltip": {
-    "description": "Tooltip for the workspace editor save button."
-  },
-  "workspaceEditorSaving": "Zapisywanie…",
-  "@workspaceEditorSaving": {
-    "description": "Label shown on the editor save button while a save is in progress."
   },
   "workspaceEditorMoreActions": "Więcej czynności",
   "@workspaceEditorMoreActions": {
@@ -5008,10 +4988,6 @@
   "@workspaceModelDelete": {
     "description": "Action that deletes the model."
   },
-  "workspaceModelDeleteConfirmTitle": "Usunąć model?",
-  "@workspaceModelDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a model."
-  },
   "workspaceModelDeleteConfirmMessage": "Spowoduje to trwałe usunięcie modelu {name}.",
   "@workspaceModelDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a model.",
@@ -5057,10 +5033,6 @@
   "@workspaceModelDeleted": {
     "description": "Confirmation that the model was deleted."
   },
-  "workspaceModelAddAction": "Dodaj",
-  "@workspaceModelAddAction": {
-    "description": "Confirm button in a small add-text dialog."
-  },
   "workspaceKnowledgeCreateTitle": "Nowa baza wiedzy",
   "@workspaceKnowledgeCreateTitle": {
     "description": "Title of the create form for a new knowledge base."
@@ -5093,10 +5065,6 @@
   "@workspaceKnowledgeDelete": {
     "description": "Overflow action that deletes the knowledge base."
   },
-  "workspaceKnowledgeDeleteConfirmTitle": "Usunąć bazę wiedzy?",
-  "@workspaceKnowledgeDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a knowledge base."
-  },
   "workspaceKnowledgeDeleteConfirmMessage": "Spowoduje to trwałe usunięcie {name} i odłączenie jej plików.",
   "@workspaceKnowledgeDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a knowledge base.",
@@ -5109,10 +5077,6 @@
   "workspaceKnowledgeReset": "Resetuj",
   "@workspaceKnowledgeReset": {
     "description": "Overflow action that removes all files from a knowledge base."
-  },
-  "workspaceKnowledgeResetConfirmTitle": "Zresetować bazę wiedzy?",
-  "@workspaceKnowledgeResetConfirmTitle": {
-    "description": "Confirmation dialog title for resetting a knowledge base."
   },
   "workspaceKnowledgeResetConfirmMessage": "Spowoduje to usunięcie wszystkich plików z {name}, ale baza wiedzy zostanie zachowana.",
   "@workspaceKnowledgeResetConfirmMessage": {
@@ -5183,22 +5147,6 @@
   "@workspaceKnowledgeFilesLoadFailed": {
     "description": "Error when the knowledge base file list fails to load."
   },
-  "workspaceKnowledgeRefreshFiles": "Odśwież",
-  "@workspaceKnowledgeRefreshFiles": {
-    "description": "Tooltip for the button that refreshes the knowledge file list."
-  },
-  "workspaceKnowledgeRoot": "Główny",
-  "@workspaceKnowledgeRoot": {
-    "description": "Breadcrumb label for the top level of a knowledge base."
-  },
-  "workspaceKnowledgeAddMenu": "Dodaj pliki",
-  "@workspaceKnowledgeAddMenu": {
-    "description": "Tooltip for the menu that adds files or folders to a knowledge base."
-  },
-  "workspaceKnowledgeUpload": "Prześlij plik",
-  "@workspaceKnowledgeUpload": {
-    "description": "Menu item to upload a single local file into a knowledge base."
-  },
   "workspaceKnowledgeUploading": "Przesyłanie {name}…",
   "@workspaceKnowledgeUploading": {
     "description": "Progress label shown while a file uploads into a knowledge base.",
@@ -5211,10 +5159,6 @@
   "workspaceKnowledgeUploadFailed": "Nie można przesłać pliku.",
   "@workspaceKnowledgeUploadFailed": {
     "description": "Error when uploading a file into a knowledge base fails."
-  },
-  "workspaceKnowledgeBatchAttach": "Prześlij wiele plików",
-  "@workspaceKnowledgeBatchAttach": {
-    "description": "Menu item to upload several local files into a knowledge base at once."
   },
   "workspaceKnowledgeAttachExisting": "Załącz plik z serwera",
   "@workspaceKnowledgeAttachExisting": {
@@ -5259,10 +5203,6 @@
   "workspaceKnowledgeDeleteFolder": "Usuń folder",
   "@workspaceKnowledgeDeleteFolder": {
     "description": "Action to delete a knowledge base directory."
-  },
-  "workspaceKnowledgeDeleteFolderConfirmTitle": "Usunąć folder?",
-  "@workspaceKnowledgeDeleteFolderConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a knowledge base directory."
   },
   "workspaceKnowledgeDeleteFolderConfirmMessage": "Pliki w folderze {name} zostaną przeniesione do folderu nadrzędnego.",
   "@workspaceKnowledgeDeleteFolderConfirmMessage": {
@@ -5386,18 +5326,6 @@
   "@workspacePromptContentRequired": {
     "description": "Validation error when the prompt content is empty."
   },
-  "workspacePromptWriteTab": "Pisanie",
-  "@workspacePromptWriteTab": {
-    "description": "Toggle label for the editable prompt content view."
-  },
-  "workspacePromptPreviewTab": "Podgląd",
-  "@workspacePromptPreviewTab": {
-    "description": "Toggle label for the rendered markdown preview of the prompt content."
-  },
-  "workspacePromptPreviewEmpty": "Nie ma jeszcze czego podglądać.",
-  "@workspacePromptPreviewEmpty": {
-    "description": "Empty-state text shown in the prompt preview when there is no content."
-  },
   "workspacePromptTags": "Tagi",
   "@workspacePromptTags": {
     "description": "Label for the prompt tags field."
@@ -5457,10 +5385,6 @@
   "workspacePromptDelete": "Usuń prompt",
   "@workspacePromptDelete": {
     "description": "Overflow action that deletes a prompt."
-  },
-  "workspacePromptDeleteConfirmTitle": "Usunąć prompt?",
-  "@workspacePromptDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a prompt."
   },
   "workspacePromptDeleteConfirmMessage": "„{name}” zostanie trwale usunięty.",
   "@workspacePromptDeleteConfirmMessage": {
@@ -5555,10 +5479,6 @@
   "@workspacePromptHistoryDelete": {
     "description": "Action that deletes a prompt history entry."
   },
-  "workspacePromptHistoryDeleteConfirmTitle": "Usunąć wersję?",
-  "@workspacePromptHistoryDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a prompt version."
-  },
   "workspacePromptHistoryDeleteConfirmMessage": "Ta wersja zostanie usunięta. Tej operacji nie można cofnąć.",
   "@workspacePromptHistoryDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a prompt version."
@@ -5627,18 +5547,6 @@
   "@workspaceSkillContentRequired": {
     "description": "Validation error when the skill instructions are empty."
   },
-  "workspaceSkillWriteTab": "Pisanie",
-  "@workspaceSkillWriteTab": {
-    "description": "Toggle label for the editable skill instructions view."
-  },
-  "workspaceSkillPreviewTab": "Podgląd",
-  "@workspaceSkillPreviewTab": {
-    "description": "Toggle label for the rendered markdown preview of the skill instructions."
-  },
-  "workspaceSkillPreviewEmpty": "Nie ma jeszcze czego podglądać.",
-  "@workspaceSkillPreviewEmpty": {
-    "description": "Empty-state text shown in the skill preview when there is no content."
-  },
   "workspaceSkillManageAccess": "Zarządzaj dostępem",
   "@workspaceSkillManageAccess": {
     "description": "Action to open the sharing/access editor for a skill."
@@ -5671,10 +5579,6 @@
   "@workspaceSkillDelete": {
     "description": "Overflow action that deletes a skill."
   },
-  "workspaceSkillDeleteConfirmTitle": "Usunąć umiejętność?",
-  "@workspaceSkillDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a skill."
-  },
   "workspaceSkillDeleteConfirmMessage": "„{name}” zostanie trwale usunięta.",
   "@workspaceSkillDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a skill.",
@@ -5695,10 +5599,6 @@
   "workspaceSkillImportMarkdown": "Importuj Markdown",
   "@workspaceSkillImportMarkdown": {
     "description": "Overflow action that imports a skill from a Markdown file into the create editor."
-  },
-  "workspaceSkillImportJson": "Importuj JSON",
-  "@workspaceSkillImportJson": {
-    "description": "Overflow action that imports one or more skills from a JSON file."
   },
   "workspaceSkillImportMarkdownLoaded": "Wczytano Markdown. Przejrzyj i zapisz, aby utworzyć umiejętność.",
   "@workspaceSkillImportMarkdownLoaded": {
@@ -5804,10 +5704,6 @@
   "@workspaceToolDelete": {
     "description": "Overflow action that deletes a tool."
   },
-  "workspaceToolDeleteConfirmTitle": "Usunąć narzędzie?",
-  "@workspaceToolDeleteConfirmTitle": {
-    "description": "Title of the tool delete confirmation dialog."
-  },
   "workspaceToolDeleteConfirmMessage": "„{name}” zostanie trwale usunięte.",
   "@workspaceToolDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a tool.",
@@ -5820,10 +5716,6 @@
   "workspaceToolImport": "Importuj narzędzia",
   "@workspaceToolImport": {
     "description": "Title of the tool JSON import sheet."
-  },
-  "workspaceToolImportJson": "Importuj JSON",
-  "@workspaceToolImportJson": {
-    "description": "Overflow action that imports tools from a JSON file."
   },
   "workspaceToolImportUrl": "Importuj z adresu URL",
   "@workspaceToolImportUrl": {
@@ -5899,10 +5791,6 @@
   "workspaceToolSpecs": "Wygenerowane specyfikacje",
   "@workspaceToolSpecs": {
     "description": "Heading for the read-only server-generated tool function specifications."
-  },
-  "workspaceToolDetails": "Szczegóły narzędzia",
-  "@workspaceToolDetails": {
-    "description": "Disclosure title for secondary tool manifest and function metadata."
   },
   "workspaceToolFunctionCount": "{count, plural, one{1 funkcja} few{{count} funkcje} many{{count} funkcji} other{{count} funkcji}}",
   "@workspaceToolFunctionCount": {
@@ -8132,7 +8020,6 @@
   "personalToolSettingsSaved": "Zapisano ustawienia narzędzi",
   "personalToolSettingsLoadFailed": "Nie można wczytać ustawień narzędzi.",
   "personalToolSettingsSaveFailed": "Nie można zapisać ustawień narzędzi.",
-  "scheduledTaskDeleteTitle": "Usunąć zaplanowane zadanie?",
   "scheduledTaskRunning": "Trwa uruchamianie…",
   "scheduledTaskRunFinished": "Uruchomienie zakończone.",
   "scheduledTaskRunFailedNotice": "Uruchomienie nie powiodło się. Szczegóły znajdziesz w Historii.",
@@ -8145,7 +8032,6 @@
       }
     }
   },
-  "scheduledTaskFolderSearchHint": "Szukaj folderów",
   "scheduledTasksEmptyHint": "Niech model wykonuje Twoje instrukcje według harmonogramu, na przykład poranny przegląd wiadomości.",
   "scheduledTasksShowAll": "Pokaż wszystkie zadania",
   "personalConnectionsEmptyToolServersHint": "Dodaj serwer narzędzi OpenAPI, aby korzystać z jego narzędzi w czatach.",
@@ -9439,10 +9325,6 @@
   "@modelControlServiceTier": {
     "description": "Row title in the model picker for a coding agent's service tier setting (which processing tier, such as faster or cheaper, the agent's model uses)."
   },
-  "scheduledTaskTerminalSearchHint": "Szukaj terminali",
-  "@scheduledTaskTerminalSearchHint": {
-    "description": "Search field hint in the list of terminals a scheduled task can run with."
-  },
   "scheduledTaskWorkingFolderLabel": "Folder roboczy",
   "@scheduledTaskWorkingFolderLabel": {
     "description": "Label of the field for the folder on the terminal where a scheduled task starts. Optional."
@@ -9462,6 +9344,233 @@
   "scheduledTaskAgentsLoading": "Wczytywanie agentów tego terminala…",
   "@scheduledTaskAgentsLoading": {
     "description": "Shown on the model row of a scheduled task while the coding agents its terminal offers are loading."
+  },
+  "personalizationMemoryGone": "Tego wspomnienia nie ma już na serwerze. Wróć, aby zobaczyć swoje wspomnienia.",
+  "@personalizationMemoryGone": {
+    "description": "Shown on a memory's page when that memory is no longer on the server (cleared or deleted meanwhile), so a change to it cannot be saved."
+  },
+  "hermesConnectionModeTitle": "Tryb połączenia",
+  "hermesModeResponsesApi": "Responses API",
+  "hermesProfilesNeedUrl": "Najpierw wpisz adres URL serwera Hermes.",
+  "hermesProfilesNeedTest": "Przetestuj połączenie, a potem odśwież listę profili.",
+  "hermesProfilesNone": "Hermes nie zwrócił żadnych profili.",
+  "hermesProfilesNeedSignIn": "Zaloguj się, a potem odśwież listę profili.",
+  "hermesNativeSignInFailed": "Logowanie do Hermes nie powiodło się lub zostało anulowane. Sprawdź, czy natywne PKCE jest włączone, i spróbuj ponownie.",
+  "hermesDashboardSignInTitle": "Logowanie do Hermes",
+  "hermesDashboardSignInLoadFailed": "Nie udało się wczytać logowania do Hermes.",
+  "hermesJobLastDeliveryError": "Dostarczenie: {error}",
+  "@hermesJobLastDeliveryError": {
+    "description": "A scheduled agent's last delivery error, as Hermes reported it.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesJobRunsLoadFailed": "Nie udało się wczytać historii uruchomień.",
+  "hermesJobPause": "Wstrzymaj",
+  "hermesJobResume": "Wznów",
+  "hermesMcpAddServer": "Dodaj serwer MCP",
+  "hermesMcpAddFromCatalog": "Dodaj z katalogu",
+  "hermesMcpLoadFailed": "Nie udało się wczytać serwerów MCP.",
+  "hermesMcpNone": "Nie skonfigurowano żadnych serwerów MCP.",
+  "hermesMcpTest": "Testuj",
+  "hermesMcpRemove": "Usuń",
+  "hermesMcpRemoveMessage": "Spowoduje to usunięcie serwera z Hermes.",
+  "hermesMcpToolsList": "Narzędzia: {tools}",
+  "@hermesMcpToolsList": {
+    "description": "An MCP server's tools, listed by name.",
+    "placeholders": {
+      "tools": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpToolFilter": "Filtr narzędzi",
+  "hermesMcpToolFilterSummary": "Filtr narzędzi: {filter}",
+  "@hermesMcpToolFilterSummary": {
+    "description": "Which of an MCP server's tools Hermes uses, summarised.",
+    "placeholders": {
+      "filter": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpAuthenticate": "Uwierzytelnij",
+  "hermesMcpSetApiKey": "Ustaw klucz API",
+  "hermesMcpSetApiKeyFor": "Klucz API dla {name}",
+  "@hermesMcpSetApiKeyFor": {
+    "description": "Title of the page setting MCP server {name}'s API key.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpHttpUrl": "Adres URL HTTP",
+  "hermesMcpStdioCommand": "Polecenie (stdio)",
+  "hermesMcpArguments": "Argumenty (jeden w wierszu)",
+  "hermesMcpApiKeyOptional": "Klucz API (opcjonalnie)",
+  "hermesMcpAdd": "Dodaj",
+  "hermesMcpCatalogAsks": "Prosi o {names}",
+  "@hermesMcpCatalogAsks": {
+    "description": "A catalog MCP server, saying which values it asks for when added.",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpCatalogNeeds": "Wymaga {names}, czego to połączenie nie może wysłać. Dodaj go z Hermes na swoim komputerze.",
+  "@hermesMcpCatalogNeeds": {
+    "description": "A catalog MCP server whose values this connection cannot send.",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpActionFailed": "Działanie MCP w Hermes nie powiodło się.",
+  "hermesMcpKeepsValues": "Hermes przechowuje każdą wartość dla {name}.",
+  "@hermesMcpKeepsValues": {
+    "description": "Footer of the values a catalog MCP server {name} asks for.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpValueRequired": "{name} (wymagane)",
+  "@hermesMcpValueRequired": {
+    "description": "A value a catalog MCP server cannot be added without.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpValueOptional": "{name} (opcjonalne)",
+  "@hermesMcpValueOptional": {
+    "description": "A value a catalog MCP server can be added without.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpFillRequired": "Uzupełnij wszystkie wymagane wartości.",
+  "hermesMcpStillInstallingSignIn": "Hermes wciąż instaluje {name}. Gdy pojawi się na liście, zaloguj się przyciskiem Uwierzytelnij na jego stronie.",
+  "@hermesMcpStillInstallingSignIn": {
+    "description": "Shown after adding a catalog MCP server that signs in with OAuth and is still being installed.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpStillInstalling": "Hermes wciąż instaluje {name}. Pojawi się na liście po zakończeniu.",
+  "@hermesMcpStillInstalling": {
+    "description": "Shown after adding a catalog MCP server that is still being installed.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpAddedSignInUnfinished": "Dodano {name}, ale logowanie nie zostało ukończone. Użyj przycisku Uwierzytelnij na jego stronie, aby spróbować ponownie.",
+  "@hermesMcpAddedSignInUnfinished": {
+    "description": "Shown when a catalog MCP server was added but signing in to it did not finish.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpResourcesPrompts": "Zasoby: {resources} · Prompty: {prompts}",
+  "@hermesMcpResourcesPrompts": {
+    "description": "How many resources and prompts an MCP server offers, from its last test.",
+    "placeholders": {
+      "resources": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "hermesMcpTestConnected": "Połączono · Narzędzia: {tools} · Zasoby: {resources} · Prompty: {prompts}",
+  "@hermesMcpTestConnected": {
+    "description": "Result of an MCP server test that reached it.",
+    "placeholders": {
+      "tools": {
+        "type": "int"
+      },
+      "resources": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "hermesMcpTestFailed": "Test MCP nie powiódł się.",
+  "scheduledTasksFilterLabel": "Pokaż",
+  "@scheduledTasksFilterLabel": {
+    "description": "Title of the row choosing which scheduled tasks the list shows: all, active or paused."
+  },
+  "personalConnectionsTurnOn": "Włącz",
+  "@personalConnectionsTurnOn": {
+    "description": "Menu action on a personal tool server or terminal row that turns it on."
+  },
+  "personalConnectionsTurnOff": "Wyłącz",
+  "@personalConnectionsTurnOff": {
+    "description": "Menu action on a personal tool server or terminal row that turns it off."
+  },
+  "calendarDayEmpty": "Brak wydarzeń",
+  "@calendarDayEmpty": {
+    "description": "Row on the calendar's month page in Settings when the chosen day holds no events."
+  },
+  "workspaceModelCapabilityVision": "Rozpoznawanie obrazów",
+  "@workspaceModelCapabilityVision": {
+    "description": "Model capability: understands images it is given."
+  },
+  "workspaceModelCapabilityFileUpload": "Przesyłanie plików",
+  "@workspaceModelCapabilityFileUpload": {
+    "description": "Model capability: accepts uploaded files."
+  },
+  "workspaceModelCapabilityCitations": "Cytowania",
+  "@workspaceModelCapabilityCitations": {
+    "description": "Model capability: cites its sources."
+  },
+  "workspaceModelCapabilityUsage": "Użycie",
+  "@workspaceModelCapabilityUsage": {
+    "description": "Model capability: reports token usage."
+  },
+  "workspacePromptHistoryDiffRemovedLine": "Usunięto: {line}",
+  "@workspacePromptHistoryDiffRemovedLine": {
+    "description": "What a screen reader says for a line removed in a comparison of two prompt versions; {line} is the line.",
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "workspacePromptHistoryDiffAddedLine": "Dodano: {line}",
+  "@workspacePromptHistoryDiffAddedLine": {
+    "description": "What a screen reader says for a line added in a comparison of two prompt versions; {line} is the line.",
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaceKnowledgeSourceLabel": "Źródło",
+  "@workspaceKnowledgeSourceLabel": {
+    "description": "Label of the menu on the Knowledge list in Settings that filters bases by where they come from (all, local, connected)."
+  },
+  "workspaceKnowledgeUploadFiles": "Prześlij pliki",
+  "@workspaceKnowledgeUploadFiles": {
+    "description": "Row in a knowledge base's files in Settings that opens the file picker to upload one or more files."
   },
   "pushFallbackTitle": "Conduit",
   "pushFallbackBody": "Nowe powiadomienie",
@@ -9604,6 +9713,18 @@
   "hermesJobCreatedNotifyFailed": "Utworzono zadanie, ale nie udało się włączyć dla niego powiadomień.",
   "hermesJobUpdatedNotifyFailed": "Zapisano zadanie, ale nie udało się zmienić jego powiadomień.",
   "hermesJobNotifyNeedsScheduled": "Aby z tego korzystać, włącz Zaplanowane zadania w Powiadomieniach.",
+  "pushSettingsMenuAction": "Ustawienia push",
+  "@pushSettingsMenuAction": {
+    "description": "Item in an account's or connection's row menu in Settings, shown while its push notifications need attention; opens that account's push settings page."
+  },
+  "workspaceSkillCloneSaveFirst": "Zapisz lub odrzuć zmiany, zanim zduplikujesz umiejętność.",
+  "@workspaceSkillCloneSaveFirst": {
+    "description": "Said on a skill's editor when Duplicate is tapped with unsaved changes: Duplicate copies the skill as saved."
+  },
+  "workspaceSkillToggleSaveFirst": "Zapisz lub odrzuć zmiany, zanim włączysz lub wyłączysz umiejętność.",
+  "@workspaceSkillToggleSaveFirst": {
+    "description": "Said on a skill's editor when its on/off switch is tapped with unsaved changes."
+  },
   "hermesShowScheduledRuns": "Pokazuj zaplanowane uruchomienia",
   "hermesShowScheduledRunsDescription": "Każde uruchomienie zaplanowanego agenta tworzy osobny czat. Wyłącz to, aby pominąć te czaty na liście Hermes. Przypięte pozostaną.",
   "hermesScheduledRunsHidden": "{count, plural, one{Ukryto 1 zaplanowane uruchomienie} few{Ukryto {count} zaplanowane uruchomienia} many{Ukryto {count} zaplanowanych uruchomień} other{Ukryto {count} zaplanowanego uruchomienia}}",
@@ -9635,6 +9756,14 @@
   "showModelNameInComposerDescription": "Puste pole wiadomości podaje nazwę wybranego modelu zamiast Conduit.",
   "@showModelNameInComposerDescription": {
     "description": "Explains the Show Model Name in Message Box switch in Settings > Chat."
+  },
+  "workspaceEditorAccountChanged": "Zalogowane konto zostało zmienione, więc zmiana nie została zapisana.",
+  "@workspaceEditorAccountChanged": {
+    "description": "Shown on a Workspace skill or tool editor read again because the signed-in account changed while a change on it (a save, switch, duplicate, delete or valve save) was under way, when that change was never sent or failed."
+  },
+  "settingsAddAction": "Dodaj",
+  "@settingsAddAction": {
+    "description": "Read aloud for the plus button in a Settings page's bar that adds an item, such as a calendar event."
   },
   "clineRemoteTitle": "Cline przez SSH",
   "clineRemoteDescription": "Connect to your PC through an encrypted SSH tunnel. Agent sessions and project files stay on the PC. Import the private connection document created there.",

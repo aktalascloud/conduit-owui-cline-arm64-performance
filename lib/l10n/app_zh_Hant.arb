@@ -1168,7 +1168,6 @@
   "personalConnectionsTestInvalidTarget": "請先輸入有效的 URL 和路徑。",
   "personalConnectionsTestUnsupportedAuth": "此處無法測試這種驗證方式。",
   "personalConnectionsUnsupported": "此連線使用了應用程式無法編輯的設定。你仍可以開啟、關閉或刪除它。",
-  "personalConnectionsDeleteTitle": "刪除連線？",
   "personalConnectionsDeleteMessage": "{name} 將從你的 Open WebUI 帳號中移除。",
   "personalConnectionsUrlRequired": "請輸入 URL。",
   "personalConnectionsUrlInvalid": "請輸入完整的 http 或 https URL。",
@@ -2094,8 +2093,6 @@
   "workspaceUnsupported": "此伺服器不支援工作區管理。",
   "workspaceLoadFailed": "無法載入工作區。",
   "workspaceRetry": "重試",
-  "workspaceSelectItem": "選擇項目以檢視詳細資料。",
-  "workspaceEditorComingSoon": "此編輯器將在工作區的下一個階段推出。",
   "workspaceSearchHint": "搜尋工作區資源",
   "workspaceLoadMore": "載入更多",
   "workspaceAccessPublicDisabled": "您沒有權限公開分享此項目。",
@@ -2124,8 +2121,6 @@
   "workspaceEditorDiscardMessage": "未儲存的變更將會遺失。",
   "workspaceEditorDiscardConfirm": "捨棄",
   "workspaceEditorKeepEditing": "繼續編輯",
-  "workspaceEditorSaveTooltip": "儲存變更",
-  "workspaceEditorSaving": "正在儲存…",
   "workspaceEditorMoreActions": "更多動作",
   "workspaceImportChooseFile": "選擇 JSON 檔案",
   "workspaceImportPasteLabel": "或貼上 JSON",
@@ -2338,10 +2333,6 @@
   "@workspaceModelDelete": {
     "description": "Action that deletes the model."
   },
-  "workspaceModelDeleteConfirmTitle": "要刪除模型嗎？",
-  "@workspaceModelDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a model."
-  },
   "workspaceModelDeleteConfirmMessage": "這會永久移除 {name}。",
   "@workspaceModelDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a model.",
@@ -2387,10 +2378,6 @@
   "@workspaceModelDeleted": {
     "description": "Confirmation that the model was deleted."
   },
-  "workspaceModelAddAction": "新增",
-  "@workspaceModelAddAction": {
-    "description": "Confirm button in a small add-text dialog."
-  },
   "workspaceKnowledgeCreateTitle": "新增知識庫",
   "@workspaceKnowledgeCreateTitle": {
     "description": "Title of the create form for a new knowledge base."
@@ -2423,10 +2410,6 @@
   "@workspaceKnowledgeDelete": {
     "description": "Overflow action that deletes the knowledge base."
   },
-  "workspaceKnowledgeDeleteConfirmTitle": "要刪除知識庫嗎？",
-  "@workspaceKnowledgeDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a knowledge base."
-  },
   "workspaceKnowledgeDeleteConfirmMessage": "這會永久移除 {name}，並解除其檔案的連結。",
   "@workspaceKnowledgeDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a knowledge base.",
@@ -2439,10 +2422,6 @@
   "workspaceKnowledgeReset": "重設",
   "@workspaceKnowledgeReset": {
     "description": "Overflow action that removes all files from a knowledge base."
-  },
-  "workspaceKnowledgeResetConfirmTitle": "要重設知識庫嗎？",
-  "@workspaceKnowledgeResetConfirmTitle": {
-    "description": "Confirmation dialog title for resetting a knowledge base."
   },
   "workspaceKnowledgeResetConfirmMessage": "這會移除 {name} 中的所有檔案，但保留知識庫本身。",
   "@workspaceKnowledgeResetConfirmMessage": {
@@ -2513,22 +2492,6 @@
   "@workspaceKnowledgeFilesLoadFailed": {
     "description": "Error when the knowledge base file list fails to load."
   },
-  "workspaceKnowledgeRefreshFiles": "重新整理",
-  "@workspaceKnowledgeRefreshFiles": {
-    "description": "Tooltip for the button that refreshes the knowledge file list."
-  },
-  "workspaceKnowledgeRoot": "根目錄",
-  "@workspaceKnowledgeRoot": {
-    "description": "Breadcrumb label for the top level of a knowledge base."
-  },
-  "workspaceKnowledgeAddMenu": "新增檔案",
-  "@workspaceKnowledgeAddMenu": {
-    "description": "Tooltip for the menu that adds files or folders to a knowledge base."
-  },
-  "workspaceKnowledgeUpload": "上傳檔案",
-  "@workspaceKnowledgeUpload": {
-    "description": "Menu item to upload a single local file into a knowledge base."
-  },
   "workspaceKnowledgeUploading": "正在上傳 {name}…",
   "@workspaceKnowledgeUploading": {
     "description": "Progress label shown while a file uploads into a knowledge base.",
@@ -2541,10 +2504,6 @@
   "workspaceKnowledgeUploadFailed": "無法上傳檔案。",
   "@workspaceKnowledgeUploadFailed": {
     "description": "Error when uploading a file into a knowledge base fails."
-  },
-  "workspaceKnowledgeBatchAttach": "上傳多個檔案",
-  "@workspaceKnowledgeBatchAttach": {
-    "description": "Menu item to upload several local files into a knowledge base at once."
   },
   "workspaceKnowledgeAttachExisting": "附加伺服器檔案",
   "@workspaceKnowledgeAttachExisting": {
@@ -2589,10 +2548,6 @@
   "workspaceKnowledgeDeleteFolder": "刪除資料夾",
   "@workspaceKnowledgeDeleteFolder": {
     "description": "Action to delete a knowledge base directory."
-  },
-  "workspaceKnowledgeDeleteFolderConfirmTitle": "要刪除資料夾嗎？",
-  "@workspaceKnowledgeDeleteFolderConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a knowledge base directory."
   },
   "workspaceKnowledgeDeleteFolderConfirmMessage": "{name} 中的檔案將移至上層資料夾。",
   "@workspaceKnowledgeDeleteFolderConfirmMessage": {
@@ -2716,18 +2671,6 @@
   "@workspacePromptContentRequired": {
     "description": "Validation error when the prompt content is empty."
   },
-  "workspacePromptWriteTab": "編輯",
-  "@workspacePromptWriteTab": {
-    "description": "Toggle label for the editable prompt content view."
-  },
-  "workspacePromptPreviewTab": "預覽",
-  "@workspacePromptPreviewTab": {
-    "description": "Toggle label for the rendered markdown preview of the prompt content."
-  },
-  "workspacePromptPreviewEmpty": "尚無可預覽的內容。",
-  "@workspacePromptPreviewEmpty": {
-    "description": "Empty-state text shown in the prompt preview when there is no content."
-  },
   "workspacePromptTags": "標籤",
   "@workspacePromptTags": {
     "description": "Label for the prompt tags field."
@@ -2787,10 +2730,6 @@
   "workspacePromptDelete": "刪除提示詞",
   "@workspacePromptDelete": {
     "description": "Overflow action that deletes a prompt."
-  },
-  "workspacePromptDeleteConfirmTitle": "要刪除提示詞嗎？",
-  "@workspacePromptDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a prompt."
   },
   "workspacePromptDeleteConfirmMessage": "「{name}」將被永久刪除。",
   "@workspacePromptDeleteConfirmMessage": {
@@ -2885,10 +2824,6 @@
   "@workspacePromptHistoryDelete": {
     "description": "Action that deletes a prompt history entry."
   },
-  "workspacePromptHistoryDeleteConfirmTitle": "要刪除版本嗎？",
-  "@workspacePromptHistoryDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a prompt version."
-  },
   "workspacePromptHistoryDeleteConfirmMessage": "此版本快照將被移除。此動作無法復原。",
   "@workspacePromptHistoryDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a prompt version."
@@ -2957,18 +2892,6 @@
   "@workspaceSkillContentRequired": {
     "description": "Validation error when the skill instructions are empty."
   },
-  "workspaceSkillWriteTab": "編輯",
-  "@workspaceSkillWriteTab": {
-    "description": "Toggle label for the editable skill instructions view."
-  },
-  "workspaceSkillPreviewTab": "預覽",
-  "@workspaceSkillPreviewTab": {
-    "description": "Toggle label for the rendered markdown preview of the skill instructions."
-  },
-  "workspaceSkillPreviewEmpty": "尚無可預覽的內容。",
-  "@workspaceSkillPreviewEmpty": {
-    "description": "Empty-state text shown in the skill preview when there is no content."
-  },
   "workspaceSkillManageAccess": "管理存取權",
   "@workspaceSkillManageAccess": {
     "description": "Action to open the sharing/access editor for a skill."
@@ -3001,10 +2924,6 @@
   "@workspaceSkillDelete": {
     "description": "Overflow action that deletes a skill."
   },
-  "workspaceSkillDeleteConfirmTitle": "要刪除技能嗎？",
-  "@workspaceSkillDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a skill."
-  },
   "workspaceSkillDeleteConfirmMessage": "「{name}」將被永久刪除。",
   "@workspaceSkillDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a skill.",
@@ -3025,10 +2944,6 @@
   "workspaceSkillImportMarkdown": "匯入 Markdown",
   "@workspaceSkillImportMarkdown": {
     "description": "Overflow action that imports a skill from a Markdown file into the create editor."
-  },
-  "workspaceSkillImportJson": "匯入 JSON",
-  "@workspaceSkillImportJson": {
-    "description": "Overflow action that imports one or more skills from a JSON file."
   },
   "workspaceSkillImportMarkdownLoaded": "已載入 Markdown。請檢查後儲存以建立技能。",
   "@workspaceSkillImportMarkdownLoaded": {
@@ -3068,10 +2983,8 @@
   "workspaceToolClone": "複製",
   "workspaceToolCloneSuffix": "（副本）",
   "workspaceToolDelete": "刪除",
-  "workspaceToolDeleteConfirmTitle": "要刪除工具嗎？",
   "workspaceToolDeleteConfirmMessage": "「{name}」將被永久刪除。",
   "workspaceToolImport": "匯入工具",
-  "workspaceToolImportJson": "匯入 JSON",
   "workspaceToolImportUrl": "從網址匯入",
   "workspaceToolImportUrlTitle": "從網址匯入工具",
   "workspaceToolImportUrlHint": "輸入工具 Python 檔案的 GitHub 網址",
@@ -3086,7 +2999,6 @@
   "workspaceToolManifestRequiredVersion": "需要 Open WebUI {version}",
   "workspaceToolManifestFunding": "贊助：{url}",
   "workspaceToolSpecs": "產生的規格",
-  "workspaceToolDetails": "工具詳細資料",
   "workspaceToolFunctionCount": "{count} 個函式",
   "@workspaceToolFunctionCount": {"placeholders":{"count":{"type":"int"}}},
   "workspaceToolSpecsEmpty": "未為此工具產生任何規格。",
@@ -4287,13 +4199,11 @@
   "personalToolSettingsSaved": "工具設定已儲存",
   "personalToolSettingsLoadFailed": "無法載入工具設定。",
   "personalToolSettingsSaveFailed": "無法儲存工具設定。",
-  "scheduledTaskDeleteTitle": "要刪除排程工作嗎？",
   "scheduledTaskRunning": "執行中…",
   "scheduledTaskRunFinished": "執行完成。",
   "scheduledTaskRunFailedNotice": "執行失敗。請在「記錄」中查看詳細資訊。",
   "scheduledTaskLastRunFailed": "上次執行失敗",
   "scheduledTaskRruleRuns": "執行：{summary}",
-  "scheduledTaskFolderSearchHint": "搜尋資料夾",
   "scheduledTasksEmptyHint": "讓模型依排程執行你的指示，例如每天早上的新聞摘要。",
   "scheduledTasksShowAll": "顯示所有工作",
   "personalConnectionsEmptyToolServersHint": "新增 OpenAPI 工具伺服器，即可在聊天中使用其工具。",
@@ -4781,12 +4691,209 @@
   "@hermesProcessKillFailed": {"placeholders": {"error": {"type": "String"}}},
   "modelPickerCodingAgents": "程式設計代理",
   "modelControlServiceTier": "服務等級",
-  "scheduledTaskTerminalSearchHint": "搜尋終端機",
   "scheduledTaskWorkingFolderLabel": "工作資料夾",
   "scheduledTaskWorkingFolderHint": "終端機的預設資料夾",
   "scheduledTaskTerminalRequired": "請選擇執行此代理的終端機。",
   "scheduledTaskAgentNeedsChat": "代理的結果會傳送到新聊天。",
   "scheduledTaskAgentsLoading": "正在載入此終端機的代理…",
+  "personalizationMemoryGone": "此記憶已不在伺服器上。請返回查看您的記憶。",
+  "hermesConnectionModeTitle": "連線模式",
+  "hermesModeResponsesApi": "Responses API",
+  "hermesProfilesNeedUrl": "請先輸入 Hermes 伺服器 URL。",
+  "hermesProfilesNeedTest": "請先測試連線，然後重新整理設定檔清單。",
+  "hermesProfilesNone": "Hermes 未傳回任何設定檔。",
+  "hermesProfilesNeedSignIn": "請先登入，然後重新整理設定檔清單。",
+  "hermesNativeSignInFailed": "Hermes 登入失敗或已取消。請確認已啟用原生 PKCE，然後再試一次。",
+  "hermesDashboardSignInTitle": "Hermes 登入",
+  "hermesDashboardSignInLoadFailed": "無法載入 Hermes 登入頁面。",
+  "hermesJobLastDeliveryError": "傳送：{error}",
+  "@hermesJobLastDeliveryError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesJobRunsLoadFailed": "無法載入執行紀錄。",
+  "hermesJobPause": "暫停",
+  "hermesJobResume": "繼續",
+  "hermesMcpAddServer": "新增 MCP 伺服器",
+  "hermesMcpAddFromCatalog": "從目錄新增",
+  "hermesMcpLoadFailed": "無法載入 MCP 伺服器。",
+  "hermesMcpNone": "尚未設定 MCP 伺服器。",
+  "hermesMcpTest": "測試",
+  "hermesMcpRemove": "移除",
+  "hermesMcpRemoveMessage": "這會將此伺服器從 Hermes 中移除。",
+  "hermesMcpToolsList": "工具：{tools}",
+  "@hermesMcpToolsList": {
+    "placeholders": {
+      "tools": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpToolFilter": "工具篩選",
+  "hermesMcpToolFilterSummary": "工具篩選：{filter}",
+  "@hermesMcpToolFilterSummary": {
+    "placeholders": {
+      "filter": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpAuthenticate": "驗證",
+  "hermesMcpSetApiKey": "設定 API 金鑰",
+  "hermesMcpSetApiKeyFor": "{name} 的 API 金鑰",
+  "@hermesMcpSetApiKeyFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpHttpUrl": "HTTP URL",
+  "hermesMcpStdioCommand": "命令 (stdio)",
+  "hermesMcpArguments": "參數（每行一個）",
+  "hermesMcpApiKeyOptional": "API 金鑰（選填）",
+  "hermesMcpAdd": "新增",
+  "hermesMcpCatalogAsks": "需要填寫 {names}",
+  "@hermesMcpCatalogAsks": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpCatalogNeeds": "需要 {names}，但此連線無法傳送。請在您電腦上的 Hermes 中新增。",
+  "@hermesMcpCatalogNeeds": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpActionFailed": "Hermes MCP 操作失敗。",
+  "hermesMcpKeepsValues": "Hermes 會為 {name} 保存每個值。",
+  "@hermesMcpKeepsValues": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpValueRequired": "{name}（必填）",
+  "@hermesMcpValueRequired": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpValueOptional": "{name}（選填）",
+  "@hermesMcpValueOptional": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpFillRequired": "請填寫所有必填值。",
+  "hermesMcpStillInstallingSignIn": "Hermes 仍在安裝 {name}。列出後，請在其頁面上使用「驗證」登入。",
+  "@hermesMcpStillInstallingSignIn": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpStillInstalling": "Hermes 仍在安裝 {name}。完成後會顯示在清單中。",
+  "@hermesMcpStillInstalling": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpAddedSignInUnfinished": "已新增 {name}，但登入未完成。請在其頁面上使用「驗證」再試一次。",
+  "@hermesMcpAddedSignInUnfinished": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpResourcesPrompts": "資源：{resources} · 提示詞：{prompts}",
+  "@hermesMcpResourcesPrompts": {
+    "placeholders": {
+      "resources": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "hermesMcpTestConnected": "已連線 · 工具：{tools} · 資源：{resources} · 提示詞：{prompts}",
+  "@hermesMcpTestConnected": {
+    "placeholders": {
+      "tools": {
+        "type": "int"
+      },
+      "resources": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "hermesMcpTestFailed": "MCP 測試失敗。",
+  "scheduledTasksFilterLabel": "顯示",
+  "personalConnectionsTurnOn": "開啟",
+  "personalConnectionsTurnOff": "關閉",
+  "calendarDayEmpty": "沒有活動",
+  "workspaceModelCapabilityVision": "視覺",
+  "@workspaceModelCapabilityVision": {
+    "description": "Model capability: understands images it is given."
+  },
+  "workspaceModelCapabilityFileUpload": "檔案上傳",
+  "@workspaceModelCapabilityFileUpload": {
+    "description": "Model capability: accepts uploaded files."
+  },
+  "workspaceModelCapabilityCitations": "引用",
+  "@workspaceModelCapabilityCitations": {
+    "description": "Model capability: cites its sources."
+  },
+  "workspaceModelCapabilityUsage": "用量",
+  "@workspaceModelCapabilityUsage": {
+    "description": "Model capability: reports token usage."
+  },
+  "workspacePromptHistoryDiffRemovedLine": "已刪除：{line}",
+  "@workspacePromptHistoryDiffRemovedLine": {
+    "description": "What a screen reader says for a line removed in a comparison of two prompt versions; {line} is the line.",
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "workspacePromptHistoryDiffAddedLine": "已新增：{line}",
+  "@workspacePromptHistoryDiffAddedLine": {
+    "description": "What a screen reader says for a line added in a comparison of two prompt versions; {line} is the line.",
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaceKnowledgeSourceLabel": "來源",
+  "@workspaceKnowledgeSourceLabel": {
+    "description": "Label of the menu on the Knowledge list in Settings that filters bases by where they come from (all, local, connected)."
+  },
+  "workspaceKnowledgeUploadFiles": "上傳檔案",
+  "@workspaceKnowledgeUploadFiles": {
+    "description": "Row in a knowledge base's files in Settings that opens the file picker to upload one or more files."
+  },
   "pushFallbackTitle": "Conduit",
   "pushFallbackBody": "新通知",
   "pushReplyTitle": "新回覆",
@@ -4912,6 +5019,15 @@
   "hermesJobCreatedNotifyFailed": "排程工作已建立，但無法為其開啟通知。",
   "hermesJobUpdatedNotifyFailed": "排程工作已儲存，但無法變更其通知。",
   "hermesJobNotifyNeedsScheduled": "要使用此功能，請在「通知」中開啟「排程工作」。",
+  "pushSettingsMenuAction": "推播設定",
+  "workspaceSkillCloneSaveFirst": "請先儲存或捨棄變更，再複製此技能。",
+  "@workspaceSkillCloneSaveFirst": {
+    "description": "Said on a skill's editor when Duplicate is tapped with unsaved changes: Duplicate copies the skill as saved."
+  },
+  "workspaceSkillToggleSaveFirst": "請先儲存或捨棄變更，再啟用或停用此技能。",
+  "@workspaceSkillToggleSaveFirst": {
+    "description": "Said on a skill's editor when its on/off switch is tapped with unsaved changes."
+  },
   "hermesShowScheduledRuns": "顯示排程執行",
   "hermesShowScheduledRunsDescription": "排程代理程式每次執行都會建立一個新聊天。關閉後，這些聊天不會顯示在 Hermes 列表中。已置頂的仍會保留。",
   "hermesScheduledRunsHidden": "{count, plural, other{已隱藏 {count} 個排程執行}}",
@@ -4935,5 +5051,13 @@
     }
   },
   "showModelNameInComposer": "在訊息框中顯示模型名稱",
-  "showModelNameInComposerDescription": "空白訊息框會顯示所選模型的名稱，而非 Conduit。"
+  "showModelNameInComposerDescription": "空白訊息框會顯示所選模型的名稱，而非 Conduit。",
+  "workspaceEditorAccountChanged": "目前登入的帳戶已變更，因此未儲存你的變更。",
+  "@workspaceEditorAccountChanged": {
+    "description": "Shown on a Workspace skill or tool editor read again because the signed-in account changed while a change on it (a save, switch, duplicate, delete or valve save) was under way, when that change was never sent or failed."
+  },
+  "settingsAddAction": "新增",
+  "@settingsAddAction": {
+    "description": "Read aloud for the plus button in a Settings page's bar that adds an item, such as a calendar event."
+  }
 }

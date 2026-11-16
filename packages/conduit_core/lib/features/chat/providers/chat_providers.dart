@@ -45,6 +45,8 @@ import 'package:conduit_core/models/message_voice.dart';
 import 'package:conduit_core/models/model.dart';
 import 'package:conduit_core/models/openwebui_chat_prompt.dart';
 import 'package:conduit_core/models/openwebui_chat_settings.dart';
+import 'package:conduit_core/models/openwebui_chat_settings_form.dart'
+    show ChatParamsPatch;
 import 'package:conduit_core/models/conversation.dart';
 import 'package:conduit_core/models/file_info.dart';
 import 'package:conduit_core/models/folder.dart'
@@ -102,6 +104,10 @@ import 'package:conduit_core/sync/sync_engine.dart';
 import 'package:conduit_core/sync/sync_api_client.dart'
     show SyncTerminalException;
 
+import 'package:conduit_core/features/chat/providers/queued_completion_provider.dart'
+    show chatSessionScopedQueuedCompletionOverrides;
+import 'package:conduit_core/features/chat/services/chat_draft_queue.dart'
+    show chatSessionScopedDraftQueueOverrides;
 import 'package:conduit_core/services/chat_completion_transport.dart';
 
 import 'package:conduit_core/services/api_service.dart';
@@ -152,7 +158,11 @@ import 'package:conduit_core/features/hermes/models/hermes_model.dart';
 import 'package:conduit_core/features/hermes/controllers/hermes_busy_turn_controller.dart';
 
 import 'package:conduit_core/features/hermes/providers/hermes_providers.dart';
+import 'package:conduit_core/features/hermes/providers/hermes_background_work_providers.dart'
+    show chatSessionScopedHermesWorkOverrides;
 import 'package:conduit_core/features/push/providers/push_providers.dart';
+import 'package:conduit_core/features/hermes/models/hermes_clarify_form.dart';
+import 'package:conduit_core/features/hermes/models/hermes_run_event.dart';
 import 'package:conduit_core/features/hermes/services/hermes_api_service.dart';
 import 'package:conduit_core/features/hermes/services/hermes_copied_history_store.dart';
 import 'package:conduit_core/features/hermes/services/hermes_backend_service.dart';
@@ -180,6 +190,8 @@ import 'package:conduit_core/models/model_controls.dart';
 import 'package:conduit_core/features/terminal/models/terminal_models.dart'
     show TerminalServerInfo;
 import 'package:conduit_core/features/terminal/providers/terminal_providers.dart';
+import 'package:conduit_core/features/chat/voice_mode/chat_voice_mode_controller.dart'
+    show chatSessionScopedVoiceOverrides;
 import 'package:conduit_core/features/integrations/personal_tool_execution.dart';
 import 'package:conduit_core/features/integrations/personal_connection_client.dart';
 import 'package:conduit_core/features/integrations/personal_connection_settings.dart';
@@ -206,6 +218,7 @@ import 'package:conduit_core/features/chat/providers/chat_model_choice.dart';
 import 'package:conduit_core/providers/chat_picks_session.dart';
 import 'package:conduit_core/features/chat/services/reviewer_mode_service.dart';
 
+part 'chat_action_availability.dart';
 part 'chat_attachments.dart';
 part 'chat_branch_controller.dart';
 part 'chat_capability_providers.dart';
@@ -220,6 +233,7 @@ part 'chat_feature_defaults.dart';
 part 'chat_generation_control.dart';
 part 'chat_headless_completion.dart';
 part 'chat_hermes_approvals.dart';
+part 'chat_hermes_decisions.dart';
 part 'chat_hermes_projection_store.dart';
 part 'chat_hermes_replay.dart';
 part 'chat_hermes_turns.dart';

@@ -1,7 +1,16 @@
+import 'dart:convert';
+
 import 'package:conduit_markdown/conduit_markdown.dart';
 import 'package:meta/meta.dart';
 
 import '../../../models/chat_message.dart';
+import '../../hermes/models/hermes_error_surface.dart';
+import '../../hermes/models/hermes_inline_diff.dart';
+import '../../hermes/services/hermes_run_transport.dart'
+    show hermesErrorSurfaceOf;
+import '../../mcp_apps/openwebui_mcp_app.dart';
+import '../../web_embed/web_embed_document.dart'
+    show isRemoteWebEmbedSource, resolveRemoteWebEmbedUri;
 import '../../../services/structured_output.dart' show displayedChatFiles;
 import '../../web_search/services/direct_web_search_mode.dart'
     show isDirectToolsUnsupportedError;
@@ -18,21 +27,24 @@ import 'chat_turn_render_state.dart';
 ///
 /// 1. [AssistantFilesBlock]: the answer's files (generated images, files the
 ///    model showed with `display_file`);
-/// 2. [AssistantStatusBlock]: the status timeline (web search, knowledge,
+/// 2. [AssistantEmbedsBlock]: rich content the answer carries (HTML a tool
+///    returned, a page, an MCP App);
+/// 3. [AssistantStatusBlock]: the status timeline (web search, knowledge,
 ///    Hermes tools);
-/// 3. [AssistantMarkdownBlock]s, in content order: text, reasoning, tool
-///    calls, code-interpreter runs and other sections, as
-///    `segmentAssistantMessage` splits the content, normalised for a plain
-///    markdown renderer;
-/// 4. [AssistantErrorBlock]: the error banner;
-/// 5. [AssistantCodeExecutionBlock]s, one per code execution;
-/// 6. [AssistantSourcesBlock]: what `[n]` cites, which the action row shows
+/// 4. [AssistantMarkdownBlock]s, in content order: text, GitHub-style
+///    alerts, reasoning, tool calls, code-interpreter runs and other
+///    sections, as `segmentAssistantMessage` splits the content, normalised
+///    for a plain markdown renderer;
+/// 5. [AssistantErrorBlock]: the error banner (a Hermes failure's card);
+/// 6. [AssistantCodeExecutionBlock]s, one per code execution;
+/// 7. [AssistantChangedFilesBlock]: the files a Hermes reply changed;
+/// 8. [AssistantSourcesBlock]: what `[n]` cites, which the action row shows
 ///    as a sources pill once the answer is finished;
-/// 7. [AssistantFollowUpsBlock]: suggested follow-ups, once finished.
+/// 9. [AssistantFollowUpsBlock]: suggested follow-ups, once finished.
 ///
-/// Not carried: rich embeds and MCP apps (a webview each), a multi-model
-/// turn's merged response, a queued send's banner, and the legacy
-/// `attachmentIds` of old answers that stored no `files`.
+/// Not carried: a multi-model turn's merged response, a queued send's
+/// banner (hosts read the queue themselves), and the legacy `attachmentIds`
+/// of old answers that stored no `files`.
 @immutable
 sealed class AssistantBlock {
   const AssistantBlock();
@@ -49,6 +61,106 @@ final class AssistantFilesBlock extends AssistantBlock {
   final List<Map<String, dynamic>> files;
 }
 
+/// What an [AssistantEmbed] shows.
+enum AssistantEmbedKind {
+  /// Inline HTML or SVG: [AssistantEmbed.source].
+  html,
+
+  /// A web page by its http(s) address: [AssistantEmbed.source].
+  url,
+
+  /// An MCP App: [AssistantEmbed.app].
+  mcpApp,
+}
+
+/// One piece of rich content, as the mobile app shows it
+/// (`WebContentEmbed`, `McpAppEmbed`): loaded only when the user opens it.
+@immutable
+final class AssistantEmbed {
+  const AssistantEmbed.html(String this.source, {this.argsText = ''})
+    : kind = AssistantEmbedKind.html,
+      app = null;
+
+  const AssistantEmbed.url(String this.source)
+    : kind = AssistantEmbedKind.url,
+      argsText = '',
+      app = null;
+
+  const AssistantEmbed.mcpApp(OpenWebUiMcpApp this.app)
+    : kind = AssistantEmbedKind.mcpApp,
+      source = null,
+      argsText = '';
+
+  final AssistantEmbedKind kind;
+
+  /// [AssistantEmbedKind.html]: the markup. [AssistantEmbedKind.url]: the
+  /// address, `//` resolved to https.
+  final String? source;
+
+  /// The tool call's arguments as written, for an HTML embed a tool
+  /// returned (its `window.args`); empty otherwise.
+  final String argsText;
+
+  /// [AssistantEmbedKind.mcpApp]: the app.
+  final OpenWebUiMcpApp? app;
+
+  @override
+  bool operator ==(Object other) =>
+      other is AssistantEmbed &&
+      other.kind == kind &&
+      other.source == source &&
+      other.argsText == argsText &&
+      other.app == app;
+
+  @override
+  int get hashCode => Object.hash(kind, source, argsText, app);
+}
+
+/// [raw] (Open WebUI's `embeds`: a list of sources and MCP App objects, or
+/// that list as JSON text, as a tool call's `embeds` attribute holds it)
+/// read into what the mobile app shows, in order. An address that names no
+/// host and an entry with nothing to show are left out. [argsText] goes
+/// with each HTML embed.
+List<AssistantEmbed> assistantEmbeds(Object? raw, {String argsText = ''}) {
+  var value = raw;
+  for (var depth = 0; depth < 2 && value is String; depth++) {
+    final text = value.trim();
+    if (text.isEmpty) return const <AssistantEmbed>[];
+    try {
+      value = jsonDecode(text);
+    } on FormatException {
+      return const <AssistantEmbed>[];
+    }
+  }
+  final embeds = <AssistantEmbed>[];
+  for (final embed in normalizeEmbedList(value)) {
+    if (isMcpAppEmbed(embed)) {
+      if (OpenWebUiMcpApp.tryParse(embed) case final app?) {
+        embeds.add(AssistantEmbed.mcpApp(app));
+      }
+      continue;
+    }
+    final source = extractEmbedSource(embed);
+    if (source == null || source.isEmpty) continue;
+    if (isRemoteWebEmbedSource(source)) {
+      if (resolveRemoteWebEmbedUri(source) case final uri?) {
+        embeds.add(AssistantEmbed.url(uri.toString()));
+      }
+    } else {
+      embeds.add(AssistantEmbed.html(source, argsText: argsText));
+    }
+  }
+  return List<AssistantEmbed>.unmodifiable(embeds);
+}
+
+/// The rich content the answer itself carries, above its status and text.
+final class AssistantEmbedsBlock extends AssistantBlock {
+  AssistantEmbedsBlock(List<AssistantEmbed> embeds)
+    : embeds = List<AssistantEmbed>.unmodifiable(embeds);
+
+  final List<AssistantEmbed> embeds;
+}
+
 /// One line of a status timeline, as the mobile app shows it.
 @immutable
 final class AssistantStatusLine {
@@ -59,11 +171,17 @@ final class AssistantStatusLine {
     required this.queries,
     required this.links,
     required this.details,
+    this.phrase,
+    this.count,
+    this.query,
   });
 
   factory AssistantStatusLine.of(ChatStatusUpdate update) =>
       AssistantStatusLine(
         description: resolveStatusDescription(update),
+        phrase: resolveStatusPhrase(update),
+        count: update.count,
+        query: update.query,
         action: update.action,
         done: update.done == true,
         queries: collectStatusQueries(update),
@@ -88,6 +206,16 @@ final class AssistantStatusLine {
 
   /// Items shown as a snippet under a title.
   final List<ChatStatusItem> details;
+
+  /// When [description] is core's own wording, which ([resolveStatusPhrase]),
+  /// for a host that words it in its own language.
+  final ChatStatusPhrase? phrase;
+
+  /// The update's count (sources found).
+  final int? count;
+
+  /// The update's query (what a knowledge search searched for).
+  final String? query;
 }
 
 /// The status timeline: the row shows the last line (or [toolSummary]),
@@ -122,7 +250,13 @@ final class AssistantErrorBlock extends AssistantBlock {
   const AssistantErrorBlock({
     required this.text,
     required this.toolsUnsupported,
+    this.hermes,
   });
+
+  /// A Hermes turn's failure as Hermes classified it: hosts draw its card
+  /// (what broke, a reset time, one action) instead of the banner. Only on
+  /// the answer itself, never on an earlier version.
+  final HermesErrorSurface? hermes;
 
   /// The server's or provider's words; empty when it gave none (hosts then
   /// say that an error occurred).
@@ -145,6 +279,17 @@ final class AssistantCodeExecutionBlock extends AssistantBlock {
 
   /// It failed.
   bool get isError => execution.result?.error != null;
+}
+
+/// The files a Hermes reply's tools changed ([hermesChangedFiles]), with
+/// their added and removed lines: a card that opens each file's coloured
+/// diff. Only on the answer itself: an earlier version keeps no record of
+/// what its tools did.
+final class AssistantChangedFilesBlock extends AssistantBlock {
+  AssistantChangedFilesBlock(List<HermesDiffFile> files)
+    : files = List<HermesDiffFile>.unmodifiable(files);
+
+  final List<HermesDiffFile> files;
 }
 
 /// What the answer's `[n]` markers cite: marker `n` is `sources[n - 1]`.
@@ -240,10 +385,13 @@ List<AssistantBlock> assistantMessageBlocks(
     streaming: isStreaming,
     live: isStreaming ? live : null,
     files: message.files,
+    embeds: message.embeds,
     output: message.output,
     attachmentIds: message.attachmentIds,
     statusHistory: message.statusHistory,
     error: message.error,
+    hermesError: hermesErrorSurfaceOf(message),
+    changedFiles: hermesChangedFiles(message.statusHistory),
     codeExecutions: message.codeExecutions,
     sources: message.sources,
     followUps: message.followUps,
@@ -260,6 +408,7 @@ List<AssistantBlock> assistantVersionBlocks(ChatMessageVersion version) =>
       streaming: false,
       live: null,
       files: version.files,
+      embeds: version.embeds,
       output: version.output,
       attachmentIds: null,
       statusHistory: const <ChatStatusUpdate>[],
@@ -276,10 +425,13 @@ List<AssistantBlock> _assemble({
   required bool streaming,
   required StreamingContentBlocks? live,
   required List<Map<String, dynamic>>? files,
+  required List<Map<String, dynamic>>? embeds,
   required List<Map<String, dynamic>>? output,
   required List<String>? attachmentIds,
   required List<ChatStatusUpdate> statusHistory,
   required ChatMessageError? error,
+  HermesErrorSurface? hermesError,
+  List<HermesDiffFile> changedFiles = const <HermesDiffFile>[],
   required List<ChatCodeExecution> codeExecutions,
   required List<ChatSourceReference> sources,
   required List<String> followUps,
@@ -303,6 +455,9 @@ List<AssistantBlock> _assemble({
       ]),
     );
   }
+
+  final shownEmbeds = assistantEmbeds(embeds);
+  if (shownEmbeds.isNotEmpty) blocks.add(AssistantEmbedsBlock(shownEmbeds));
 
   final statuses = filterVisibleStatusUpdates(
     statusHistory,
@@ -343,11 +498,16 @@ List<AssistantBlock> _assemble({
       AssistantErrorBlock(
         text: error.content ?? '',
         toolsUnsupported: isDirectToolsUnsupportedError(error.content),
+        hermes: hermesError,
       ),
     );
   }
 
   blocks.addAll(codeExecutions.map(AssistantCodeExecutionBlock.new));
+
+  if (changedFiles.isNotEmpty) {
+    blocks.add(AssistantChangedFilesBlock(changedFiles));
+  }
 
   if (sources.isNotEmpty) blocks.add(AssistantSourcesBlock(sources));
 
@@ -362,15 +522,19 @@ List<AssistantBlock> _assemble({
 /// [content] (already through [assistantDisplayContent]) as content blocks
 /// for a plain markdown renderer: `segmentAssistantMessage`, then
 /// `normalizeBlocksForPlainMarkdown`, where `[n]` becomes a
-/// `conduit-cite:n` link when source `n` is among [sourceCount].
+/// `conduit-cite:n` link when source `n` is among [sourceCount], then
+/// `liftMarkdownAlerts`, which gives each GitHub-style alert a block of its
+/// own, as the mobile renderer draws them.
 List<MessageBlock> plainMarkdownContentBlocks(
   String content, {
   required bool streaming,
   required int sourceCount,
-}) => normalizeBlocksForPlainMarkdown(
-  segmentAssistantMessage(content, streaming: streaming),
-  hasSources: sourceCount > 0,
-  sourceCount: sourceCount,
+}) => liftMarkdownAlerts(
+  normalizeBlocksForPlainMarkdown(
+    segmentAssistantMessage(content, streaming: streaming),
+    hasSources: sourceCount > 0,
+    sourceCount: sourceCount,
+  ),
 );
 
 /// Content blocks for one streaming answer, frame after frame, without

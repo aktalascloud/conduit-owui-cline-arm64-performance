@@ -2621,10 +2621,6 @@
   "@personalConnectionsUnsupported": {
     "description": "Explains that a connection uses settings the app cannot edit, so it can only be switched or deleted."
   },
-  "personalConnectionsDeleteTitle": "Odstrániť pripojenie?",
-  "@personalConnectionsDeleteTitle": {
-    "description": "Title of the confirmation for deleting a personal connection."
-  },
   "personalConnectionsDeleteMessage": "{name} sa odstráni z vášho účtu Open WebUI.",
   "@personalConnectionsDeleteMessage": {
     "description": "Confirmation text naming the personal connection {name} that will be deleted.",
@@ -4017,8 +4013,6 @@
   "workspaceUnsupported": "Tento server nepodporuje správu pracovného priestoru.",
   "workspaceLoadFailed": "Pracovný priestor sa nepodarilo načítať.",
   "workspaceRetry": "Skúsiť znova",
-  "workspaceSelectItem": "Vyberte položku a zobrazte jej podrobnosti.",
-  "workspaceEditorComingSoon": "Tento editor bude k dispozícii v ďalšej etape pracovného priestoru.",
   "workspaceSearchHint": "Hľadať v prostriedkoch pracovného priestoru",
   "workspaceLoadMore": "Načítať ďalšie",
   "workspaceAccessPublicDisabled": "Nemáte oprávnenie zdieľať túto položku verejne.",
@@ -4047,8 +4041,6 @@
   "workspaceEditorDiscardMessage": "Neuložené zmeny sa stratia.",
   "workspaceEditorDiscardConfirm": "Zahodiť",
   "workspaceEditorKeepEditing": "Pokračovať v úpravách",
-  "workspaceEditorSaveTooltip": "Uložiť zmeny",
-  "workspaceEditorSaving": "Ukladá sa…",
   "workspaceEditorMoreActions": "Ďalšie akcie",
   "workspaceImportChooseFile": "Vybrať súbor JSON",
   "workspaceImportPasteLabel": "Alebo vložte JSON",
@@ -4261,10 +4253,6 @@
   "@workspaceModelDelete": {
     "description": "Action that deletes the model."
   },
-  "workspaceModelDeleteConfirmTitle": "Odstrániť model?",
-  "@workspaceModelDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a model."
-  },
   "workspaceModelDeleteConfirmMessage": "Model {name} sa natrvalo odstráni.",
   "@workspaceModelDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a model.",
@@ -4310,10 +4298,6 @@
   "@workspaceModelDeleted": {
     "description": "Confirmation that the model was deleted."
   },
-  "workspaceModelAddAction": "Pridať",
-  "@workspaceModelAddAction": {
-    "description": "Confirm button in a small add-text dialog."
-  },
   "workspaceKnowledgeCreateTitle": "Nová znalostná báza",
   "@workspaceKnowledgeCreateTitle": {
     "description": "Title of the create form for a new knowledge base."
@@ -4346,10 +4330,6 @@
   "@workspaceKnowledgeDelete": {
     "description": "Overflow action that deletes the knowledge base."
   },
-  "workspaceKnowledgeDeleteConfirmTitle": "Odstrániť znalostnú bázu?",
-  "@workspaceKnowledgeDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a knowledge base."
-  },
   "workspaceKnowledgeDeleteConfirmMessage": "Znalostná báza {name} sa natrvalo odstráni a jej súbory sa odpoja.",
   "@workspaceKnowledgeDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a knowledge base.",
@@ -4362,10 +4342,6 @@
   "workspaceKnowledgeReset": "Resetovať",
   "@workspaceKnowledgeReset": {
     "description": "Overflow action that removes all files from a knowledge base."
-  },
-  "workspaceKnowledgeResetConfirmTitle": "Resetovať znalostnú bázu?",
-  "@workspaceKnowledgeResetConfirmTitle": {
-    "description": "Confirmation dialog title for resetting a knowledge base."
   },
   "workspaceKnowledgeResetConfirmMessage": "Zo znalostnej bázy {name} sa odstránia všetky súbory, ale báza zostane zachovaná.",
   "@workspaceKnowledgeResetConfirmMessage": {
@@ -4436,22 +4412,6 @@
   "@workspaceKnowledgeFilesLoadFailed": {
     "description": "Error when the knowledge base file list fails to load."
   },
-  "workspaceKnowledgeRefreshFiles": "Obnoviť",
-  "@workspaceKnowledgeRefreshFiles": {
-    "description": "Tooltip for the button that refreshes the knowledge file list."
-  },
-  "workspaceKnowledgeRoot": "Koreň",
-  "@workspaceKnowledgeRoot": {
-    "description": "Breadcrumb label for the top level of a knowledge base."
-  },
-  "workspaceKnowledgeAddMenu": "Pridať súbory",
-  "@workspaceKnowledgeAddMenu": {
-    "description": "Tooltip for the menu that adds files or folders to a knowledge base."
-  },
-  "workspaceKnowledgeUpload": "Nahrať súbor",
-  "@workspaceKnowledgeUpload": {
-    "description": "Menu item to upload a single local file into a knowledge base."
-  },
   "workspaceKnowledgeUploading": "Nahráva sa {name}…",
   "@workspaceKnowledgeUploading": {
     "description": "Progress label shown while a file uploads into a knowledge base.",
@@ -4464,10 +4424,6 @@
   "workspaceKnowledgeUploadFailed": "Súbor sa nepodarilo nahrať.",
   "@workspaceKnowledgeUploadFailed": {
     "description": "Error when uploading a file into a knowledge base fails."
-  },
-  "workspaceKnowledgeBatchAttach": "Nahrať viac súborov",
-  "@workspaceKnowledgeBatchAttach": {
-    "description": "Menu item to upload several local files into a knowledge base at once."
   },
   "workspaceKnowledgeAttachExisting": "Pripojiť súbor zo servera",
   "@workspaceKnowledgeAttachExisting": {
@@ -4512,10 +4468,6 @@
   "workspaceKnowledgeDeleteFolder": "Odstrániť priečinok",
   "@workspaceKnowledgeDeleteFolder": {
     "description": "Action to delete a knowledge base directory."
-  },
-  "workspaceKnowledgeDeleteFolderConfirmTitle": "Odstrániť priečinok?",
-  "@workspaceKnowledgeDeleteFolderConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a knowledge base directory."
   },
   "workspaceKnowledgeDeleteFolderConfirmMessage": "Súbory z priečinka {name} sa presunú do nadradeného priečinka.",
   "@workspaceKnowledgeDeleteFolderConfirmMessage": {
@@ -4639,18 +4591,6 @@
   "@workspacePromptContentRequired": {
     "description": "Validation error when the prompt content is empty."
   },
-  "workspacePromptWriteTab": "Písať",
-  "@workspacePromptWriteTab": {
-    "description": "Toggle label for the editable prompt content view."
-  },
-  "workspacePromptPreviewTab": "Ukážka",
-  "@workspacePromptPreviewTab": {
-    "description": "Toggle label for the rendered markdown preview of the prompt content."
-  },
-  "workspacePromptPreviewEmpty": "Zatiaľ nie je čo zobraziť.",
-  "@workspacePromptPreviewEmpty": {
-    "description": "Empty-state text shown in the prompt preview when there is no content."
-  },
   "workspacePromptTags": "Štítky",
   "@workspacePromptTags": {
     "description": "Label for the prompt tags field."
@@ -4710,10 +4650,6 @@
   "workspacePromptDelete": "Odstrániť prompt",
   "@workspacePromptDelete": {
     "description": "Overflow action that deletes a prompt."
-  },
-  "workspacePromptDeleteConfirmTitle": "Odstrániť prompt?",
-  "@workspacePromptDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a prompt."
   },
   "workspacePromptDeleteConfirmMessage": "„{name}“ sa natrvalo odstráni.",
   "@workspacePromptDeleteConfirmMessage": {
@@ -4808,10 +4744,6 @@
   "@workspacePromptHistoryDelete": {
     "description": "Action that deletes a prompt history entry."
   },
-  "workspacePromptHistoryDeleteConfirmTitle": "Odstrániť verziu?",
-  "@workspacePromptHistoryDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a prompt version."
-  },
   "workspacePromptHistoryDeleteConfirmMessage": "Táto snímka verzie sa odstráni. Túto akciu nie je možné vrátiť späť.",
   "@workspacePromptHistoryDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a prompt version."
@@ -4880,18 +4812,6 @@
   "@workspaceSkillContentRequired": {
     "description": "Validation error when the skill instructions are empty."
   },
-  "workspaceSkillWriteTab": "Písať",
-  "@workspaceSkillWriteTab": {
-    "description": "Toggle label for the editable skill instructions view."
-  },
-  "workspaceSkillPreviewTab": "Ukážka",
-  "@workspaceSkillPreviewTab": {
-    "description": "Toggle label for the rendered markdown preview of the skill instructions."
-  },
-  "workspaceSkillPreviewEmpty": "Zatiaľ nie je čo zobraziť.",
-  "@workspaceSkillPreviewEmpty": {
-    "description": "Empty-state text shown in the skill preview when there is no content."
-  },
   "workspaceSkillManageAccess": "Spravovať prístup",
   "@workspaceSkillManageAccess": {
     "description": "Action to open the sharing/access editor for a skill."
@@ -4924,10 +4844,6 @@
   "@workspaceSkillDelete": {
     "description": "Overflow action that deletes a skill."
   },
-  "workspaceSkillDeleteConfirmTitle": "Odstrániť zručnosť?",
-  "@workspaceSkillDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a skill."
-  },
   "workspaceSkillDeleteConfirmMessage": "„{name}“ sa natrvalo odstráni.",
   "@workspaceSkillDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a skill.",
@@ -4948,10 +4864,6 @@
   "workspaceSkillImportMarkdown": "Importovať Markdown",
   "@workspaceSkillImportMarkdown": {
     "description": "Overflow action that imports a skill from a Markdown file into the create editor."
-  },
-  "workspaceSkillImportJson": "Importovať JSON",
-  "@workspaceSkillImportJson": {
-    "description": "Overflow action that imports one or more skills from a JSON file."
   },
   "workspaceSkillImportMarkdownLoaded": "Markdown bol načítaný. Skontrolujte ho a uložením vytvorte zručnosť.",
   "@workspaceSkillImportMarkdownLoaded": {
@@ -4991,10 +4903,8 @@
   "workspaceToolClone": "Duplikovať",
   "workspaceToolCloneSuffix": "(kópia)",
   "workspaceToolDelete": "Odstrániť",
-  "workspaceToolDeleteConfirmTitle": "Odstrániť nástroj?",
   "workspaceToolDeleteConfirmMessage": "„{name}“ sa natrvalo odstráni.",
   "workspaceToolImport": "Importovať nástroje",
-  "workspaceToolImportJson": "Importovať JSON",
   "workspaceToolImportUrl": "Importovať z URL",
   "workspaceToolImportUrlTitle": "Importovať nástroj z URL",
   "workspaceToolImportUrlHint": "Zadajte URL na GitHube k súboru Python nástroja",
@@ -5009,7 +4919,6 @@
   "workspaceToolManifestRequiredVersion": "Vyžaduje Open WebUI {version}",
   "workspaceToolManifestFunding": "Financovanie: {url}",
   "workspaceToolSpecs": "Vygenerované špecifikácie",
-  "workspaceToolDetails": "Podrobnosti nástroja",
   "workspaceToolFunctionCount": "Počet funkcií: {count}",
   "@workspaceToolFunctionCount": {"placeholders":{"count":{"type":"int"}}},
   "workspaceToolSpecsEmpty": "Pre tento nástroj sa nevygenerovali žiadne špecifikácie.",
@@ -6210,13 +6119,11 @@
   "personalToolSettingsSaved": "Nastavenia nástrojov uložené",
   "personalToolSettingsLoadFailed": "Nastavenia nástrojov sa nepodarilo načítať.",
   "personalToolSettingsSaveFailed": "Nastavenia nástrojov sa nepodarilo uložiť.",
-  "scheduledTaskDeleteTitle": "Odstrániť naplánovanú úlohu?",
   "scheduledTaskRunning": "Prebieha…",
   "scheduledTaskRunFinished": "Spustenie bolo dokončené.",
   "scheduledTaskRunFailedNotice": "Spustenie zlyhalo. Podrobnosti nájdete v Histórii.",
   "scheduledTaskLastRunFailed": "Posledné spustenie zlyhalo",
   "scheduledTaskRruleRuns": "Spúšťa sa: {summary}",
-  "scheduledTaskFolderSearchHint": "Hľadať priečinky",
   "scheduledTasksEmptyHint": "Nechajte model plniť vaše pokyny podľa plánu, napríklad ranný prehľad správ.",
   "scheduledTasksShowAll": "Zobraziť všetky úlohy",
   "personalConnectionsEmptyToolServersHint": "Pridajte server nástrojov OpenAPI a používajte jeho nástroje v chatoch.",
@@ -6704,12 +6611,209 @@
   "@hermesProcessKillFailed": {"placeholders": {"error": {"type": "String"}}},
   "modelPickerCodingAgents": "Programovací agenti",
   "modelControlServiceTier": "Úroveň služby",
-  "scheduledTaskTerminalSearchHint": "Hľadať terminály",
   "scheduledTaskWorkingFolderLabel": "Pracovný priečinok",
   "scheduledTaskWorkingFolderHint": "Predvolený priečinok terminálu",
   "scheduledTaskTerminalRequired": "Vyberte terminál, na ktorom tento agent beží.",
   "scheduledTaskAgentNeedsChat": "Výsledky agenta sa ukladajú do nového chatu.",
   "scheduledTaskAgentsLoading": "Načítavajú sa agenti tohto terminálu…",
+  "personalizationMemoryGone": "Táto spomienka už na serveri nie je. Vráťte sa späť a zobrazte svoje spomienky.",
+  "hermesConnectionModeTitle": "Režim pripojenia",
+  "hermesModeResponsesApi": "Responses API",
+  "hermesProfilesNeedUrl": "Najprv zadajte URL servera Hermes.",
+  "hermesProfilesNeedTest": "Otestujte pripojenie a potom obnovte zoznam profilov.",
+  "hermesProfilesNone": "Hermes nevrátil žiadne profily.",
+  "hermesProfilesNeedSignIn": "Prihláste sa a potom obnovte zoznam profilov.",
+  "hermesNativeSignInFailed": "Prihlásenie do Hermes zlyhalo alebo bolo zrušené. Skontrolujte, či je zapnuté natívne PKCE, a skúste to znova.",
+  "hermesDashboardSignInTitle": "Prihlásenie do Hermes",
+  "hermesDashboardSignInLoadFailed": "Prihlásenie do Hermes sa nepodarilo načítať.",
+  "hermesJobLastDeliveryError": "Doručenie: {error}",
+  "@hermesJobLastDeliveryError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesJobRunsLoadFailed": "Históriu spustení sa nepodarilo načítať.",
+  "hermesJobPause": "Pozastaviť",
+  "hermesJobResume": "Obnoviť",
+  "hermesMcpAddServer": "Pridať MCP server",
+  "hermesMcpAddFromCatalog": "Pridať z katalógu",
+  "hermesMcpLoadFailed": "MCP servery sa nepodarilo načítať.",
+  "hermesMcpNone": "Nie sú nastavené žiadne MCP servery.",
+  "hermesMcpTest": "Otestovať",
+  "hermesMcpRemove": "Odstrániť",
+  "hermesMcpRemoveMessage": "Týmto odstránite server z Hermes.",
+  "hermesMcpToolsList": "Nástroje: {tools}",
+  "@hermesMcpToolsList": {
+    "placeholders": {
+      "tools": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpToolFilter": "Filter nástrojov",
+  "hermesMcpToolFilterSummary": "Filter nástrojov: {filter}",
+  "@hermesMcpToolFilterSummary": {
+    "placeholders": {
+      "filter": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpAuthenticate": "Overiť",
+  "hermesMcpSetApiKey": "Nastaviť API kľúč",
+  "hermesMcpSetApiKeyFor": "API kľúč pre {name}",
+  "@hermesMcpSetApiKeyFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpHttpUrl": "HTTP URL",
+  "hermesMcpStdioCommand": "Príkaz (stdio)",
+  "hermesMcpArguments": "Argumenty (jeden na riadok)",
+  "hermesMcpApiKeyOptional": "API kľúč (voliteľné)",
+  "hermesMcpAdd": "Pridať",
+  "hermesMcpCatalogAsks": "Žiada o {names}",
+  "@hermesMcpCatalogAsks": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpCatalogNeeds": "Vyžaduje {names}, čo toto pripojenie nemôže odoslať. Pridajte ho z Hermes vo svojom počítači.",
+  "@hermesMcpCatalogNeeds": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpActionFailed": "Akcia MCP v Hermes zlyhala.",
+  "hermesMcpKeepsValues": "Hermes uloží každú hodnotu pre {name}.",
+  "@hermesMcpKeepsValues": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpValueRequired": "{name} (povinné)",
+  "@hermesMcpValueRequired": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpValueOptional": "{name} (voliteľné)",
+  "@hermesMcpValueOptional": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpFillRequired": "Vyplňte všetky povinné hodnoty.",
+  "hermesMcpStillInstallingSignIn": "Hermes stále inštaluje {name}. Keď sa zobrazí v zozname, prihláste sa cez Overiť na jeho stránke.",
+  "@hermesMcpStillInstallingSignIn": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpStillInstalling": "Hermes stále inštaluje {name}. Po dokončení sa zobrazí v zozname.",
+  "@hermesMcpStillInstalling": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpAddedSignInUnfinished": "{name} bol pridaný, ale prihlásenie sa nedokončilo. Skúste to znova cez Overiť na jeho stránke.",
+  "@hermesMcpAddedSignInUnfinished": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpResourcesPrompts": "Zdroje: {resources} · Prompty: {prompts}",
+  "@hermesMcpResourcesPrompts": {
+    "placeholders": {
+      "resources": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "hermesMcpTestConnected": "Pripojené · Nástroje: {tools} · Zdroje: {resources} · Prompty: {prompts}",
+  "@hermesMcpTestConnected": {
+    "placeholders": {
+      "tools": {
+        "type": "int"
+      },
+      "resources": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "hermesMcpTestFailed": "Test MCP zlyhal.",
+  "scheduledTasksFilterLabel": "Zobraziť",
+  "personalConnectionsTurnOn": "Zapnúť",
+  "personalConnectionsTurnOff": "Vypnúť",
+  "calendarDayEmpty": "Žiadne udalosti",
+  "workspaceModelCapabilityVision": "Videnie",
+  "@workspaceModelCapabilityVision": {
+    "description": "Model capability: understands images it is given."
+  },
+  "workspaceModelCapabilityFileUpload": "Nahrávanie súborov",
+  "@workspaceModelCapabilityFileUpload": {
+    "description": "Model capability: accepts uploaded files."
+  },
+  "workspaceModelCapabilityCitations": "Citácie",
+  "@workspaceModelCapabilityCitations": {
+    "description": "Model capability: cites its sources."
+  },
+  "workspaceModelCapabilityUsage": "Využitie",
+  "@workspaceModelCapabilityUsage": {
+    "description": "Model capability: reports token usage."
+  },
+  "workspacePromptHistoryDiffRemovedLine": "Odstránené: {line}",
+  "@workspacePromptHistoryDiffRemovedLine": {
+    "description": "What a screen reader says for a line removed in a comparison of two prompt versions; {line} is the line.",
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "workspacePromptHistoryDiffAddedLine": "Pridané: {line}",
+  "@workspacePromptHistoryDiffAddedLine": {
+    "description": "What a screen reader says for a line added in a comparison of two prompt versions; {line} is the line.",
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaceKnowledgeSourceLabel": "Zdroj",
+  "@workspaceKnowledgeSourceLabel": {
+    "description": "Label of the menu on the Knowledge list in Settings that filters bases by where they come from (all, local, connected)."
+  },
+  "workspaceKnowledgeUploadFiles": "Nahrať súbory",
+  "@workspaceKnowledgeUploadFiles": {
+    "description": "Row in a knowledge base's files in Settings that opens the file picker to upload one or more files."
+  },
   "pushFallbackTitle": "Conduit",
   "pushFallbackBody": "Nové upozornenie",
   "pushReplyTitle": "Nová odpoveď",
@@ -6835,6 +6939,15 @@
   "hermesJobCreatedNotifyFailed": "Úloha bola vytvorená, ale upozornenia pre ňu sa nepodarilo zapnúť.",
   "hermesJobUpdatedNotifyFailed": "Úloha bola uložená, ale jej upozornenia sa nepodarilo zmeniť.",
   "hermesJobNotifyNeedsScheduled": "Ak to chcete použiť, zapnite v Upozorneniach Naplánované úlohy.",
+  "pushSettingsMenuAction": "Nastavenia push",
+  "workspaceSkillCloneSaveFirst": "Pred duplikovaním zručnosti zmeny uložte alebo zahoďte.",
+  "@workspaceSkillCloneSaveFirst": {
+    "description": "Said on a skill's editor when Duplicate is tapped with unsaved changes: Duplicate copies the skill as saved."
+  },
+  "workspaceSkillToggleSaveFirst": "Pred zapnutím alebo vypnutím zručnosti zmeny uložte alebo zahoďte.",
+  "@workspaceSkillToggleSaveFirst": {
+    "description": "Said on a skill's editor when its on/off switch is tapped with unsaved changes."
+  },
   "hermesShowScheduledRuns": "Zobrazovať naplánované spustenia",
   "hermesShowScheduledRunsDescription": "Každé spustenie naplánovaného agenta vytvorí vlastný chat. Vypnutím tieto chaty vynecháte zo zoznamu Hermes. Pripnuté zostanú.",
   "hermesScheduledRunsHidden": "{count, plural, one{Skryté 1 naplánované spustenie} few{Skryté {count} naplánované spustenia} other{Skrytých {count} naplánovaných spustení}}",
@@ -6858,5 +6971,13 @@
     }
   },
   "showModelNameInComposer": "Zobrazovať názov modelu v poli správy",
-  "showModelNameInComposerDescription": "Prázdne pole správy uvádza názov vybraného modelu namiesto Conduitu."
+  "showModelNameInComposerDescription": "Prázdne pole správy uvádza názov vybraného modelu namiesto Conduitu.",
+  "workspaceEditorAccountChanged": "Prihlásený účet sa zmenil, preto sa vaša zmena neuložila.",
+  "@workspaceEditorAccountChanged": {
+    "description": "Shown on a Workspace skill or tool editor read again because the signed-in account changed while a change on it (a save, switch, duplicate, delete or valve save) was under way, when that change was never sent or failed."
+  },
+  "settingsAddAction": "Pridať",
+  "@settingsAddAction": {
+    "description": "Read aloud for the plus button in a Settings page's bar that adds an item, such as a calendar event."
+  }
 }

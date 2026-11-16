@@ -21,7 +21,7 @@
     "upstream_commit": "7a5391a34721bff7bc22c1eda05538f88d6404bb"
   },
   "compatible_lockfile_sha256": [
-    "1de61500210a0d47b52d36dab1ac681e477d33a21658defc7eaa09a385eb7eda"
+    "57ec9e526636d78758d4102863e5b3fe2a4c4296b9227baca5195ca7661f5992"
   ],
-  "compatible_lockfile_scope": "2026-11-11 Dart lock refresh. JNI/SQLite/PDFium/WebRTC and compatible Android SharedPreferences archives retain qualified versions. ONNX compiler inputs and binary evidence unchanged."
+  "compatible_lockfile_scope": "2026-11-16 workspace additions; Android native package versions and hashes, queried compiler and native recipes remain unchanged."
 }

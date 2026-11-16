@@ -1194,7 +1194,6 @@
   "personalConnectionsTestInvalidTarget": "Сначала введите корректные URL и путь.",
   "personalConnectionsTestUnsupportedAuth": "Этот способ аутентификации нельзя проверить здесь.",
   "personalConnectionsUnsupported": "Это подключение использует настройки, которые приложение не может изменить. Его всё равно можно включить, выключить или удалить.",
-  "personalConnectionsDeleteTitle": "Удалить подключение?",
   "personalConnectionsDeleteMessage": "{name} будет удалено из вашей учётной записи Open WebUI.",
   "personalConnectionsUrlRequired": "Введите URL.",
   "personalConnectionsUrlInvalid": "Введите полный URL с http или https.",
@@ -2128,8 +2127,6 @@
   "workspaceUnsupported": "Этот сервер не поддерживает управление рабочей областью.",
   "workspaceLoadFailed": "Не удалось загрузить рабочую область.",
   "workspaceRetry": "Повторить",
-  "workspaceSelectItem": "Выберите элемент для просмотра сведений.",
-  "workspaceEditorComingSoon": "Этот редактор появится в следующем обновлении рабочей области.",
   "workspaceSearchHint": "Поиск по ресурсам рабочей области",
   "workspaceLoadMore": "Загрузить еще",
   "workspaceAccessPublicDisabled": "У вас нет разрешения делать этот ресурс общедоступным.",
@@ -2158,8 +2155,6 @@
   "workspaceEditorDiscardMessage": "Все несохраненные изменения будут потеряны.",
   "workspaceEditorDiscardConfirm": "Сбросить",
   "workspaceEditorKeepEditing": "Продолжить редактирование",
-  "workspaceEditorSaveTooltip": "Сохранить изменения",
-  "workspaceEditorSaving": "Сохранение…",
   "workspaceEditorMoreActions": "Дополнительные действия",
   "workspaceImportChooseFile": "Выбрать JSON-файл",
   "workspaceImportPasteLabel": "Или вставьте JSON",
@@ -2374,10 +2369,6 @@
   "@workspaceModelDelete": {
     "description": "Action that deletes the model."
   },
-  "workspaceModelDeleteConfirmTitle": "Удалить модель?",
-  "@workspaceModelDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a model."
-  },
   "workspaceModelDeleteConfirmMessage": "Модель {name} будет удалена без возможности восстановления.",
   "@workspaceModelDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a model.",
@@ -2423,10 +2414,6 @@
   "@workspaceModelDeleted": {
     "description": "Confirmation that the model was deleted."
   },
-  "workspaceModelAddAction": "Добавить",
-  "@workspaceModelAddAction": {
-    "description": "Confirm button in a small add-text dialog."
-  },
   "workspaceKnowledgeCreateTitle": "Новая база знаний",
   "@workspaceKnowledgeCreateTitle": {
     "description": "Title of the create form for a new knowledge base."
@@ -2459,10 +2446,6 @@
   "@workspaceKnowledgeDelete": {
     "description": "Overflow action that deletes the knowledge base."
   },
-  "workspaceKnowledgeDeleteConfirmTitle": "Удалить базу знаний?",
-  "@workspaceKnowledgeDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a knowledge base."
-  },
   "workspaceKnowledgeDeleteConfirmMessage": "База знаний {name} будет удалена без возможности восстановления, а её файлы будут отсоединены.",
   "@workspaceKnowledgeDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a knowledge base.",
@@ -2475,10 +2458,6 @@
   "workspaceKnowledgeReset": "Сбросить",
   "@workspaceKnowledgeReset": {
     "description": "Overflow action that removes all files from a knowledge base."
-  },
-  "workspaceKnowledgeResetConfirmTitle": "Сбросить базу знаний?",
-  "@workspaceKnowledgeResetConfirmTitle": {
-    "description": "Confirmation dialog title for resetting a knowledge base."
   },
   "workspaceKnowledgeResetConfirmMessage": "Из базы знаний {name} будут удалены все файлы, но сама база останется.",
   "@workspaceKnowledgeResetConfirmMessage": {
@@ -2549,22 +2528,6 @@
   "@workspaceKnowledgeFilesLoadFailed": {
     "description": "Error when the knowledge base file list fails to load."
   },
-  "workspaceKnowledgeRefreshFiles": "Обновить",
-  "@workspaceKnowledgeRefreshFiles": {
-    "description": "Tooltip for the button that refreshes the knowledge file list."
-  },
-  "workspaceKnowledgeRoot": "Корень",
-  "@workspaceKnowledgeRoot": {
-    "description": "Breadcrumb label for the top level of a knowledge base."
-  },
-  "workspaceKnowledgeAddMenu": "Добавить файлы",
-  "@workspaceKnowledgeAddMenu": {
-    "description": "Tooltip for the menu that adds files or folders to a knowledge base."
-  },
-  "workspaceKnowledgeUpload": "Загрузить файл",
-  "@workspaceKnowledgeUpload": {
-    "description": "Menu item to upload a single local file into a knowledge base."
-  },
   "workspaceKnowledgeUploading": "Загрузка {name}…",
   "@workspaceKnowledgeUploading": {
     "description": "Progress label shown while a file uploads into a knowledge base.",
@@ -2577,10 +2540,6 @@
   "workspaceKnowledgeUploadFailed": "Не удалось загрузить файл.",
   "@workspaceKnowledgeUploadFailed": {
     "description": "Error when uploading a file into a knowledge base fails."
-  },
-  "workspaceKnowledgeBatchAttach": "Загрузить несколько файлов",
-  "@workspaceKnowledgeBatchAttach": {
-    "description": "Menu item to upload several local files into a knowledge base at once."
   },
   "workspaceKnowledgeAttachExisting": "Прикрепить файл с сервера",
   "@workspaceKnowledgeAttachExisting": {
@@ -2625,10 +2584,6 @@
   "workspaceKnowledgeDeleteFolder": "Удалить папку",
   "@workspaceKnowledgeDeleteFolder": {
     "description": "Action to delete a knowledge base directory."
-  },
-  "workspaceKnowledgeDeleteFolderConfirmTitle": "Удалить папку?",
-  "@workspaceKnowledgeDeleteFolderConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a knowledge base directory."
   },
   "workspaceKnowledgeDeleteFolderConfirmMessage": "Файлы из папки {name} будут перемещены в родительскую папку.",
   "@workspaceKnowledgeDeleteFolderConfirmMessage": {
@@ -2752,18 +2707,6 @@
   "@workspacePromptContentRequired": {
     "description": "Validation error when the prompt content is empty."
   },
-  "workspacePromptWriteTab": "Редактор",
-  "@workspacePromptWriteTab": {
-    "description": "Toggle label for the editable prompt content view."
-  },
-  "workspacePromptPreviewTab": "Предпросмотр",
-  "@workspacePromptPreviewTab": {
-    "description": "Toggle label for the rendered markdown preview of the prompt content."
-  },
-  "workspacePromptPreviewEmpty": "Пока нечего показать.",
-  "@workspacePromptPreviewEmpty": {
-    "description": "Empty-state text shown in the prompt preview when there is no content."
-  },
   "workspacePromptTags": "Теги",
   "@workspacePromptTags": {
     "description": "Label for the prompt tags field."
@@ -2823,10 +2766,6 @@
   "workspacePromptDelete": "Удалить промпт",
   "@workspacePromptDelete": {
     "description": "Overflow action that deletes a prompt."
-  },
-  "workspacePromptDeleteConfirmTitle": "Удалить промпт?",
-  "@workspacePromptDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a prompt."
   },
   "workspacePromptDeleteConfirmMessage": "Удалить промпт «{name}»? Это действие нельзя отменить.",
   "@workspacePromptDeleteConfirmMessage": {
@@ -2921,10 +2860,6 @@
   "@workspacePromptHistoryDelete": {
     "description": "Action that deletes a prompt history entry."
   },
-  "workspacePromptHistoryDeleteConfirmTitle": "Удалить версию?",
-  "@workspacePromptHistoryDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a prompt version."
-  },
   "workspacePromptHistoryDeleteConfirmMessage": "Этот снимок версии будет удалён. Это действие нельзя отменить.",
   "@workspacePromptHistoryDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a prompt version."
@@ -2993,18 +2928,6 @@
   "@workspaceSkillContentRequired": {
     "description": "Validation error when the skill instructions are empty."
   },
-  "workspaceSkillWriteTab": "Редактор",
-  "@workspaceSkillWriteTab": {
-    "description": "Toggle label for the editable skill instructions view."
-  },
-  "workspaceSkillPreviewTab": "Предпросмотр",
-  "@workspaceSkillPreviewTab": {
-    "description": "Toggle label for the rendered markdown preview of the skill instructions."
-  },
-  "workspaceSkillPreviewEmpty": "Пока нечего показать.",
-  "@workspaceSkillPreviewEmpty": {
-    "description": "Empty-state text shown in the skill preview when there is no content."
-  },
   "workspaceSkillManageAccess": "Управление доступом",
   "@workspaceSkillManageAccess": {
     "description": "Action to open the sharing/access editor for a skill."
@@ -3037,10 +2960,6 @@
   "@workspaceSkillDelete": {
     "description": "Overflow action that deletes a skill."
   },
-  "workspaceSkillDeleteConfirmTitle": "Удалить навык?",
-  "@workspaceSkillDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a skill."
-  },
   "workspaceSkillDeleteConfirmMessage": "Навык «{name}» будет удалён без возможности восстановления.",
   "@workspaceSkillDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a skill.",
@@ -3061,10 +2980,6 @@
   "workspaceSkillImportMarkdown": "Импортировать Markdown",
   "@workspaceSkillImportMarkdown": {
     "description": "Overflow action that imports a skill from a Markdown file into the create editor."
-  },
-  "workspaceSkillImportJson": "Импортировать JSON",
-  "@workspaceSkillImportJson": {
-    "description": "Overflow action that imports one or more skills from a JSON file."
   },
   "workspaceSkillImportMarkdownLoaded": "Markdown загружен. Проверьте его и сохраните, чтобы создать навык.",
   "@workspaceSkillImportMarkdownLoaded": {
@@ -3104,10 +3019,8 @@
   "workspaceToolClone": "Дублировать",
   "workspaceToolCloneSuffix": "(копия)",
   "workspaceToolDelete": "Удалить",
-  "workspaceToolDeleteConfirmTitle": "Удалить инструмент?",
   "workspaceToolDeleteConfirmMessage": "Удалить инструмент «{name}»? Это действие нельзя отменить.",
   "workspaceToolImport": "Импортировать инструменты",
-  "workspaceToolImportJson": "Импортировать JSON",
   "workspaceToolImportUrl": "Импортировать по URL",
   "workspaceToolImportUrlTitle": "Импорт инструмента по URL",
   "workspaceToolImportUrlHint": "Введите URL файла Python инструмента на GitHub",
@@ -3122,7 +3035,6 @@
   "workspaceToolManifestRequiredVersion": "Требуется Open WebUI {version}",
   "workspaceToolManifestFunding": "Финансирование: {url}",
   "workspaceToolSpecs": "Сгенерированные спецификации",
-  "workspaceToolDetails": "Сведения об инструменте",
   "workspaceToolFunctionCount": "{count, plural, one{# функция} few{# функции} many{# функций} other{# функции}}",
   "@workspaceToolFunctionCount": {
     "placeholders": {
@@ -4695,13 +4607,11 @@
   "personalToolSettingsSaved": "Настройки инструментов сохранены",
   "personalToolSettingsLoadFailed": "Не удалось загрузить настройки инструментов.",
   "personalToolSettingsSaveFailed": "Не удалось сохранить настройки инструментов.",
-  "scheduledTaskDeleteTitle": "Удалить запланированную задачу?",
   "scheduledTaskRunning": "Выполняется…",
   "scheduledTaskRunFinished": "Запуск завершён.",
   "scheduledTaskRunFailedNotice": "Запуск не удался. Подробности смотрите в истории.",
   "scheduledTaskLastRunFailed": "Последний запуск не удался",
   "scheduledTaskRruleRuns": "Запуск: {summary}",
-  "scheduledTaskFolderSearchHint": "Поиск папок",
   "scheduledTasksEmptyHint": "Пусть модель выполняет ваши инструкции по расписанию, например готовит утреннюю сводку новостей.",
   "scheduledTasksShowAll": "Показать все задачи",
   "personalConnectionsEmptyToolServersHint": "Добавьте сервер инструментов OpenAPI, чтобы использовать его инструменты в чатах.",
@@ -5405,12 +5315,209 @@
   },
   "modelPickerCodingAgents": "Агенты для программирования",
   "modelControlServiceTier": "Уровень обслуживания",
-  "scheduledTaskTerminalSearchHint": "Поиск терминалов",
   "scheduledTaskWorkingFolderLabel": "Рабочая папка",
   "scheduledTaskWorkingFolderHint": "Папка терминала по умолчанию",
   "scheduledTaskTerminalRequired": "Выберите терминал, на котором работает этот агент.",
   "scheduledTaskAgentNeedsChat": "Результаты агента отправляются в новый чат.",
   "scheduledTaskAgentsLoading": "Загрузка агентов этого терминала…",
+  "personalizationMemoryGone": "Этого воспоминания больше нет на сервере. Вернитесь назад, чтобы увидеть свои воспоминания.",
+  "hermesConnectionModeTitle": "Режим подключения",
+  "hermesModeResponsesApi": "API ответов",
+  "hermesProfilesNeedUrl": "Сначала введите URL сервера Hermes.",
+  "hermesProfilesNeedTest": "Проверьте подключение, затем обновите список профилей.",
+  "hermesProfilesNone": "Hermes не вернул ни одного профиля.",
+  "hermesProfilesNeedSignIn": "Войдите, затем обновите список профилей.",
+  "hermesNativeSignInFailed": "Не удалось войти в Hermes, или вход был отменён. Убедитесь, что встроенный PKCE включён, и повторите попытку.",
+  "hermesDashboardSignInTitle": "Вход в Hermes",
+  "hermesDashboardSignInLoadFailed": "Не удалось загрузить вход в Hermes.",
+  "hermesJobLastDeliveryError": "Доставка: {error}",
+  "@hermesJobLastDeliveryError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesJobRunsLoadFailed": "Не удалось загрузить историю запусков.",
+  "hermesJobPause": "Приостановить",
+  "hermesJobResume": "Возобновить",
+  "hermesMcpAddServer": "Добавить сервер MCP",
+  "hermesMcpAddFromCatalog": "Добавить из каталога",
+  "hermesMcpLoadFailed": "Не удалось загрузить серверы MCP.",
+  "hermesMcpNone": "Серверы MCP не настроены.",
+  "hermesMcpTest": "Проверить",
+  "hermesMcpRemove": "Удалить",
+  "hermesMcpRemoveMessage": "Сервер будет удалён из Hermes.",
+  "hermesMcpToolsList": "Инструменты: {tools}",
+  "@hermesMcpToolsList": {
+    "placeholders": {
+      "tools": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpToolFilter": "Фильтр инструментов",
+  "hermesMcpToolFilterSummary": "Фильтр инструментов: {filter}",
+  "@hermesMcpToolFilterSummary": {
+    "placeholders": {
+      "filter": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpAuthenticate": "Пройти аутентификацию",
+  "hermesMcpSetApiKey": "Задать ключ API",
+  "hermesMcpSetApiKeyFor": "Ключ API для {name}",
+  "@hermesMcpSetApiKeyFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpHttpUrl": "HTTP-адрес",
+  "hermesMcpStdioCommand": "Команда (stdio)",
+  "hermesMcpArguments": "Аргументы (по одному в строке)",
+  "hermesMcpApiKeyOptional": "Ключ API (необязательно)",
+  "hermesMcpAdd": "Добавить",
+  "hermesMcpCatalogAsks": "Запрашивает {names}",
+  "@hermesMcpCatalogAsks": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpCatalogNeeds": "Требуется {names}, но это подключение не может это передать. Добавьте сервер в Hermes на своём компьютере.",
+  "@hermesMcpCatalogNeeds": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpActionFailed": "Не удалось выполнить действие MCP в Hermes.",
+  "hermesMcpKeepsValues": "Hermes сохраняет каждое значение для {name}.",
+  "@hermesMcpKeepsValues": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpValueRequired": "{name} (обязательно)",
+  "@hermesMcpValueRequired": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpValueOptional": "{name} (необязательно)",
+  "@hermesMcpValueOptional": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpFillRequired": "Заполните все обязательные значения.",
+  "hermesMcpStillInstallingSignIn": "Hermes ещё устанавливает {name}. Когда сервер появится в списке, войдите с помощью «Пройти аутентификацию» на его странице.",
+  "@hermesMcpStillInstallingSignIn": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpStillInstalling": "Hermes ещё устанавливает {name}. Сервер появится в списке, когда установка завершится.",
+  "@hermesMcpStillInstalling": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpAddedSignInUnfinished": "{name} добавлен, но вход не был завершён. Повторите попытку с помощью «Пройти аутентификацию» на его странице.",
+  "@hermesMcpAddedSignInUnfinished": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpResourcesPrompts": "Ресурсы: {resources} · Промпты: {prompts}",
+  "@hermesMcpResourcesPrompts": {
+    "placeholders": {
+      "resources": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "hermesMcpTestConnected": "Подключено · Инструменты: {tools} · Ресурсы: {resources} · Промпты: {prompts}",
+  "@hermesMcpTestConnected": {
+    "placeholders": {
+      "tools": {
+        "type": "int"
+      },
+      "resources": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "hermesMcpTestFailed": "Проверка MCP не удалась.",
+  "scheduledTasksFilterLabel": "Показать",
+  "personalConnectionsTurnOn": "Включить",
+  "personalConnectionsTurnOff": "Выключить",
+  "calendarDayEmpty": "Нет событий",
+  "workspaceModelCapabilityVision": "Зрение",
+  "@workspaceModelCapabilityVision": {
+    "description": "Model capability: understands images it is given."
+  },
+  "workspaceModelCapabilityFileUpload": "Загрузка файлов",
+  "@workspaceModelCapabilityFileUpload": {
+    "description": "Model capability: accepts uploaded files."
+  },
+  "workspaceModelCapabilityCitations": "Цитаты",
+  "@workspaceModelCapabilityCitations": {
+    "description": "Model capability: cites its sources."
+  },
+  "workspaceModelCapabilityUsage": "Использование",
+  "@workspaceModelCapabilityUsage": {
+    "description": "Model capability: reports token usage."
+  },
+  "workspacePromptHistoryDiffRemovedLine": "Удалено: {line}",
+  "@workspacePromptHistoryDiffRemovedLine": {
+    "description": "What a screen reader says for a line removed in a comparison of two prompt versions; {line} is the line.",
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "workspacePromptHistoryDiffAddedLine": "Добавлено: {line}",
+  "@workspacePromptHistoryDiffAddedLine": {
+    "description": "What a screen reader says for a line added in a comparison of two prompt versions; {line} is the line.",
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaceKnowledgeSourceLabel": "Источник",
+  "@workspaceKnowledgeSourceLabel": {
+    "description": "Label of the menu on the Knowledge list in Settings that filters bases by where they come from (all, local, connected)."
+  },
+  "workspaceKnowledgeUploadFiles": "Загрузить файлы",
+  "@workspaceKnowledgeUploadFiles": {
+    "description": "Row in a knowledge base's files in Settings that opens the file picker to upload one or more files."
+  },
   "pushFallbackTitle": "Новое уведомление",
   "pushFallbackBody": "Новое уведомление",
   "pushReplyTitle": "Новый ответ",
@@ -5536,6 +5643,15 @@
   "hermesJobCreatedNotifyFailed": "Задание создано, но включить для него уведомления не удалось.",
   "hermesJobUpdatedNotifyFailed": "Задание сохранено, но изменить его уведомления не удалось.",
   "hermesJobNotifyNeedsScheduled": "Чтобы пользоваться этим, включите «Запланированные задачи» в уведомлениях.",
+  "pushSettingsMenuAction": "Настройки push",
+  "workspaceSkillCloneSaveFirst": "Сохраните или отмените изменения, прежде чем дублировать навык.",
+  "@workspaceSkillCloneSaveFirst": {
+    "description": "Said on a skill's editor when Duplicate is tapped with unsaved changes: Duplicate copies the skill as saved."
+  },
+  "workspaceSkillToggleSaveFirst": "Сохраните или отмените изменения, прежде чем включать или выключать навык.",
+  "@workspaceSkillToggleSaveFirst": {
+    "description": "Said on a skill's editor when its on/off switch is tapped with unsaved changes."
+  },
   "hermesShowScheduledRuns": "Показывать запланированные запуски",
   "hermesShowScheduledRunsDescription": "Каждый запуск запланированного агента создаёт отдельный чат. Отключите, чтобы не показывать такие чаты в списке Hermes. Закреплённые останутся.",
   "hermesScheduledRunsHidden": "{count, plural, one{Скрыт {count} запланированный запуск} few{Скрыто {count} запланированных запуска} many{Скрыто {count} запланированных запусков} other{Скрыто {count} запланированного запуска}}",
@@ -5560,6 +5676,14 @@
   },
   "showModelNameInComposer": "Показывать название модели в поле сообщения",
   "showModelNameInComposerDescription": "В пустом поле сообщения указывается выбранная модель вместо Conduit.",
+  "workspaceEditorAccountChanged": "Аккаунт, в который выполнен вход, изменился, поэтому изменение не было сохранено.",
+  "@workspaceEditorAccountChanged": {
+    "description": "Shown on a Workspace skill or tool editor read again because the signed-in account changed while a change on it (a save, switch, duplicate, delete or valve save) was under way, when that change was never sent or failed."
+  },
+  "settingsAddAction": "Добавить",
+  "@settingsAddAction": {
+    "description": "Read aloud for the plus button in a Settings page's bar that adds an item, such as a calendar event."
+  },
   "@ok": {
     "description": "Generic OK button label."
   },

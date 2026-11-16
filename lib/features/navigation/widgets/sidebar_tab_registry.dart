@@ -142,26 +142,21 @@ Widget _clineBody({required bool showBottomNavigation, required bool active, Tex
 bool _clineVisible(SidebarTabAvailability availability) =>
     availability.hasOpenWebUi && !availability.hermesOnly;
 
+// The rule lives in the core, where the Mac's source list reads it too.
 bool _chatsVisible(SidebarTabAvailability availability) =>
-    !availability.hermesOnly;
+    isSidebarTabVisible(SidebarTabId.chats, availability);
 
 bool _hermesVisible(SidebarTabAvailability availability) =>
-    availability.hermesOnly || availability.hermesEnabled;
+    isSidebarTabVisible(SidebarTabId.hermes, availability);
 
 bool _notesVisible(SidebarTabAvailability availability) =>
-    availability.hasOpenWebUi &&
-    !availability.hermesOnly &&
-    availability.notesEnabled;
+    isSidebarTabVisible(SidebarTabId.notes, availability);
 
 bool _terminalVisible(SidebarTabAvailability availability) =>
-    availability.hasOpenWebUi &&
-    !availability.hermesOnly &&
-    availability.terminalEnabled;
+    isSidebarTabVisible(SidebarTabId.terminal, availability);
 
 bool _channelsVisible(SidebarTabAvailability availability) =>
-    availability.hasOpenWebUi &&
-    !availability.hermesOnly &&
-    availability.channelsEnabled;
+    isSidebarTabVisible(SidebarTabId.channels, availability);
 
 const sidebarTabRegistry = <SidebarTabDescriptor>[
   SidebarTabDescriptor(

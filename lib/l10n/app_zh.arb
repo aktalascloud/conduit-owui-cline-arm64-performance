@@ -1168,7 +1168,6 @@
   "personalConnectionsTestInvalidTarget": "请先输入有效的 URL 和路径。",
   "personalConnectionsTestUnsupportedAuth": "此处无法测试这种身份验证方式。",
   "personalConnectionsUnsupported": "此连接使用了应用无法编辑的设置。你仍可以开启、关闭或删除它。",
-  "personalConnectionsDeleteTitle": "删除连接？",
   "personalConnectionsDeleteMessage": "{name} 将从你的 Open WebUI 账户中移除。",
   "personalConnectionsUrlRequired": "请输入 URL。",
   "personalConnectionsUrlInvalid": "请输入完整的 http 或 https URL。",
@@ -2094,8 +2093,6 @@
   "workspaceUnsupported": "此服务器不支持工作区管理。",
   "workspaceLoadFailed": "无法加载工作区。",
   "workspaceRetry": "重试",
-  "workspaceSelectItem": "选择一个项目以查看详情。",
-  "workspaceEditorComingSoon": "此编辑器将在工作区的下一阶段推出。",
   "workspaceSearchHint": "搜索工作区资源",
   "workspaceLoadMore": "加载更多",
   "workspaceAccessPublicDisabled": "您没有权限公开分享此项。",
@@ -2124,8 +2121,6 @@
   "workspaceEditorDiscardMessage": "未保存的更改将会丢失。",
   "workspaceEditorDiscardConfirm": "放弃",
   "workspaceEditorKeepEditing": "继续编辑",
-  "workspaceEditorSaveTooltip": "保存更改",
-  "workspaceEditorSaving": "正在保存…",
   "workspaceEditorMoreActions": "更多操作",
   "workspaceImportChooseFile": "选择 JSON 文件",
   "workspaceImportPasteLabel": "或粘贴 JSON",
@@ -2338,10 +2333,6 @@
   "@workspaceModelDelete": {
     "description": "Action that deletes the model."
   },
-  "workspaceModelDeleteConfirmTitle": "删除模型？",
-  "@workspaceModelDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a model."
-  },
   "workspaceModelDeleteConfirmMessage": "这会永久删除 {name}。",
   "@workspaceModelDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a model.",
@@ -2387,10 +2378,6 @@
   "@workspaceModelDeleted": {
     "description": "Confirmation that the model was deleted."
   },
-  "workspaceModelAddAction": "添加",
-  "@workspaceModelAddAction": {
-    "description": "Confirm button in a small add-text dialog."
-  },
   "workspaceKnowledgeCreateTitle": "新建知识库",
   "@workspaceKnowledgeCreateTitle": {
     "description": "Title of the create form for a new knowledge base."
@@ -2423,10 +2410,6 @@
   "@workspaceKnowledgeDelete": {
     "description": "Overflow action that deletes the knowledge base."
   },
-  "workspaceKnowledgeDeleteConfirmTitle": "删除知识库？",
-  "@workspaceKnowledgeDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a knowledge base."
-  },
   "workspaceKnowledgeDeleteConfirmMessage": "这会永久删除 {name}，并解除其文件的关联。",
   "@workspaceKnowledgeDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a knowledge base.",
@@ -2439,10 +2422,6 @@
   "workspaceKnowledgeReset": "重置",
   "@workspaceKnowledgeReset": {
     "description": "Overflow action that removes all files from a knowledge base."
-  },
-  "workspaceKnowledgeResetConfirmTitle": "重置知识库？",
-  "@workspaceKnowledgeResetConfirmTitle": {
-    "description": "Confirmation dialog title for resetting a knowledge base."
   },
   "workspaceKnowledgeResetConfirmMessage": "这会移除 {name} 中的所有文件，但保留知识库本身。",
   "@workspaceKnowledgeResetConfirmMessage": {
@@ -2513,22 +2492,6 @@
   "@workspaceKnowledgeFilesLoadFailed": {
     "description": "Error when the knowledge base file list fails to load."
   },
-  "workspaceKnowledgeRefreshFiles": "刷新",
-  "@workspaceKnowledgeRefreshFiles": {
-    "description": "Tooltip for the button that refreshes the knowledge file list."
-  },
-  "workspaceKnowledgeRoot": "根目录",
-  "@workspaceKnowledgeRoot": {
-    "description": "Breadcrumb label for the top level of a knowledge base."
-  },
-  "workspaceKnowledgeAddMenu": "添加文件",
-  "@workspaceKnowledgeAddMenu": {
-    "description": "Tooltip for the menu that adds files or folders to a knowledge base."
-  },
-  "workspaceKnowledgeUpload": "上传文件",
-  "@workspaceKnowledgeUpload": {
-    "description": "Menu item to upload a single local file into a knowledge base."
-  },
   "workspaceKnowledgeUploading": "正在上传 {name}…",
   "@workspaceKnowledgeUploading": {
     "description": "Progress label shown while a file uploads into a knowledge base.",
@@ -2541,10 +2504,6 @@
   "workspaceKnowledgeUploadFailed": "无法上传文件。",
   "@workspaceKnowledgeUploadFailed": {
     "description": "Error when uploading a file into a knowledge base fails."
-  },
-  "workspaceKnowledgeBatchAttach": "上传多个文件",
-  "@workspaceKnowledgeBatchAttach": {
-    "description": "Menu item to upload several local files into a knowledge base at once."
   },
   "workspaceKnowledgeAttachExisting": "附加服务器文件",
   "@workspaceKnowledgeAttachExisting": {
@@ -2589,10 +2548,6 @@
   "workspaceKnowledgeDeleteFolder": "删除文件夹",
   "@workspaceKnowledgeDeleteFolder": {
     "description": "Action to delete a knowledge base directory."
-  },
-  "workspaceKnowledgeDeleteFolderConfirmTitle": "删除文件夹？",
-  "@workspaceKnowledgeDeleteFolderConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a knowledge base directory."
   },
   "workspaceKnowledgeDeleteFolderConfirmMessage": "{name} 中的文件将移至上级文件夹。",
   "@workspaceKnowledgeDeleteFolderConfirmMessage": {
@@ -2716,18 +2671,6 @@
   "@workspacePromptContentRequired": {
     "description": "Validation error when the prompt content is empty."
   },
-  "workspacePromptWriteTab": "编辑",
-  "@workspacePromptWriteTab": {
-    "description": "Toggle label for the editable prompt content view."
-  },
-  "workspacePromptPreviewTab": "预览",
-  "@workspacePromptPreviewTab": {
-    "description": "Toggle label for the rendered markdown preview of the prompt content."
-  },
-  "workspacePromptPreviewEmpty": "暂无可预览的内容。",
-  "@workspacePromptPreviewEmpty": {
-    "description": "Empty-state text shown in the prompt preview when there is no content."
-  },
   "workspacePromptTags": "标签",
   "@workspacePromptTags": {
     "description": "Label for the prompt tags field."
@@ -2787,10 +2730,6 @@
   "workspacePromptDelete": "删除提示词",
   "@workspacePromptDelete": {
     "description": "Overflow action that deletes a prompt."
-  },
-  "workspacePromptDeleteConfirmTitle": "删除提示词？",
-  "@workspacePromptDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a prompt."
   },
   "workspacePromptDeleteConfirmMessage": "“{name}”将被永久删除。",
   "@workspacePromptDeleteConfirmMessage": {
@@ -2885,10 +2824,6 @@
   "@workspacePromptHistoryDelete": {
     "description": "Action that deletes a prompt history entry."
   },
-  "workspacePromptHistoryDeleteConfirmTitle": "删除版本？",
-  "@workspacePromptHistoryDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a prompt version."
-  },
   "workspacePromptHistoryDeleteConfirmMessage": "此版本快照将被移除。此操作无法撤销。",
   "@workspacePromptHistoryDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a prompt version."
@@ -2957,18 +2892,6 @@
   "@workspaceSkillContentRequired": {
     "description": "Validation error when the skill instructions are empty."
   },
-  "workspaceSkillWriteTab": "编辑",
-  "@workspaceSkillWriteTab": {
-    "description": "Toggle label for the editable skill instructions view."
-  },
-  "workspaceSkillPreviewTab": "预览",
-  "@workspaceSkillPreviewTab": {
-    "description": "Toggle label for the rendered markdown preview of the skill instructions."
-  },
-  "workspaceSkillPreviewEmpty": "暂无可预览的内容。",
-  "@workspaceSkillPreviewEmpty": {
-    "description": "Empty-state text shown in the skill preview when there is no content."
-  },
   "workspaceSkillManageAccess": "管理访问权限",
   "@workspaceSkillManageAccess": {
     "description": "Action to open the sharing/access editor for a skill."
@@ -3001,10 +2924,6 @@
   "@workspaceSkillDelete": {
     "description": "Overflow action that deletes a skill."
   },
-  "workspaceSkillDeleteConfirmTitle": "删除技能？",
-  "@workspaceSkillDeleteConfirmTitle": {
-    "description": "Confirmation dialog title for deleting a skill."
-  },
   "workspaceSkillDeleteConfirmMessage": "“{name}”将被永久删除。",
   "@workspaceSkillDeleteConfirmMessage": {
     "description": "Confirmation dialog body for deleting a skill.",
@@ -3025,10 +2944,6 @@
   "workspaceSkillImportMarkdown": "导入 Markdown",
   "@workspaceSkillImportMarkdown": {
     "description": "Overflow action that imports a skill from a Markdown file into the create editor."
-  },
-  "workspaceSkillImportJson": "导入 JSON",
-  "@workspaceSkillImportJson": {
-    "description": "Overflow action that imports one or more skills from a JSON file."
   },
   "workspaceSkillImportMarkdownLoaded": "已加载 Markdown。请检查后保存以创建技能。",
   "@workspaceSkillImportMarkdownLoaded": {
@@ -3068,10 +2983,8 @@
   "workspaceToolClone": "复制",
   "workspaceToolCloneSuffix": "（副本）",
   "workspaceToolDelete": "删除",
-  "workspaceToolDeleteConfirmTitle": "删除工具？",
   "workspaceToolDeleteConfirmMessage": "“{name}”将被永久删除。",
   "workspaceToolImport": "导入工具",
-  "workspaceToolImportJson": "导入 JSON",
   "workspaceToolImportUrl": "从 URL 导入",
   "workspaceToolImportUrlTitle": "从 URL 导入工具",
   "workspaceToolImportUrlHint": "输入工具 Python 文件的 GitHub URL",
@@ -3086,7 +2999,6 @@
   "workspaceToolManifestRequiredVersion": "需要 Open WebUI {version}",
   "workspaceToolManifestFunding": "赞助：{url}",
   "workspaceToolSpecs": "生成的规范",
-  "workspaceToolDetails": "工具详情",
   "workspaceToolFunctionCount": "{count} 个函数",
   "@workspaceToolFunctionCount": {"placeholders":{"count":{"type":"int"}}},
   "workspaceToolSpecsEmpty": "未为此工具生成任何规范。",
@@ -4287,13 +4199,11 @@
   "personalToolSettingsSaved": "工具设置已保存",
   "personalToolSettingsLoadFailed": "无法加载工具设置。",
   "personalToolSettingsSaveFailed": "无法保存工具设置。",
-  "scheduledTaskDeleteTitle": "删除计划任务？",
   "scheduledTaskRunning": "正在运行…",
   "scheduledTaskRunFinished": "运行完成。",
   "scheduledTaskRunFailedNotice": "运行失败。请在“历史记录”中查看详情。",
   "scheduledTaskLastRunFailed": "上次运行失败",
   "scheduledTaskRruleRuns": "运行：{summary}",
-  "scheduledTaskFolderSearchHint": "搜索文件夹",
   "scheduledTasksEmptyHint": "让模型按计划执行你的指令，例如每天早上的新闻摘要。",
   "scheduledTasksShowAll": "显示所有任务",
   "personalConnectionsEmptyToolServersHint": "添加 OpenAPI 工具服务器，即可在聊天中使用其工具。",
@@ -4781,12 +4691,209 @@
   "@hermesProcessKillFailed": {"placeholders": {"error": {"type": "String"}}},
   "modelPickerCodingAgents": "编程智能体",
   "modelControlServiceTier": "服务等级",
-  "scheduledTaskTerminalSearchHint": "搜索终端",
   "scheduledTaskWorkingFolderLabel": "工作文件夹",
   "scheduledTaskWorkingFolderHint": "终端的默认文件夹",
   "scheduledTaskTerminalRequired": "请选择运行此智能体的终端。",
   "scheduledTaskAgentNeedsChat": "智能体的结果会发送到新聊天。",
   "scheduledTaskAgentsLoading": "正在加载此终端的智能体…",
+  "personalizationMemoryGone": "此记忆已不在服务器上。请返回查看您的记忆。",
+  "hermesConnectionModeTitle": "连接模式",
+  "hermesModeResponsesApi": "Responses API",
+  "hermesProfilesNeedUrl": "请先输入 Hermes 服务器 URL。",
+  "hermesProfilesNeedTest": "请先测试连接，然后刷新配置文件列表。",
+  "hermesProfilesNone": "Hermes 未返回任何配置文件。",
+  "hermesProfilesNeedSignIn": "请先登录，然后刷新配置文件列表。",
+  "hermesNativeSignInFailed": "Hermes 登录失败或已取消。请确认已启用原生 PKCE，然后重试。",
+  "hermesDashboardSignInTitle": "Hermes 登录",
+  "hermesDashboardSignInLoadFailed": "无法加载 Hermes 登录页面。",
+  "hermesJobLastDeliveryError": "投递：{error}",
+  "@hermesJobLastDeliveryError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesJobRunsLoadFailed": "无法加载运行记录。",
+  "hermesJobPause": "暂停",
+  "hermesJobResume": "恢复",
+  "hermesMcpAddServer": "添加 MCP 服务器",
+  "hermesMcpAddFromCatalog": "从目录添加",
+  "hermesMcpLoadFailed": "无法加载 MCP 服务器。",
+  "hermesMcpNone": "尚未配置 MCP 服务器。",
+  "hermesMcpTest": "测试",
+  "hermesMcpRemove": "移除",
+  "hermesMcpRemoveMessage": "这会将该服务器从 Hermes 中移除。",
+  "hermesMcpToolsList": "工具：{tools}",
+  "@hermesMcpToolsList": {
+    "placeholders": {
+      "tools": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpToolFilter": "工具筛选",
+  "hermesMcpToolFilterSummary": "工具筛选：{filter}",
+  "@hermesMcpToolFilterSummary": {
+    "placeholders": {
+      "filter": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpAuthenticate": "认证",
+  "hermesMcpSetApiKey": "设置 API 密钥",
+  "hermesMcpSetApiKeyFor": "{name} 的 API 密钥",
+  "@hermesMcpSetApiKeyFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpHttpUrl": "HTTP URL",
+  "hermesMcpStdioCommand": "命令 (stdio)",
+  "hermesMcpArguments": "参数（每行一个）",
+  "hermesMcpApiKeyOptional": "API 密钥（可选）",
+  "hermesMcpAdd": "添加",
+  "hermesMcpCatalogAsks": "需要填写 {names}",
+  "@hermesMcpCatalogAsks": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpCatalogNeeds": "需要 {names}，但此连接无法发送。请在您电脑上的 Hermes 中添加。",
+  "@hermesMcpCatalogNeeds": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpActionFailed": "Hermes MCP 操作失败。",
+  "hermesMcpKeepsValues": "Hermes 会为 {name} 保存每个值。",
+  "@hermesMcpKeepsValues": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpValueRequired": "{name}（必填）",
+  "@hermesMcpValueRequired": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpValueOptional": "{name}（可选）",
+  "@hermesMcpValueOptional": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpFillRequired": "请填写所有必填值。",
+  "hermesMcpStillInstallingSignIn": "Hermes 仍在安装 {name}。列出后，请在其页面上使用“认证”登录。",
+  "@hermesMcpStillInstallingSignIn": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpStillInstalling": "Hermes 仍在安装 {name}。完成后会显示在列表中。",
+  "@hermesMcpStillInstalling": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpAddedSignInUnfinished": "已添加 {name}，但登录未完成。请在其页面上使用“认证”重试。",
+  "@hermesMcpAddedSignInUnfinished": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hermesMcpResourcesPrompts": "资源：{resources} · 提示词：{prompts}",
+  "@hermesMcpResourcesPrompts": {
+    "placeholders": {
+      "resources": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "hermesMcpTestConnected": "已连接 · 工具：{tools} · 资源：{resources} · 提示词：{prompts}",
+  "@hermesMcpTestConnected": {
+    "placeholders": {
+      "tools": {
+        "type": "int"
+      },
+      "resources": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "hermesMcpTestFailed": "MCP 测试失败。",
+  "scheduledTasksFilterLabel": "显示",
+  "personalConnectionsTurnOn": "开启",
+  "personalConnectionsTurnOff": "关闭",
+  "calendarDayEmpty": "没有日程",
+  "workspaceModelCapabilityVision": "视觉",
+  "@workspaceModelCapabilityVision": {
+    "description": "Model capability: understands images it is given."
+  },
+  "workspaceModelCapabilityFileUpload": "文件上传",
+  "@workspaceModelCapabilityFileUpload": {
+    "description": "Model capability: accepts uploaded files."
+  },
+  "workspaceModelCapabilityCitations": "引用",
+  "@workspaceModelCapabilityCitations": {
+    "description": "Model capability: cites its sources."
+  },
+  "workspaceModelCapabilityUsage": "用量",
+  "@workspaceModelCapabilityUsage": {
+    "description": "Model capability: reports token usage."
+  },
+  "workspacePromptHistoryDiffRemovedLine": "已删除：{line}",
+  "@workspacePromptHistoryDiffRemovedLine": {
+    "description": "What a screen reader says for a line removed in a comparison of two prompt versions; {line} is the line.",
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "workspacePromptHistoryDiffAddedLine": "已添加：{line}",
+  "@workspacePromptHistoryDiffAddedLine": {
+    "description": "What a screen reader says for a line added in a comparison of two prompt versions; {line} is the line.",
+    "placeholders": {
+      "line": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaceKnowledgeSourceLabel": "来源",
+  "@workspaceKnowledgeSourceLabel": {
+    "description": "Label of the menu on the Knowledge list in Settings that filters bases by where they come from (all, local, connected)."
+  },
+  "workspaceKnowledgeUploadFiles": "上传文件",
+  "@workspaceKnowledgeUploadFiles": {
+    "description": "Row in a knowledge base's files in Settings that opens the file picker to upload one or more files."
+  },
   "pushFallbackTitle": "Conduit",
   "pushFallbackBody": "新通知",
   "pushReplyTitle": "新回复",
@@ -4912,6 +5019,15 @@
   "hermesJobCreatedNotifyFailed": "定时任务已创建，但无法为其开启通知。",
   "hermesJobUpdatedNotifyFailed": "定时任务已保存，但无法更改其通知。",
   "hermesJobNotifyNeedsScheduled": "要使用此功能，请在“通知”中开启“计划任务”。",
+  "pushSettingsMenuAction": "推送设置",
+  "workspaceSkillCloneSaveFirst": "请先保存或放弃更改，再复制该技能。",
+  "@workspaceSkillCloneSaveFirst": {
+    "description": "Said on a skill's editor when Duplicate is tapped with unsaved changes: Duplicate copies the skill as saved."
+  },
+  "workspaceSkillToggleSaveFirst": "请先保存或放弃更改，再启用或停用该技能。",
+  "@workspaceSkillToggleSaveFirst": {
+    "description": "Said on a skill's editor when its on/off switch is tapped with unsaved changes."
+  },
   "hermesShowScheduledRuns": "显示定时运行",
   "hermesShowScheduledRunsDescription": "定时智能体每次运行都会新建一个聊天。关闭后，这些聊天不会显示在 Hermes 列表中。已置顶的仍会保留。",
   "hermesScheduledRunsHidden": "{count, plural, other{已隐藏 {count} 个定时运行}}",
@@ -4935,5 +5051,13 @@
     }
   },
   "showModelNameInComposer": "在消息框中显示模型名称",
-  "showModelNameInComposerDescription": "空消息框将显示所选模型的名称，而不是 Conduit。"
+  "showModelNameInComposerDescription": "空消息框将显示所选模型的名称，而不是 Conduit。",
+  "workspaceEditorAccountChanged": "已登录的账户发生了变化，因此未保存你的更改。",
+  "@workspaceEditorAccountChanged": {
+    "description": "Shown on a Workspace skill or tool editor read again because the signed-in account changed while a change on it (a save, switch, duplicate, delete or valve save) was under way, when that change was never sent or failed."
+  },
+  "settingsAddAction": "添加",
+  "@settingsAddAction": {
+    "description": "Read aloud for the plus button in a Settings page's bar that adds an item, such as a calendar event."
+  }
 }
