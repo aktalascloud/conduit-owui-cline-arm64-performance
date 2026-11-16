@@ -1,5 +1,5 @@
 diff --git a/packages/conduit_core/lib/database/daos/outbox_dao.dart b/packages/conduit_core/lib/database/daos/outbox_dao.dart
-index 0d27e93088bf376b6c637dc90e0f00dcb3bc4085..bb70bb81d905375472aad27e62ec23acdb9f4a4e 100644
+index f09f1bb3c69dfa85164d944e819f824d3c30a514..16f101ab7034d2407a3909eec7a30cdc843bfe10 100644
 --- a/packages/conduit_core/lib/database/daos/outbox_dao.dart
 +++ b/packages/conduit_core/lib/database/daos/outbox_dao.dart
 @@ -485,6 +485,19 @@ class OutboxDao extends DatabaseAccessor<AppDatabase> with _$OutboxDaoMixin {
@@ -45,7 +45,7 @@ index 0d27e93088bf376b6c637dc90e0f00dcb3bc4085..bb70bb81d905375472aad27e62ec23ac
          ? null
          : await attachedDatabase.chatsDao.getChatParams(op.chatId!);
      final frozen = OpenWebUiChatSettingsSnapshot(
-@@ -875,7 +889,10 @@ class OutboxDao extends DatabaseAccessor<AppDatabase> with _$OutboxDaoMixin {
+@@ -892,7 +906,10 @@ class OutboxDao extends DatabaseAccessor<AppDatabase> with _$OutboxDaoMixin {
              survivorSeq: update.seq,
              mergedPayload: payload.isEmpty
                  ? null
@@ -58,7 +58,7 @@ index 0d27e93088bf376b6c637dc90e0f00dcb3bc4085..bb70bb81d905375472aad27e62ec23ac
          }
          return const _CoalesceDecision(insert: true);
 diff --git a/packages/conduit_core/lib/features/chat/providers/chat_providers.dart b/packages/conduit_core/lib/features/chat/providers/chat_providers.dart
-index 30e068df9e844af328b525938ba77fad386f3d29..7559e6506326e29ae3b07c6b6f9bd44d81c07bd3 100644
+index 3f3ecc17702634a1bbc9c4edf157ed431a966f5f..da1f31325f12094c4db445e1da971bed2e501230 100644
 --- a/packages/conduit_core/lib/features/chat/providers/chat_providers.dart
 +++ b/packages/conduit_core/lib/features/chat/providers/chat_providers.dart
 @@ -13,6 +13,9 @@
@@ -72,7 +72,7 @@ index 30e068df9e844af328b525938ba77fad386f3d29..7559e6506326e29ae3b07c6b6f9bd44d
  import 'dart:collection';
  import 'dart:convert';
 diff --git a/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart b/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart
-index d46ded1050a351c233b67011c528401eea6b751e..dc40ab4d0535bba5bbdea8d1751b1bce68888b6a 100644
+index f183945fc39e6f845a6aabcb4250336cc02c3378..b18e7742c68a6f36e249df5e2b3bdf3c490357e6 100644
 --- a/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart
 +++ b/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart
 @@ -12,6 +12,15 @@ Future<void> _sendMessageInternal(
@@ -92,7 +92,7 @@ index d46ded1050a351c233b67011c528401eea6b751e..dc40ab4d0535bba5bbdea8d1751b1bce
    final libreChatActive = ref.read(activeConversationProvider) as Conversation?;
    if (libreChatSelected != null && isLibreChatModel(libreChatSelected)) {
 diff --git a/packages/conduit_core/lib/features/chat/providers/chat_session_lifecycle.dart b/packages/conduit_core/lib/features/chat/providers/chat_session_lifecycle.dart
-index f6e037241d80d91edfb64611db0c552b243aef79..a8e7ac7e36edbf53c4019974fa9b1be27c7f33b3 100644
+index 2335964d6bec24f3565c804c823bfb2e75cb9bff..28b791eb330bac82a3f7ae11668b781f31b0ba8b 100644
 --- a/packages/conduit_core/lib/features/chat/providers/chat_session_lifecycle.dart
 +++ b/packages/conduit_core/lib/features/chat/providers/chat_session_lifecycle.dart
 @@ -46,6 +46,11 @@ List<String> selectedFilterIdsForModel(dynamic ref, Model model) {

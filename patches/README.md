@@ -5,7 +5,7 @@ Only currently applied maintainer differences from the exact official baseline a
 Mainstream-only commits, rejected proposals and reverted experiments are excluded.
 Коммиты самого mainstream, неприменённые предложения и отменённые эксперименты исключены.
 
-Official baseline: `50a9ae4e3644e710e67852d0f2a48671f5b1d750`. Downstream snapshot: `60d0e01f25ca2cdb8b828608fab9c27222197158`.
+Official baseline: `7ec48dee0d97def4da2a170fcd64021115661bf5`. Downstream snapshot: `069d879b55ac79421a6415bc7177a664a49b7098`.
 Patches are already applied in this fork. Apply `series` only to a clean checkout of that exact baseline.
 В этом форке патчи уже применены. `series` предназначен только для чистого checkout указанной базы.
 Apply the numbered patches in the order listed in `series`. Each row describes one topic.
@@ -18,9 +18,9 @@ Native Cline with pinned bounded SSH transport, account-isolated VRM/cache/call 
 |---:|---|---|---:|
 | 1 | [01-cline-ssh-gateway.patch](01-cline-ssh-gateway.patch) | Pin SSH identity and handle reconnects, session listing and file uploads through the Windows gateway / Закрепляет идентификатор SSH, поддерживает переподключение, список сессий и загрузку файлов через Windows-шлюз. | 19 |
 | 2 | [02-cline-client.patch](02-cline-client.patch) | Add native Cline client and models for messages, sessions and tool approvals / Добавляет клиент и модели Cline для сообщений, сессий и разрешений инструментов. | 8 |
-| 3 | [03-cline-navigation.patch](03-cline-navigation.patch) | Add the Cline workspace route and retain sidebar search, drafts and selection / Добавляет маршрут рабочего пространства Cline и сохраняет поиск, черновики и выбор в панели. | 26 |
+| 3 | [03-cline-navigation.patch](03-cline-navigation.patch) | Add the Cline workspace route and retain sidebar search, drafts and selection / Добавляет маршрут рабочего пространства Cline и сохраняет поиск, черновики и выбор в панели. | 23 |
 | 4 | [04-voice-vrm.patch](04-voice-vrm.patch) | Bind avatars to account and file identity, bound textures and cache, and adapt voice controls / Привязывает VRM к аккаунту и файлу, ограничивает текстуры и кэш и адаптирует голосовые кнопки. | 26 |
-| 5 | [05-provider-compatibility.patch](05-provider-compatibility.patch) | Adapt direct-provider profiles, MiniMax transport and default-model handling / Адаптирует профили прямых провайдеров, транспорт MiniMax и выбор модели по умолчанию. | 12 |
+| 5 | [05-provider-compatibility.patch](05-provider-compatibility.patch) | Adapt direct-provider profiles, MiniMax transport and default-model handling / Адаптирует профили прямых провайдеров, транспорт MiniMax и выбор модели по умолчанию. | 11 |
 | 6 | [06-chat-persistence.patch](06-chat-persistence.patch) | Adapt chat payloads, outbox and sync to Open WebUI persistence / Адаптирует сообщения, очередь отправки и синхронизацию к хранению Open WebUI. | 14 |
 | 7 | [07-localization.patch](07-localization.patch) | Translate Cline and other fork UI labels / Переводит подписи Cline и других функций форка. | 16 |
 | 8 | [08-arm64-native.patch](08-arm64-native.patch) | Qualify ARM64 native libraries, toolchains, cache and binary verification / Проверяет ARM64-библиотеки, инструменты, кэш и свойства бинарников. | 11 |
@@ -29,3 +29,4 @@ Native Cline with pinned bounded SSH transport, account-isolated VRM/cache/call 
 | 11 | [11-ci-build.patch](11-ci-build.patch) | Pin toolchains and package inputs, and run the fork build and publication checks / Закрепляет инструменты и входы сборки, запускает проверки пакетов и публикации. | 11 |
 | 12 | [12-project-docs.patch](12-project-docs.patch) | Document fork setup, support and license terms / Описывает установку, поддержку и условия лицензирования форка. | 2 |
 | 13 | [13-fork-records.patch](13-fork-records.patch) | Record fork changes, upstream reviews and qualification measurements / Хранит журнал изменений, разбор upstream и результаты проверок. | 2 |
+| 14 | [14-runtime.patch](14-runtime.patch) | Local runtime, integration, security, dependency and platform adaptations / Наши изменения работы, интеграций, безопасности и платформ. | 1 |

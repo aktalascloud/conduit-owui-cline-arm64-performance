@@ -97,7 +97,7 @@ index 0000000000000000000000000000000000000000..c08ce8b6cabbd90f797e706467133345
 +    checked+=1
 +print('RUSSIAN_LOCALE_KEYS_AND_PARAMETERS_VERIFIED='+str(checked))
 diff --git a/lib/l10n/app_cs.arb b/lib/l10n/app_cs.arb
-index b6bf89fa724a7aba024a773151829c1354006c1e..0a5424b0153dae7bebc84e055cccfa0eaf22ab9d 100644
+index 9151a40473b434b3a69817b8c5e08092d37dc1d1..66045e8a0239bf6166acf45ad4f37af57576cd18 100644
 --- a/lib/l10n/app_cs.arb
 +++ b/lib/l10n/app_cs.arb
 @@ -1,6 +1,6 @@
@@ -109,7 +109,7 @@ index b6bf89fa724a7aba024a773151829c1354006c1e..0a5424b0153dae7bebc84e055cccfa0e
    "serverIncompatibleMessage": "Tento server používá Open WebUI {serverVersion}, což je novější verze, než tato aplikace podporuje (maximálně {maxVersion}).",
    "serverIncompatibleResolution": "Chcete-li pokračovat, snižte verzi serveru na {maxVersion} nebo nižší, nebo počkejte na aktualizaci aplikace, která podporu doplní.",
 diff --git a/lib/l10n/app_de.arb b/lib/l10n/app_de.arb
-index d8e379c39b4c69c62061f4e9063ab557646928be..7afb449884b12c6879afa88031fee0e9f97c4f56 100644
+index 6f5dc893907906806edb9288ffa3a9e728755764..b49ae57bd322e8681cfa722c8b57ded082bc118b 100644
 --- a/lib/l10n/app_de.arb
 +++ b/lib/l10n/app_de.arb
 @@ -1,6 +1,6 @@
@@ -121,7 +121,7 @@ index d8e379c39b4c69c62061f4e9063ab557646928be..7afb449884b12c6879afa88031fee0e9
    "serverIncompatibleMessage": "Auf diesem Server läuft Open WebUI {serverVersion}, was neuer ist, als diese App unterstützt (bis {maxVersion}).",
    "serverIncompatibleResolution": "Um fortzufahren, stufe deinen Server auf {maxVersion} oder älter zurück oder warte auf ein App-Update, das diese Version unterstützt.",
 diff --git a/lib/l10n/app_en.arb b/lib/l10n/app_en.arb
-index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e5192813970 100644
+index 37981da8c8fc35fddc21c26205169592401298fd..1360765a32c34a6e53d7842137ac811cd5966732 100644
 --- a/lib/l10n/app_en.arb
 +++ b/lib/l10n/app_en.arb
 @@ -1,6 +1,6 @@
@@ -281,7 +281,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "ttsSystemDefault": "System Default",
    "@ttsSystemDefault": {
      "description": "Label for system default voice option."
-@@ -3230,13 +3280,21 @@
+@@ -3226,13 +3276,21 @@
    },
    "sidebarChannelsTab": "Channels",
    "sidebarResizeHandle": "Resize Sidebar",
@@ -306,7 +306,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    },
    "@sidebarChannelsTab": {
      "description": "Label for the Channels tab in the sidebar"
-@@ -3489,7 +3547,11 @@
+@@ -3485,7 +3543,11 @@
    "channelUnreadCount": "{count, plural, =1{1 unread message} other{{count} unread messages}}",
    "@channelUnreadCount": {
      "description": "Accessibility text describing unread messages in a channel.",
@@ -319,7 +319,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    },
    "channelCreateError": "Failed to create channel",
    "@channelCreateError": {
-@@ -3789,15 +3851,25 @@
+@@ -3785,15 +3847,25 @@
      "description": "Hint text for the memory editor."
    },
    "memoryTypeLabel": "Type",
@@ -350,7 +350,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "addMemory": "Add Memory",
    "@addMemory": {
      "description": "Button label for creating a memory."
-@@ -4138,13 +4210,21 @@
+@@ -4134,13 +4206,21 @@
      "description": "Socket health status when disconnected."
    },
    "liveConnectionDetails": "Live updates disconnected. View connection details.",
@@ -376,8 +376,8 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "socketLatencyLabel": "Latency",
    "@socketLatencyLabel": {
      "description": "Metric label for socket latency."
-@@ -4903,655 +4983,1407 @@
-   "workspaceEditorComingSoon": "This editor will be available in the next Workspace milestone.",
+@@ -4897,603 +4977,1301 @@
+   "workspaceRetry": "Retry",
    "workspaceSearchHint": "Search workspace resources",
    "workspaceLoadMore": "Load More",
 -  "@workspaceTitle": {"description": "App bar title for the Workspace feature."},
@@ -393,8 +393,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 -  "@workspaceUnsupported": {"description": "Shown when the connected server does not support Workspace management."},
 -  "@workspaceLoadFailed": {"description": "Error message shown when the Workspace fails to load."},
 -  "@workspaceRetry": {"description": "Retry button label on the Workspace error state."},
--  "@workspaceSelectItem": {"description": "Placeholder prompting the user to select a resource to view its details."},
--  "@workspaceEditorComingSoon": {"description": "Placeholder shown for workspace section editors that are not yet implemented."},
 -  "@workspaceSearchHint": {"description": "Hint text for the workspace resource search field."},
 -  "@workspaceLoadMore": {"description": "Button label to load the next page of workspace resources."},
 +  "@workspaceTitle": {
@@ -435,12 +433,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 +  },
 +  "@workspaceRetry": {
 +    "description": "Retry button label on the Workspace error state."
-+  },
-+  "@workspaceSelectItem": {
-+    "description": "Placeholder prompting the user to select a resource to view its details."
-+  },
-+  "@workspaceEditorComingSoon": {
-+    "description": "Placeholder shown for workspace section editors that are not yet implemented."
 +  },
 +  "@workspaceSearchHint": {
 +    "description": "Hint text for the workspace resource search field."
@@ -577,16 +569,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 -  "@workspaceEditorKeepEditing": {"description": "Cancel button label on the discard-changes dialog."},
 +  "@workspaceEditorKeepEditing": {
 +    "description": "Cancel button label on the discard-changes dialog."
-+  },
-   "workspaceEditorSaveTooltip": "Save Changes",
--  "@workspaceEditorSaveTooltip": {"description": "Tooltip for the workspace editor save button."},
-+  "@workspaceEditorSaveTooltip": {
-+    "description": "Tooltip for the workspace editor save button."
-+  },
-   "workspaceEditorSaving": "Saving…",
--  "@workspaceEditorSaving": {"description": "Label shown on the editor save button while a save is in progress."},
-+  "@workspaceEditorSaving": {
-+    "description": "Label shown on the editor save button while a save is in progress."
 +  },
    "workspaceEditorMoreActions": "More Actions",
 -  "@workspaceEditorMoreActions": {"description": "Tooltip for the workspace editor overflow menu button."},
@@ -911,11 +893,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 +  "@workspaceModelDelete": {
 +    "description": "Action that deletes the model."
 +  },
-   "workspaceModelDeleteConfirmTitle": "Delete model?",
--  "@workspaceModelDeleteConfirmTitle": {"description":"Confirmation dialog title for deleting a model."},
-+  "@workspaceModelDeleteConfirmTitle": {
-+    "description": "Confirmation dialog title for deleting a model."
-+  },
    "workspaceModelDeleteConfirmMessage": "This permanently removes {name}.",
 -  "@workspaceModelDeleteConfirmMessage": {"description":"Confirmation dialog body for deleting a model.","placeholders":{"name":{"type":"String"}}},
 +  "@workspaceModelDeleteConfirmMessage": {
@@ -971,11 +948,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 +  "@workspaceModelDeleted": {
 +    "description": "Confirmation that the model was deleted."
 +  },
-   "workspaceModelAddAction": "Add",
--  "@workspaceModelAddAction": {"description":"Confirm button in a small add-text dialog."},
-+  "@workspaceModelAddAction": {
-+    "description": "Confirm button in a small add-text dialog."
-+  },
    "workspaceKnowledgeCreateTitle": "New Knowledge Base",
 -  "@workspaceKnowledgeCreateTitle": {"description":"Title of the create form for a new knowledge base."},
 +  "@workspaceKnowledgeCreateTitle": {
@@ -1016,11 +988,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 +  "@workspaceKnowledgeDelete": {
 +    "description": "Overflow action that deletes the knowledge base."
 +  },
-   "workspaceKnowledgeDeleteConfirmTitle": "Delete knowledge base?",
--  "@workspaceKnowledgeDeleteConfirmTitle": {"description":"Confirmation dialog title for deleting a knowledge base."},
-+  "@workspaceKnowledgeDeleteConfirmTitle": {
-+    "description": "Confirmation dialog title for deleting a knowledge base."
-+  },
    "workspaceKnowledgeDeleteConfirmMessage": "This permanently removes {name} and detaches its files.",
 -  "@workspaceKnowledgeDeleteConfirmMessage": {"description":"Confirmation dialog body for deleting a knowledge base.","placeholders":{"name":{"type":"String"}}},
 +  "@workspaceKnowledgeDeleteConfirmMessage": {
@@ -1035,11 +1002,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 -  "@workspaceKnowledgeReset": {"description":"Overflow action that removes all files from a knowledge base."},
 +  "@workspaceKnowledgeReset": {
 +    "description": "Overflow action that removes all files from a knowledge base."
-+  },
-   "workspaceKnowledgeResetConfirmTitle": "Reset knowledge base?",
--  "@workspaceKnowledgeResetConfirmTitle": {"description":"Confirmation dialog title for resetting a knowledge base."},
-+  "@workspaceKnowledgeResetConfirmTitle": {
-+    "description": "Confirmation dialog title for resetting a knowledge base."
 +  },
    "workspaceKnowledgeResetConfirmMessage": "This removes all files from {name} but keeps the knowledge base.",
 -  "@workspaceKnowledgeResetConfirmMessage": {"description":"Confirmation dialog body for resetting a knowledge base.","placeholders":{"name":{"type":"String"}}},
@@ -1126,26 +1088,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 +  "@workspaceKnowledgeFilesLoadFailed": {
 +    "description": "Error when the knowledge base file list fails to load."
 +  },
-   "workspaceKnowledgeRefreshFiles": "Refresh",
--  "@workspaceKnowledgeRefreshFiles": {"description":"Tooltip for the button that refreshes the knowledge file list."},
-+  "@workspaceKnowledgeRefreshFiles": {
-+    "description": "Tooltip for the button that refreshes the knowledge file list."
-+  },
-   "workspaceKnowledgeRoot": "Root",
--  "@workspaceKnowledgeRoot": {"description":"Breadcrumb label for the top level of a knowledge base."},
-+  "@workspaceKnowledgeRoot": {
-+    "description": "Breadcrumb label for the top level of a knowledge base."
-+  },
-   "workspaceKnowledgeAddMenu": "Add Files",
--  "@workspaceKnowledgeAddMenu": {"description":"Tooltip for the menu that adds files or folders to a knowledge base."},
-+  "@workspaceKnowledgeAddMenu": {
-+    "description": "Tooltip for the menu that adds files or folders to a knowledge base."
-+  },
-   "workspaceKnowledgeUpload": "Upload File",
--  "@workspaceKnowledgeUpload": {"description":"Menu item to upload a single local file into a knowledge base."},
-+  "@workspaceKnowledgeUpload": {
-+    "description": "Menu item to upload a single local file into a knowledge base."
-+  },
    "workspaceKnowledgeUploading": "Uploading {name}…",
 -  "@workspaceKnowledgeUploading": {"description":"Progress label shown while a file uploads into a knowledge base.","placeholders":{"name":{"type":"String"}}},
 +  "@workspaceKnowledgeUploading": {
@@ -1160,11 +1102,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 -  "@workspaceKnowledgeUploadFailed": {"description":"Error when uploading a file into a knowledge base fails."},
 +  "@workspaceKnowledgeUploadFailed": {
 +    "description": "Error when uploading a file into a knowledge base fails."
-+  },
-   "workspaceKnowledgeBatchAttach": "Upload Multiple Files",
--  "@workspaceKnowledgeBatchAttach": {"description":"Menu item to upload several local files into a knowledge base at once."},
-+  "@workspaceKnowledgeBatchAttach": {
-+    "description": "Menu item to upload several local files into a knowledge base at once."
 +  },
    "workspaceKnowledgeAttachExisting": "Attach Server File",
 -  "@workspaceKnowledgeAttachExisting": {"description":"Menu item to attach an existing server file to a knowledge base."},
@@ -1220,11 +1157,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 -  "@workspaceKnowledgeDeleteFolder": {"description":"Action to delete a knowledge base directory."},
 +  "@workspaceKnowledgeDeleteFolder": {
 +    "description": "Action to delete a knowledge base directory."
-+  },
-   "workspaceKnowledgeDeleteFolderConfirmTitle": "Delete folder?",
--  "@workspaceKnowledgeDeleteFolderConfirmTitle": {"description":"Confirmation dialog title for deleting a knowledge base directory."},
-+  "@workspaceKnowledgeDeleteFolderConfirmTitle": {
-+    "description": "Confirmation dialog title for deleting a knowledge base directory."
 +  },
    "workspaceKnowledgeDeleteFolderConfirmMessage": "Files inside {name} move to the parent folder.",
 -  "@workspaceKnowledgeDeleteFolderConfirmMessage": {"description":"Confirmation dialog body for deleting a knowledge base directory.","placeholders":{"name":{"type":"String"}}},
@@ -1376,21 +1308,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 +  "@workspacePromptContentRequired": {
 +    "description": "Validation error when the prompt content is empty."
 +  },
-   "workspacePromptWriteTab": "Write",
--  "@workspacePromptWriteTab": {"description":"Toggle label for the editable prompt content view."},
-+  "@workspacePromptWriteTab": {
-+    "description": "Toggle label for the editable prompt content view."
-+  },
-   "workspacePromptPreviewTab": "Preview",
--  "@workspacePromptPreviewTab": {"description":"Toggle label for the rendered markdown preview of the prompt content."},
-+  "@workspacePromptPreviewTab": {
-+    "description": "Toggle label for the rendered markdown preview of the prompt content."
-+  },
-   "workspacePromptPreviewEmpty": "Nothing to preview yet.",
--  "@workspacePromptPreviewEmpty": {"description":"Empty-state text shown in the prompt preview when there is no content."},
-+  "@workspacePromptPreviewEmpty": {
-+    "description": "Empty-state text shown in the prompt preview when there is no content."
-+  },
    "workspacePromptTags": "Tags",
 -  "@workspacePromptTags": {"description":"Label for the prompt tags field."},
 +  "@workspacePromptTags": {
@@ -1465,11 +1382,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 -  "@workspacePromptDelete": {"description":"Overflow action that deletes a prompt."},
 +  "@workspacePromptDelete": {
 +    "description": "Overflow action that deletes a prompt."
-+  },
-   "workspacePromptDeleteConfirmTitle": "Delete prompt?",
--  "@workspacePromptDeleteConfirmTitle": {"description":"Confirmation dialog title for deleting a prompt."},
-+  "@workspacePromptDeleteConfirmTitle": {
-+    "description": "Confirmation dialog title for deleting a prompt."
 +  },
    "workspacePromptDeleteConfirmMessage": "\"{name}\" will be permanently deleted.",
 -  "@workspacePromptDeleteConfirmMessage": {"description":"Confirmation dialog body for deleting a prompt.","placeholders":{"name":{"type":"String"}}},
@@ -1586,11 +1498,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 +  "@workspacePromptHistoryDelete": {
 +    "description": "Action that deletes a prompt history entry."
 +  },
-   "workspacePromptHistoryDeleteConfirmTitle": "Delete version?",
--  "@workspacePromptHistoryDeleteConfirmTitle": {"description":"Confirmation dialog title for deleting a prompt version."},
-+  "@workspacePromptHistoryDeleteConfirmTitle": {
-+    "description": "Confirmation dialog title for deleting a prompt version."
-+  },
    "workspacePromptHistoryDeleteConfirmMessage": "This version snapshot will be removed. This can't be undone.",
 -  "@workspacePromptHistoryDeleteConfirmMessage": {"description":"Confirmation dialog body for deleting a prompt version."},
 +  "@workspacePromptHistoryDeleteConfirmMessage": {
@@ -1676,21 +1583,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 +  "@workspaceSkillContentRequired": {
 +    "description": "Validation error when the skill instructions are empty."
 +  },
-   "workspaceSkillWriteTab": "Write",
--  "@workspaceSkillWriteTab": {"description":"Toggle label for the editable skill instructions view."},
-+  "@workspaceSkillWriteTab": {
-+    "description": "Toggle label for the editable skill instructions view."
-+  },
-   "workspaceSkillPreviewTab": "Preview",
--  "@workspaceSkillPreviewTab": {"description":"Toggle label for the rendered markdown preview of the skill instructions."},
-+  "@workspaceSkillPreviewTab": {
-+    "description": "Toggle label for the rendered markdown preview of the skill instructions."
-+  },
-   "workspaceSkillPreviewEmpty": "Nothing to preview yet.",
--  "@workspaceSkillPreviewEmpty": {"description":"Empty-state text shown in the skill preview when there is no content."},
-+  "@workspaceSkillPreviewEmpty": {
-+    "description": "Empty-state text shown in the skill preview when there is no content."
-+  },
    "workspaceSkillManageAccess": "Manage Access",
 -  "@workspaceSkillManageAccess": {"description":"Action to open the sharing/access editor for a skill."},
 +  "@workspaceSkillManageAccess": {
@@ -1731,11 +1623,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 +  "@workspaceSkillDelete": {
 +    "description": "Overflow action that deletes a skill."
 +  },
-   "workspaceSkillDeleteConfirmTitle": "Delete skill?",
--  "@workspaceSkillDeleteConfirmTitle": {"description":"Confirmation dialog title for deleting a skill."},
-+  "@workspaceSkillDeleteConfirmTitle": {
-+    "description": "Confirmation dialog title for deleting a skill."
-+  },
    "workspaceSkillDeleteConfirmMessage": "\"{name}\" will be permanently deleted.",
 -  "@workspaceSkillDeleteConfirmMessage": {"description":"Confirmation dialog body for deleting a skill.","placeholders":{"name":{"type":"String"}}},
 +  "@workspaceSkillDeleteConfirmMessage": {
@@ -1760,11 +1647,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 -  "@workspaceSkillImportMarkdown": {"description":"Overflow action that imports a skill from a Markdown file into the create editor."},
 +  "@workspaceSkillImportMarkdown": {
 +    "description": "Overflow action that imports a skill from a Markdown file into the create editor."
-+  },
-   "workspaceSkillImportJson": "Import JSON",
--  "@workspaceSkillImportJson": {"description":"Overflow action that imports one or more skills from a JSON file."},
-+  "@workspaceSkillImportJson": {
-+    "description": "Overflow action that imports one or more skills from a JSON file."
 +  },
    "workspaceSkillImportMarkdownLoaded": "Markdown loaded. Review and save to create the skill.",
 -  "@workspaceSkillImportMarkdownLoaded": {"description":"Confirmation that a Markdown file was loaded into the unsaved skill editor."},
@@ -1896,11 +1778,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 +  "@workspaceToolDelete": {
 +    "description": "Overflow action that deletes a tool."
 +  },
-   "workspaceToolDeleteConfirmTitle": "Delete tool?",
--  "@workspaceToolDeleteConfirmTitle": {"description":"Title of the tool delete confirmation dialog."},
-+  "@workspaceToolDeleteConfirmTitle": {
-+    "description": "Title of the tool delete confirmation dialog."
-+  },
    "workspaceToolDeleteConfirmMessage": "\"{name}\" will be permanently deleted.",
 -  "@workspaceToolDeleteConfirmMessage": {"description":"Confirmation dialog body for deleting a tool.","placeholders":{"name":{"type":"String"}}},
 +  "@workspaceToolDeleteConfirmMessage": {
@@ -1915,11 +1792,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 -  "@workspaceToolImport": {"description":"Title of the tool JSON import sheet."},
 +  "@workspaceToolImport": {
 +    "description": "Title of the tool JSON import sheet."
-+  },
-   "workspaceToolImportJson": "Import JSON",
--  "@workspaceToolImportJson": {"description":"Overflow action that imports tools from a JSON file."},
-+  "@workspaceToolImportJson": {
-+    "description": "Overflow action that imports tools from a JSON file."
 +  },
    "workspaceToolImportUrl": "Import from URL",
 -  "@workspaceToolImportUrl": {"description":"Overflow action, admin-only, that imports a tool from a URL."},
@@ -2010,11 +1882,6 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 -  "@workspaceToolSpecs": {"description":"Heading for the read-only server-generated tool function specifications."},
 +  "@workspaceToolSpecs": {
 +    "description": "Heading for the read-only server-generated tool function specifications."
-+  },
-   "workspaceToolDetails": "Tool Details",
--  "@workspaceToolDetails": {"description":"Disclosure title for secondary tool manifest and function metadata."},
-+  "@workspaceToolDetails": {
-+    "description": "Disclosure title for secondary tool manifest and function metadata."
 +  },
    "workspaceToolFunctionCount": "{count, plural, =1{1 function} other{{count} functions}}",
 -  "@workspaceToolFunctionCount": {"description":"Quiet collection status showing how many functions a tool provides.","placeholders":{"count":{"type":"int"}}},
@@ -2117,7 +1984,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "hermesAgentSettingsTitle": "Hermes Agent",
    "@hermesAgentSettingsTitle": {
      "description": "Title for the profile option that opens Hermes Agent settings."
-@@ -5969,7 +6801,9 @@
+@@ -5911,7 +6689,9 @@
      "description": "Label for newline-separated model identifiers."
    },
    "directManualModelIdsDescription": "Optional. Enter one ID per line when the server cannot list its models.",
@@ -2128,7 +1995,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "directModelIdPrefix": "Model ID Prefix",
    "@directModelIdPrefix": {
      "description": "Label for a visible namespace added to direct model IDs."
-@@ -6058,7 +6892,9 @@
+@@ -6000,7 +6780,9 @@
    "@applePccQuotaResetsAt": {
      "description": "Apple PCC quota reset time.",
      "placeholders": {
@@ -2139,7 +2006,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
      }
    },
    "applePccShowQuotaOptions": "Show Usage Options",
-@@ -6081,14 +6917,18 @@
+@@ -6023,14 +6805,18 @@
    "@applePccContextSize": {
      "description": "Apple PCC context size label.",
      "placeholders": {
@@ -2160,7 +2027,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
      }
    },
    "directContextCompactionTitle": "Context Compaction",
-@@ -6172,11 +7012,17 @@
+@@ -6114,11 +6900,17 @@
      "description": "Fallback description for a Hermes approval request."
    },
    "openWebUiPromptOther": "Other",
@@ -2181,7 +2048,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "hermesApprovalApproved": "Approved ✓",
    "@hermesApprovalApproved": {
      "description": "Resolved status for an approved Hermes request."
-@@ -6579,37 +7425,74 @@
+@@ -6521,37 +7313,74 @@
      "description": "Combined message explaining how a review or donation supports Conduit."
    },
    "directConnectProvider": "Connect Provider",
@@ -2272,7 +2139,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "hermesLegacySessionToken": "Legacy Session Token",
    "@hermesLegacySessionToken": {
      "description": "Label for the legacy Hermes session-token field."
-@@ -7218,179 +8101,401 @@
+@@ -7160,179 +7989,401 @@
      "description": "Compact label for the Hermes sidebar tab."
    },
    "markdownShowMoreLines": "{count, plural, =1{Show 1 More Line} other{Show {count} More Lines}}",
@@ -2761,7 +2628,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "chatTaskProgress": "Tasks: {completed} of {total} completed",
    "@chatTaskProgress": {
      "description": "Summary of the Open WebUI task checklist above the chat composer.",
-@@ -7420,73 +8525,163 @@
+@@ -7362,73 +8413,163 @@
      "description": "Task checklist status for a cancelled task."
    },
    "webSearchSettingsFooterAuto": "Used by Direct models that don't have their own web search. Searches run from this device: queries go to DuckDuckGo, then to Brave, Bing, Mojeek or Wikipedia if it doesn't answer. Pages the model reads are also fetched from this device.",
@@ -2959,7 +2826,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "voiceCallMinimize": "Minimize",
    "@voiceCallMinimize": {
      "description": "Accessibility label for the button that shrinks the voice call panel to a small pill."
-@@ -7496,53 +8691,107 @@
+@@ -7438,53 +8579,107 @@
      "description": "Accessibility label for the button that opens the minimized voice call pill back into the full panel."
    },
    "askConduitAction": "Ask Conduit",
@@ -3091,7 +2958,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "chatShareAudience": "Who Has Access",
    "@chatShareAudience": {
      "description": "Row in the chat share sheet, below Copy link and Share, that opens the sheet choosing who can open the shared chat."
-@@ -7552,45 +8801,91 @@
+@@ -7494,45 +8689,91 @@
      "description": "Subtitle of the Who has access row in the chat share sheet."
    },
    "resourceSharingSaved": "Sharing updated",
@@ -3203,7 +3070,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "chatBranchContinueFromResponse": "Continue from Here",
    "@chatBranchContinueFromResponse": {
      "description": "Pill next to a response's version pager while an alternative response is previewed. Continues the chat from the previewed response."
-@@ -7681,11 +8976,17 @@
+@@ -7623,11 +8864,17 @@
      "description": "Generic failure shown when forking a chat did not work."
    },
    "codeInterpreter": "Code Interpreter",
@@ -3224,7 +3091,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "codeInterpreterUnavailable": "Not available for this server, account, or model.",
    "@codeInterpreterUnavailable": {
      "description": "Subtitle of the code interpreter option when the server, the account or the selected model cannot run it."
-@@ -7779,159 +9080,342 @@
+@@ -7721,159 +8968,342 @@
      "description": "Short notice on a folder page when none of the folder's saved default models is available and the user's own default model is used instead."
    },
    "scheduledTasksTitle": "Scheduled Tasks",
@@ -3642,7 +3509,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "scheduledTaskDeleteConfirm": "{name} will stop running on the server, and its run history will be removed.",
    "@scheduledTaskDeleteConfirm": {
      "description": "Message of the confirmation dialog before deleting a scheduled task. The placeholder is the task name.",
-@@ -7942,11 +9426,17 @@
+@@ -7884,11 +9314,17 @@
      }
    },
    "scheduledTaskChangeFailed": "Could not change this task.",
@@ -3663,7 +3530,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "queueDraftAction": "Queue",
    "@queueDraftAction": {
      "description": "Composer action that queues the typed message behind the running response, to be sent after it finishes. Also the send label of the expanded editor while a response is running."
-@@ -7990,181 +9480,372 @@
+@@ -7932,181 +9368,372 @@
      "description": "Shown on the queue summary while the queued messages are being committed as one message."
    },
    "calendarTitle": "Calendar",
@@ -4120,7 +3987,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "chatDataControlsTitle": "Data Controls",
    "@chatDataControlsTitle": {
      "description": "Title of the Settings page, and of its native Settings row, for backing up, restoring and changing all chats of the Open WebUI account."
-@@ -8471,7 +10152,9 @@
+@@ -8413,7 +10040,9 @@
      "description": "Shown when exporting a single chat failed."
    },
    "chatDataControlsWorkChanged": "Unsent changes appeared on this device while this waited. Nothing was deleted. Review and try again.",
@@ -4131,7 +3998,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "chatComparisonTabsLabel": "Model responses",
    "@chatComparisonTabsLabel": {
      "description": "Accessibility label of the row of tabs that switch between the responses different models gave to the same message."
-@@ -9740,89 +11423,173 @@
+@@ -9674,89 +11303,173 @@
      "description": "Header of the group in the Add Account sheet that lists the Open WebUI servers already saved on this device; tapping one signs in to another account on it. Title Case."
    },
    "computerEnabledDescription": "Watch and control Desktop and Browser sessions in chats.",
@@ -4347,10 +4214,10 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
    "libreChatTemporaryChatOff": "LibreChat saves every chat. Turn off Temporary Chat to send.",
    "@libreChatTemporaryChatOff": {
      "description": "Shown when a new LibreChat chat is not sent because temporary chat is on: LibreChat saves every chat."
-@@ -11367,5 +13134,93 @@
-   "showModelNameInComposerDescription": "The empty message box names the selected model instead of Conduit.",
-   "@showModelNameInComposerDescription": {
-     "description": "Explains the Show Model Name in Message Box switch in Settings > Chat."
+@@ -11634,5 +13347,93 @@
+   "settingsAddAction": "Add",
+   "@settingsAddAction": {
+     "description": "Read aloud for the plus button in a Settings page's bar that adds an item, such as a calendar event."
 -  }
 +  },
 +  "clineRemoteTitle": "Cline via SSH",
@@ -4443,7 +4310,7 @@ index 14759b25f1bb02739dfb1b34b62ad76e76ef300e..4cdf0c5cefc07dc71acdc409fad92e51
 +  "voiceAvatarResetView": "Reset view"
  }
 diff --git a/lib/l10n/app_es.arb b/lib/l10n/app_es.arb
-index 3484c8d2af5b4cd79081adb73c1071567716a0b0..7c4961a8d2eb5aa2d116ebffc3f7ae4ab5bc7ef7 100644
+index 21ffda81dbb0d0a8bc3ca23d036871f21b97511d..bd88045058ad6e7f8bcdd59ffe7d937b83ce5f44 100644
 --- a/lib/l10n/app_es.arb
 +++ b/lib/l10n/app_es.arb
 @@ -1,6 +1,6 @@
@@ -4455,7 +4322,7 @@ index 3484c8d2af5b4cd79081adb73c1071567716a0b0..7c4961a8d2eb5aa2d116ebffc3f7ae4a
    "serverIncompatibleMessage": "Este servidor ejecuta Open WebUI {serverVersion}, que es más reciente de lo que admite esta app (hasta {maxVersion}).",
    "serverIncompatibleResolution": "Para continuar, baja la versión de tu servidor a {maxVersion} o anterior, o espera a una actualización de la app que añada compatibilidad.",
 diff --git a/lib/l10n/app_fr.arb b/lib/l10n/app_fr.arb
-index 485b07cdc849f048f2a4498456f5dbd1f471dfdf..b0ea57755271869f97e92558cd04d96ba95f1266 100644
+index f0dc41550431944da86bf15833928957f1a6ef59..ba5236ff171c3a83967c1b90e0753b037b9c196e 100644
 --- a/lib/l10n/app_fr.arb
 +++ b/lib/l10n/app_fr.arb
 @@ -1,6 +1,6 @@
@@ -4467,7 +4334,7 @@ index 485b07cdc849f048f2a4498456f5dbd1f471dfdf..b0ea57755271869f97e92558cd04d96b
    "serverIncompatibleMessage": "Ce serveur exécute Open WebUI {serverVersion}, une version plus récente que celle prise en charge par cette application (jusqu'à {maxVersion}).",
    "serverIncompatibleResolution": "Pour continuer, rétrogradez votre serveur vers la version {maxVersion} ou une version antérieure, ou attendez une mise à jour de l'application qui ajoute la prise en charge.",
 diff --git a/lib/l10n/app_it.arb b/lib/l10n/app_it.arb
-index f8e4f815baf280bf5d4e632522782e9f6901d686..971e2853dc5538070f7e24f9e2fcfb94dcfc63a3 100644
+index 94f9fc4f02afa10fd6b61369aac151e91c4d6251..64ea6cf6c49b1ed0d95f666a6c89b953f9ac83ea 100644
 --- a/lib/l10n/app_it.arb
 +++ b/lib/l10n/app_it.arb
 @@ -1,6 +1,6 @@
@@ -4479,7 +4346,7 @@ index f8e4f815baf280bf5d4e632522782e9f6901d686..971e2853dc5538070f7e24f9e2fcfb94
    "serverIncompatibleMessage": "Questo server esegue Open WebUI {serverVersion}, una versione più recente di quella supportata da questa app (fino alla {maxVersion}).",
    "serverIncompatibleResolution": "Per continuare, riporta il server alla versione {maxVersion} o precedente, oppure attendi un aggiornamento dell'app che ne aggiunga il supporto.",
 diff --git a/lib/l10n/app_ja.arb b/lib/l10n/app_ja.arb
-index a9530b0c210777686aa506020bad979184ca2e85..dd37b6af542e7c5c22b938ac61fbd90dedb6934d 100644
+index 2dd86a18ceb3528a5630ab129392f381eae85e5e..19b6f44cf54d199527810d364c09c26ecbb711a6 100644
 --- a/lib/l10n/app_ja.arb
 +++ b/lib/l10n/app_ja.arb
 @@ -1,6 +1,6 @@
@@ -4491,7 +4358,7 @@ index a9530b0c210777686aa506020bad979184ca2e85..dd37b6af542e7c5c22b938ac61fbd90d
    "serverIncompatibleMessage": "このサーバーは Open WebUI {serverVersion} を実行しており、このアプリが対応するバージョン（{maxVersion} まで）よりも新しいバージョンです。",
    "serverIncompatibleResolution": "続行するには、サーバーを {maxVersion} 以前にダウングレードするか、対応を追加するアプリの更新をお待ちください。",
 diff --git a/lib/l10n/app_ko.arb b/lib/l10n/app_ko.arb
-index 9006e204681d94b2707ecc33332e3f3990c31121..5239aee48baaa345637b08dac99362b8cc9c3cb6 100644
+index 2693b84b4a4bb5f5bd71767cb7a42cb3c61f5a4f..d4f503388ddaefc1d87d3b75f8f00907c71bf879 100644
 --- a/lib/l10n/app_ko.arb
 +++ b/lib/l10n/app_ko.arb
 @@ -1,6 +1,6 @@
@@ -4503,7 +4370,7 @@ index 9006e204681d94b2707ecc33332e3f3990c31121..5239aee48baaa345637b08dac99362b8
    "serverIncompatibleMessage": "이 서버는 Open WebUI {serverVersion} 버전을 사용 중이며, 이는 이 앱이 지원하는 버전({maxVersion} 이하)보다 최신입니다.",
    "serverIncompatibleResolution": "계속하려면 서버를 {maxVersion} 이하 버전으로 다운그레이드하거나, 해당 버전을 지원하는 앱 업데이트를 기다리세요.",
 diff --git a/lib/l10n/app_nl.arb b/lib/l10n/app_nl.arb
-index 05f1fb0c3ca7bbd8badb47969c4669972cb13895..6194022789228beab20b0d02131cfbdcf4e04902 100644
+index 776e7a362fa5e55213d74821c1cea323b9cb5a4c..593ceae173b470999ca1b3a3b357939fa52d6b8f 100644
 --- a/lib/l10n/app_nl.arb
 +++ b/lib/l10n/app_nl.arb
 @@ -1,6 +1,6 @@
@@ -4515,7 +4382,7 @@ index 05f1fb0c3ca7bbd8badb47969c4669972cb13895..6194022789228beab20b0d02131cfbdc
    "serverIncompatibleMessage": "Deze server draait Open WebUI {serverVersion}, wat nieuwer is dan deze app ondersteunt (tot {maxVersion}).",
    "serverIncompatibleResolution": "Om door te gaan, zet je je server terug naar {maxVersion} of eerder, of wacht je op een app-update die ondersteuning toevoegt.",
 diff --git a/lib/l10n/app_pl.arb b/lib/l10n/app_pl.arb
-index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd50185c39 100644
+index 42c574eda5c4ecf6b5cda06870b5f6b6b7231adb..e76d6ae86157591fcddb6d03df679fc6bb95dff6 100644
 --- a/lib/l10n/app_pl.arb
 +++ b/lib/l10n/app_pl.arb
 @@ -1,6 +1,6 @@
@@ -4621,7 +4488,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "chatSettingErrorNotJson": "Wpisz słowo, np. json, lub prawidłowy schemat JSON.",
    "chatSettingErrorNotAChoice": "Wybierz obsługiwaną wartość.",
    "personalConnectionsTitle": "Połączenia osobiste",
-@@ -3882,7 +3917,9 @@
+@@ -3878,7 +3913,9 @@
      "description": "Socket health status when disconnected."
    },
    "liveConnectionRetryFailed": "Aktualizacje na żywo nadal są rozłączone. Stuknij ikonę połączenia, aby spróbować ponownie.",
@@ -4632,7 +4499,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "liveConnectionDetails": "Aktualizacje na żywo są rozłączone. Wyświetl szczegóły połączenia.",
    "liveConnectionDetailsTitle": "Aktualizacje na żywo",
    "liveConnectionDetailsMessage": "Aktualizacje na żywo są rozłączone. Odpowiedzi i zmiany w czacie mogą być opóźnione. Sprawdź połączenie lub spróbuj połączyć się ponownie.",
-@@ -4529,7 +4566,13 @@
+@@ -4525,7 +4562,13 @@
    "notificationTargetTestFailed": "Nie udało się dostarczyć powiadomienia testowego.",
    "notificationTargetDelete": "Usuń miejsce docelowe",
    "notificationTargetDeleteConfirm": "Usunąć {name}? Serwer przestanie wysyłać tam powiadomienia.",
@@ -4647,7 +4514,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "@notificationSystemSettingsOpenFailed": {
      "description": "Shown when the OS notification settings screen could not be launched."
    },
-@@ -4778,7 +4821,9 @@
+@@ -4758,7 +4801,9 @@
    },
    "workspaceModelBaseModelNone": "Brak (własny)",
    "workspaceModelBaseModelRequired": "Wybierz model bazowy.",
@@ -4658,7 +4525,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "@workspaceModelBaseModelNone": {
      "description": "Base-model option meaning no base model is used."
    },
-@@ -6442,7 +6487,9 @@
+@@ -6330,7 +6375,9 @@
    "@applePccQuotaResetsAt": {
      "description": "Apple PCC quota reset time.",
      "placeholders": {
@@ -4669,7 +4536,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
      }
    },
    "applePccShowQuotaOptions": "Pokaż opcje użycia",
-@@ -6465,14 +6512,18 @@
+@@ -6353,14 +6400,18 @@
    "@applePccContextSize": {
      "description": "Apple PCC context size label.",
      "placeholders": {
@@ -4690,7 +4557,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
      }
    },
    "directContextCompactionTitle": "Kompaktowanie kontekstu",
-@@ -6556,11 +6607,17 @@
+@@ -6444,11 +6495,17 @@
      "description": "Fallback description for a Hermes approval request."
    },
    "openWebUiPromptOther": "Inne",
@@ -4711,7 +4578,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "hermesApprovalApproved": "Zatwierdzono ✓",
    "@hermesApprovalApproved": {
      "description": "Resolved status for an approved Hermes request."
-@@ -7152,46 +7209,151 @@
+@@ -7040,46 +7097,151 @@
    "@voiceCallSpeakerOff": {
      "description": "Tooltip for disabling the loudspeaker during a voice call."
    },
@@ -4898,7 +4765,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "chatTaskProgress": "Zadania: ukończono {completed} z {total}",
    "@chatTaskProgress": {
      "description": "Summary of the Open WebUI task checklist above the chat composer.",
-@@ -7210,7 +7372,15 @@
+@@ -7098,7 +7260,15 @@
    "chatTaskCancelled": "Anulowane",
    "webSearchSettingsFooterAuto": "Używane przez modele Direct bez własnego wyszukiwania w sieci. Wyszukiwanie odbywa się z tego urządzenia: zapytania trafiają do DuckDuckGo, a jeśli nie odpowie — do Brave, Bing, Mojeek lub Wikipedii. Strony czytane przez model również są pobierane z tego urządzenia.",
    "webSearchSettingsFooterEngine": "Używane przez modele Direct bez własnego wyszukiwania w sieci. Wyszukiwanie odbywa się z tego urządzenia, a zapytania trafiają tylko do {engine}. Strony czytane przez model również są pobierane z tego urządzenia.",
@@ -4915,7 +4782,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "webSearchEngineLabel": "Wyszukiwarka",
    "webSearchEngineAuto": "Automatycznie",
    "webSearchSafeSearchLabel": "Bezpieczne wyszukiwanie",
-@@ -7229,9 +7399,28 @@
+@@ -7117,9 +7287,28 @@
    "heldReplyStillRunning": "Serwer wciąż pracuje nad tą odpowiedzią. Otwórz ten czat ponownie później, aby ją zobaczyć.",
    "directContextLimitOllamaNote": "W przypadku modeli Ollama na własnym serwerze wybrany tutaj limit jest też rozmiarem okna kontekstu, z jakim Ollama ładuje model. Większe okno zużywa więcej pamięci.",
    "directContextCompactionModelCount": "{count, plural, one{{count} model} few{{count} modele} many{{count} modeli} other{{count} modelu}}",
@@ -4946,7 +4813,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "saveImage": "Zapisz obraz",
    "imageSaved": "Obraz zapisany",
    "imageSaveFailed": "Nie udało się zapisać obrazu.",
-@@ -7258,11 +7447,17 @@
+@@ -7146,11 +7335,17 @@
      "description": "Long-press menu action that puts the selected answer text into the chat composer to ask about it."
    },
    "voiceCallStartTimeout": "Rozpoczęcie połączenia głosowego trwało zbyt długo. Spróbuj ponownie.",
@@ -4967,7 +4834,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "personalToolSettings": "Ustawienia narzędzi",
    "personalToolSettingsDescription": "Twoje osobiste opcje dla wybranych narzędzi i modelu.",
    "personalToolSettingsYours": "Twoje ustawienia",
-@@ -7273,7 +7468,14 @@
+@@ -7161,7 +7356,14 @@
    "notePages": "Strony",
    "notePagesDescription": "Wybierz stronę do czytania lub edycji. Strony dodasz, zmienisz ich nazwę lub przeniesiesz w Open WebUI w przeglądarce.",
    "notePageChipLabel": "Strona {page}. Pokazuje strony notatki.",
@@ -4983,7 +4850,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "notePageRemoved": "Otwarta strona została usunięta. Wyświetlana jest pierwsza strona notatki.",
    "notePageMissingNotice": "Ta strona została usunięta gdzie indziej. Niezapisany tekst zostaje tutaj: zapisz go jako osobną notatkę albo odrzuć.",
    "noteAccessUnverifiedNotice": "Połącz się ponownie, aby potwierdzić, że możesz edytować tę notatkę.",
-@@ -7303,7 +7505,15 @@
+@@ -7191,7 +7393,15 @@
    "channelMembersAdd": "Dodaj członków",
    "channelMembersAddConfirm": "Dodaj",
    "channelMembersRemoveMember": "Usuń: {name}",
@@ -5000,7 +4867,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "channelMembersChangeFailed": "Nie udało się zaktualizować członków. Spróbuj ponownie.",
    "channelMembersChangeDenied": "Serwer nie zezwolił na tę zmianę.",
    "channelMembersChangeNotPermitted": "Nie możesz zarządzać członkami tego kanału.",
-@@ -7374,8 +7584,20 @@
+@@ -7262,8 +7472,20 @@
    "folderProjectReadOnly": "Ten udostępniony folder jest tylko do odczytu, więc jego ustawień projektu nie można zmienić.",
    "folderProjectGone": "Ten folder nie jest już dostępny.",
    "folderProjectModelFallbackNotice": "Model domyślny tego folderu jest niedostępny, więc używany jest Twój model domyślny.",
@@ -5023,7 +4890,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "scheduledTasksTitle": "Zadania zaplanowane",
    "scheduledTasksDescription": "Twój serwer Open WebUI wykonuje te zadania według własnego harmonogramu, nawet gdy ten telefon jest offline.",
    "scheduledTasksUnavailable": "Zadania zaplanowane nie są dostępne dla tego konta na tym serwerze.",
-@@ -7394,20 +7616,53 @@
+@@ -7282,20 +7504,53 @@
    "scheduledTaskStatusActive": "Aktywne",
    "scheduledTaskStatusPaused": "Wstrzymane",
    "scheduledTaskNextRun": "Następne uruchomienie: {time}",
@@ -5082,7 +4949,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "scheduledTaskScheduleCustom": "Harmonogram niestandardowy",
    "scheduledTaskNewTitle": "Nowe zadanie zaplanowane",
    "scheduledTaskEditTitle": "Edytuj zadanie zaplanowane",
-@@ -7417,7 +7672,13 @@
+@@ -7305,7 +7560,13 @@
    "scheduledTaskModelLabel": "Model",
    "scheduledTaskModelChoose": "Wybierz model",
    "scheduledTaskModelUnavailable": "{id} (już niedostępny)",
@@ -5097,7 +4964,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "scheduledTaskScheduleLabel": "Harmonogram",
    "scheduledTaskTimeLabel": "Godzina",
    "scheduledTaskDateLabel": "Data",
-@@ -7459,7 +7720,13 @@
+@@ -7347,7 +7608,13 @@
    "scheduledTaskOpenResultFailed": "Nie udało się otworzyć tego wyniku.",
    "scheduledTaskDelete": "Usuń zadanie",
    "scheduledTaskDeleteConfirm": "Zadanie {name} przestanie być uruchamiane na serwerze, a jego historia uruchomień zostanie usunięta.",
@@ -5112,7 +4979,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "scheduledTaskChangeFailed": "Nie udało się zmienić tego zadania.",
    "scheduledTaskTerminalKept": "Do tego zadania jest dołączony terminal. Zostaje zachowany podczas edycji.",
    "scheduledTaskPromptSection": "Instrukcje",
-@@ -7472,12 +7739,27 @@
+@@ -7360,12 +7627,27 @@
    "queuedDraftFileFailed": "Nie udało się przesłać pliku. Spróbuj ponownie lub usuń go.",
    "queuedDraftsSendFailed": "Nie udało się wysłać wiadomości z kolejki. Nadal czekają w kolejce.",
    "queuedDraftsSending": "Wysyłanie wiadomości z kolejki…",
@@ -5142,7 +5009,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "calendarToday": "Dziś",
    "calendarEmpty": "Brak wydarzeń w tym okresie.",
    "calendarLoadFailed": "Nie udało się wczytać kalendarza.",
-@@ -7504,9 +7786,21 @@
+@@ -7392,9 +7674,21 @@
    "calendarEventDelete": "Usuń",
    "calendarEventDeleteSeries": "Usuń serię",
    "calendarEventDeleteConfirm": "Usunąć {title}? Tej operacji nie można cofnąć.",
@@ -5166,7 +5033,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "calendarEventDeleteFailed": "Nie udało się usunąć tego wydarzenia.",
    "calendarEventLoadFailed": "Nie udało się otworzyć tego wydarzenia do edycji.",
    "calendarEventReadOnly": "Nie możesz zmienić tego wydarzenia. Nadal możesz odpowiedzieć na zaproszenie.",
-@@ -7539,7 +7833,13 @@
+@@ -7427,7 +7721,13 @@
    "calendarAddPeople": "Dodaj osoby",
    "calendarInvitedPerson": "Zaproszona osoba",
    "calendarRemovePerson": "Usuń: {name}",
@@ -5181,7 +5048,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
    "calendarAttendeesNote": "Zaproszone osoby odpowiadają same za siebie. Ich odpowiedzi zostają zachowane po zmianie listy.",
    "calendarNoWritableCalendar": "Nie masz kalendarza, do którego możesz dodawać wydarzenia. Aby kontynuować, utwórz kalendarz.",
    "calendarTitleRequired": "Wpisz tytuł.",
-@@ -9132,21 +9432,37 @@
+@@ -9018,21 +9318,37 @@
      }
    },
    "modelPickerCodingAgents": "Agenci programistyczni",
@@ -5193,11 +5060,6 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
 -  "@modelControlServiceTier": {"description": "Row title in the model picker for a coding agent's service tier setting (which processing tier, such as faster or cheaper, the agent's model uses)."},
 +  "@modelControlServiceTier": {
 +    "description": "Row title in the model picker for a coding agent's service tier setting (which processing tier, such as faster or cheaper, the agent's model uses)."
-+  },
-   "scheduledTaskTerminalSearchHint": "Szukaj terminali",
--  "@scheduledTaskTerminalSearchHint": {"description": "Search field hint in the list of terminals a scheduled task can run with."},
-+  "@scheduledTaskTerminalSearchHint": {
-+    "description": "Search field hint in the list of terminals a scheduled task can run with."
 +  },
    "scheduledTaskWorkingFolderLabel": "Folder roboczy",
 -  "@scheduledTaskWorkingFolderLabel": {"description": "Label of the field for the folder on the terminal where a scheduled task starts. Optional."},
@@ -5224,13 +5086,18 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
 +  "@scheduledTaskAgentsLoading": {
 +    "description": "Shown on the model row of a scheduled task while the coding agents its terminal offers are loading."
 +  },
-   "pushFallbackTitle": "Conduit",
-   "pushFallbackBody": "Nowe powiadomienie",
-   "pushReplyTitle": "Nowa odpowiedź",
-@@ -9319,5 +9635,87 @@
-   "showModelNameInComposerDescription": "Puste pole wiadomości podaje nazwę wybranego modelu zamiast Conduit.",
-   "@showModelNameInComposerDescription": {
-     "description": "Explains the Show Model Name in Message Box switch in Settings > Chat."
+   "personalizationMemoryGone": "Tego wspomnienia nie ma już na serwerze. Wróć, aby zobaczyć swoje wspomnienia.",
+-  "@personalizationMemoryGone": {"description": "Shown on a memory's page when that memory is no longer on the server (cleared or deleted meanwhile), so a change to it cannot be saved."},
++  "@personalizationMemoryGone": {
++    "description": "Shown on a memory's page when that memory is no longer on the server (cleared or deleted meanwhile), so a change to it cannot be saved."
++  },
+   "hermesConnectionModeTitle": "Tryb połączenia",
+   "hermesModeResponsesApi": "Responses API",
+   "hermesProfilesNeedUrl": "Najpierw wpisz adres URL serwera Hermes.",
+@@ -9448,5 +9764,87 @@
+   "settingsAddAction": "Dodaj",
+   "@settingsAddAction": {
+     "description": "Read aloud for the plus button in a Settings page's bar that adds an item, such as a calendar event."
 -  }
 +  },
 +  "clineRemoteTitle": "Cline przez SSH",
@@ -5317,7 +5184,7 @@ index 7425c97e3b23ecdd4e0ad95d6a9d20ea92824da5..1a8b93f871d2181eee3f18b46a28d8bd
 +  "voiceAvatarResetView": "Zresetuj widok"
  }
 diff --git a/lib/l10n/app_ru.arb b/lib/l10n/app_ru.arb
-index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095cf3abfc1f 100644
+index eaaf95e2d7e9e4f2f2bfde153b5b690f2ac01632..a279379bdc261de58705a7a58e2297d886c9f2dd 100644
 --- a/lib/l10n/app_ru.arb
 +++ b/lib/l10n/app_ru.arb
 @@ -1,6 +1,6 @@
@@ -5396,7 +5263,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "personalConnectionsPath": "Путь",
    "personalConnectionsSpecSource": "Спецификация OpenAPI",
    "personalConnectionsSpecFromUrl": "Получить по URL",
-@@ -2167,7 +2187,9 @@
+@@ -2162,7 +2182,9 @@
    },
    "workspaceModelBaseModelNone": "Нет (своя модель)",
    "workspaceModelBaseModelRequired": "Выберите базовую модель.",
@@ -5407,7 +5274,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "@workspaceModelBaseModelNone": {
      "description": "Base-model option meaning no base model is used."
    },
-@@ -3089,7 +3111,7 @@
+@@ -3002,7 +3024,7 @@
    "workspaceToolImportUrl": "Импортировать по URL",
    "workspaceToolImportUrlTitle": "Импорт инструмента по URL",
    "workspaceToolImportUrlHint": "Введите URL файла Python инструмента на GitHub",
@@ -5416,7 +5283,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "workspaceToolImportUrlInvalid": "Введите корректный URL.",
    "workspaceToolImportUrlFailed": "Не удалось импортировать инструмент по этому URL.",
    "workspaceToolImportUrlLoaded": "Инструмент загружен. Проверьте и сохраните.",
-@@ -3156,16 +3178,22 @@
+@@ -3068,16 +3090,22 @@
    "connectOpenWebUITitle": "Подключение к Open WebUI",
    "connectOpenWebUISubtitle": "Добавить собственный сервер Open WebUI",
    "backendChooserOpenWebUISubtitle": "Войдите на свой сервер, чтобы синхронизировать чаты, заметки и многое другое.",
@@ -5443,7 +5310,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "hermesApprovalApproved": "Одобрено ✓",
    "hermesApprovalDenied": "Отклонено",
    "hermesApprovalApproveAction": "Одобрить",
-@@ -3232,7 +3260,8 @@
+@@ -3144,7 +3172,8 @@
      "description": "Confirmation message shown before deleting an Open WebUI-synced direct connection.",
      "placeholders": {
        "name": {
@@ -5453,7 +5320,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
        }
      }
    },
-@@ -3402,7 +3431,7 @@
+@@ -3314,7 +3343,7 @@
    "hermesDashboardSignIn": "Открыть вход в панель",
    "hermesGatewayAccessHeaders": "Заголовки доступа шлюза",
    "hermesGatewayAccessHeadersHelp": "Необязательные заголовки для защищённой панели Hermes.",
@@ -5462,7 +5329,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "hermesReloadSkills": "Перезагрузить навыки",
    "hermesNoInstalledSkills": "Нет установленных навыков",
    "hermesMcpServers": "Серверы MCP",
-@@ -3424,7 +3453,13 @@
+@@ -3336,7 +3365,13 @@
    "hermesJobStopUnsupported": "Обновите Hermes, чтобы останавливать выполняемые задания.",
    "hermesJobRunning": "Выполняется",
    "hermesJobLastCancelled": "Последний запуск остановлен: {reason}",
@@ -5477,7 +5344,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "hermesJobLastCancelledNoReason": "Последний запуск остановлен",
    "hermesJobCatchUpLabel": "Пропущенные запуски",
    "hermesJobCatchUpHint": "Что делать с запусками, пропущенными, пока Hermes не работал.",
-@@ -3437,9 +3472,21 @@
+@@ -3349,9 +3384,21 @@
    "hermesJobDeliverBotChats": "Чаты ботов",
    "hermesJobDeliverGroupChats": "Групповые чаты",
    "hermesJobDeliverBotChat": "Чат бота: {name}",
@@ -5501,7 +5368,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "hermesJobDeliverNeedsHomeChannel": "Сначала задайте домашний канал в Hermes.",
    "hermesJobDeliverRoomHint": "Групповые чаты будят только тех ботов, которых задание упоминает через @.",
    "hermesRoomsTitle": "Комнаты",
-@@ -3452,11 +3499,24 @@
+@@ -3364,11 +3411,24 @@
    "hermesRoomScheduled": "По расписанию",
    "hermesRoomEveryone": "Все",
    "hermesRoomBotCount": "{count, plural, one{{count} бот} few{{count} бота} many{{count} ботов} other{{count} бота}}",
@@ -5528,7 +5395,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "hermesRoomNeedsYou": "Ждёт вашего ответа",
    "hermesRoomTurnFailed": "Ход не удался",
    "hermesRoomTurnCancelled": "Ход отменён",
-@@ -3467,29 +3527,85 @@
+@@ -3379,29 +3439,85 @@
    "hermesRoomAuthorityLost": "Эту комнату взял на себя другой шлюз",
    "hermesRoomWorkLimit": "Достигнут лимит ходов",
    "hermesRoomRoutedTo": "Назначено: {names}",
@@ -5622,7 +5489,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "hermesRoomActionFailed": "Не получилось. Попробуйте ещё раз.",
    "hermesRoomInfoTitle": "О комнате",
    "hermesRoomPurpose": "Цель",
-@@ -3509,7 +3625,13 @@
+@@ -3421,7 +3537,13 @@
    "hermesRoomStopWork": "Остановить всю работу",
    "hermesRoomDisband": "Распустить комнату",
    "hermesRoomDisbandTitle": "Распустить «{name}»?",
@@ -5637,7 +5504,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "hermesRoomDisbandMessage": "Её работа остановится, и комната исчезнет навсегда.",
    "hermesRoomRenameTitle": "Переименовать комнату",
    "hermesApprovalAllowOnce": "Разрешить один раз",
-@@ -3537,7 +3659,8 @@
+@@ -3449,7 +3571,8 @@
    "@markdownShowMoreLines": {
      "placeholders": {
        "count": {
@@ -5647,7 +5514,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
        }
      }
    },
-@@ -3601,31 +3724,112 @@
+@@ -3513,31 +3636,112 @@
    "hermesSessionDeleteFailed": "Не удалось удалить разговор.",
    "hermesSessionLoadFailed": "Не удалось загрузить этот разговор. Проверьте подключение и повторите попытку.",
    "hermesMemoryKeyFieldLabel": "Ключ памяти",
@@ -5785,7 +5652,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "reasoningEffortLight": "Низкий",
    "reasoningEffortModerate": "Средний",
    "reasoningEffortDeep": "Высокий",
-@@ -3702,14 +3906,28 @@
+@@ -3614,14 +3818,28 @@
    "notificationTargetTestFailed": "Не удалось доставить тестовое уведомление.",
    "notificationTargetDelete": "Удалить адрес",
    "notificationTargetDeleteConfirm": "Удалить «{name}»? Сервер перестанет отправлять на него уведомления.",
@@ -5816,7 +5683,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "transcribingAudio": "Расшифровка...",
    "chatTaskProgress": "Задачи: выполнено {completed} из {total}",
    "@chatTaskProgress": {
-@@ -3729,7 +3947,14 @@
+@@ -3641,7 +3859,14 @@
    "chatTaskCancelled": "Отменено",
    "webSearchSettingsFooterAuto": "Используется моделями Direct без собственного веб-поиска. Поиск выполняется с этого устройства: запросы отправляются в DuckDuckGo, а если он не отвечает — в Brave, Bing, Mojeek или Википедию. Страницы, которые читает модель, тоже загружаются с этого устройства.",
    "webSearchSettingsFooterEngine": "Используется моделями Direct без собственного веб-поиска. Поиск выполняется с этого устройства, а запросы отправляются только в {engine}. Страницы, которые читает модель, тоже загружаются с этого устройства.",
@@ -5832,7 +5699,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "webSearchEngineLabel": "Поисковая система",
    "webSearchEngineAuto": "Автоматически",
    "webSearchSafeSearchLabel": "Безопасный поиск",
-@@ -3748,9 +3973,27 @@
+@@ -3660,9 +3885,27 @@
    "heldReplyStillRunning": "Сервер ещё работает над этим ответом. Откройте этот чат позже, чтобы увидеть его.",
    "directContextLimitOllamaNote": "Для моделей Ollama на вашем собственном сервере выбранный здесь лимит также задаёт размер контекста, с которым Ollama загружает модель. Чем больше контекст, тем больше памяти он использует.",
    "directContextCompactionModelCount": "{count, plural, one{{count} модель} few{{count} модели} many{{count} моделей} other{{count} модели}}",
@@ -5862,7 +5729,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "saveImage": "Сохранить изображение",
    "imageSaved": "Изображение сохранено",
    "imageSaveFailed": "Не удалось сохранить изображение.",
-@@ -3774,11 +4017,17 @@
+@@ -3686,11 +3929,17 @@
    },
    "askConduitAction": "Спросите Conduit",
    "voiceCallStartTimeout": "Запуск голосового вызова занял слишком много времени. Попробуйте ещё раз.",
@@ -5883,7 +5750,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "personalToolSettings": "Настройки инструментов",
    "personalToolSettingsDescription": "Ваши личные параметры для выбранных инструментов и модели.",
    "personalToolSettingsYours": "Ваши настройки",
-@@ -3818,7 +4067,15 @@
+@@ -3730,7 +3979,15 @@
    "channelMembersAdd": "Добавить участников",
    "channelMembersAddConfirm": "Добавить",
    "channelMembersRemoveMember": "Удалить: {name}",
@@ -5900,7 +5767,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "channelMembersChangeFailed": "Не удалось обновить список участников. Повторите попытку.",
    "channelMembersChangeDenied": "Сервер не разрешил это изменение.",
    "channelMembersChangeNotPermitted": "У вас нет прав управлять участниками этого канала.",
-@@ -3889,8 +4146,22 @@
+@@ -3801,8 +4058,22 @@
    "folderProjectReadOnly": "Эта общая папка доступна только для чтения, поэтому её настройки проекта нельзя изменить.",
    "folderProjectGone": "Эта папка больше недоступна.",
    "folderProjectModelFallbackNotice": "Модель этой папки по умолчанию недоступна, поэтому используется ваша модель по умолчанию.",
@@ -5925,7 +5792,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "scheduledTasksTitle": "Запланированные задачи",
    "scheduledTasksDescription": "Ваш сервер Open WebUI выполняет эти задачи по собственному расписанию, даже когда этот телефон не в сети.",
    "scheduledTasksUnavailable": "Запланированные задачи недоступны для этого аккаунта на этом сервере.",
-@@ -3909,20 +4180,53 @@
+@@ -3821,20 +4092,53 @@
    "scheduledTaskStatusActive": "Активна",
    "scheduledTaskStatusPaused": "Приостановлена",
    "scheduledTaskNextRun": "Следующий запуск: {time}",
@@ -5984,7 +5851,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "scheduledTaskScheduleCustom": "Своё расписание",
    "scheduledTaskNewTitle": "Новая запланированная задача",
    "scheduledTaskEditTitle": "Изменить запланированную задачу",
-@@ -3932,7 +4236,13 @@
+@@ -3844,7 +4148,13 @@
    "scheduledTaskModelLabel": "Модель",
    "scheduledTaskModelChoose": "Выберите модель",
    "scheduledTaskModelUnavailable": "{id} (больше недоступна)",
@@ -5999,7 +5866,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "scheduledTaskScheduleLabel": "Расписание",
    "scheduledTaskTimeLabel": "Время",
    "scheduledTaskDateLabel": "Дата",
-@@ -3974,7 +4284,13 @@
+@@ -3886,7 +4196,13 @@
    "scheduledTaskOpenResultFailed": "Не удалось открыть этот результат.",
    "scheduledTaskDelete": "Удалить задачу",
    "scheduledTaskDeleteConfirm": "Задача «{name}» больше не будет выполняться на сервере, а её история запусков будет удалена.",
@@ -6014,7 +5881,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "scheduledTaskChangeFailed": "Не удалось изменить эту задачу.",
    "scheduledTaskTerminalKept": "К этой задаче подключён терминал. При редактировании он сохраняется.",
    "scheduledTaskPromptSection": "Инструкции",
-@@ -3987,12 +4303,28 @@
+@@ -3899,12 +4215,28 @@
    "queuedDraftFileFailed": "Файл не загрузился. Повторите попытку или удалите его.",
    "queuedDraftsSendFailed": "Не удалось отправить сообщения из очереди. Они остаются в очереди.",
    "queuedDraftsSending": "Отправка сообщений из очереди…",
@@ -6045,7 +5912,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "calendarToday": "Сегодня",
    "calendarEmpty": "В этом периоде нет событий.",
    "calendarLoadFailed": "Не удалось загрузить календарь.",
-@@ -4019,9 +4351,21 @@
+@@ -3931,13 +4263,25 @@
    "calendarEventDelete": "Удалить",
    "calendarEventDeleteSeries": "Удалить серию",
    "calendarEventDeleteConfirm": "Удалить «{title}»? Это действие нельзя отменить.",
@@ -6059,6 +5926,10 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
 +  },
    "calendarEventDeleteSeriesConfirm": "Удалить «{title}» и все его повторения? Это действие нельзя отменить.",
 -  "@calendarEventDeleteSeriesConfirm": {"placeholders": {"title": {"type": "String"}}},
+-  "calendarEventDeleteFailed": "Не удалось удалить это событие.",
+-  "calendarEventLoadFailed": "Не удалось открыть это событие для редактирования.",
+-  "calendarEventReadOnly": "Вы не можете изменить это событие. Ответить на приглашение по-прежнему можно.",
+-  "calendarEventGone": "Этого события больше не существует. Расписание обновляется.",
 +  "@calendarEventDeleteSeriesConfirm": {
 +    "placeholders": {
 +      "title": {
@@ -6066,10 +5937,14 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
 +      }
 +    }
 +  },
-   "calendarEventDeleteFailed": "Не удалось удалить это событие.",
-   "calendarEventLoadFailed": "Не удалось открыть это событие для редактирования.",
-   "calendarEventReadOnly": "Вы не можете изменить это событие. Ответить на приглашение по-прежнему можно.",
-@@ -4054,7 +4398,13 @@
++  "calendarEventDeleteFailed": "Не удалось удалить это событие.",
++  "calendarEventLoadFailed": "Не удалось открыть это событие для редактирования.",
++  "calendarEventReadOnly": "Вы не можете изменить это событие. Ответить на приглашение по-прежнему можно.",
++  "calendarEventGone": "Этого события больше не существует. Расписание обновляется.",
+   "calendarNewEventTitle": "Новое событие",
+   "calendarEditEventTitle": "Изменить событие",
+   "calendarEditSeriesTitle": "Изменить серию",
+@@ -3966,7 +4310,13 @@
    "calendarAddPeople": "Добавить участников",
    "calendarInvitedPerson": "Приглашённый участник",
    "calendarRemovePerson": "Удалить: {name}",
@@ -6084,7 +5959,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "calendarAttendeesNote": "Приглашённые отвечают сами за себя. Их ответы сохраняются при изменении списка.",
    "calendarNoWritableCalendar": "У вас нет календаря, в который можно добавлять события. Создайте календарь, чтобы продолжить.",
    "calendarTitleRequired": "Введите название.",
-@@ -4266,41 +4616,61 @@
+@@ -4178,41 +4528,61 @@
    "chatCompareErrorUnavailable": "Сравнение моделей недоступно в этом чате.",
    "chatCompareErrorModelUnavailable": "{count, plural, =1{Модель {models} недоступна на этом сервере.} other{Модели {models} недоступны на этом сервере.}}",
    "@chatCompareErrorModelUnavailable": {
@@ -6146,7 +6021,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
        }
      }
    },
-@@ -4556,7 +4926,7 @@
+@@ -4466,7 +4836,7 @@
    "authFieldName": "Название",
    "authFieldRequired": "Обязательно",
    "authFieldOptional": "Необязательно",
@@ -6155,7 +6030,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "authTokenFieldLabel": "Токен",
    "composerAttachPhotos": "Фото",
    "modelPickerAppleOnDeviceSubtitle": "На этом устройстве, работает офлайн",
-@@ -4635,7 +5005,13 @@
+@@ -4545,7 +4915,13 @@
    "libreChatMemoryUsage": "Использовано {used} из {limit} токенов",
    "hermesReadOnlySessionNotice": "Этот чат начат в другом приложении Hermes. Здесь его можно читать, но Hermes разрешает Conduit отвечать только в чатах, которые начал Conduit.",
    "hermesReadOnlySessionNoticeFrom": "Этот чат начат в приложении: {source}. Здесь его можно читать, но Hermes разрешает Conduit отвечать только в чатах, которые начал Conduit.",
@@ -6170,7 +6045,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "hermesContinueInCopy": "Продолжить в копии",
    "hermesContinueInCopyFailed": "Не удалось скопировать этот чат. Повторите попытку.",
    "hermesContinueHere": "Продолжить здесь",
-@@ -4656,7 +5032,16 @@
+@@ -4566,7 +4942,16 @@
    "hermesUndoLastTurnFailed": "Не удалось отменить последний обмен. Повторите попытку.",
    "hermesArchivedLoadError": "Не удалось загрузить архивные чаты.",
    "hermesClarifyProgress": "Готово: {answered} из {total}",
@@ -6188,7 +6063,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "hermesClarifySendFailed": "Не удалось отправить ответы. Попробуйте ещё раз.",
    "hermesClarifyAlreadySettled": "На этот вопрос уже ответили в другом месте, или его срок истёк, поэтому ваш ответ не отправлен.",
    "hermesClarifyAnswerOrSkip": "Ответьте на каждый вопрос или пропустите его.",
-@@ -4665,35 +5050,117 @@
+@@ -4575,35 +4960,117 @@
    "hermesClarifySkipped": "Пропущено",
    "hermesClarifyRecommended": "Рекомендуется",
    "hermesChangedFiles": "{count, plural, one{Изменён {count} файл} few{Изменено {count} файла} many{Изменено {count} файлов} other{Изменено {count} файла}}",
@@ -6317,7 +6192,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "hermesContextNoWindow": "Это подключение не сообщает размер окна контекста.",
    "hermesContextBreakdown": "Чем оно заполнено",
    "hermesContextSystemPrompt": "Системный промпт",
-@@ -4717,19 +5184,65 @@
+@@ -4627,19 +5094,65 @@
    "hermesContextGaugeMonth": "В этом месяце",
    "hermesContextGaugeTopTier": "Топовые модели",
    "hermesContextUsedPercent": "использовано {percent}%",
@@ -6389,7 +6264,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "hermesContextLevelFree": "бесплатно",
    "hermesContextLevelLow": "низкий",
    "hermesContextLevelMedium": "средний",
-@@ -4740,9 +5253,31 @@
+@@ -4650,9 +5163,31 @@
    "hermesContextCompactNow": "Сжать сейчас",
    "hermesContextCompacted": "Чат сжат.",
    "hermesContextCompactedTokens": "Токены: ~{before} → ~{after}",
@@ -6423,7 +6298,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "hermesContextCompactUnchanged": "Пока нечего сжимать.",
    "hermesContextCompactRefused": "Оставлено как есть: пересказ был бы длиннее сообщений, которые он заменяет.",
    "hermesContextCompactAborted": "Сжатие не удалось. Сообщения не удалены.",
-@@ -4773,21 +5308,54 @@
+@@ -4683,21 +5218,54 @@
    "hermesErrorBlocking": "Заблокировано, пока это не исправлено",
    "hermesErrorDegraded": "Можно продолжать общение",
    "hermesErrorResetsAt": "Сброс в {time}",
@@ -6483,7 +6358,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "hermesBackgroundWorkShow": "Показать фоновую работу",
    "hermesBackgroundWorkTitle": "Фоновая работа",
    "hermesBackgroundWorkEmpty": "В фоне ничего не выполняется.",
-@@ -4795,7 +5363,13 @@
+@@ -4705,7 +5273,13 @@
    "hermesBackgroundProcesses": "Процессы",
    "hermesSubagentQueued": "в очереди",
    "hermesSubagentLastTool": "последний инструмент: {tool}",
@@ -6498,7 +6373,7 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
    "hermesSubagentFinished": "Этот агент завершил работу.",
    "hermesSubagentOutput": "Вывод в реальном времени",
    "hermesSubagentNoOutput": "Вывода пока нет.",
-@@ -4812,11 +5386,23 @@
+@@ -4722,11 +5296,23 @@
    "hermesProcessKillLabel": "Завершить процесс",
    "hermesProcessKillTitle": "Завершить этот процесс?",
    "hermesProcessKillMessage": "Hermes попытается остановить эту команду и всё, что она запустила:\n{command}\nНекоторые процессы могут продолжить работу.",
@@ -6523,22 +6398,30 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
 +  },
    "modelPickerCodingAgents": "Агенты для программирования",
    "modelControlServiceTier": "Уровень обслуживания",
-   "scheduledTaskTerminalSearchHint": "Поиск терминалов",
-@@ -4825,7 +5411,7 @@
-   "scheduledTaskTerminalRequired": "Выберите терминал, на котором работает этот агент.",
-   "scheduledTaskAgentNeedsChat": "Результаты агента отправляются в новый чат.",
+   "scheduledTaskWorkingFolderLabel": "Рабочая папка",
+@@ -4736,7 +5322,7 @@
    "scheduledTaskAgentsLoading": "Загрузка агентов этого терминала…",
+   "personalizationMemoryGone": "Этого воспоминания больше нет на сервере. Вернитесь назад, чтобы увидеть свои воспоминания.",
+   "hermesConnectionModeTitle": "Режим подключения",
+-  "hermesModeResponsesApi": "Responses API",
++  "hermesModeResponsesApi": "API ответов",
+   "hermesProfilesNeedUrl": "Сначала введите URL сервера Hermes.",
+   "hermesProfilesNeedTest": "Проверьте подключение, затем обновите список профилей.",
+   "hermesProfilesNone": "Hermes не вернул ни одного профиля.",
+@@ -4932,7 +5518,7 @@
+   "@workspaceKnowledgeUploadFiles": {
+     "description": "Row in a knowledge base's files in Settings that opens the file picker to upload one or more files."
+   },
 -  "pushFallbackTitle": "Conduit",
 +  "pushFallbackTitle": "Новое уведомление",
    "pushFallbackBody": "Новое уведомление",
    "pushReplyTitle": "Новый ответ",
    "pushReplyFailedTitle": "Ошибка ответа",
-@@ -4973,5 +5559,1072 @@
-     }
-   },
-   "showModelNameInComposer": "Показывать название модели в поле сообщения",
--  "showModelNameInComposerDescription": "В пустом поле сообщения указывается выбранная модель вместо Conduit."
-+  "showModelNameInComposerDescription": "В пустом поле сообщения указывается выбранная модель вместо Conduit.",
+@@ -5097,5 +5683,1072 @@
+   "settingsAddAction": "Добавить",
+   "@settingsAddAction": {
+     "description": "Read aloud for the plus button in a Settings page's bar that adds an item, such as a calendar event."
++  },
 +  "@ok": {
 +    "description": "Generic OK button label."
 +  },
@@ -7605,10 +7488,10 @@ index ff8a6bc84f0147a4a8423899316edeb63f4d6d70..98fbaae49800e8998813ca565f2d095c
 +        "example": "https://github.com/cogwheel0/conduit/blob/main/docs/push/ADMIN_SETUP.md"
 +      }
 +    }
-+  }
+   }
  }
 diff --git a/lib/l10n/app_sk.arb b/lib/l10n/app_sk.arb
-index d49d137bec4f4c813278bb851739df2e738be3b7..63d23d3381c535fff70318785299769decd1f76c 100644
+index b2a6e9c0ead4fb1db22d295ef1b0c44c2c536630..acee5cc894507478314dd05c9a8d48aa8205daa0 100644
 --- a/lib/l10n/app_sk.arb
 +++ b/lib/l10n/app_sk.arb
 @@ -1,6 +1,6 @@
@@ -7620,7 +7503,7 @@ index d49d137bec4f4c813278bb851739df2e738be3b7..63d23d3381c535fff70318785299769d
    "serverIncompatibleMessage": "Tento server používa Open WebUI {serverVersion}, čo je novšia verzia, než akú táto aplikácia podporuje (maximálne {maxVersion}).",
    "serverIncompatibleResolution": "Ak chcete pokračovať, znížte verziu servera na {maxVersion} alebo staršiu, alebo počkajte na aktualizáciu aplikácie, ktorá pridá podporu.",
 diff --git a/lib/l10n/app_zh.arb b/lib/l10n/app_zh.arb
-index bc0883dacb57fbc24394af8b506875661b3b47f9..8bf5b0eff5b49b0ea7f4121715051fae9076d491 100644
+index 06c8792129090de1f06a51d3d62f7daba948004e..2e4a9e6ad9a4cfe48907a2e7e59a0fe4b4d6bf87 100644
 --- a/lib/l10n/app_zh.arb
 +++ b/lib/l10n/app_zh.arb
 @@ -1,6 +1,6 @@
@@ -7632,7 +7515,7 @@ index bc0883dacb57fbc24394af8b506875661b3b47f9..8bf5b0eff5b49b0ea7f4121715051fae
    "serverIncompatibleMessage": "此服务器运行的 Open WebUI 版本为 {serverVersion}，高于本应用支持的版本（最高 {maxVersion}）。",
    "serverIncompatibleResolution": "若要继续，请将服务器降级到 {maxVersion} 或更早版本，或等待新增支持的应用更新。",
 diff --git a/lib/l10n/app_zh_Hant.arb b/lib/l10n/app_zh_Hant.arb
-index 11d8a7e91f1b75eb1681d1d578c3ad13e36ff67f..ee32de59edabddc4d0842378ddca54d09b16d73a 100644
+index cf6f46e7b26cbecdef8ffe985f7466ea70f71401..c42e4e7d4f9b4a9c2414ed0880fabdaaa161ae40 100644
 --- a/lib/l10n/app_zh_Hant.arb
 +++ b/lib/l10n/app_zh_Hant.arb
 @@ -1,6 +1,6 @@

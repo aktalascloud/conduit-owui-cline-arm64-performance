@@ -61,12 +61,12 @@ index 07a063eb6fef7bb61f865a6a3341d02f0b7afba9..8d4bdb4503bf5c2dc1fbe7ace12af07b
          };
        }
 diff --git a/lib/features/direct_connections/views/direct_connection_editor_sections.dart b/lib/features/direct_connections/views/direct_connection_editor_sections.dart
-index 52c8a9804580e3cec6cdc5da92c5957e2beb91bd..852045e6e85b475b20db797addcd1e2f3d493239 100644
+index 96dde9f7be7c85580c1cefeb759e303ca5641ea8..2c849a44e196b0cea608c5e10d9c2e5dd964884b 100644
 --- a/lib/features/direct_connections/views/direct_connection_editor_sections.dart
 +++ b/lib/features/direct_connections/views/direct_connection_editor_sections.dart
-@@ -111,18 +111,24 @@ final class DirectConnectionGeneralSection extends StatelessWidget {
-   }
- }
+@@ -20,18 +20,115 @@ import 'package:conduit_core/features/direct_connections/models/direct_connectio
+ 
+ part 'direct_connection_advanced_settings.dart';
  
 -List<AdaptiveDropdownOption<String>> _providerOptions(AppLocalizations l10n) =>
 -    [
@@ -77,9 +77,99 @@ index 52c8a9804580e3cec6cdc5da92c5957e2beb91bd..852045e6e85b475b20db797addcd1e2f
 -      AdaptiveDropdownOption(
 -        value: kOpenRouterProviderPreset,
 -        label: l10n.openRouterProviderName,
--      ),
++final class DirectConnectionAvailabilitySection extends StatelessWidget {
++  const DirectConnectionAvailabilitySection({super.key, required this.form});
++
++  final DirectConnectionEditorForm form;
++
++  @override
++  Widget build(BuildContext context) {
++    final theme = context.conduitTheme;
++    final l10n = AppLocalizations.of(context)!;
++    return InsetGroupedSection(
++      child: MergeSemantics(
++        child: InkWell(
++          onTap: () {
++            ConduitHaptics.selectionClick();
++            form.setEnabled(!form.enabled);
++          },
++          borderRadius: BorderRadius.circular(AppBorderRadius.md),
++          child: Row(
++            children: [
++              Expanded(
++                child: Column(
++                  crossAxisAlignment: CrossAxisAlignment.start,
++                  children: [
++                    ExcludeSemantics(
++                      child: Text(
++                        l10n.enabledLabel,
++                        style: AppTypography.bodyMediumStyle.copyWith(
++                          color: theme.textPrimary,
++                          fontWeight: FontWeight.w600,
++                        ),
++                      ),
++                    ),
++                    const SizedBox(height: Spacing.xxs),
++                    Text(
++                      l10n.directConnectionEnabledSubtitle,
++                      style: AppTypography.bodySmallStyle.copyWith(
++                        color: theme.textSecondary,
++                      ),
++                    ),
++                  ],
++                ),
++              ),
++              const SizedBox(width: Spacing.md),
++              AdaptiveSwitch(
++                value: form.enabled,
++                semanticLabel: l10n.enabledLabel,
++                onChanged: form.setEnabled,
++              ),
++            ],
++          ),
++        ),
+       ),
 -      AdaptiveDropdownOption(value: kOllamaAdapterKey, label: l10n.ollama),
 -    ];
++    );
++  }
++}
++
++/// The compact first group used by the iOS editor.
++///
++/// Availability and provider are both connection identity, so presenting them
++/// as one list creates a single entry point before the editable credentials.
++final class DirectConnectionGeneralSection extends StatelessWidget {
++  const DirectConnectionGeneralSection({super.key, required this.form});
++
++  final DirectConnectionEditorForm form;
++
++  @override
++  Widget build(BuildContext context) {
++    final l10n = AppLocalizations.of(context)!;
++    return InsetGroupedList(
++      useNativeSurface: true,
++      footer: form.policy.editsProvider
++          ? l10n.directConnectionEnabledSubtitle
++          : l10n.openWebUiDirectConnectionProviderDescription,
++      children: [
++        UtilityRow(
++          title: l10n.enabledLabel,
++          titleFontWeight: FontWeight.w400,
++          toggled: form.enabled,
++          trailing: AdaptiveSwitch(
++            value: form.enabled,
++            onChanged: form.setEnabled,
++            semanticLabel: l10n.enabledLabel,
++          ),
++          onTap: () => form.setEnabled(!form.enabled),
++        ),
++        _NativeProviderRow(form: form),
++      ],
++    );
++  }
++}
++
 +List<AdaptiveDropdownOption<String>> _providerOptions(
 +  AppLocalizations l10n,
 +) => [
@@ -101,7 +191,7 @@ index 52c8a9804580e3cec6cdc5da92c5957e2beb91bd..852045e6e85b475b20db797addcd1e2f
  
  List<AdaptiveDropdownOption<String>> _providerOptionsForForm(
    AppLocalizations l10n,
-@@ -275,6 +281,22 @@ final class DirectConnectionProviderSection extends StatelessWidget {
+@@ -184,6 +281,22 @@ final class DirectConnectionProviderSection extends StatelessWidget {
              showDivider: true,
              onTap: () => select(kOpenRouterProviderPreset),
            ),
@@ -1200,189 +1290,3 @@ index 2d4083446480783a367c7078b6d88cb0adaadb00..cea0e8bb31dab7cfae5053f5fe1443ce
    test('failed refresh retains same-profile cached models', () async {
      final adapter = _QueuedAdapter()
        ..responses.add([DirectRemoteModel(id: 'first')])
-diff --git a/test/features/hermes/hermes_connections_page_test.dart b/test/features/hermes/hermes_connections_page_test.dart
-index c35196cb2867d4b388fc2ad36ae63bd5cbf364ef..e26e52ba3e96c05523ccfdbdaafd42e25e6b62e7 100644
---- a/test/features/hermes/hermes_connections_page_test.dart
-+++ b/test/features/hermes/hermes_connections_page_test.dart
-@@ -63,7 +63,6 @@ void main() {
-   });
-   tearDown(PreferencesStore.debugReset);
- 
--
-   testWidgets('lists connections, switches on tap, and opens the editor', (
-     tester,
-   ) async {
-@@ -222,11 +221,12 @@ void main() {
-     check(saved.nameSource).equals(HermesConnectionNameSource.user);
-     // Saving another connection leaves the runtime on the active one.
-     check(container.read(hermesConfigProvider).connectionId).equals(_home);
--    check(
--      await secrets.read(key: 'hermes_api_key_v1:$_work'),
--    ).equals('work-key');
-+    check(await secrets.read(key: 'hermes_api_key_v1:$_work'))
-+        .equals('work-key');
- 
--    await tester.tap(find.byKey(const ValueKey<String>('hermes-use-connection')));
-+    await tester.tap(
-+      find.byKey(const ValueKey<String>('hermes-use-connection')),
-+    );
-     await tester.pumpAndSettle();
-     check(container.read(hermesConfigProvider).connectionId).equals(_work);
-     expect(
-@@ -310,9 +310,8 @@ void main() {
- 
-     await tester.tap(find.text('Test Connection'));
-     await tester.pumpAndSettle();
--    check(
--      gateway.probed.single.desktopCredentials?.nativeTokens?.refreshToken,
--    ).equals('refresh-1');
-+    check(gateway.probed.single.desktopCredentials?.nativeTokens?.refreshToken)
-+        .equals('refresh-1');
-   });
- 
-   testWidgets('switching waits for the token refresh its editor started', (
-@@ -323,9 +322,12 @@ void main() {
-     addTearDown(tester.view.reset);
-     // The binding blocks real HTTP; the refresh must really be in flight.
-     final blockedHttp = HttpOverrides.current;
--    HttpOverrides.global = _RealHttpOverrides();
-+    final realHttp = _RealHttpOverrides();
-+    HttpOverrides.global = realHttp;
-+    addTearDown(realHttp.closeClients);
-     addTearDown(() => HttpOverrides.global = blockedHttp);
-     final gateway = (await tester.runAsync(_RotatingGateway.start))!;
-+    realHttp.allowedPort = Uri.parse(gateway.baseUrl).port;
-     addTearDown(gateway.close);
-     // Hermes stays off, so no live client refreshes the tokens itself.
-     PreferencesStore.debugOverride(
-@@ -411,9 +413,8 @@ void main() {
-     check(active.connectionId).equals(_work);
-     // The switch picked up the replacement tokens; the spent ones would
-     // sign the connection out at its next refresh.
--    check(
--      active.desktopCredentials?.nativeTokens?.refreshToken,
--    ).equals('refresh-1');
-+    check(active.desktopCredentials?.nativeTokens?.refreshToken)
-+        .equals('refresh-1');
-     final stored = HermesDesktopCredentials.fromJson(
-       jsonDecode(
-         (await secrets.read(key: 'hermes_desktop_credentials_v1:$_work'))!,
-@@ -421,8 +422,10 @@ void main() {
-     );
-     check(stored.nativeTokens?.refreshToken).equals('refresh-1');
- 
--    // The editor lists the now active connection's profiles again; closing
--    // the gateway ends that request with the test.
-+    // Dispose the editor/client before its real loopback server. This keeps
-+    // a reconnect to the closed fixture from leaking fake connect timers.
-+    await tester.pumpWidget(const SizedBox.shrink());
-+    realHttp.closeClients();
-     await tester.runAsync(gateway.close);
-     for (var i = 0; i < 5; i++) {
-       await settleIo();
-@@ -437,9 +440,12 @@ void main() {
-     addTearDown(tester.view.reset);
-     // The binding blocks real HTTP; the refresh must really be in flight.
-     final blockedHttp = HttpOverrides.current;
--    HttpOverrides.global = _RealHttpOverrides();
-+    final realHttp = _RealHttpOverrides();
-+    HttpOverrides.global = realHttp;
-+    addTearDown(realHttp.closeClients);
-     addTearDown(() => HttpOverrides.global = blockedHttp);
-     final gateway = (await tester.runAsync(_RotatingGateway.start))!;
-+    realHttp.allowedPort = Uri.parse(gateway.baseUrl).port;
-     addTearDown(gateway.close);
-     PreferencesStore.debugOverride(
-       InMemoryKeyValueStore(<String, Object?>{
-@@ -524,9 +530,9 @@ void main() {
-       final stored = await secrets.read(
-         key: 'hermes_desktop_credentials_v1:$_work',
-       );
--      return HermesDesktopCredentials.fromJson(
--        jsonDecode(stored!),
--      ).nativeTokens?.refreshToken;
-+      return HermesDesktopCredentials.fromJson(jsonDecode(stored!))
-+          .nativeTokens
-+          ?.refreshToken;
-     }
- 
-     for (var i = 0; i < 100 && await storedRefreshToken() != 'refresh-1'; i++) {
-@@ -659,9 +665,9 @@ void main() {
-     // The edited connection stops being active, and reading its stored
-     // baseline fails (reads of Hermes secrets retry once).
-     flaky.failures = 2;
--    await container.read(hermesConfigProvider.notifier).setActiveConnection(
--      _work,
--    );
-+    await container
-+        .read(hermesConfigProvider.notifier)
-+        .setActiveConnection(_work);
-     await tester.pumpAndSettle();
-     expect(retry, findsOneWidget);
-     check(save().onPressed).isNull();
-@@ -737,9 +743,8 @@ void main() {
- 
-     check(container.read(hermesConnectionsProvider)).isEmpty();
-     // With nothing left, a Hermes-only install goes back to the chooser.
--    check(
--      container.read(preferredBackendProvider),
--    ).equals(PreferredBackend.unset);
-+    check(container.read(preferredBackendProvider))
-+        .equals(PreferredBackend.unset);
-     check(tester.takeException()).isNull();
-   });
- 
-@@ -882,7 +887,52 @@ final class _BlockingCookieJar extends NullCookieJarPort {
-   Future<bool> clearForOrigin(String origin) => release.future;
- }
- 
--class _RealHttpOverrides extends HttpOverrides {}
-+class _RealHttpOverrides extends HttpOverrides {
-+  final _clients = <HttpClient>[];
-+  final _connections = <ConnectionTask<Socket>>[];
-+  int? allowedPort;
-+  bool _closed = false;
-+
-+  void closeClients() {
-+    _closed = true;
-+    for (final connection in _connections) {
-+      connection.cancel();
-+    }
-+    _connections.clear();
-+    for (final client in _clients) {
-+      client.close(force: true);
-+    }
-+    _clients.clear();
-+  }
-+
-+  @override
-+  HttpClient createHttpClient(SecurityContext? context) {
-+    final client = super.createHttpClient(context);
-+    _clients.add(client);
-+    client.findProxy = (_) => 'DIRECT';
-+    client.connectionFactory = (uri, proxyHost, proxyPort) async {
-+      if (_closed ||
-+          uri.port != allowedPort ||
-+          uri.scheme != 'http' ||
-+          uri.host != '127.0.0.1') {
-+        throw const SocketException(
-+          'Only the loopback fixture may receive HTTP',
-+        );
-+      }
-+      final connection = await Socket.startConnect(
-+        InternetAddress.loopbackIPv4,
-+        uri.port,
-+      );
-+      if (_closed) {
-+        connection.cancel();
-+      } else {
-+        _connections.add(connection);
-+      }
-+      return connection;
-+    };
-+    return client;
-+  }
-+}
- 
- /// A Desktop gateway whose first token refresh waits for [release]. Each
- /// refresh spends the refresh token it replaces.

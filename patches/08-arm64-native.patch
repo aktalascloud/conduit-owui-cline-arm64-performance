@@ -285,7 +285,7 @@ index 0000000000000000000000000000000000000000..0bf5e90cac691b999d4a35044f97167d
 \ No newline at end of file
 diff --git a/.avx1/measurements/onnx-qualified-reference.json b/.avx1/measurements/onnx-qualified-reference.json
 new file mode 100644
-index 0000000000000000000000000000000000000000..7eb97464fb37213884aafe8d4a1c72ab12a9910a
+index 0000000000000000000000000000000000000000..50f14839666e3198a7ed67f2461a740fafe10bea
 --- /dev/null
 +++ b/.avx1/measurements/onnx-qualified-reference.json
 @@ -0,0 +1,27 @@
@@ -312,9 +312,9 @@ index 0000000000000000000000000000000000000000..7eb97464fb37213884aafe8d4a1c72ab
 +    "upstream_commit": "7a5391a34721bff7bc22c1eda05538f88d6404bb"
 +  },
 +  "compatible_lockfile_sha256": [
-+    "1de61500210a0d47b52d36dab1ac681e477d33a21658defc7eaa09a385eb7eda"
++    "57ec9e526636d78758d4102863e5b3fe2a4c4296b9227baca5195ca7661f5992"
 +  ],
-+  "compatible_lockfile_scope": "2026-11-11 Dart lock refresh. JNI/SQLite/PDFium/WebRTC and compatible Android SharedPreferences archives retain qualified versions. ONNX compiler inputs and binary evidence unchanged."
++  "compatible_lockfile_scope": "2026-11-16 workspace additions; Android native package versions and hashes, queried compiler and native recipes remain unchanged."
 +}
 diff --git a/.avx1/native-arm64.json b/.avx1/native-arm64.json
 new file mode 100644

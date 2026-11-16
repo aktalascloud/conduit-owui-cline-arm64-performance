@@ -78,21 +78,21 @@ index 0000000000000000000000000000000000000000..3e502d53fc1a0cfeaf64474a5073c369
 +  assert.equal(voice.emoji('спасибо'), '😊');
 +});
 diff --git a/lib/core/router/app_router.dart b/lib/core/router/app_router.dart
-index c918b307366b45307b2f830e94ae478c333b5746..594d9f05ca93d1b7d230885d4aa0d58edc9f4397 100644
+index 4528381d4966a98ddc31d1ac1ad6a7b2d0a1e8a5..30ea3e6d226db86f7261b28358dc88d61e96fd9c 100644
 --- a/lib/core/router/app_router.dart
 +++ b/lib/core/router/app_router.dart
-@@ -46,6 +46,8 @@ import '../../features/hermes/views/hermes_hidden_sessions_page.dart';
- import '../../features/hermes/views/hermes_room_page.dart';
- import '../../features/profile/views/personalization_page.dart';
- import '../../features/profile/views/profile_page.dart';
+@@ -43,6 +43,8 @@ import '../../features/settings/views/settings_page_view.dart';
+ import '../../features/settings/views/settings_root_page.dart';
+ import '../services/native_sheet_bridge.dart' show NativeSheetRoutes;
+ import '../utils/native_sheet_utils.dart' show nativeAccountsDetailId;
 +import '../../features/cline/views/cline_remote_page.dart';
 +import '../../features/cline/views/cline_workspace_page.dart';
- import '../../features/notifications/views/notification_settings_page.dart';
- import '../../features/push/views/push_privacy_page.dart';
- import '../../features/workspace/views/workspace_page.dart';
-@@ -345,6 +347,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
-       pageBuilder: (context, state) =>
-           _buildPlatformPage(state: state, child: const ProfilePage()),
+ import '../../features/workspace/workspace_navigation.dart';
+ 
+ import 'package:conduit_core/features/direct_connections/controllers/direct_connection_editor_draft.dart';
+@@ -364,6 +366,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
+               ),
+       ),
      ),
 +    GoRoute(
 +      path: Routes.clineWorkspace,
@@ -114,10 +114,10 @@ index c918b307366b45307b2f830e94ae478c333b5746..594d9f05ca93d1b7d230885d4aa0d58e
        path: Routes.personalization,
        name: RouteNames.personalization,
 diff --git a/lib/features/auth/views/backend_chooser_page.dart b/lib/features/auth/views/backend_chooser_page.dart
-index 39311aea926c5d6edd4ba8ac6a552a8064943f27..add711ed556ff1a0ae160473c8f5875849d8bf01 100644
+index ba39f8f95920e783b19d1316abe36edd54626036..9092ad63f6e06f9fcab7bf766bd1f7c35d985e4a 100644
 --- a/lib/features/auth/views/backend_chooser_page.dart
 +++ b/lib/features/auth/views/backend_chooser_page.dart
-@@ -54,6 +54,15 @@ class BackendChooserPage extends ConsumerWidget {
+@@ -49,6 +49,15 @@ class BackendChooserPage extends ConsumerWidget {
              subtitle: l10n.backendChooserOpenWebUISubtitle,
              onTap: () => context.go(Routes.serverConnection),
            ),
@@ -2229,7 +2229,7 @@ index dfd43924d2ca3fe28006b68f105c67de227459b0..ead178410746275a700ae8a96d4d70d2
    closeSidebarDrawerIfOverlay(context);
  }
 diff --git a/lib/features/navigation/widgets/sidebar_tab_registry.dart b/lib/features/navigation/widgets/sidebar_tab_registry.dart
-index 1c2d3a653a106fa912a09c6b2f0250d5953c3c57..7cd0f7b23b558cce28cdd9c1c350abdd4e521f0f 100644
+index 689a5bce594aa7048296d27d3fdb22bdcd1428c1..93802f18991195ab8a9bf013fe9e62b0ae60807c 100644
 --- a/lib/features/navigation/widgets/sidebar_tab_registry.dart
 +++ b/lib/features/navigation/widgets/sidebar_tab_registry.dart
 @@ -5,6 +5,7 @@ import '../../../shared/services/navigation_service.dart';
@@ -2266,10 +2266,10 @@ index 1c2d3a653a106fa912a09c6b2f0250d5953c3c57..7cd0f7b23b558cce28cdd9c1c350abdd
 +bool _clineVisible(SidebarTabAvailability availability) =>
 +    availability.hasOpenWebUi && !availability.hermesOnly;
 +
+ // The rule lives in the core, where the Mac's source list reads it too.
  bool _chatsVisible(SidebarTabAvailability availability) =>
-     !availability.hermesOnly;
- 
-@@ -207,6 +216,17 @@ const sidebarTabRegistry = <SidebarTabDescriptor>[
+     isSidebarTabVisible(SidebarTabId.chats, availability);
+@@ -202,6 +211,17 @@ const sidebarTabRegistry = <SidebarTabDescriptor>[
      isVisible: _terminalVisible,
      behavior: terminalSidebarTabBehavior,
    ),
@@ -2287,7 +2287,7 @@ index 1c2d3a653a106fa912a09c6b2f0250d5953c3c57..7cd0f7b23b558cce28cdd9c1c350abdd
    SidebarTabDescriptor(
      id: SidebarTabId.channels,
      labelBuilder: _channelsLabel,
-@@ -233,6 +253,9 @@ List<SidebarTabId> visibleSidebarTabIds(SidebarTabAvailability availability) =>
+@@ -228,6 +248,9 @@ List<SidebarTabId> visibleSidebarTabIds(SidebarTabAvailability availability) =>
  /// Maps collection and detail routes to their navigation destination.
  SidebarTabId sidebarTabForLocation(String location) {
    final path = Uri.tryParse(location)?.path ?? location;
@@ -2297,69 +2297,6 @@ index 1c2d3a653a106fa912a09c6b2f0250d5953c3c57..7cd0f7b23b558cce28cdd9c1c350abdd
    if (path == Routes.notes || path.startsWith('${Routes.notes}/')) {
      return SidebarTabId.notes;
    }
-diff --git a/lib/features/profile/views/manage_accounts_page.dart b/lib/features/profile/views/manage_accounts_page.dart
-index b03feac7c1a8f99d468c148b09be6318dcf6163a..c9e28d604e85eaa216ca2526e67fed5e2a735217 100644
---- a/lib/features/profile/views/manage_accounts_page.dart
-+++ b/lib/features/profile/views/manage_accounts_page.dart
-@@ -57,6 +57,24 @@ class ManageAccountsPage extends ConsumerWidget {
-             settingsSectionGap,
-           ],
-         ),
-+        InsetGroupedList(
-+          key: const Key('accounts-cline'),
-+          children: [
-+            UtilityRow(
-+              key: const Key('accounts-cline-open'),
-+              title: l10n.clineRemoteTitle,
-+              subtitle: l10n.clineChooserSubtitle,
-+              leading: _RowGlyph(
-+                UiUtils.platformIcon(
-+                  ios: CupertinoIcons.desktopcomputer,
-+                  android: Icons.computer_outlined,
-+                ),
-+              ),
-+              onTap: () => context.push(Routes.clineRemote),
-+            ),
-+          ],
-+        ),
-+        settingsSectionGap,
-         const _LibreChatCard(),
-         const _HermesCard(),
-         settingsSectionGap,
-diff --git a/lib/features/profile/views/profile_page.dart b/lib/features/profile/views/profile_page.dart
-index 6503c1735e0eee45202eb768bb4249b6df41fdb8..a8230329819112574974d62f79acc781bc169c87 100644
---- a/lib/features/profile/views/profile_page.dart
-+++ b/lib/features/profile/views/profile_page.dart
-@@ -456,6 +456,14 @@ class ProfilePage extends ConsumerWidget {
-     // Single-line settings rows, so each title and its
-     // icon carry the meaning without a descriptive subtitle.
-     final appItems = <Widget>[
-+      _buildAccountOption(
-+        context,
-+        key: const Key('cline-remote-entry'),
-+        icon: UiUtils.platformIcon(ios: CupertinoIcons.desktopcomputer,
-+          android: Icons.terminal_outlined),
-+        title: l10n.clineRemoteTitle,
-+        onTap: () => context.pushNamed(RouteNames.clineRemote),
-+      ),
-       _buildAccountOption(
-         context,
-         icon: UiUtils.platformIcon(
-diff --git a/lib/main.dart b/lib/main.dart
-index d5cc1bfe80171a27c99b360114dff3252765f402..990dffe50b5266b811c0df6d4bdd2774d5ca0c5b 100644
---- a/lib/main.dart
-+++ b/lib/main.dart
-@@ -1177,6 +1177,10 @@ class _ConduitAppState extends ConsumerState<ConduitApp> {
-       }
- 
-       switch (event.id) {
-+        case NativeSheetRoutes.clineRemote:
-+          unawaited(
-+            NavigationService.router.pushNamed<void>(RouteNames.clineRemote),
-+          );
-         case NativeSheetRoutes.hermes:
-           unawaited(
-             NavigationService.router.pushNamed<void>(
 diff --git a/packages/conduit_core/lib/features/cline/providers/cline_backend_providers.dart b/packages/conduit_core/lib/features/cline/providers/cline_backend_providers.dart
 new file mode 100644
 index 0000000000000000000000000000000000000000..06f445109d288549098c881826f05c50853e848a
@@ -2416,7 +2353,7 @@ index 0000000000000000000000000000000000000000..06f445109d288549098c881826f05c50
 +  return snapshot?.connected == true && snapshot?.hubConnected == true;
 +});
 diff --git a/packages/conduit_core/lib/features/navigation/models/sidebar_navigation_model.dart b/packages/conduit_core/lib/features/navigation/models/sidebar_navigation_model.dart
-index a63b805cceb5e5f8108b0b424afae3845c175639..9e513b29755adfdef4560403a6f85090bc899cce 100644
+index 623b25d57379f4a027ea1bb396fbf28fb1180db4..ef4aa4961539e91e8304c45dbd17ee7abd685cc7 100644
 --- a/packages/conduit_core/lib/features/navigation/models/sidebar_navigation_model.dart
 +++ b/packages/conduit_core/lib/features/navigation/models/sidebar_navigation_model.dart
 @@ -1,7 +1,7 @@
@@ -2429,7 +2366,7 @@ index a63b805cceb5e5f8108b0b424afae3845c175639..9e513b29755adfdef4560403a6f85090
  /// Data-only capability snapshot used to decide which destinations exist.
  @immutable
 diff --git a/packages/conduit_core/lib/navigation/route_redirect.dart b/packages/conduit_core/lib/navigation/route_redirect.dart
-index 5434ba4a9ce45ff3d3a1b84caadf391b0f9749d6..bacac572251227bd53c839efff25e9f90dcb22c1 100644
+index f8e9d0eaf62055bdd16ace5491f97c09c6632c77..7e32745b6f67001b3fc1597f3ccafc4a59393a9d 100644
 --- a/packages/conduit_core/lib/navigation/route_redirect.dart
 +++ b/packages/conduit_core/lib/navigation/route_redirect.dart
 @@ -54,6 +54,7 @@ bool isHermesOnlyAppLocation(String location) =>
@@ -2440,7 +2377,7 @@ index 5434ba4a9ce45ff3d3a1b84caadf391b0f9749d6..bacac572251227bd53c839efff25e9f9
        // The saved accounts are on the device: switching to one still
        // signed in needs no session on the active account.
        location == Routes.accounts ||
-@@ -135,6 +136,20 @@ String? resolveRouteRedirect(String location, ProviderRead read) {
+@@ -138,6 +139,20 @@ String? resolveRouteRedirect(String location, ProviderRead read) {
    final activeServerAsync = read(activeServerProvider);
    final authState = read(authNavigationStateProvider);
    final preferredBackend = read(preferredBackendProvider);
@@ -2461,7 +2398,7 @@ index 5434ba4a9ce45ff3d3a1b84caadf391b0f9749d6..bacac572251227bd53c839efff25e9f9
    final hermesConfig = read(hermesConfigProvider);
    final hermesUsable = hermesConfig.isUsable;
    final hermesSecretsLoading = read(hermesSecretsLoadingProvider);
-@@ -151,6 +166,7 @@ String? resolveRouteRedirect(String location, ProviderRead read) {
+@@ -154,6 +169,7 @@ String? resolveRouteRedirect(String location, ProviderRead read) {
    );
    final isLocalBackendSetup =
        location == Routes.backendChooser ||
@@ -2470,7 +2407,7 @@ index 5434ba4a9ce45ff3d3a1b84caadf391b0f9749d6..bacac572251227bd53c839efff25e9f9
        isHermesSettingsLocation(location) ||
        isDirectConnectionsLocation(location);
 diff --git a/packages/conduit_core/lib/navigation/routes.dart b/packages/conduit_core/lib/navigation/routes.dart
-index 52aa5e2e11a61689e060fb2866d1dee53ab40222..9c69f3f8cd2ec96fc592f40dba83de31d92ec1ef 100644
+index 985f9d930c5ce637d7724ac26ee7518156d40812..f360d99217b1f402ce1af156a0c62d96f03a13d0 100644
 --- a/packages/conduit_core/lib/navigation/routes.dart
 +++ b/packages/conduit_core/lib/navigation/routes.dart
 @@ -19,6 +19,9 @@ class Routes {
@@ -2483,7 +2420,7 @@ index 52aa5e2e11a61689e060fb2866d1dee53ab40222..9c69f3f8cd2ec96fc592f40dba83de31
    static const String personalization = '/profile/personalization';
    static const String audioSettings = '/profile/audio';
    static const String voiceProviderSettings = '/profile/audio/voice-provider';
-@@ -79,6 +82,7 @@ class Routes {
+@@ -84,6 +87,7 @@ class Routes {
  
  /// Friendly names for GoRouter routes to support context.pushNamed.
  class RouteNames {
@@ -2491,7 +2428,7 @@ index 52aa5e2e11a61689e060fb2866d1dee53ab40222..9c69f3f8cd2ec96fc592f40dba83de31
    static const String splash = 'splash';
    static const String chat = 'chat';
    static const String folder = 'folder';
-@@ -92,6 +96,7 @@ class RouteNames {
+@@ -97,6 +101,7 @@ class RouteNames {
    static const String ssoAuth = 'sso-auth';
    static const String proxyAuth = 'proxy-auth';
    static const String profile = 'profile';
@@ -2636,7 +2573,7 @@ index 9ce76b74c9fd0c5ec088e12c21b121f47c9e927a..aea8d65313dc4d873570f3b3f935bbf2
      tester,
    ) async {
 diff --git a/test/features/auth/views/support/adaptive_auth_harness.dart b/test/features/auth/views/support/adaptive_auth_harness.dart
-index 83c383f1554ecf80530e951ae55c1ab6ff809175..cdb12062d6fc838fbd14e279c5986acf26d53e1c 100644
+index 58d56615c5eb35ae93d13ed7e0bbf99b96353526..af8ca1a48d81361b6c600bec1c5dd7722c2a8551 100644
 --- a/test/features/auth/views/support/adaptive_auth_harness.dart
 +++ b/test/features/auth/views/support/adaptive_auth_harness.dart
 @@ -10,6 +10,7 @@ import 'package:conduit_core/services/api_service.dart';
@@ -2680,7 +2617,7 @@ index 83c383f1554ecf80530e951ae55c1ab6ff809175..cdb12062d6fc838fbd14e279c5986acf
          GoRoute(
            path: Routes.directConnections,
            name: RouteNames.directConnections,
-@@ -325,10 +330,11 @@ class BackendOnboardingHarness {
+@@ -324,10 +329,11 @@ class BackendOnboardingHarness {
    }
  
    late final GoRouter router;
@@ -2694,7 +2631,7 @@ index 83c383f1554ecf80530e951ae55c1ab6ff809175..cdb12062d6fc838fbd14e279c5986acf
      router.go(initialLocation);
      return ProviderScope(
        overrides: [
-@@ -347,7 +353,8 @@ class BackendOnboardingHarness {
+@@ -346,7 +352,8 @@ class BackendOnboardingHarness {
          ),
        ],
        child: MaterialApp.router(
@@ -2952,7 +2889,7 @@ index 561e0df9bad056874d97edc0ed23d602e9dd8e7d..8604277d913df88f57b78da3a56e6ac2
 +}
 \ No newline at end of file
 diff --git a/test/features/navigation/widgets/sidebar_workspace_tabs_test.dart b/test/features/navigation/widgets/sidebar_workspace_tabs_test.dart
-index 1ddfe2a2879eda4f00859d583873a937747490a7..d07513c04b8a8063b7db04e40787181b365481b4 100644
+index e9af7f8afb81d107d9688df9068793c1777f9dc9..4574048464ddfabb669eb82b767251840e1e251d 100644
 --- a/test/features/navigation/widgets/sidebar_workspace_tabs_test.dart
 +++ b/test/features/navigation/widgets/sidebar_workspace_tabs_test.dart
 @@ -33,6 +33,7 @@ import 'package:conduit/shared/widgets/user_avatar.dart';
@@ -2963,7 +2900,7 @@ index 1ddfe2a2879eda4f00859d583873a937747490a7..d07513c04b8a8063b7db04e40787181b
  import 'package:flutter_riverpod/flutter_riverpod.dart';
  import 'package:flutter_test/flutter_test.dart';
  import 'package:go_router/go_router.dart';
-@@ -1018,6 +1019,38 @@ void main() {
+@@ -1031,6 +1032,38 @@ void main() {
      );
    });
  

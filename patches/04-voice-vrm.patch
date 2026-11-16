@@ -5309,7 +5309,7 @@ index 0be912dbedf5db0ff834e2e853b5b2676985b0c3..087015f8b01fcfbad86fc02d3c16e71f
        filePath: filePath,
        fileName: fileName,
 diff --git a/lib/core/services/native_sheet_bridge.dart b/lib/core/services/native_sheet_bridge.dart
-index 6c65deb2679604edb14163720b31c08537d60f27..42b171a87f2388b14a162900ef340af033e1faf9 100644
+index ae423c632eccc39879a5b8741b2059b0b42d18c7..2f9ae28ae30bdef074f8eca417c7ce4f098fd7b7 100644
 --- a/lib/core/services/native_sheet_bridge.dart
 +++ b/lib/core/services/native_sheet_bridge.dart
 @@ -118,6 +118,7 @@ class NativeSheetRoutes {
@@ -5317,17 +5317,17 @@ index 6c65deb2679604edb14163720b31c08537d60f27..42b171a87f2388b14a162900ef340af0
    static const dataConnection = 'data-connection';
    static const hermes = 'hermes';
 +  static const clineRemote = 'cline-remote';
-   static const directConnections = 'open-direct-connections';
+   /// The Direct Connections page, Settings's own.
+   static const directConnections = 'direct-connections';
    static const personalConnections = 'open-personal-connections';
-   static const scheduledTasks = 'open-scheduled-tasks';
 diff --git a/lib/core/utils/native_sheet_utils.dart b/lib/core/utils/native_sheet_utils.dart
-index e1377614956793fd5511f1b3c136da5b18eaf195..26aa120ecb4e785c3ec6c841047669932faa2a3d 100644
+index 8cb34d111187dbfa3321d2ecdbea2465b5fd7e79..d28ca3da3975149e6327ee9dfa16f3cd80570991 100644
 --- a/lib/core/utils/native_sheet_utils.dart
 +++ b/lib/core/utils/native_sheet_utils.dart
-@@ -512,6 +512,15 @@ NativeSheetDetailConfig buildNativeAccountsDetail(
-         ),
+@@ -655,6 +655,15 @@ NativeSheetDetailConfig buildNativeAccountsDetail(
        NativeSheetSectionConfig(
          items: [
+           // Hermes Agent's own page of Settings.
 +          NativeSheetItemConfig(
 +            id: 'accounts-cline',
 +            title: l10n.clineRemoteTitle,
@@ -5338,7 +5338,7 @@ index e1377614956793fd5511f1b3c136da5b18eaf195..26aa120ecb4e785c3ec6c84104766993
 +            actionValue: true,
 +          ),
            NativeSheetItemConfig(
-             id: 'accounts-hermes',
+             id: hermesSettingsPageId,
              title: l10n.hermesAgentSettingsTitle,
 diff --git a/lib/features/chat/voice_call/presentation/voice_call_launcher.dart b/lib/features/chat/voice_call/presentation/voice_call_launcher.dart
 index 0a387db5fd736fd5ad3ec2c424e0f76d06cbabef..cf8f8c54cb1d2157cc4f4521d51df0b3e1f81b32 100644
@@ -6254,10 +6254,10 @@ index 0000000000000000000000000000000000000000..15d7731e1749bc57215d0f0c66a38d8f
 +  javaScriptBridgeEnabled: false,
 +);
 diff --git a/packages/conduit_core/lib/features/chat/voice_mode/chat_voice_mode_controller.dart b/packages/conduit_core/lib/features/chat/voice_mode/chat_voice_mode_controller.dart
-index b855660616aabb3ad349a96bfd23686feb04d8e8..5a210e37f34848df12bc7ef3c99ac9aec70bc401 100644
+index 0c46b525166a9c3fd12b3a0ba42e4d24461ee8b8..f88b923d12a8ce64ca2b4d35aa51dd66d4367044 100644
 --- a/packages/conduit_core/lib/features/chat/voice_mode/chat_voice_mode_controller.dart
 +++ b/packages/conduit_core/lib/features/chat/voice_mode/chat_voice_mode_controller.dart
-@@ -158,6 +158,8 @@ class _ChatVoiceModeServiceLifecycleGate {
+@@ -182,6 +182,8 @@ class _ChatVoiceModeServiceLifecycleGate {
  }
  
  class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
@@ -6266,7 +6266,7 @@ index b855660616aabb3ad349a96bfd23686feb04d8e8..5a210e37f34848df12bc7ef3c99ac9ae
    static const int _maxEmptyTranscriptRestarts = 4;
    static const int _emptyTranscriptBaseDelayMs = 250;
    static const int _emptyTranscriptMaxDelayMs = 2000;
-@@ -349,8 +351,10 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
+@@ -415,8 +417,10 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
      bool cancellationRequested() =>
          _disposed || stopGenerationAtRequest != _stopRequestGeneration;
  
@@ -6277,7 +6277,7 @@ index b855660616aabb3ad349a96bfd23686feb04d8e8..5a210e37f34848df12bc7ef3c99ac9ae
        if (cancellationRequested()) {
          result = ChatVoiceModeStartResult.cancelled;
          return;
-@@ -795,9 +799,16 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
+@@ -877,9 +881,16 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
    bool get isWaitingForStartReadiness =>
        _pendingStartReadinessCancellation != null;
  
@@ -6296,7 +6296,7 @@ index b855660616aabb3ad349a96bfd23686feb04d8e8..5a210e37f34848df12bc7ef3c99ac9ae
    }
  
    /// Stops a start under way before it goes further. A realtime voice still
-@@ -826,17 +837,19 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
+@@ -908,17 +919,19 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
          return;
        }
  
@@ -6318,7 +6318,7 @@ index b855660616aabb3ad349a96bfd23686feb04d8e8..5a210e37f34848df12bc7ef3c99ac9ae
  
        state = state.copyWith(phase: ChatVoiceModePhase.paused);
      });
-@@ -868,7 +881,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
+@@ -950,7 +963,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
        if (_pausedDuringSpeech) {
          _pausedDuringSpeech = false;
          await _textToSpeech!.resume();
@@ -6327,7 +6327,7 @@ index b855660616aabb3ad349a96bfd23686feb04d8e8..5a210e37f34848df12bc7ef3c99ac9ae
          state = state.copyWith(phase: ChatVoiceModePhase.speaking);
          return;
        }
-@@ -1001,12 +1014,13 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
+@@ -1083,12 +1096,13 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
  
    Future<void> toggleSpeakerphone() {
      return _enqueue(() async {
@@ -6342,7 +6342,7 @@ index b855660616aabb3ad349a96bfd23686feb04d8e8..5a210e37f34848df12bc7ef3c99ac9ae
        // A route the platform refused leaves audio where it was, so the button
        // stays where it was too rather than promising a route nobody is hearing.
        // That holds both ways: the coordinator reads the route back on and off
-@@ -1020,6 +1034,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
+@@ -1102,6 +1116,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
  
    Future<void> cancelSpeaking() {
      return _enqueue(() async {
@@ -6350,7 +6350,7 @@ index b855660616aabb3ad349a96bfd23686feb04d8e8..5a210e37f34848df12bc7ef3c99ac9ae
        final realtime = _realtime;
        if (realtime != null) {
          realtime.interrupt();
-@@ -1029,7 +1044,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
+@@ -1111,7 +1126,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
        if (tts == null) return;
        await tts.stopStreamingTts();
        await tts.stop();
@@ -6359,7 +6359,7 @@ index b855660616aabb3ad349a96bfd23686feb04d8e8..5a210e37f34848df12bc7ef3c99ac9ae
        _streamingTtsStarted = false;
        _assistantFinalized = true;
        if (state.isActive && !state.isMuted) {
-@@ -1112,7 +1127,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
+@@ -1194,7 +1209,7 @@ class ChatVoiceModeController extends Notifier<ChatVoiceModeSnapshot> {
          if (endedCallId == callId) {
            _stoppingFromCallKit = true;
            _cancelStart();
@@ -6369,10 +6369,10 @@ index b855660616aabb3ad349a96bfd23686feb04d8e8..5a210e37f34848df12bc7ef3c99ac9ae
        case VoiceCallKitMuteToggled(callId: final mutedCallId, :final isMuted):
          if (mutedCallId == callId && isMuted != state.isMuted) {
 diff --git a/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart b/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart
-index c26e5f61e91f2d2fa3f1f96e8710204b0f945160..0318781be13b192b267b5f7efe2e5b94a5780ee9 100644
+index 7fed972fa164833d31e9db79d9f58b73ae3b99f2..4dc8a5c6842653ee81cfee44cc8e859b60682242 100644
 --- a/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart
 +++ b/packages/conduit_core/test/features/chat/voice_mode/chat_voice_mode_controller_test.dart
-@@ -365,6 +365,46 @@ void main() {
+@@ -367,6 +367,46 @@ void main() {
      check(snapshot.activeCallId).isNull();
    });
  
@@ -6419,272 +6419,6 @@ index c26e5f61e91f2d2fa3f1f96e8710204b0f945160..0318781be13b192b267b5f7efe2e5b94
    test('stop cancels a start during voice input initialization', () async {
      final input = _FakeVoiceInputService()..initializeGate = Completer<bool>();
      final container = ProviderContainer(
-@@ -2747,62 +2787,66 @@ void main() {
-       return container;
-     }
- 
--    test('a call with a realtime voice talks through it, not turn by turn',
--        () async {
--      final container = realtimeContainer();
--      final controller = container.read(
--        chatVoiceModeControllerProvider.notifier,
--      );
--
--      final result = await controller.start(
--        startNewConversation: false,
--        admittedModel: _model,
--      );
--
--      check(result).equals(ChatVoiceModeStartResult.started);
--      check(input.beginCalls).equals(0);
--      check(audio.started).isTrue();
--      check(container.read(chatVoiceModeControllerProvider).phase)
--          .equals(ChatVoiceModePhase.listening);
--
--      bridge.inbox.add({
--        'type': 'conversation.item.input_audio_transcription.completed',
--        'item_id': 'item-1',
--        'transcript': 'Hello',
--      });
--      await pumpEventQueue();
--      check(container.read(chatVoiceModeControllerProvider).transcript)
--          .equals('Hello');
-+    test(
-+      'a call with a realtime voice talks through it, not turn by turn',
-+      () async {
-+        final container = realtimeContainer();
-+        final controller = container.read(
-+          chatVoiceModeControllerProvider.notifier,
-+        );
- 
--      await controller.toggleMute();
--      check(container.read(chatVoiceModeControllerProvider).isMuted).isTrue();
--      check(audio.captureEnabled).equals(false);
-+        final result = await controller.start(
-+          startNewConversation: false,
-+          admittedModel: _model,
-+        );
- 
--      await controller.stop();
--      check(bridge.wasClosed).isTrue();
--      check(audio.stopped).isTrue();
--      check(container.read(chatVoiceModeControllerProvider).isActive)
--          .isFalse();
--    });
-+        check(result).equals(ChatVoiceModeStartResult.started);
-+        check(input.beginCalls).equals(0);
-+        check(audio.started).isTrue();
-+        check(container.read(chatVoiceModeControllerProvider).phase)
-+            .equals(ChatVoiceModePhase.listening);
-+
-+        bridge.inbox.add({
-+          'type': 'conversation.item.input_audio_transcription.completed',
-+          'item_id': 'item-1',
-+          'transcript': 'Hello',
-+        });
-+        await pumpEventQueue();
-+        check(container.read(chatVoiceModeControllerProvider).transcript)
-+            .equals('Hello');
-+
-+        await controller.toggleMute();
-+        check(container.read(chatVoiceModeControllerProvider).isMuted).isTrue();
-+        check(audio.captureEnabled).equals(false);
-+
-+        await controller.stop();
-+        check(bridge.wasClosed).isTrue();
-+        check(audio.stopped).isTrue();
-+        check(container.read(chatVoiceModeControllerProvider).isActive)
-+            .isFalse();
-+      },
-+    );
- 
--    test('a realtime call follows its own chat and ends when another opens',
--        () {
--      // The first turn of a call started without a chat creates one.
--      check(realtimeCallChatAfter(null, 'local:new', createdByCall: true))
--          .equals((ends: false, chatId: 'local:new'));
--      // A new chat gets its server id in place.
--      check(realtimeCallChatAfter('local:new', 'chat-1', remapped: true))
--          .equals((ends: false, chatId: 'chat-1'));
--      check(realtimeCallChatAfter('chat-1', 'chat-1'))
--          .equals((ends: false, chatId: 'chat-1'));
--      check(realtimeCallChatAfter('chat-1', 'chat-2').ends).isTrue();
--      check(realtimeCallChatAfter('chat-1', null).ends).isTrue();
--      check(realtimeCallChatAfter('direct-local:a', 'direct-local:b').ends)
--          .isTrue();
--      // A chat the user opens is not the call's, even before it has one.
--      check(realtimeCallChatAfter(null, 'chat-2').ends).isTrue();
--      check(realtimeCallChatAfter('local:new', 'chat-2').ends).isTrue();
--    });
-+    test(
-+      'a realtime call follows its own chat and ends when another opens',
-+      () {
-+        // The first turn of a call started without a chat creates one.
-+        check(realtimeCallChatAfter(null, 'local:new', createdByCall: true))
-+            .equals((ends: false, chatId: 'local:new'));
-+        // A new chat gets its server id in place.
-+        check(realtimeCallChatAfter('local:new', 'chat-1', remapped: true))
-+            .equals((ends: false, chatId: 'chat-1'));
-+        check(realtimeCallChatAfter('chat-1', 'chat-1'))
-+            .equals((ends: false, chatId: 'chat-1'));
-+        check(realtimeCallChatAfter('chat-1', 'chat-2').ends).isTrue();
-+        check(realtimeCallChatAfter('chat-1', null).ends).isTrue();
-+        check(realtimeCallChatAfter('direct-local:a', 'direct-local:b').ends)
-+            .isTrue();
-+        // A chat the user opens is not the call's, even before it has one.
-+        check(realtimeCallChatAfter(null, 'chat-2').ends).isTrue();
-+        check(realtimeCallChatAfter('local:new', 'chat-2').ends).isTrue();
-+      },
-+    );
- 
-     test('opening another chat ends a realtime call', () async {
-       // Direct chats, which this container keeps open.
-@@ -2819,8 +2863,7 @@ void main() {
-       await container
-           .read(chatVoiceModeControllerProvider.notifier)
-           .start(startNewConversation: false, admittedModel: _model);
--      check(container.read(chatVoiceModeControllerProvider).isActive)
--          .isTrue();
-+      check(container.read(chatVoiceModeControllerProvider).isActive).isTrue();
- 
-       active.set(chat('direct-local:b'));
-       await _until(
-@@ -2849,44 +2892,48 @@ void main() {
-       check(audio.stopped).isTrue();
-       check(await starting).equals(ChatVoiceModeStartResult.cancelled);
-       await stopping;
--      check(container.read(chatVoiceModeControllerProvider).isActive)
--          .isFalse();
-+      check(container.read(chatVoiceModeControllerProvider).isActive).isFalse();
-     });
- 
--    test('ending it from the system call UI while it connects ends it at once',
--        () async {
--      bridge.opening = Completer<void>();
--      final callKit = _AvailableCallKitService();
--      addTearDown(callKit.dispose);
--      final container = realtimeContainer(callKit: callKit);
--      final controller = container.read(
--        chatVoiceModeControllerProvider.notifier,
--      );
-+    test(
-+      'ending it from the system call UI while it connects ends it at once',
-+      () async {
-+        bridge.opening = Completer<void>();
-+        final callKit = _AvailableCallKitService();
-+        addTearDown(callKit.dispose);
-+        final container = realtimeContainer(callKit: callKit);
-+        final controller = container.read(
-+          chatVoiceModeControllerProvider.notifier,
-+        );
- 
--      final starting = controller.start(
--        startNewConversation: false,
--        admittedModel: _model,
--      );
--      await _until(() => audio.started);
--      callKit.emit(const VoiceCallKitEnded('call-1'));
--      await pumpEventQueue();
-+        final starting = controller.start(
-+          startNewConversation: false,
-+          admittedModel: _model,
-+        );
-+        await _until(() => audio.started);
-+        callKit.emit(const VoiceCallKitEnded('call-1'));
-+        await pumpEventQueue();
- 
--      check(bridge.wasClosed).isTrue();
--      check(audio.stopped).isTrue();
--      check(await starting).equals(ChatVoiceModeStartResult.cancelled);
--      await _until(
--        () => !container.read(chatVoiceModeControllerProvider).isActive,
--      );
--      // The system ended the call; it is not ended again.
--      check(callKit.endedCallIds).isEmpty();
--    });
-+        check(bridge.wasClosed).isTrue();
-+        check(audio.stopped).isTrue();
-+        check(await starting).equals(ChatVoiceModeStartResult.cancelled);
-+        await _until(
-+          () => !container.read(chatVoiceModeControllerProvider).isActive,
-+        );
-+        // The system ended the call; it is not ended again.
-+        check(callKit.endedCallIds).isEmpty();
-+      },
-+    );
- 
-     test('unmuting a paused call brings its answers back', () async {
-       final container = realtimeContainer();
-       final controller = container.read(
-         chatVoiceModeControllerProvider.notifier,
-       );
--      await controller.start(startNewConversation: false, admittedModel: _model);
-+      await controller.start(
-+        startNewConversation: false,
-+        admittedModel: _model,
-+      );
-       await controller.pause();
-       await controller.toggleMute();
- 
-@@ -2903,27 +2950,29 @@ void main() {
-       await controller.stop();
-     });
- 
--    test('a chat opened right after the call is asked for cancels it',
--        () async {
--      Conversation chat(String id) => Conversation(
--        id: id,
--        title: 'Chat',
--        createdAt: DateTime.utc(2026),
--        updatedAt: DateTime.utc(2026),
--        metadata: const {'backend': kDirectTransport},
--      );
--      final container = realtimeContainer();
--      final active = container.read(activeConversationProvider.notifier)
--        ..set(chat('direct-local:a'));
-+    test(
-+      'a chat opened right after the call is asked for cancels it',
-+      () async {
-+        Conversation chat(String id) => Conversation(
-+          id: id,
-+          title: 'Chat',
-+          createdAt: DateTime.utc(2026),
-+          updatedAt: DateTime.utc(2026),
-+          metadata: const {'backend': kDirectTransport},
-+        );
-+        final container = realtimeContainer();
-+        final active = container.read(activeConversationProvider.notifier)
-+          ..set(chat('direct-local:a'));
- 
--      final starting = container
--          .read(chatVoiceModeControllerProvider.notifier)
--          .start(startNewConversation: false, admittedModel: _model);
--      active.set(chat('direct-local:b'));
-+        final starting = container
-+            .read(chatVoiceModeControllerProvider.notifier)
-+            .start(startNewConversation: false, admittedModel: _model);
-+        active.set(chat('direct-local:b'));
- 
--      check(await starting).equals(ChatVoiceModeStartResult.cancelled);
--      check(bridge.opened).isFalse();
--    });
-+        check(await starting).equals(ChatVoiceModeStartResult.cancelled);
-+        check(bridge.opened).isFalse();
-+      },
-+    );
- 
-     test('a chat opened while the call sets up cancels it', () async {
-       // Direct chats, which this container keeps open.
-@@ -2952,8 +3001,7 @@ void main() {
- 
-       check(await starting).equals(ChatVoiceModeStartResult.cancelled);
-       check(bridge.opened).isFalse();
--      check(container.read(chatVoiceModeControllerProvider).isActive)
--          .isFalse();
-+      check(container.read(chatVoiceModeControllerProvider).isActive).isFalse();
-     });
- 
-     test('a realtime voice that cannot start says why', () async {
 diff --git a/test/features/chat/voice_mode/chat_voice_mode_overlay_test.dart b/test/features/chat/voice_mode/chat_voice_mode_overlay_test.dart
 index 1c108d624bfa49bd99cb9ff35e7199e60a12213e..c90c657615ada2f2af63681483e3bd84011a3e70 100644
 --- a/test/features/chat/voice_mode/chat_voice_mode_overlay_test.dart
@@ -7193,10 +6927,10 @@ index 0000000000000000000000000000000000000000..b28ed1776dfa611023a47d797baaaa86
 +  );
 +}
 diff --git a/test/shared/widgets/platform_ui/settings_switch_semantics_test.dart b/test/shared/widgets/platform_ui/settings_switch_semantics_test.dart
-index 942c31682a639702ad0f52e7e9e8caa3e11ec3ef..797b1a682efbb26412c059f02ce72a7b2249fd08 100644
+index fa6c6d755e038fd589fcc88c418aca777bd75df2..a4185ce11779e9e0e59992fd612a891ec32899e9 100644
 --- a/test/shared/widgets/platform_ui/settings_switch_semantics_test.dart
 +++ b/test/shared/widgets/platform_ui/settings_switch_semantics_test.dart
-@@ -252,6 +252,9 @@ Future<void> _pump(WidgetTester tester, Widget child, {_Jobs? jobs}) async {
+@@ -171,6 +171,9 @@ Future<void> _pump(WidgetTester tester, Widget child, {_Jobs? jobs}) async {
      ),
    );
    await tester.pumpAndSettle();

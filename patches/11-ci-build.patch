@@ -608,7 +608,7 @@ index 0000000000000000000000000000000000000000..e874280cb0d73c156847d9c271a8253f
 +    verify_archive(target)
 diff --git a/.avx1/project.json b/.avx1/project.json
 new file mode 100644
-index 0000000000000000000000000000000000000000..6a0af96e3ee2bfc76dd16450116ab8a7d97bffff
+index 0000000000000000000000000000000000000000..0ff5b94d7b09a6725720e810d659d99db84cdc91
 --- /dev/null
 +++ b/.avx1/project.json
 @@ -0,0 +1,13 @@
@@ -621,7 +621,7 @@ index 0000000000000000000000000000000000000000..6a0af96e3ee2bfc76dd16450116ab8a7
 +  "description": "Conduit for OWUI + Cline: signed ARM64 APK, SSH access to Cline sessions/projects, O3 ThinLTO native libraries; extended Russian UI / дополненный русский перевод.",
 +  "repository": "aktalascloud/conduit-owui-cline-arm64-performance",
 +  "channel": "latest",
-+  "upstream_commit": "50a9ae4e3644e710e67852d0f2a48671f5b1d750",
++  "upstream_commit": "7ec48dee0d97def4da2a170fcd64021115661bf5",
 +  "stable_tag": "v4.3.1",
 +  "distribution": "single unified latest"
 +}
@@ -875,10 +875,10 @@ index 0000000000000000000000000000000000000000..a088ce1d402fcff53c06345e66ddb023
 +            .avx1-work/native/ort-build
 +          key: ${{ steps.native-cache.outputs.cache-primary-key }}
 diff --git a/.gitignore b/.gitignore
-index 35b186cdbd6f59f853c062d757345ed31a107e70..c0afce3fe5a122aed611b21bcff9f105a34885a4 100644
+index f9609b43c9cf588318f27244cc071ee29f0d25a8..2dff4060d00e0c7341aeaf4730a63aaf2ad0f0c7 100644
 --- a/.gitignore
 +++ b/.gitignore
-@@ -162,6 +162,19 @@ GoogleService-Info.plist
+@@ -164,6 +164,19 @@ GoogleService-Info.plist
  !**/ios/**/default.pbxuser
  !**/ios/**/default.perspectivev3
  !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
