@@ -2229,7 +2229,7 @@ index dfd43924d2ca3fe28006b68f105c67de227459b0..ead178410746275a700ae8a96d4d70d2
    closeSidebarDrawerIfOverlay(context);
  }
 diff --git a/lib/features/navigation/widgets/sidebar_tab_registry.dart b/lib/features/navigation/widgets/sidebar_tab_registry.dart
-index 689a5bce594aa7048296d27d3fdb22bdcd1428c1..93802f18991195ab8a9bf013fe9e62b0ae60807c 100644
+index 689a5bce594aa7048296d27d3fdb22bdcd1428c1..188f8310940606c4ecdcebdfeab2b66f02586f21 100644
 --- a/lib/features/navigation/widgets/sidebar_tab_registry.dart
 +++ b/lib/features/navigation/widgets/sidebar_tab_registry.dart
 @@ -5,6 +5,7 @@ import '../../../shared/services/navigation_service.dart';
@@ -2264,7 +2264,7 @@ index 689a5bce594aa7048296d27d3fdb22bdcd1428c1..93802f18991195ab8a9bf013fe9e62b0
 +    ClineSidebarTab(active: active);
 +
 +bool _clineVisible(SidebarTabAvailability availability) =>
-+    availability.hasOpenWebUi && !availability.hermesOnly;
++    isSidebarTabVisible(SidebarTabId.cline, availability);
 +
  // The rule lives in the core, where the Mac's source list reads it too.
  bool _chatsVisible(SidebarTabAvailability availability) =>
@@ -2353,7 +2353,7 @@ index 0000000000000000000000000000000000000000..06f445109d288549098c881826f05c50
 +  return snapshot?.connected == true && snapshot?.hubConnected == true;
 +});
 diff --git a/packages/conduit_core/lib/features/navigation/models/sidebar_navigation_model.dart b/packages/conduit_core/lib/features/navigation/models/sidebar_navigation_model.dart
-index 623b25d57379f4a027ea1bb396fbf28fb1180db4..ef4aa4961539e91e8304c45dbd17ee7abd685cc7 100644
+index 623b25d57379f4a027ea1bb396fbf28fb1180db4..12e594aef3839be6b5a3561d12c7b246c392f265 100644
 --- a/packages/conduit_core/lib/features/navigation/models/sidebar_navigation_model.dart
 +++ b/packages/conduit_core/lib/features/navigation/models/sidebar_navigation_model.dart
 @@ -1,7 +1,7 @@
@@ -2365,6 +2365,22 @@ index 623b25d57379f4a027ea1bb396fbf28fb1180db4..ef4aa4961539e91e8304c45dbd17ee7a
  
  /// Data-only capability snapshot used to decide which destinations exist.
  @immutable
+@@ -50,6 +50,7 @@ const List<SidebarTabId> sidebarTabOrder = <SidebarTabId>[
+   SidebarTabId.hermes,
+   SidebarTabId.notes,
+   SidebarTabId.terminal,
++  SidebarTabId.cline,
+   SidebarTabId.channels,
+ ];
+ 
+@@ -69,6 +70,7 @@ bool isSidebarTabVisible(
+       availability.hermesOnly || availability.hermesEnabled,
+     SidebarTabId.notes => openWebUi && availability.notesEnabled,
+     SidebarTabId.terminal => openWebUi && availability.terminalEnabled,
++    SidebarTabId.cline => openWebUi,
+     SidebarTabId.channels => openWebUi && availability.channelsEnabled,
+   };
+ }
 diff --git a/packages/conduit_core/lib/navigation/route_redirect.dart b/packages/conduit_core/lib/navigation/route_redirect.dart
 index f8e9d0eaf62055bdd16ace5491f97c09c6632c77..7e32745b6f67001b3fc1597f3ccafc4a59393a9d 100644
 --- a/packages/conduit_core/lib/navigation/route_redirect.dart
