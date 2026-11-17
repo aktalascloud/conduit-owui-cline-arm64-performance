@@ -1,8 +1,8 @@
 diff --git a/README.md b/README.md
-index 8725a352d5214db044df9bdb396fe9a0fb1501c5..f89155c92caf10e54fd0ce7d13bf65e1d07301fb 100644
+index 8725a352d5214db044df9bdb396fe9a0fb1501c5..8f56aa228a03b7d13f43e4128128b08e5ae2a16d 100644
 --- a/README.md
 +++ b/README.md
-@@ -1,391 +1,38 @@
+@@ -1,391 +1,9 @@
 -<h1 align="center">Conduit</h1>
 +# Conduit OWUI + Cline ARM64
  
@@ -14,12 +14,12 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..f89155c92caf10e54fd0ce7d13bf65e1
 -    height="96"
 -  />
 -</p>
-+[Русский](README.ru.md)
++[Upstream](https://github.com/cogwheel0/conduit) · [signed ARM64 APK](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Applied patches](patches/README.md)
  
 -<p align="center">
 -  <strong>A native mobile client for Open WebUI, your own model endpoints, and self-hosted agents.</strong>
 -</p>
-+Unofficial fork with reviewed agent/MCP fixes and extended Russian UI. One latest APK.
++Build with Python 3.12+, Git and GitHub CLI: `Build.cmd status`, then `Build.cmd build`. CI and checks are in `.avx1/`. Keep user data, model weights and credentials outside the source checkout.
  
 -<p align="center">
 -  <img
@@ -35,7 +35,7 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..f89155c92caf10e54fd0ce7d13bf65e1
 -    src="https://img.shields.io/badge/License-GPL%203.0-16A34A"
 -  />
 -</p>
-+[Upstream](https://github.com/cogwheel0/conduit) · [Release](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Patches](patches/README.md)
++Cline через SSH с проверкой ключа, русский интерфейс, VRM и дополнительные провайдеры. Инструкции шлюза — [remote](remote/README.md). APK проверен в CI, физический телефон проверяется отдельно.
  
 -<p align="center">
 -  <a href="https://play.google.com/store/apps/details?id=app.cogwheel.conduit">
@@ -55,8 +55,7 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..f89155c92caf10e54fd0ce7d13bf65e1
 -    />
 -  </a>
 -</p>
-+Mainstream adds account-local text/recording drafts, seekable read-aloud playback, language-filtered voices, connection retry and native iOS controls. Native Cline and server VRM remain. The upstream server-version warning is retained; this update does not claim physical-phone or 0.13 server qualification.
- 
+-
 -<p align="center">
 -  <a href="https://vercel.com/blog/vercel-open-source-program-fall-2025-cohort#conduit">
 -    <img
@@ -82,8 +81,7 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..f89155c92caf10e54fd0ce7d13bf65e1
 -    />
 -  </a>
 -</p>
-+Native Cline chat uses Conduit themes, responsive spacing and an Act-only composer. Avatar bindings refresh from the server; the private 100 MiB cache checks server SHA256 and downloads changed VRMs. Personal avatars stay on the server.
- 
+-
 -<p align="center">
 -  <a href="#ways-to-connect">Connect</a> ·
 -  <a href="#screenshots">Screenshots</a> ·
@@ -92,11 +90,9 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..f89155c92caf10e54fd0ce7d13bf65e1
 -  <a href="#privacy">Privacy</a> ·
 -  <a href="docs/BUILDING.md">Build from Source</a>
 -</p>
-+Direct connections include MiniMax global/CN presets for M3.1 Flash and M3. Saved model IDs stay unchanged. Flash thinking and tool history follow the provider contract; Responses uses client-held history. OpenRouter keeps its advertised routes and existing model choices. These optional direct profiles use your provider credentials and do not change FreeLLM. Regional Responses availability and real inference have not been verified.
- 
+-
 -<br>
-+## Build
- 
+-
 -<p align="center">
 -  <img
 -    src="https://github.com/user-attachments/assets/8531f859-a2c4-4e61-877e-9885d1413f4e"
@@ -104,11 +100,9 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..f89155c92caf10e54fd0ce7d13bf65e1
 -    width="360"
 -  />
 -</p>
-+Normal outbound chat saves project only assistant content that exactly matches the retained structured-output renderer. Raw output, literal text, versions and local rows are preserved; legacy queue hashes remain valid during crash recovery. Upstream may derive display content again when output changes. No bulk history migration runs.
- 
+-
 -<br>
-+Requires Python 3.12+, Git and GitHub CLI for CI. No LLM, model weights or Codex dependency.
- 
+-
 -Open WebUI is excellent on the desktop. On mobile it breaks down at the edges:
 -authentication behind a reverse proxy, streaming that drops when the app
 -backgrounds, getting a screenshot into a prompt, starting a chat from the home
@@ -349,11 +343,8 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..f89155c92caf10e54fd0ce7d13bf65e1
 -flutter pub get
 -dart run build_runner build
 -flutter run -d ios   # or: flutter run -d android
-+```cmd
-+Build.cmd status
-+Build.cmd build
- ```
- 
+-```
+-
 -Clone recursively and run `build_runner`. The Mermaid renderer is a submodule,
 -and generated Dart files are git-ignored.
 -
@@ -378,16 +369,13 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..f89155c92caf10e54fd0ce7d13bf65e1
 -[cogwheel@cogwheel.app](mailto:cogwheel@cogwheel.app).
 -
 -## Support
-+`build` verifies the clean published commit and dispatches the pinned workflow. For a prepared local compiler/SDK environment: `Build.cmd local`. Dependencies, flags, tests and license gates are in `.avx1/`; lockfiles and source history are retained. Signing keys stay outside the repository.
- 
+-
 -If Conduit is useful to you, you can support development through
 -[GitHub Sponsors](https://github.com/sponsors/cogwheel0) or
 -[Buy Me a Coffee](https://www.buymeacoffee.com/cogwheel0).
-+## Run and verify
- 
+-
 -## Acknowledgements
-+Install the single signed ARM64 APK. Keep user data separate from source. Android release AOT and native-library provenance/flags are recorded in the manifest. Phone FPS has not been measured.
- 
+-
 -- Supported by the [Vercel OSS Program](https://vercel.com/blog/vercel-open-source-program-fall-2025-cohort#conduit).
 -- Tested with BrowserStack.
 -- Code review provided by <a href="http://macroscope.com/?utm_source=open_source&utm_term=conduit">
@@ -404,57 +392,10 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..f89155c92caf10e54fd0ce7d13bf65e1
 -      />
 -    </picture>
 -  </a>.
-+Current checks and measurements: [.avx1/measurements/latest.json](.avx1/measurements/latest.json). CPU microbenchmarks are not LLM tokens/s. Original licenses and notices apply.
- 
+-
 -## License
-+Android native builds use Linux (the CI environment). Local builds require the same pinned SDK/NDK and private `CONDUIT_KEYSTORE_BASE64` / `CONDUIT_KEYSTORE_PASSWORD` environment variables; never commit their values.
- 
+-
 -Released under the [GPL-3.0 License](LICENSE).
-+The withdrawn PR914/918 timeline experiment is removed. Upstream long-chat scrollbar/extent instability remains a known limitation; passing widget tests is not frame-time or phone performance acceptance.
- 
+-
 -Conduit is an independent client and is not affiliated with Open WebUI.
-+Current maintainer-only applied differences: [patches](patches/README.md).
-diff --git a/README.ru.md b/README.ru.md
-new file mode 100644
-index 0000000000000000000000000000000000000000..89d6eacc090759639402be1215d1f12e8330a2de
---- /dev/null
-+++ b/README.ru.md
-@@ -0,0 +1,38 @@
-+# Conduit OWUI + Cline ARM64
-+
-+[English](README.md)
-+
-+Неофициальный форк: проверенные исправления для агентов/MCP и дополненный русский интерфейс. Один актуальный APK.
-+
-+[Upstream](https://github.com/cogwheel0/conduit) · [Release](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Patches](patches/README.md)
-+
-+Mainstream добавляет локальные черновики текста/записей с разделением аккаунтов, перемотку озвучивания, фильтр языков голосов, повтор подключения и элементы iOS. Native Cline и серверные VRM сохранены. Предупреждение upstream о версии сервера остаётся; проверка телефона и квалификация сервера 0.13 не заявляются.
-+
-+Нативный Cline-чат использует темы Conduit, адаптивные отступы и режим действия. Аватар сверяется с сервером; закрытый кэш 100 МиБ проверяет SHA256 и загружает изменённые VRM. Личные аватары остаются на сервере.
-+
-+Прямые подключения включают региональные пресеты MiniMax global/CN для M3.1 Flash и M3. Сохранённые ID моделей не меняются. Thinking Flash и история инструментов учитывают контракт провайдера; Responses передаёт историю с клиента. OpenRouter сохраняет модели и маршруты своего каталога. Эти дополнительные прямые профили используют ключ провайдера и не меняют FreeLLM. Доступность регионального Responses и реальный inference не проверены.
-+
-+## Сборка
-+
-+При обычном сохранении чата преобразуется только контент ассистента, точно совпавший с renderer сохранённого structured output. Сам output, буквальный текст, версии и локальные строки сохраняются; старые hash очереди совместимы с восстановлением после сбоя. Upstream может снова сформировать display content при изменении output. Массовой миграции истории нет.
-+
-+Нужны Python 3.12+, Git и GitHub CLI для CI. Сборка не зависит от модели, её весов или Codex.
-+
-+```cmd
-+Build.cmd status
-+Build.cmd build
-+```
-+
-+`build` проверяет чистоту опубликованного коммита и запускает закреплённый workflow. При готовом локальном компиляторе/SDK: `Build.cmd local`. Зависимости, флаги, тесты и проверки лицензий — в `.avx1/`. Lockfiles и история исходников сохранены. Ключи подписи в репозиторий не входят.
-+
-+## Установка и проверки
-+
-+Установите единственный подписанный ARM64 APK. Пользовательские данные храните отдельно от исходников. Release AOT, происхождение нативных библиотек и реальные флаги указаны в манифесте. FPS на физическом телефоне не измерялся.
-+
-+Последние проверки и замеры: [.avx1/measurements/latest.json](.avx1/measurements/latest.json). Микрозамеры CPU не означают скорость LLM. Исходные лицензии и уведомления сохранены.
-+
-+Нативная сборка Android выполняется в Linux, как в CI. Для локальной сборки нужны те же закреплённые SDK/NDK и закрытые переменные `CONDUIT_KEYSTORE_BASE64` / `CONDUIT_KEYSTORE_PASSWORD`; их значения нельзя коммитить.
-+
-+Эксперимент timeline из отозванных PR914/918 удалён. Нестабильность scrollbar/высоты длинных сообщений upstream остаётся известным ограничением; widget-тесты не подтверждают frame-time или производительность телефона.
-+
-+Только наши текущие применённые изменения: [patches](patches/README.md).
++[Checks and measurements](.avx1/measurements/latest.json)

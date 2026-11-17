@@ -5,7 +5,7 @@ Only currently applied maintainer differences from the exact official baseline a
 Mainstream-only commits, rejected proposals and reverted experiments are excluded.
 Коммиты самого mainstream, неприменённые предложения и отменённые эксперименты исключены.
 
-Official baseline: `d5430398dc16dffb62785fc137fab44b55d58cfb`. Downstream snapshot: `e08345f223a154a664670066d3db5b4f4b30a339`.
+Official baseline: `d5430398dc16dffb62785fc137fab44b55d58cfb`. Downstream snapshot: `a47b0d1301d69b65c573a1c8533709778bb00212`.
 Patches are already applied in this fork. Apply `series` only to a clean checkout of that exact baseline.
 В этом форке патчи уже применены. `series` предназначен только для чистого checkout указанной базы.
 Apply the numbered patches in the order listed in `series`. Each row describes one topic.
@@ -27,6 +27,6 @@ Native Cline with pinned bounded SSH transport, account-isolated VRM/cache/call 
 | 9 | [09-android-package.patch](09-android-package.patch) | Configure signed ARM64 Android package, manifests and Dart dependency locks / Настраивает подпись и сборку ARM64 APK, манифесты и фиксированные Dart-зависимости. | 7 |
 | 10 | [10-portable-install.patch](10-portable-install.patch) | Provide portable build commands and the fork installer / Добавляет команды переносимой сборки и установщик. | 4 |
 | 11 | [11-ci-build.patch](11-ci-build.patch) | Pin toolchains and package inputs, and run the fork build and publication checks / Закрепляет инструменты и входы сборки, запускает проверки пакетов и публикации. | 11 |
-| 12 | [12-project-docs.patch](12-project-docs.patch) | Document fork setup, support and license terms / Описывает установку, поддержку и условия лицензирования форка. | 2 |
+| 12 | [12-project-docs.patch](12-project-docs.patch) | Document fork setup, support and license terms / Описывает установку, поддержку и условия лицензирования форка. | 1 |
 | 13 | [13-fork-records.patch](13-fork-records.patch) | Record fork changes, upstream reviews and qualification measurements / Хранит журнал изменений, разбор upstream и результаты проверок. | 2 |
 | 14 | [14-runtime.patch](14-runtime.patch) | Local runtime, integration, security, dependency and platform adaptations / Наши изменения работы, интеграций, безопасности и платформ. | 1 |
