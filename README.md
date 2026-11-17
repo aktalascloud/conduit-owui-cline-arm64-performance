@@ -1,38 +1,9 @@
 # Conduit OWUI + Cline ARM64
 
-[Русский](README.ru.md)
+[Upstream](https://github.com/cogwheel0/conduit) · [signed ARM64 APK](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Applied patches](patches/README.md)
 
-Unofficial fork with reviewed agent/MCP fixes and extended Russian UI. One latest APK.
+Build with Python 3.12+, Git and GitHub CLI: `Build.cmd status`, then `Build.cmd build`. CI and checks are in `.avx1/`. Keep user data, model weights and credentials outside the source checkout.
 
-[Upstream](https://github.com/cogwheel0/conduit) · [Release](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Patches](patches/README.md)
+Cline через SSH с проверкой ключа, русский интерфейс, VRM и дополнительные провайдеры. Инструкции шлюза — [remote](remote/README.md). APK проверен в CI, физический телефон проверяется отдельно.
 
-Mainstream adds account-local text/recording drafts, seekable read-aloud playback, language-filtered voices, connection retry and native iOS controls. Native Cline and server VRM remain. The upstream server-version warning is retained; this update does not claim physical-phone or 0.13 server qualification.
-
-Native Cline chat uses Conduit themes, responsive spacing and an Act-only composer. Avatar bindings refresh from the server; the private 100 MiB cache checks server SHA256 and downloads changed VRMs. Personal avatars stay on the server.
-
-Direct connections include MiniMax global/CN presets for M3.1 Flash and M3. Saved model IDs stay unchanged. Flash thinking and tool history follow the provider contract; Responses uses client-held history. OpenRouter keeps its advertised routes and existing model choices. These optional direct profiles use your provider credentials and do not change FreeLLM. Regional Responses availability and real inference have not been verified.
-
-## Build
-
-Normal outbound chat saves project only assistant content that exactly matches the retained structured-output renderer. Raw output, literal text, versions and local rows are preserved; legacy queue hashes remain valid during crash recovery. Upstream may derive display content again when output changes. No bulk history migration runs.
-
-Requires Python 3.12+, Git and GitHub CLI for CI. No LLM, model weights or Codex dependency.
-
-```cmd
-Build.cmd status
-Build.cmd build
-```
-
-`build` verifies the clean published commit and dispatches the pinned workflow. For a prepared local compiler/SDK environment: `Build.cmd local`. Dependencies, flags, tests and license gates are in `.avx1/`; lockfiles and source history are retained. Signing keys stay outside the repository.
-
-## Run and verify
-
-Install the single signed ARM64 APK. Keep user data separate from source. Android release AOT and native-library provenance/flags are recorded in the manifest. Phone FPS has not been measured.
-
-Current checks and measurements: [.avx1/measurements/latest.json](.avx1/measurements/latest.json). CPU microbenchmarks are not LLM tokens/s. Original licenses and notices apply.
-
-Android native builds use Linux (the CI environment). Local builds require the same pinned SDK/NDK and private `CONDUIT_KEYSTORE_BASE64` / `CONDUIT_KEYSTORE_PASSWORD` environment variables; never commit their values.
-
-The withdrawn PR914/918 timeline experiment is removed. Upstream long-chat scrollbar/extent instability remains a known limitation; passing widget tests is not frame-time or phone performance acceptance.
-
-Current maintainer-only applied differences: [patches](patches/README.md).
+[Checks and measurements](.avx1/measurements/latest.json)
