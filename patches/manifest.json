@@ -3,9 +3,9 @@
   "grouping_version": 3,
   "ownership": "applied-downstream-only",
   "project": "conduit",
-  "upstream": "7ec48dee0d97def4da2a170fcd64021115661bf5",
-  "snapshot_source": "3341b13307b1db5e8d0c98cf415a48ded292b685",
-  "downstream_tree_without_patches": "c400ac6e94cfd1e4f6ee96d197274256bc106036",
+  "upstream": "d5430398dc16dffb62785fc137fab44b55d58cfb",
+  "snapshot_source": "e08345f223a154a664670066d3db5b4f4b30a339",
+  "downstream_tree_without_patches": "84e145c3e5fcff29989ae39d4336cd55ee504f51",
   "groups": [
     {
       "patch": "01-cline-ssh-gateway.patch",
@@ -232,7 +232,7 @@
         ".github/workflows/avx1-build.yml",
         ".gitignore"
       ],
-      "sha256": "66ecc257b0202096faa9ba214e208dd6cd997e132bce03b57899587b15b56fcc"
+      "sha256": "0ef67b2bfccb3a8412ede16dfcd7e5a9aa89b4b2b55167e56dde2b7783a6b12c"
     },
     {
       "patch": "12-project-docs.patch",
@@ -272,12 +272,12 @@
     "08-arm64-native.patch": "3ab33cffc6ae667acba8b878fe04fc53d8019765576f08a41a0342747ed54228",
     "09-android-package.patch": "58c3e602827817796c40de3e532c0f269d412f6cabba65f53bbe2a624615f7c5",
     "10-portable-install.patch": "a5f4c34a7c7c47f8f56c4bebdee4b03422237c66a6b0445f57c1f5d3aceeb4c9",
-    "11-ci-build.patch": "66ecc257b0202096faa9ba214e208dd6cd997e132bce03b57899587b15b56fcc",
+    "11-ci-build.patch": "0ef67b2bfccb3a8412ede16dfcd7e5a9aa89b4b2b55167e56dde2b7783a6b12c",
     "12-project-docs.patch": "a97a49e693bcc1bf2d8715373e40a0a2729818d49bfbc3be0cdabf0dd448ad19",
     "13-fork-records.patch": "10d25f732aec0e27ebe9ab74ecb2b6bacc505c00a3b35e6486b6d11be572c530",
     "14-runtime.patch": "7a01a1fca1e2b015e3383f5ace7fbd9d3cbbc7eeda1f261b378b3c6caf8221ec",
     ".gitattributes": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",
     "series": "40dacc80649bb4aec660d7f73fec8ed4fae643d5b6b8708c422c760b2cedf144",
-    "README.md": "b11cb0bc58587ea75f4635e63502d85d27830eae49f09ec1defd7887551ee517"
+    "README.md": "3f36c10dd5b95a37b7e852c89823632d1e0077c0e7543c434eb7745763ae98f2"
   }
 }
