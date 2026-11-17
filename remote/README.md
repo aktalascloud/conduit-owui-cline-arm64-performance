@@ -37,3 +37,6 @@ Conduit remains GPL-3.0. Cline is separately installed under its own license; se
 Use the paperclip to transfer a file through SSH into the private PC `user-uploads` inbox. Size and SHA256 are verified; identical uploads reuse the same content-addressed file. Limits: 64 MiB/file, 1 GiB/inbox, 4 attachments/message. Images up to 6 MiB each also use the normal `userImages` field, within an aggregate 8 MiB encoded-image budget; larger files remain accessible by their PC path. Image understanding requires a vision-capable model. Cline reads documents with its normal tools and approval rules.
 
 Files attach only to the next message you send yourself. Clear pending attachments before sending if needed. Completed uploads are user data, never disposable cache. No shell, SFTP or arbitrary destination path is exposed. Phone voice input/calls are not implemented for this connection. Desktop voice input is configured separately in Cline.
+## Кратко по-русски
+
+Установите Cline Desktop и Python 3.12+. На ПК запустите команду `remote/Setup.cmd` по примеру выше. В Conduit выберите Cline через SSH и импортируйте закрытый `connection.json` с ПК. Сверяйте отпечаток сервера. Для внешнего доступа открывайте только TCP 2222; порт панели 11280 оставьте на loopback. Подтверждение действий остаётся включённым, переподключение не повторяет незавершённые отправки.
