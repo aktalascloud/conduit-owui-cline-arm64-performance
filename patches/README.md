@@ -5,7 +5,7 @@ Only currently applied maintainer differences from the exact official baseline a
 Mainstream-only commits, rejected proposals and reverted experiments are excluded.
 Коммиты самого mainstream, неприменённые предложения и отменённые эксперименты исключены.
 
-Official baseline: `d5430398dc16dffb62785fc137fab44b55d58cfb`. Downstream snapshot: `a47b0d1301d69b65c573a1c8533709778bb00212`.
+Official baseline: `d5430398dc16dffb62785fc137fab44b55d58cfb`. Downstream snapshot: `224bae6d08c920dd5b823f1d335c8b112f5fa474`.
 Patches are already applied in this fork. Apply `series` only to a clean checkout of that exact baseline.
 В этом форке патчи уже применены. `series` предназначен только для чистого checkout указанной базы.
 Apply the numbered patches in the order listed in `series`. Each row describes one topic.
@@ -16,7 +16,7 @@ Native Cline with pinned bounded SSH transport, account-isolated VRM/cache/call 
 
 | Order | Patch | Description | Files |
 |---:|---|---|---:|
-| 1 | [01-cline-ssh-gateway.patch](01-cline-ssh-gateway.patch) | Pin SSH identity and handle reconnects, session listing and file uploads through the Windows gateway / Закрепляет идентификатор SSH, поддерживает переподключение, список сессий и загрузку файлов через Windows-шлюз. | 19 |
+| 1 | [01-cline-ssh-gateway.patch](01-cline-ssh-gateway.patch) | Pin SSH identity and handle reconnects, session listing and file uploads through the Windows gateway / Закрепляет идентификатор SSH, поддерживает переподключение, список сессий и загрузку файлов через Windows-шлюз. | 18 |
 | 2 | [02-cline-client.patch](02-cline-client.patch) | Add native Cline client and models for messages, sessions and tool approvals / Добавляет клиент и модели Cline для сообщений, сессий и разрешений инструментов. | 8 |
 | 3 | [03-cline-navigation.patch](03-cline-navigation.patch) | Add the Cline workspace route and retain sidebar search, drafts and selection / Добавляет маршрут рабочего пространства Cline и сохраняет поиск, черновики и выбор в панели. | 23 |
 | 4 | [04-voice-vrm.patch](04-voice-vrm.patch) | Bind avatars to account and file identity, bound textures and cache, and adapt voice controls / Привязывает VRM к аккаунту и файлу, ограничивает текстуры и кэш и адаптирует голосовые кнопки. | 26 |

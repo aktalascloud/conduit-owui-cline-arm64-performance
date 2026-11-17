@@ -471,10 +471,10 @@ index 0000000000000000000000000000000000000000..faa1f7f4f84858c51bbebd071ee0b5d7
 +}
 diff --git a/remote/README.md b/remote/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..4fe066e8ff54f0aa80eb724999e0ce6db60a66a0
+index 0000000000000000000000000000000000000000..3d3f6665afd78d0f8976940ead246123879e71b4
 --- /dev/null
 +++ b/remote/README.md
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,42 @@
 +# OWUI + Cline remote access
 +
 +Conduit connects to the installed Cline Hub JSON protocol through an encrypted SSH tunnel. Chat, history, project selection, model controls and tool approvals use native Flutter widgets and Conduit's Markdown renderer. Cline, its providers, sessions and project files stay on the PC. The APK contains no Cline binary, provider credential or configured server address.
@@ -514,49 +514,9 @@ index 0000000000000000000000000000000000000000..4fe066e8ff54f0aa80eb724999e0ce6d
 +Use the paperclip to transfer a file through SSH into the private PC `user-uploads` inbox. Size and SHA256 are verified; identical uploads reuse the same content-addressed file. Limits: 64 MiB/file, 1 GiB/inbox, 4 attachments/message. Images up to 6 MiB each also use the normal `userImages` field, within an aggregate 8 MiB encoded-image budget; larger files remain accessible by their PC path. Image understanding requires a vision-capable model. Cline reads documents with its normal tools and approval rules.
 +
 +Files attach only to the next message you send yourself. Clear pending attachments before sending if needed. Completed uploads are user data, never disposable cache. No shell, SFTP or arbitrary destination path is exposed. Phone voice input/calls are not implemented for this connection. Desktop voice input is configured separately in Cline.
-diff --git a/remote/README.ru.md b/remote/README.ru.md
-new file mode 100644
-index 0000000000000000000000000000000000000000..f8182925eaa64abf916b7bcfee1c08a2194fd8f7
---- /dev/null
-+++ b/remote/README.ru.md
-@@ -0,0 +1,37 @@
-+# Удалённый доступ: OWUI + Cline
++## Кратко по-русски
 +
-+Conduit подключается к JSON-протоколу установленного Cline Hub через зашифрованный SSH-туннель. Чат, история, выбор проекта и модели, подтверждения инструментов работают на нативных виджетах Flutter с Markdown Conduit. Cline, провайдеры, сессии и файлы проектов остаются на ПК. В APK нет бинарника Cline, ключей провайдеров или готового адреса сервера.
-+
-+## Windows
-+
-+Установите Python 3.12+ и Cline Desktop. Скачайте исходники этого репозитория и выполните:
-+
-+```powershell
-+.\remote\Setup.cmd -HostAddress your-host.example -ListenAddress 0.0.0.0 -Workspace C:\Projects\Example -InstallStartup -Start
-+```
-+
-+Для другого CLI или профиля используйте `-ClineCli` и `-ClineConfig`. Настройка создаёт закрытую папку в Local AppData, постоянный ключ сервера Ed25519 и два независимых случайных кода доступа. Выводится только путь к файлу подключения. Существующие ключи сохраняются. Необязательный ярлык автозагрузки запускает шлюз независимо от Codex.
-+
-+Для внешнего доступа разрешите входящий TCP 2222 для интерпретатора шлюза и пробросьте только этот порт на ПК. Порт панели 11280 оставьте на локальном интерфейсе. По возможности ограничьте адреса клиентов. Подписка на VPN не требуется.
-+
-+## Android
-+
-+Установите подписанный APK OWUI + Cline. Откройте **Начальный экран → Cline через SSH**, импортируйте закрытый `connection.json` с ПК и подключитесь. Передавайте этот файл лично; не публикуйте его. Параметры сохраняются только в защищённом хранилище телефона. Отпечаток сервера обязан совпадать; режима принятия любого ключа нет.
-+
-+Откройте сессию из бокового списка либо выберите папку проекта на ПК и модель для нового чата. Существующие сессии сохраняют свою модель и каталог; перед отправкой явно выберите «План» или «Действие». Нативный интерфейс переведён на русский и английский. При необходимости войдите к провайдеру модели на ПК. После обрыва связи подключитесь снова и проверьте историю, прежде чем повторять сообщение с неизвестным исходом.
-+
-+## Границы и безопасность
-+
-+- Shell, SFTP, обратный туннель и произвольные TCP-адреса запрещены. Доступны локальная панель Cline и единственный RPC приёма файлов.
-+- Проверяются ключ сервера и отдельный код панели; ограничены подключения и попытки входа. Автоматического повтора команд нет.
-+- Подтверждения Cline сохраняются. Уже запущенный в Desktop ход может сохранять исходного владельца подтверждений; новые ходы из Conduit показывают нативные карточки разрешений с просмотром полного запроса.
-+- SSH не защищает интернет-канал от объёмного DDoS. Для такой защиты нужен сервис с защитой выше по сети либо закрытая VPN-сеть.
-+- Потеря связи с телефоном не означает повторную отправку сообщения. Перед ручным повтором действия с неизвестным исходом проверьте состояние сессии.
-+
-+Лицензия Conduit — GPL-3.0. Cline устанавливается отдельно по собственной лицензии: [исходный проект](https://github.com/cline/cline). Уведомления зависимостей Dart SSH сохраняются; AsyncSSH распространяется по EPL-2.0 либо GPL-2.0-or-later. Конфигурацию, ключи и рабочие данные нельзя помещать в исходники и релизы.
-+
-+## Изображения и документы
-+
-+Кнопка скрепки передаёт файл через SSH в закрытую папку `user-uploads` на ПК. Проверяются размер и SHA256; повторная передача одинакового файла не создаёт копию. Максимум: 64 МиБ на файл, 1 ГиБ на папку, 4 вложения на сообщение. Изображения до 6 МиБ каждое также передаются через штатный `userImages`, в пределах суммарных 8 МиБ после кодирования; более крупные файлы доступны агенту по пути на ПК. Для понимания изображений нужна модель с поддержкой vision. Документы читает Cline своими инструментами с обычными разрешениями.
-+
-+Файлы добавляются только к следующему сообщению, которое вы отправите сами. Вложения можно убрать перед отправкой. Готовые файлы — пользовательские данные; шлюз не удаляет их как кеш. Нет shell, SFTP и записи по произвольному пути. Голосовой ввод и звонки с телефона для этого подключения пока не реализованы. Голосовой ввод Desktop настраивается отдельно в Cline.
++Установите Cline Desktop и Python 3.12+. На ПК запустите команду `remote/Setup.cmd` по примеру выше. В Conduit выберите Cline через SSH и импортируйте закрытый `connection.json` с ПК. Сверяйте отпечаток сервера. Для внешнего доступа открывайте только TCP 2222; порт панели 11280 оставьте на loopback. Подтверждение действий остаётся включённым, переподключение не повторяет незавершённые отправки.
 diff --git a/remote/Setup.cmd b/remote/Setup.cmd
 new file mode 100644
 index 0000000000000000000000000000000000000000..a422cdaf724a0a05932bb6befd1df91548428b5f
