@@ -19,9 +19,22 @@
 //! * `direct`: a fresh profile, Direct, the fake model as an
 //!   OpenAI-compatible provider (`FAKE_OPENAI_URL`), Test, Save, and the
 //!   direct-only main frame.
+//! * `direct-advanced`: Settings › Direct Connections end to end: headers,
+//!   manual models, the Responses API, the history location, a connection
+//!   kept in Open WebUI, Ollama's models, an MCP server signed in with OAuth
+//!   and its tool called, and web search reaching the request ([`direct`]).
 //! * `hermes`: a fresh profile, Hermes in API-server mode against the fake
 //!   Hermes server (`FAKE_HERMES_URL`, `FAKE_HERMES_KEY`), Test, Save, and
 //!   the Hermes-only main frame.
+//! * `hermes-sessions`: Hermes sessions on a real local Desktop gateway
+//!   (`HERMES_GATEWAY_URL`, `HERMES_GATEWAY_TOKEN`): opened in the chat
+//!   pane and answered, pin, rename, fork, archive, hide and Hidden Chats,
+//!   Branch from Here, Undo Last Turn, delete; and a read-only session of
+//!   the fake API server continued in a copy ([`hermes_sessions`]).
+//! * `hermes-rooms`: Hermes Bot Mode and Group Chats on the same real
+//!   gateway: a bot's Bot Chat, New Room, @mentions answered by both bots,
+//!   a paused debate continued, an approval card, Room Info, rename, stop
+//!   and disband ([`hermes_rooms`]).
 //! * `sidebar`: sign in to the seeded server, then the sidebar: folders as the
 //!   account left them, open, hover, rename, pin, move to folder (menu and
 //!   drop), remove from folder, archive and the archived section, delete,
@@ -37,6 +50,11 @@
 //!   Desktop, Quick Ask, notifications, close to the menu bar, open at
 //!   login, the model the composer names after a send and Show Sidebar
 //!   ([`shell`]).
+//! * `share`: the Share menu's hand-off (a share staged in the inbox as the
+//!   Share extension stages it, opened by its `conduit://share/` link) and
+//!   the Services menu's Ask Conduit and New Conduit Chat With Selection
+//!   ([`share`]); `share-system` waits for the real extension and Services
+//!   menu (`packaging/macos/share/e2e-system.sh`).
 //! * `sections`: the sidebar's areas on the seeded server: sections per
 //!   capability, collapse kept per account, the keyboard across sections,
 //!   note and channel links, the Go menu, lists on `*.changed`, and
@@ -48,6 +66,10 @@
 //!   and branches kept on the server, Branch in New Chat, Delete, Compare
 //!   Models with Continue from Here and Merge Responses, Export, Share
 //!   Chat, Generate Title, Mark as Unread and Save Chat ([`actions`]).
+//! * `widget`: the desktop widget's snapshot (sign-in, rename, archive, a
+//!   new chat, the language, sign-out) and its links ([`widget`]).
+//! * `intents`: Shortcuts' actions (App Intents) through the Swift
+//!   intents' own `perform()` and chat query ([`intents`]).
 //! * `offline-setup`, `offline`: a signed-in account whose server is out of
 //!   reach at launch, with conduitd restarted once while the window opens;
 //!   two launches, run by `crates/app/e2e-offline.sh` ([`offline`]).
@@ -59,15 +81,33 @@
 //! typed.
 
 mod actions;
+mod calendar;
+mod channels;
 mod chat;
 mod chat_settings;
 mod composer;
+mod dictation;
+mod direct;
+mod hermes_admin;
+mod hermes_cards;
+mod hermes_rooms;
+mod hermes_sessions;
 mod integration;
+mod intents;
+mod librechat;
+mod notes;
 mod offline;
+mod read_aloud;
 mod rendering;
 mod sections;
 mod settings;
+mod share;
 pub mod shell;
+mod tasks;
+mod terminal;
+mod voice_call;
+mod widget;
+mod workspace;
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -98,6 +138,18 @@ pub struct E2eInputs {
     /// KEY=VALUE pairs (the env file). Never printed.
     pub env: BTreeMap<String, String>,
 }
+
+/// The env file's server addresses: every server a pass signs in to, or
+/// sends credentials, messages or settings to. Each must be this Mac's own
+/// (loopback), or the env file is not used.
+const SERVER_URLS: [&str; 6] = [
+    "OWUI_URL",
+    "LIBRECHAT_URL",
+    "HERMES_GATEWAY_URL",
+    "HERMES_DESKTOP_URL",
+    "HERMES_A_URL",
+    "HERMES_B_URL",
+];
 
 /// Whether `url` is an http(s) address on this Mac (loopback).
 pub(crate) fn is_local_url(url: &str) -> bool {
@@ -135,9 +187,11 @@ impl E2eInputs {
         // The passes sign in with these credentials and photograph what
         // the server shows: only ever on this Mac's own test server.
         // The address itself is never logged: it may be private.
-        if env.get("OWUI_URL").is_some_and(|u| !is_local_url(u)) {
-            println!("SMOKE FAILED e2e OWUI_URL is not a local (loopback) address");
-            env.clear();
+        for key in SERVER_URLS {
+            if env.get(key).is_some_and(|u| !is_local_url(u)) {
+                println!("SMOKE FAILED e2e {key} is not a local (loopback) address");
+                env.clear();
+            }
         }
         Some(Self { scenario, env })
     }
@@ -709,21 +763,40 @@ pub async fn run(inputs: E2eInputs, dir: PathBuf, cx: &mut AsyncApp) -> bool {
         "owui" => owui(&inputs, &dir, cx).await,
         "sso" => sso(&inputs, &dir, cx).await,
         "direct" => direct(&inputs, &dir, cx).await,
+        "direct-advanced" => direct::run(&inputs, &dir, cx).await,
         "hermes" => hermes(&inputs, &dir, cx).await,
+        "hermes-sessions" => hermes_sessions::run_scenario(&inputs, &dir, cx).await,
+        "hermes-rooms" => hermes_rooms::run_scenario(&inputs, &dir, cx).await,
+        "hermes-cards" => hermes_cards::run(&inputs, &dir, cx).await,
+        "hermes-admin" => hermes_admin::run(&inputs, &dir, cx).await,
         "sidebar" => sidebar(&inputs, &dir, cx).await,
         "chat" | "chat-direct" | "chat-smoke" | "chat-read-only" => {
             chat::run(&inputs, &dir, cx).await
         }
         "integration" => integration::run(&inputs, &dir, cx).await,
         "sections" => sections::run(&inputs, &dir, cx).await,
+        "channels" => channels::run(&inputs, &dir, cx).await,
+        "librechat" => librechat::run(&inputs, &dir, cx).await,
         "composer" => composer::run(&inputs, &dir, cx).await,
         "chat-settings" => chat_settings::run(&inputs, &dir, cx).await,
         "shell" | "shell-notify" | "shell-close" => shell::run(&inputs, &dir, cx).await,
+        "share" | "share-system" => share::run(&inputs, &dir, cx).await,
         "offline-setup" => offline::setup(&inputs, &dir, cx).await,
         "offline" => offline::run(&inputs, &dir, cx).await,
         "settings" => settings::run(&inputs, &dir, cx).await,
         "actions" => actions::run(&inputs, &dir, cx).await,
+        "read-aloud" => read_aloud::run(&inputs, &dir, cx).await,
         "rendering" => rendering::run(&inputs, &dir, cx).await,
+        "dictation" => dictation::run(&inputs, &dir, cx).await,
+        "notes" => notes::run(&inputs, &dir, cx).await,
+        "dictation-recovered" => dictation::recovered(&inputs, &dir, cx).await,
+        "voice-call" => voice_call::run(&inputs, &dir, cx).await,
+        "workspace" => workspace::run(&inputs, &dir, cx).await,
+        "calendar" => calendar::run(&inputs, &dir, cx).await,
+        "tasks" => tasks::run(&inputs, &dir, cx).await,
+        "widget" => widget::run(&inputs, &dir, cx).await,
+        "intents" => intents::run(&inputs, &dir, cx).await,
+        "terminal" => terminal::run(&inputs, &dir, cx).await,
         other => ok(&format!("unknown scenario {other}"), false),
     }
 }
@@ -2146,6 +2219,25 @@ mod tests {
         assert!(!is_local_url("http://10.0.0.5:8080"));
         assert!(!is_local_url("http://localhost.example.org"));
         assert!(!is_local_url("file:///tmp/x"));
+        // An env file naming another machine is not used, for any kind of
+        // server.
+        for key in SERVER_URLS {
+            let file = std::env::temp_dir()
+                .join(format!("conduit-e2e-env-{key}-{}.env", std::process::id()));
+            std::fs::write(&file, format!("{key}=https://chat.example.org\nX=1\n")).unwrap();
+            let args: Vec<String> = ["app", "--e2e", "smoke", "--e2e-env"]
+                .into_iter()
+                .map(String::from)
+                .chain([file.display().to_string()])
+                .collect();
+            let inputs = E2eInputs::from_args(&args).unwrap();
+            assert_eq!(inputs.get(key), None, "{key} names another machine");
+            assert_eq!(
+                inputs.get("X"),
+                None,
+                "{key}: the rest of the file is still used"
+            );
+        }
     }
 
     #[test]

@@ -5,9 +5,14 @@
 //! [`open_files`]), answer notifications ([`notify`], [`notifications`]),
 //! the Quick Ask hotkey and placement ([`hotkey`], [`placement`]), the
 //! menu-bar item ([`tray`]) and open at login ([`login_item`]); Sparkle
-//! updates ([`updater`]); and Reduce Motion ([`reduce_motion`]).
+//! updates ([`updater`]); Reduce Motion ([`reduce_motion`]); read
+//! aloud's voices and player ([`speech_engine`]) and Now Playing
+//! ([`now_playing`]); the desktop widget's snapshot ([`widget`]); and the
+//! Share extension's inbox ([`share_inbox`]) and "Ask Conduit" in the
+//! Services menu ([`services`]).
 
 pub mod crash;
+pub mod date_picker;
 pub mod deep_link;
 #[cfg(target_os = "macos")]
 #[cfg(target_os = "macos")]
@@ -21,15 +26,20 @@ pub mod macos;
 #[cfg(target_os = "macos")]
 pub mod notifications;
 pub mod notify;
+pub mod now_playing;
 pub mod open_files;
 pub mod open_url;
 pub mod placement;
 pub mod reduce_motion;
+pub mod services;
 pub mod share;
+pub mod share_inbox;
 pub mod sheet;
 pub mod speech;
+pub mod speech_engine;
 pub mod sso;
 #[cfg(target_os = "macos")]
 pub mod tray;
 #[cfg(target_os = "macos")]
 pub mod updater;
+pub mod widget;

@@ -10,6 +10,11 @@
 //! and checks the choices through `settings.set` (core's `AppSettings`)
 //! and `voice.*` (what the server can do, the desktop's own transcription
 //! engine); the voices on this Mac are AVSpeech's ([`crate::shell::speech`]).
+//!
+//! Dictation ([`crate::stores::dictation`]) uses the transcription language
+//! and the pause with every engine, this Mac's included. With Whisper on
+//! This Mac, its models are listed here to download, use and delete; a
+//! download's progress comes as `voice.changed`.
 
 use std::rc::Rc;
 
@@ -17,8 +22,9 @@ use conduit_components::ActiveConduitTheme as _;
 use conduit_components::views::kit::{Button, Segment, Segmented, Switch, setting_row};
 use conduit_components::views::settings::{settings_section, stepper_with};
 use conduit_protocol::{
-    AppSettingsDto, AppSettingsPatch, DirectVoiceProviderDto, NoParams, VoiceProviderOptions,
-    VoiceSettings, VoiceSettingsEdit, VoiceSpeak, VoiceVoices, methods,
+    AppSettingsDto, AppSettingsPatch, DirectVoiceProviderDto, Event, NoParams, VoiceModel,
+    VoiceModelRef, VoiceModels, VoiceProviderOptions, VoiceSettings, VoiceSettingsEdit,
+    VoiceVoices, events, methods,
 };
 use gpui_kit::component::input::{InputState, Textarea, TextareaState};
 use gpui_kit::prelude::*;
@@ -33,6 +39,9 @@ use crate::stores::app_settings::AppSettingsStore;
 use crate::views::forms;
 
 use super::controls::{self, Choice, popup};
+
+/// Settings' preview, as the daemon names it (the phone's id).
+const PREVIEW_ID: &str = "tts_preview";
 
 /// Core's `ttsSpeedPresets`.
 pub const SPEEDS: [f64; 5] = [0.75, 1.0, 1.25, 1.5, 2.0];
@@ -56,6 +65,8 @@ pub struct AudioPane {
     pub server_voices: Option<VoiceVoices>,
     pub device_voices: Vec<DeviceVoice>,
     pub providers: Option<VoiceProviderOptions>,
+    /// Whisper's models, and how far a download has got.
+    pub models: Option<VoiceModels>,
     pub transcription_model: Entity<InputState>,
     pub speech_model: Entity<InputState>,
     pub speech_voice: Entity<InputState>,
@@ -65,10 +76,6 @@ pub struct AudioPane {
     /// The connection chosen in the pop-up, before Save.
     pub provider: Option<String>,
     pub provider_saved: Option<bool>,
-    pub previewing: bool,
-    /// Bumped when the pane is left: a preview still on its way stays
-    /// silent.
-    preview_round: u64,
     /// The fields hold the loaded settings' provider.
     provider_filled: bool,
 }
@@ -107,12 +114,35 @@ impl AudioPane {
             },
         )
         .detach();
+        cx.observe(&stores.speech, |_, _, cx| cx.notify()).detach();
+        // A Whisper download's progress, and the model it leaves ready.
+        stores.connection.update(cx, |c, _| {
+            c.subscribe("audio-pane", &[events::VOICE_CHANGED], vec![])
+        });
+        cx.subscribe(&stores.connection, |this: &mut Self, _, event, cx| {
+            if let crate::stores::connection::ConnectionEvent::Daemon(event) = event
+                && let Event::VoiceChanged(models) = event.as_ref()
+            {
+                let finished = this.models.as_ref().is_some_and(|before| {
+                    before.models.iter().any(|m| {
+                        !m.downloaded && models.models.iter().any(|n| n.id == m.id && n.downloaded)
+                    })
+                });
+                this.models = Some(models.clone());
+                if finished {
+                    this.refresh_voice(cx);
+                }
+                cx.notify();
+            }
+        })
+        .detach();
         let mut this = Self {
             stores,
             voice: None,
             server_voices: None,
             device_voices: speech::voices(),
             providers: None,
+            models: None,
             transcription_model,
             speech_model,
             speech_voice,
@@ -121,9 +151,7 @@ impl AudioPane {
             instructions,
             provider: None,
             provider_saved: None,
-            preview_round: 0,
             provider_filled: false,
-            previewing: false,
         };
         this.refresh(window, cx);
         this
@@ -142,15 +170,21 @@ impl AudioPane {
         let voice = rpc.call::<methods::VoiceSettings>(&NoParams);
         let voices = rpc.call::<methods::VoiceVoices>(&NoParams);
         let providers = rpc.call::<methods::SettingsVoiceProviders>(&NoParams);
+        let models = rpc.call::<methods::VoiceModels>(&NoParams);
         self.fill_provider(window, cx);
         cx.spawn_in(
             window,
             async move |this: WeakEntity<Self>, cx: &mut AsyncWindowContext| {
                 let (voice, voices, providers) = (voice.await, voices.await, providers.await);
+                let models = models.await;
                 let _ = this.update(cx, |s, cx| {
                     match voice {
                         Ok(v) => s.voice = Some(v),
                         Err(e) => log::warn!("voice.settings: {e}"),
+                    }
+                    match models {
+                        Ok(m) => s.models = Some(m),
+                        Err(e) => log::warn!("voice.models: {e}"),
                     }
                     // No server, or one with no voices: only the default.
                     s.server_voices = voices.ok();
@@ -163,6 +197,72 @@ impl AudioPane {
             },
         )
         .detach();
+    }
+
+    /// Reads `voice.settings` again (a model finished downloading).
+    fn refresh_voice(&mut self, cx: &mut Context<Self>) {
+        let call = self.rpc(cx).call::<methods::VoiceSettings>(&NoParams);
+        cx.spawn(
+            async move |this: WeakEntity<Self>, cx: &mut gpui_kit::AsyncApp| {
+                let result = call.await;
+                let _ = this.update(cx, |s, cx| {
+                    if let Ok(v) = result {
+                        s.voice = Some(v);
+                    }
+                    cx.notify();
+                });
+            },
+        )
+        .detach();
+    }
+
+    /// Download: the model, which becomes the one used.
+    pub fn download_model(&mut self, id: &str, window: &mut Window, cx: &mut Context<Self>) {
+        let call = self
+            .rpc(cx)
+            .call::<methods::VoiceDownloadModel>(&VoiceModelRef { id: id.to_string() });
+        self.use_model(id, window, cx);
+        self.model_call(call, cx);
+    }
+
+    /// Delete: the model, or its download under way.
+    pub fn delete_model(&mut self, id: &str, cx: &mut Context<Self>) {
+        let call = self
+            .rpc(cx)
+            .call::<methods::VoiceDeleteModel>(&VoiceModelRef { id: id.to_string() });
+        self.model_call(call, cx);
+    }
+
+    fn model_call(
+        &mut self,
+        call: impl std::future::Future<Output = Result<VoiceModels, conduit_daemon::RpcError>> + 'static,
+        cx: &mut Context<Self>,
+    ) {
+        cx.spawn(
+            async move |this: WeakEntity<Self>, cx: &mut gpui_kit::AsyncApp| {
+                let result = call.await;
+                let _ = this.update(cx, |s, cx| {
+                    match result {
+                        Ok(m) => s.models = Some(m),
+                        Err(e) => log::warn!("voice models: {e}"),
+                    }
+                    s.refresh_voice(cx);
+                });
+            },
+        )
+        .detach();
+    }
+
+    /// Use: the downloaded model whisper transcribes with.
+    pub fn use_model(&mut self, id: &str, window: &mut Window, cx: &mut Context<Self>) {
+        self.save_voice(
+            VoiceSettingsEdit {
+                local_model: Some(id.to_string()),
+                ..Default::default()
+            },
+            window,
+            cx,
+        );
     }
 
     /// Puts the saved Voice Provider in the fields.
@@ -342,68 +442,24 @@ impl AudioPane {
         self.set(patch, cx);
     }
 
-    /// Preview Voice: the phone's sentence in the chosen voice and speed.
-    pub fn preview(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let l10n = cx.l10n().clone();
-        let s = self.store().read(cx).settings().clone();
-        let text = l10n.tts_preview_text();
-        if s.tts_engine != "server" {
-            speech::speak(&text, s.tts_voice.as_deref(), s.tts_speed);
-            return;
-        }
-        let call = self.rpc(cx).call::<methods::VoiceSpeak>(&VoiceSpeak {
-            text,
-            voice: s.tts_server_voice_id.clone(),
-        });
-        let http = self.stores.connection.read(cx).http().cloned();
-        self.previewing = true;
-        let round = self.preview_round;
-        cx.notify();
-        cx.spawn_in(
-            window,
-            async move |this: WeakEntity<Self>, cx: &mut AsyncWindowContext| {
-                let audio = match (call.await, http) {
-                    (Ok(job), Some(http)) => match http.speech(&job.job_id).await {
-                        Ok(audio) => Some(audio),
-                        Err(e) => {
-                            log::warn!("the server's speech for a preview: {e}");
-                            None
-                        }
-                    },
-                    (Err(e), _) => {
-                        log::warn!("voice.speak: {e}");
-                        None
-                    }
-                    _ => None,
-                };
-                let _ = this.update(cx, |s, cx| {
-                    s.previewing = false;
-                    if s.preview_round != round {
-                        cx.notify();
-                        return;
-                    }
-                    if let Some(audio) = audio
-                        && !speech::play(&audio.bytes)
-                    {
-                        log::warn!(
-                            "the server's speech would not play ({})",
-                            audio.content_type
-                        );
-                    }
-                    cx.notify();
-                });
-            },
-        )
-        .detach();
+    /// Preview Voice: the phone's sentence in the chosen engine, voice and
+    /// speed, read as any reading is (`speech.preview`); pressed again, it
+    /// stops.
+    pub fn preview(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+        let text = cx.l10n().tts_preview_text();
+        self.stores.speech.update(cx, |s, cx| s.preview(text, cx));
+    }
+
+    /// Whether the preview is being read.
+    pub fn previewing(&self, cx: &App) -> bool {
+        self.stores.speech.read(cx).is_reading(PREVIEW_ID)
     }
 
     /// Stops Preview Voice (the pane was left, or Settings closed).
     pub fn stop_preview(&mut self, cx: &mut Context<Self>) {
-        self.preview_round += 1;
-        if std::mem::take(&mut self.previewing) {
-            cx.notify();
+        if self.previewing(cx) {
+            self.stores.speech.update(cx, |s, cx| s.stop(cx));
         }
-        speech::stop();
     }
 
     pub fn save_provider(&mut self, cx: &mut Context<Self>) {
@@ -523,7 +579,9 @@ impl AudioPane {
             )
             .into_any_element(),
         ];
-        if engine != "device" {
+        // Every engine dictates in the transcription language and stops
+        // after the pause, this Mac's recognizer too.
+        {
             let mut languages = vec![Choice::new("", l10n.stt_transcription_language_auto())];
             for (i, code) in LOCALES.iter().enumerate() {
                 let code = code.replace('_', "-");
@@ -608,6 +666,134 @@ impl AudioPane {
             .into_any_element(),
         );
         settings_section(l10n.stt_settings(), None, rows, cx).into_any_element()
+    }
+
+    /// Whisper on This Mac's models: each one's size and state, with
+    /// Download (and its progress), Use and Delete.
+    fn models_group(&self, l10n: &L10n, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let models = self.models.clone()?;
+        let chosen = self.voice.as_ref().and_then(|v| v.local_model.clone());
+        let ready = self.voice.as_ref().is_some_and(|v| v.local_ready);
+        let rows: Vec<AnyElement> = models
+            .models
+            .iter()
+            .map(|m| self.model_row(m, chosen.as_deref(), &models, l10n, cx))
+            .collect();
+        let footer = if ready {
+            l10n.desktop_stt_models_description()
+        } else {
+            format!(
+                "{} {}",
+                l10n.desktop_stt_models_description(),
+                l10n.desktop_stt_local_needs_model()
+            )
+        };
+        Some(
+            settings_section(
+                l10n.desktop_stt_models_title(),
+                Some(footer.into()),
+                rows,
+                cx,
+            )
+            .into_any_element(),
+        )
+    }
+
+    fn model_row(
+        &self,
+        m: &VoiceModel,
+        chosen: Option<&str>,
+        models: &VoiceModels,
+        l10n: &L10n,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let view = cx.entity().downgrade();
+        let t = cx.conduit().clone();
+        let id = m.id.clone();
+        let in_use = m.downloaded && chosen == Some(m.id.as_str());
+        let mut detail = vec![size_label(m.size_bytes)];
+        if m.english_only {
+            detail.push(l10n.desktop_stt_model_english_only());
+        }
+        if models.failed_id.as_deref() == Some(m.id.as_str()) {
+            detail.push(match models.failure.as_deref() {
+                Some("checksum") => l10n.desktop_stt_model_failed_checksum(),
+                _ => l10n.desktop_stt_model_failed_network(),
+            });
+        }
+        let note = |text: String| {
+            div()
+                .text_size(px(t.metrics.small))
+                .text_color(t.roles.text_subtle)
+                .child(SharedString::from(text))
+                .into_any_element()
+        };
+        let mut controls: Vec<AnyElement> = vec![];
+        if let Some(received) = m.received_bytes {
+            let percent = if m.size_bytes > 0 {
+                (received * 100 / m.size_bytes).clamp(0, 100)
+            } else {
+                0
+            };
+            controls.push(note(
+                l10n.desktop_stt_model_downloading(&percent.to_string()),
+            ));
+            controls.push(
+                Button::new(
+                    gpui_kit::ElementId::Name(format!("model-cancel-{id}").into()),
+                    l10n.cancel(),
+                )
+                .on_click(Rc::new(move |_, _, cx| {
+                    let _ = view.update(cx, |v, cx| v.delete_model(&id, cx));
+                }))
+                .into_any_element(),
+            );
+        } else if m.downloaded {
+            if in_use {
+                controls.push(note(l10n.desktop_stt_model_in_use()));
+            } else {
+                let view = view.clone();
+                let id = id.clone();
+                controls.push(
+                    Button::new(
+                        gpui_kit::ElementId::Name(format!("model-use-{id}").into()),
+                        l10n.desktop_stt_model_use(),
+                    )
+                    .on_click(Rc::new(move |_, window, cx| {
+                        let _ = view.update(cx, |v, cx| v.use_model(&id, window, cx));
+                    }))
+                    .into_any_element(),
+                );
+            }
+            controls.push(
+                Button::new(
+                    gpui_kit::ElementId::Name(format!("model-delete-{id}").into()),
+                    l10n.desktop_stt_model_delete(),
+                )
+                .on_click(Rc::new(move |_, _, cx| {
+                    let _ = view.update(cx, |v, cx| v.delete_model(&id, cx));
+                }))
+                .into_any_element(),
+            );
+        } else {
+            controls.push(
+                Button::new(
+                    gpui_kit::ElementId::Name(format!("model-download-{id}").into()),
+                    l10n.desktop_stt_model_download(&size_label(m.size_bytes)),
+                )
+                .on_click(Rc::new(move |_, window, cx| {
+                    let _ = view.update(cx, |v, cx| v.download_model(&id, window, cx));
+                }))
+                .into_any_element(),
+            );
+        }
+        setting_row(
+            m.name.clone(),
+            Some(detail.join(" \u{00b7} ").into()),
+            div().flex().items_center().gap(px(8.)).children(controls),
+            cx,
+        )
+        .into_any_element()
     }
 
     fn tts_group(
@@ -697,13 +883,21 @@ impl AudioPane {
         }));
         let view = cx.entity().downgrade();
         // Beside the voice it plays, as System Settings' Spoken Content.
+        let previewing = self.previewing(cx);
         let preview = conduit_components::views::kit::IconButton::new(
             "tts-preview",
-            conduit_components::assets::IconName::Play,
-            l10n.tts_preview(),
+            if previewing {
+                conduit_components::assets::IconName::Square
+            } else {
+                conduit_components::assets::IconName::Play
+            },
+            if previewing {
+                l10n.desktop_stop_speaking()
+            } else {
+                l10n.tts_preview()
+            },
         )
         .size(26., 13.)
-        .disabled(self.previewing)
         .on_click(Rc::new(move |_, window, cx| {
             let _ = view.update(cx, |v, cx| v.preview(window, cx));
         }));
@@ -853,8 +1047,23 @@ impl Render for AudioPane {
             .gap(px(22.))
             .child(self.calls_group(&s, &l10n, cx))
             .child(self.stt_group(&s, &l10n, window, cx))
+            .children(if stt_engine(&s, self.voice.as_ref()) == "local" {
+                self.models_group(&l10n, cx)
+            } else {
+                None
+            })
             .child(self.tts_group(&s, &l10n, window, cx))
             .child(self.provider_group(&l10n, window, cx))
+    }
+}
+
+/// A download's size as Finder writes it: `148 MB`.
+fn size_label(bytes: i64) -> String {
+    let mb = bytes as f64 / 1_000_000.0;
+    if mb >= 1_000.0 {
+        format!("{:.1} GB", mb / 1_000.0)
+    } else {
+        format!("{} MB", mb.round() as i64)
     }
 }
 
@@ -862,6 +1071,12 @@ impl Render for AudioPane {
 mod tests {
     use super::*;
     use crate::stores::app_settings::desktop_defaults;
+
+    #[test]
+    fn model_sizes_read_as_finder_writes_them() {
+        assert_eq!(size_label(77_704_715), "78 MB");
+        assert_eq!(size_label(1_550_000_000), "1.6 GB");
+    }
 
     #[test]
     fn the_engine_follows_core_then_the_desktop_engine() {

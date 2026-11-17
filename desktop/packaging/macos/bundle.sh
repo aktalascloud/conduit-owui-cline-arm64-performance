@@ -5,17 +5,26 @@
 #   desktop/packaging/macos/bundle.sh [command] [options]
 #
 # Commands (default: all, in this order):
-#   build          compile the app (Rust), conduitd (`dart build cli`) and
-#                  libconduit_whisper, and assemble an unsigned Conduit.app
+#   build          compile the app (Rust, with its Swift App Intents),
+#                  conduitd (`dart build cli`), libconduit_whisper, the
+#                  desktop widget (widget/build.sh) and the Share extension
+#                  (share/build.sh), and assemble an unsigned Conduit.app
+#                  (the intents' metadata and strings from intents.sh, the
+#                  third-party notices from notices/notices.sh, which needs
+#                  cargo-about). The app is built without its test harness
+#                  (no `harness` feature).
 #   sign           sign inside out with the hardened runtime: conduitd's
-#                  libraries, conduitd, Sparkle's helpers and framework, the app
+#                  libraries, conduitd, Sparkle's helpers and framework, the
+#                  widget's library and extension, the Share extension
+#                  (sandboxed), the app
 #   notarize-app   notarize Conduit.app and staple it (skipped without
 #                  credentials, see below)
 #   dmg            Conduit-<version>.dmg with an Applications link (signed
 #                  when there is a signing identity)
 #   notarize-dmg   notarize the DMG and staple it (skipped without credentials)
-#   verify         codesign, Gatekeeper, architecture, minimum-OS and
-#                  Info.plist checks, and the bundle's sizes
+#   verify         codesign, Gatekeeper, architecture, minimum-OS,
+#                  Info.plist, App Intents, notices and no-test-harness
+#                  checks (harness_check.sh), and the bundle's sizes
 #   all            everything above
 #
 # Options:
@@ -39,6 +48,12 @@
 #                           an App Store Connect API key (.p8)
 #   SPARKLE_PUBLIC_ED_KEY   Sparkle's public EdDSA key (base64). Without it
 #                           the bundle carries no Sparkle and no updater.
+#   CONDUIT_APP_PROFILE, CONDUIT_WIDGET_PROFILE
+#                           provisioning profiles (.provisionprofile) for the
+#                           app and the widget extension, embedded when set.
+#                           macOS lists the widget only when a profile
+#                           vouches for its entitlements (docs/BUILDING-
+#                           DESKTOP.md, "The desktop widget")
 #   CONDUIT_APPCAST_URL     overrides the feed URL release.env derives
 #   CMAKE                   cmake to build whisper with (default: cmake)
 #   WHISPER_SOURCE_DIR      a whisper.cpp checkout to build from (offline)
@@ -48,6 +63,8 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=lib.sh
 . "$here/lib.sh"
+# shellcheck source=share/build.sh
+. "$here/share/build.sh"
 
 command=all
 version=0.0.0
@@ -83,6 +100,14 @@ app="$out/Conduit.app"
 dmg="$out/Conduit-$version.dmg"
 identity="${CONDUIT_SIGN_IDENTITY:--}"
 feed_url="$(appcast_url)"
+# The widget's app group: release.env's, with the signing team's prefix.
+# A local test bundle (--bundle-id) keeps to a group of its own, away from
+# the release app's snapshot.
+team="$(signing_team "$identity")"
+group="$(widget_group "$team")"
+if [ "$bundle_id" != "$BUNDLE_ID_DEFAULT" ]; then
+  group="${team:+$team.}$bundle_id"
+fi
 
 if [ "$release" = 1 ]; then
   [ "$bundle_id" = "$BUNDLE_ID_DEFAULT" ] || die "--bundle-id is for local tests only"
@@ -160,6 +185,13 @@ build_whisper() {
   whisper_lib="$dir/libconduit_whisper.dylib"
   if [ "$skip_whisper" = 1 ]; then
     [ -f "$whisper_lib" ] || die "--skip-whisper: no $whisper_lib"
+    # One built for a newer macOS than the bundle's (another checkout's, say)
+    # would not load there, and verify refuses it: build it instead.
+    local minos
+    minos="$(vtool -show-build "$whisper_lib" 2>/dev/null | awk '/minos/ {print $2; exit}')"
+    if [ -n "$minos" ] && [ "$(printf '%s\n%s\n' "$minos" "$MACOS_MIN" | sort -V | tail -1)" != "$MACOS_MIN" ]; then
+      die "--skip-whisper: $whisper_lib needs macOS $minos, the bundle $MACOS_MIN (build it: leave out --skip-whisper)"
+    fi
     log "reusing $whisper_lib"
     return
   fi
@@ -179,6 +211,14 @@ build_whisper() {
   [ -f "$whisper_lib" ] || die "the whisper build left no $whisper_lib"
 }
 
+# The desktop widget: ConduitWidget.appex and libconduit_widget.dylib.
+build_widget() {
+  widget_dir="$DESKTOP_DIR/target/widget/macos_$ARCH"
+  log "building the desktop widget (app group $group)"
+  "$PACKAGING_DIR/widget/build.sh" --out "$widget_dir" --bundle-id "$bundle_id" \
+    --app-group "$group" --version "$version" --build "$build" --min "$MACOS_MIN"
+}
+
 # Thins a universal Mach-O to this build's architecture (Sparkle ships
 # universal binaries; the app is Apple Silicon only).
 thin() {
@@ -193,7 +233,8 @@ set_plist() { /usr/libexec/PlistBuddy -c "$1" "$2" >/dev/null; }
 
 assemble() {
   move_aside "$out"
-  mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Frameworks"
+  mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Frameworks" \
+    "$app/Contents/PlugIns"
   log "assembling $app"
 
   cp "$rust_binary" "$app/Contents/MacOS/Conduit"
@@ -205,10 +246,19 @@ assemble() {
     "$PACKAGING_DIR/Info.plist" >"$app/Contents/Info.plist"
   printf 'APPL????' >"$app/Contents/PkgInfo"
 
+  # The Share extension (Contents/PlugIns/ConduitShare.appex) and the
+  # Services menu titles in every language (share/build.sh).
+  share_build "$app" "$bundle_id" Conduit "$version" "$build"
+  services_strings "$app"
+
   # conduitd: the `dart build cli` bundle (bin/conduitd, lib/libsqlite3)
   # plus the whisper library next to libsqlite3, where conduitd looks.
   ditto "$daemon_bundle" "$app/Contents/Resources/conduitd"
   cp "$whisper_lib" "$app/Contents/Resources/conduitd/lib/"
+  # The models.dev logo catalog direct models' logos are picked from;
+  # conduitd looks for it beside its bin/ (the app has the SVGs built in).
+  mkdir -p "$app/Contents/Resources/conduitd/model_logos"
+  cp "$DESKTOP_DIR/../assets/model_logos/catalog.json" "$app/Contents/Resources/conduitd/model_logos/"
 
   # The icon: an asset catalog for macOS 26+ and the .icns for 14 and 15
   # (both from icon.sh; Info.plist names them).
@@ -220,12 +270,24 @@ assemble() {
       need "no packaging/macos/$icon: make it with icon.sh from AppIcon-master.png"
     fi
   done
+  # The widget: its extension, and the library the app tells WidgetKit
+  # through (dlopen'ed from Frameworks).
+  ditto "$widget_dir/ConduitWidget.appex" "$app/Contents/PlugIns/ConduitWidget.appex"
+  cp "$widget_dir/libconduit_widget.dylib" "$app/Contents/Frameworks/"
+
+  # App Intents (Shortcuts, Siri, Spotlight): Resources/Metadata.appintents
+  # and each locale's strings (intents.sh), for this bundle id.
+  MACOSX_DEPLOYMENT_TARGET="$MACOS_MIN" "$PACKAGING_DIR/intents.sh" bundle "$app" \
+    --bundle-id "$bundle_id"
   # The open-source notices, generated for what this bundle ships; fails
   # when a licence is missing (packaging/notices/README.md).
   "$DESKTOP_DIR/packaging/notices/notices.sh" --out "$app/Contents/Resources/THIRD_PARTY_NOTICES.md"
 
-  # Sparkle, only with a public key: Sparkle refuses to start without one.
   local plist="$app/Contents/Info.plist"
+  # Where the widget's snapshot goes (shell/widget.rs reads it).
+  set_plist "Add :ConduitAppGroup string $group" "$plist"
+
+  # Sparkle, only with a public key: Sparkle refuses to start without one.
   if [ -n "${SPARKLE_PUBLIC_ED_KEY:-}" ]; then
     local sparkle
     sparkle="$(sparkle_dir)"
@@ -260,6 +322,7 @@ do_build() {
   build_rust
   build_daemon
   build_whisper
+  build_widget
   assemble
 }
 
@@ -277,6 +340,21 @@ do_sign() {
   mkdir -p "$ent"
   cp "$PACKAGING_DIR/Conduit.entitlements" "$ent/Conduit.entitlements"
   cp "$PACKAGING_DIR/conduitd.entitlements" "$ent/conduitd.entitlements"
+  cp "$PACKAGING_DIR/widget/ConduitWidget.entitlements" "$ent/ConduitWidget.entitlements"
+  # The app and the widget share the snapshot's app group, named for the
+  # team signing now (a release builds before its identity is imported).
+  local appex="$app/Contents/PlugIns/ConduitWidget.appex" e p
+  for p in "$app/Contents/Info.plist" "$appex/Contents/Info.plist"; do
+    set_plist "Set :ConduitAppGroup $group" "$p" 2>/dev/null ||
+      set_plist "Add :ConduitAppGroup string $group" "$p"
+  done
+  log "widget app group $group"
+  for e in Conduit ConduitWidget; do
+    set_plist "Add :com.apple.security.application-groups array" "$ent/$e.entitlements"
+    set_plist "Add :com.apple.security.application-groups:0 string $group" "$ent/$e.entitlements"
+  done
+  embed_profiles
+  share_entitlements "$bundle_id" "$ent/Share.entitlements"
   if [ "$adhoc" = 1 ]; then
     # No team ID to match: let the ad-hoc binaries load their own libraries.
     set_plist "Add :com.apple.security.cs.disable-library-validation bool true" "$ent/Conduit.entitlements"
@@ -298,8 +376,50 @@ do_sign() {
     sign "$fw/Versions/B/Updater.app"
     sign "$fw"
   fi
+  sign "$app/Contents/Frameworks/libconduit_widget.dylib"
+  sign --entitlements "$ent/ConduitWidget.entitlements" "$appex"
+  # The extension before the app that contains it; sandboxed, with the one
+  # folder it hands shares through.
+  sign --entitlements "$ent/Share.entitlements" "$app/Contents/PlugIns/$SHARE_APPEX"
   sign --entitlements "$ent/Conduit.entitlements" "$app"
   codesign --verify --deep --strict "$app"
+}
+
+# The provisioning profiles (CONDUIT_APP_PROFILE, CONDUIT_WIDGET_PROFILE),
+# embedded with the application identifier and team each one vouches for.
+# Without them the build still signs and runs; macOS only leaves the
+# widget out of its gallery (docs/BUILDING-DESKTOP.md).
+embed_profiles() {
+  local app_profile="${CONDUIT_APP_PROFILE:-}" widget_profile="${CONDUIT_WIDGET_PROFILE:-}"
+  if [ -z "$app_profile" ] && [ -z "$widget_profile" ]; then
+    if [ "$identity" != "-" ]; then
+      warn "no CONDUIT_APP_PROFILE / CONDUIT_WIDGET_PROFILE: macOS will not list the widget (docs/BUILDING-DESKTOP.md)"
+    fi
+    return 0
+  fi
+  [ -n "$app_profile" ] && [ -n "$widget_profile" ] ||
+    die "set both CONDUIT_APP_PROFILE and CONDUIT_WIDGET_PROFILE (or neither)"
+  [ -n "$team" ] || die "provisioning profiles need a signing identity with a team"
+  local pair dest id ent_file want got
+  for pair in "app:$app_profile" "widget:$widget_profile"; do
+    if [ "${pair%%:*}" = app ]; then
+      dest="$app/Contents/embedded.provisionprofile"
+      id="$bundle_id"
+      ent_file="$ent/Conduit.entitlements"
+    else
+      dest="$app/Contents/PlugIns/ConduitWidget.appex/Contents/embedded.provisionprofile"
+      id="$bundle_id.widget"
+      ent_file="$ent/ConduitWidget.entitlements"
+    fi
+    [ -f "${pair#*:}" ] || die "no profile at ${pair#*:}"
+    want="$team.$id"
+    got="$(profile_app_id "${pair#*:}")"
+    [ "$got" = "$want" ] || die "the ${pair%%:*} profile is for '$got', not $want"
+    cp "${pair#*:}" "$dest"
+    set_plist "Add :com.apple.application-identifier string $want" "$ent_file"
+    set_plist "Add :com.apple.developer.team-identifier string $team" "$ent_file"
+  done
+  log "provisioning profiles embedded (app and widget, team $team)"
 }
 
 # --- notarize --------------------------------------------------------------
@@ -394,6 +514,17 @@ do_verify() {
   [ "$v" = "conduit" ] && ok "URL scheme conduit://" || fail "URL scheme '$v'"
   v="$(plutil -extract CFBundleDocumentTypes raw -o - "$plist")"
   [ "$v" = "2" ] && ok "CFBundleDocumentTypes: 2 (documents, images)" || fail "CFBundleDocumentTypes: $v"
+  if share_verify "$app" "$(plutil -extract CFBundleIdentifier raw -o - "$plist")"; then
+    ok "Share extension: embedded, sandboxed, signed; Services: 2 items, 14 languages"
+  else
+    failed=1
+  fi
+  if "$PACKAGING_DIR/intents.sh" verify "$app" >"$out/intents-verify.txt" 2>&1; then
+    ok "App Intents: $(sed -n 's/^native_strings: ok: //p' "$out/intents-verify.txt")"
+  else
+    fail "App Intents (intents.sh verify)"
+    sed 's/^/     /' "$out/intents-verify.txt"
+  fi
   if [ -s "$app/Contents/Resources/THIRD_PARTY_NOTICES.md" ]; then
     ok "THIRD_PARTY_NOTICES.md: $(grep -c '' "$app/Contents/Resources/THIRD_PARTY_NOTICES.md") lines"
   else
@@ -459,6 +590,35 @@ do_verify() {
   done < <(for f in "$app/Contents/Resources/conduitd/bin/conduitd" "$app"/Contents/Resources/conduitd/lib/*.dylib; do
     otool -L "$f" | tail -n +2 | awk '{print $1}'
   done)
+
+  # The desktop widget.
+  local appex="$app/Contents/PlugIns/ConduitWidget.appex" wplist ents
+  wplist="$appex/Contents/Info.plist"
+  if [ -f "$wplist" ]; then
+    v="$(plutil -extract NSExtension.NSExtensionPointIdentifier raw -o - "$wplist")"
+    [ "$v" = "com.apple.widgetkit-extension" ] && ok "widget: a WidgetKit extension" || fail "widget: extension point '$v'"
+    v="$(plutil -extract CFBundleIdentifier raw -o - "$wplist")"
+    [ "$v" = "$(plutil -extract CFBundleIdentifier raw -o - "$plist").widget" ] &&
+      ok "widget: bundle id $v" || fail "widget: bundle id $v"
+    v="$(plutil -extract ConduitAppGroup raw -o - "$wplist")"
+    [ "$v" = "$(plutil -extract ConduitAppGroup raw -o - "$plist" 2>/dev/null)" ] &&
+      ok "widget: app group $v (app and widget)" || fail "widget: app group $v differs from the app's"
+    ents="$(codesign -d --entitlements - --xml "$appex" 2>/dev/null | plutil -convert json -o - - 2>/dev/null || true)"
+    grep -q '"com.apple.security.app-sandbox":true' <<<"$ents" && grep -Fq "\"$v\"" <<<"$ents" &&
+      ok "widget: sandboxed, entitled to the group" || fail "widget entitlements: $ents"
+    ents="$(codesign -d --entitlements - --xml "$app" 2>/dev/null | plutil -convert json -o - - 2>/dev/null || true)"
+    grep -Fq "\"$v\"" <<<"$ents" && ok "app: entitled to the group" || fail "app entitlements lack $v"
+    nm -gU "$app/Contents/Frameworks/libconduit_widget.dylib" 2>/dev/null |
+      grep -q '_conduit_widget_reload_all' && ok "widget: libconduit_widget.dylib exports its functions" ||
+      fail "widget: libconduit_widget.dylib"
+    if [ -f "$app/Contents/embedded.provisionprofile" ] && [ -f "$appex/Contents/embedded.provisionprofile" ]; then
+      ok "provisioning profiles embedded (the widget can be listed)"
+    else
+      printf 'note no provisioning profiles: macOS will not list the widget in its gallery\n'
+    fi
+  else
+    fail "no PlugIns/ConduitWidget.appex"
+  fi
 
   if codesign --verify --deep --strict --verbose=2 "$app" 2>"$out/codesign-verify.txt"; then
     ok "codesign --verify --deep --strict"

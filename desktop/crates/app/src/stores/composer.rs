@@ -38,8 +38,9 @@ use conduit_daemon::RpcError;
 use conduit_protocol::{
     AppSettingsDto, ChatFileDto, ComposerMentionDto, ComposerOptions, ComposerSearch,
     ContextAttachmentDto, ContextSuggestion, Draft, DraftRef, DraftSave, FetchUrl, FetchedUrl,
-    KnowledgeSummary, MentionList, ModelList, ModelSummary, NoParams, PromptSummary, RenderPrompt,
-    RenderedPrompt, SelectModel, ServerFile, ServerFileList, SkillSummary, UploadedFile, methods,
+    KnowledgeSummary, LibreChatComposer, LibreChatComposerTarget, MentionList, ModelList,
+    ModelSummary, NoParams, PromptSummary, RenderPrompt, RenderedPrompt, SelectModel, ServerFile,
+    ServerFileList, SkillSummary, UploadedFile, methods,
 };
 use gpui_kit::{
     AppContext as _, AsyncApp, Context, EventEmitter, Image, ImageFormat, Task, WeakEntity,
@@ -62,6 +63,9 @@ pub struct UploadRequest {
     pub progress: Progress,
     /// Which try this is (1 for the first), for the core's retry rules.
     pub attempt: u32,
+    /// A channel's attachment: filed under the channel on the server, so
+    /// its members may read it.
+    pub channel_id: Option<String>,
 }
 
 /// What a failed upload says about trying again: the daemon answers with
@@ -204,10 +208,13 @@ pub enum UploadState {
 
 /// The draft a new chat's settings were set in, its round, and which
 /// assignment they were in it ([`ComposerStore::params_owner`]): every save
-/// is its own owner, even two in one round.
+/// is its own owner, even two in one round. `folder`: the new chat's folder
+/// (a temporary one keeps no draft key), so another folder's new chat
+/// never takes them.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParamsOwner {
     draft: Option<DraftKey>,
+    folder: Option<String>,
     round: u64,
     rev: u64,
 }
@@ -228,13 +235,76 @@ pub struct OneShot {
     pub mentions: Vec<ComposerMentionDto>,
     /// Compare Models' second model.
     pub compare_with: Option<ModelSummary>,
+    /// The draft's recordings the message took with it (a dictation hold):
+    /// kept if it is refused.
+    pub recordings: Option<u64>,
 }
 
 impl OneShot {
+    /// The same, with the recordings the message took.
+    pub fn with_recordings(mut self, recordings: Option<u64>) -> Self {
+        self.recordings = recordings;
+        self
+    }
+
     /// The same, with the mentions the message carried.
     pub fn with_mentions(mut self, mentions: Vec<ComposerMentionDto>) -> Self {
         self.mentions = mentions;
         self
+    }
+
+    /// Two unsent messages for one draft kept as one, so neither one's words
+    /// are lost: `first`'s words, a blank line, then `later`'s, with both
+    /// messages' mentions and files (`later`'s knowledge, context and models
+    /// unless it chose none). `first` from another account or draft scope is
+    /// dropped, as [`ComposerStore::give_back`] would drop it.
+    pub fn merge(
+        first_text: &str,
+        first: OneShot,
+        later_text: &str,
+        later: OneShot,
+    ) -> (String, OneShot) {
+        if first.scope != later.scope {
+            return (later_text.to_string(), later);
+        }
+        let (text, mentions) = if later_text.trim().is_empty() {
+            (first_text.to_string(), first.mentions)
+        } else if first_text.trim().is_empty() {
+            (later_text.to_string(), later.mentions)
+        } else {
+            let head = format!("{first_text}\n\n");
+            let shift = head.encode_utf16().count() as i64;
+            let mut mentions = first.mentions;
+            mentions.extend(later.mentions.into_iter().map(|mut m| {
+                m.start += shift;
+                m.end += shift;
+                m
+            }));
+            (format!("{head}{later_text}"), mentions)
+        };
+        let mut attachments = first.attachments;
+        attachments.retain(|a| !later.attachments.iter().any(|b| b.local_id == a.local_id));
+        attachments.extend(later.attachments);
+        let merged = OneShot {
+            scope: later.scope,
+            draft: later.draft,
+            attachments,
+            knowledge: if later.knowledge.is_empty() {
+                first.knowledge
+            } else {
+                later.knowledge
+            },
+            context: if later.context.is_empty() {
+                first.context
+            } else {
+                later.context
+            },
+            mention: later.mention.or(first.mention),
+            mentions,
+            compare_with: later.compare_with.or(first.compare_with),
+            recordings: later.recordings.or(first.recordings),
+        };
+        (text, merged)
     }
 }
 
@@ -285,6 +355,17 @@ impl Attachment {
         }
     }
 
+    /// Still being read, converted or uploaded, or waiting to be tried again.
+    fn in_flight(&self) -> bool {
+        matches!(
+            self.state,
+            UploadState::Reading
+                | UploadState::Converting
+                | UploadState::Uploading { .. }
+                | UploadState::Waiting
+        )
+    }
+
     /// 0–1 while uploading.
     pub fn progress(&self) -> Option<f32> {
         match self.state {
@@ -321,6 +402,20 @@ pub enum ComposerEvent {
     DraftLoaded { key: DraftKey, text: String },
 }
 
+/// One of LibreChat's composer switches.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum LibreChatTool {
+    WebSearch,
+    CodeInterpreter,
+    FileSearch,
+    /// One of the user's MCP servers; one that `needs_connection` is
+    /// connected in LibreChat's web app first.
+    Mcp {
+        name: String,
+        needs_connection: bool,
+    },
+}
+
 pub struct ComposerStore {
     rpc: Rpc,
     uploader: Option<Uploader>,
@@ -328,9 +423,21 @@ pub struct ComposerStore {
     pub prefs: ComposerPrefs,
     pub models: Option<ModelList>,
     pub options: ComposerOptions,
+    /// LibreChat's tools for the model, when it is a LibreChat one
+    /// (`librechat.composer`): chosen in `tool_ids`, as Open WebUI's are.
+    pub librechat: LibreChatComposer,
     pub prompts: Option<Vec<PromptSummary>>,
+    /// `prompts` are a Hermes chat's `/` commands (the agent's skills, as
+    /// on a phone), inserted as typed rather than rendered.
+    pub prompts_hermes: bool,
+    /// The Hermes connection a Hermes chat's commands were read from (the
+    /// daemon's name for it): another one reads its own.
+    prompts_connection: Option<String>,
     /// `@`: the server's users and channels for the query typed.
     pub mention_results: MentionList,
+    /// A channel's composer: `@` lists the channel's members (and models,
+    /// as tokens), and attachments are filed under the channel.
+    pub channel: Option<String>,
     /// `#`: notes, knowledge bases and files for the query typed.
     pub context_results: Vec<ContextSuggestion>,
     /// `$`: skills for the query typed.
@@ -338,6 +445,10 @@ pub struct ComposerStore {
     /// The query each list answers, once it has answered.
     searched: [Option<String>; 3],
     pub attachments: Vec<Attachment>,
+    /// Files still being read or uploaded when their draft was taken
+    /// ([`Self::take_draft`]): their upload lands here, and they go back
+    /// with the draft ([`Self::put_draft`]), as they are by then.
+    parked: Vec<Attachment>,
     pub web_search: bool,
     pub image_generation: bool,
     pub code_interpreter: bool,
@@ -358,8 +469,8 @@ pub struct ComposerStore {
     /// message.
     pub context: Vec<ContextAttachmentDto>,
     /// A new chat's own settings (Chat Settings on a new chat): its first
-    /// message takes them. Dropped once another chat opens, as mobile drops
-    /// its pending settings.
+    /// message takes them. Dropped once another chat, or another folder's
+    /// new chat, opens, as mobile drops its pending settings.
     pub draft_params: serde_json::Value,
     /// Whose [`Self::draft_params`] they are: the draft (and its round)
     /// they were set in. A send forgets only settings it still owns.
@@ -377,6 +488,10 @@ pub struct ComposerStore {
     _model_options: Option<Task<()>>,
     /// The draft the composer holds, and what was last kept of it.
     draft: Option<DraftKey>,
+    /// A new chat's folder, kept apart from [`Self::draft`]: a temporary
+    /// new chat keeps no draft, and its first send still goes to the
+    /// folder, with the folder's model, prompt and knowledge.
+    new_chat_folder: Option<String>,
     draft_saved: String,
     next_id: u64,
     /// Bumped by [`Self::reset`]: answers to an older account are dropped.
@@ -409,12 +524,17 @@ impl ComposerStore {
             prefs: ComposerPrefs::default(),
             models: None,
             options: ComposerOptions::default(),
+            librechat: LibreChatComposer::default(),
             prompts: None,
+            prompts_hermes: false,
+            prompts_connection: None,
             mention_results: MentionList::default(),
+            channel: None,
             context_results: vec![],
             skill_results: vec![],
             searched: [None, None, None],
             attachments: vec![],
+            parked: vec![],
             web_search: false,
             image_generation: false,
             code_interpreter: false,
@@ -433,6 +553,7 @@ impl ComposerStore {
             model_options: None,
             _model_options: None,
             draft: None,
+            new_chat_folder: None,
             draft_saved: String::new(),
             next_id: 0,
             scope: 0,
@@ -442,6 +563,19 @@ impl ComposerStore {
             _searches: [None, None, None],
             _draft: None,
         }
+    }
+
+    /// A channel's composer: `@` offers the channel's members and the
+    /// models (as mentions), + attaches files and pictures, and nothing
+    /// else a chat's composer offers applies.
+    pub fn for_channel(mut self, channel_id: impl Into<String>) -> Self {
+        self.channel = Some(channel_id.into());
+        self.options = serde_json::from_value(serde_json::json!({
+            "mentions": true,
+            "attachments": {"files": true, "images": true},
+        }))
+        .unwrap_or_default();
+        self
     }
 
     /// The daemon, for a panel that asks it directly (MCP Content).
@@ -720,21 +854,60 @@ impl ComposerStore {
         );
     }
 
-    /// `composer.options`; switches it no longer offers go off.
+    /// `composer.options` (and `librechat.composer` for the model);
+    /// switches they no longer offer go off.
     pub fn refresh_options(&mut self, cx: &mut Context<Self>) {
+        // A channel's options are its own (`for_channel`), not a model's.
+        if self.channel.is_some() {
+            return;
+        }
         let call = self.rpc.call::<methods::ComposerOptions>(&NoParams);
         let scope = self.scope;
+        let model_id = self.selected_model().map(|m| m.id.clone());
+        let librechat = self
+            .rpc
+            .call::<methods::LibrechatComposer>(&LibreChatComposerTarget { model_id });
         self._options = Some(
             cx.spawn(async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
-                if let Ok(options) = call.await {
+                let (options, librechat) = futures::join!(call, librechat);
+                if let Ok(options) = options {
                     let _ = this.update(cx, |s, cx| {
-                        if s.scope == scope {
-                            s.set_options(options, cx)
+                        // Another account's answers never fill this one's.
+                        if s.scope != scope {
+                            return;
                         }
+                        // A daemon without LibreChat answers as none.
+                        s.librechat = librechat.unwrap_or_default();
+                        s.set_options(options, cx)
                     });
                 }
             }),
         );
+    }
+
+    /// LibreChat's switches for the model: `(tool id, which)`.
+    pub fn librechat_tools(&self) -> Vec<(String, LibreChatTool)> {
+        let lc = &self.librechat;
+        let mut tools = Vec::new();
+        if let Some(id) = &lc.web_search_tool_id {
+            tools.push((id.clone(), LibreChatTool::WebSearch));
+        }
+        if let Some(id) = &lc.code_interpreter_tool_id {
+            tools.push((id.clone(), LibreChatTool::CodeInterpreter));
+        }
+        if let Some(id) = &lc.file_search_tool_id {
+            tools.push((id.clone(), LibreChatTool::FileSearch));
+        }
+        for server in &lc.mcp_servers {
+            tools.push((
+                server.tool_id.clone(),
+                LibreChatTool::Mcp {
+                    name: server.name.clone(),
+                    needs_connection: server.needs_connection,
+                },
+            ));
+        }
+        tools
     }
 
     fn set_options(&mut self, options: ComposerOptions, cx: &mut Context<Self>) {
@@ -746,11 +919,13 @@ impl ComposerStore {
         if !options.code_interpreter && options.code_interpreter_block.is_none() {
             self.code_interpreter = false;
         }
+        let librechat = self.librechat_tools();
         let offered: BTreeSet<&str> = options
             .tools
             .iter()
             .chain(&options.mcp_tools)
             .map(|t| t.id.as_str())
+            .chain(librechat.iter().map(|(id, _)| id.as_str()))
             .collect();
         self.tool_ids.retain(|id| offered.contains(id.as_str()));
         // Filters start from the model's own defaults, until the user picks.
@@ -816,19 +991,65 @@ impl ComposerStore {
 
     // ── Prompts and knowledge ───────────────────────────────────────────
 
-    /// `prompts.list`, once (and again after `reset`).
-    pub fn load_prompts(&mut self, cx: &mut Context<Self>) {
-        if self.prompts.is_some() {
+    /// Whether the composer writes to Hermes: a Hermes session's chat, or
+    /// the Hermes model chosen for a new one.
+    pub fn is_hermes(&self) -> bool {
+        self.chat_id()
+            .is_some_and(|id| id.starts_with("local:hermes_"))
+            || self
+                .selected_model()
+                .is_some_and(|m| m.id.starts_with("hermes:"))
+    }
+
+    /// What `/` lists, once (and again after `reset`, or when the chat
+    /// moves between Hermes and the rest): saved prompts (`prompts.list`),
+    /// or in a Hermes chat the agent's commands (`hermes.catalog`), as
+    /// mobile's composer sources its `/` overlay.
+    pub fn load_prompts(&mut self, hermes_connection: Option<String>, cx: &mut Context<Self>) {
+        let hermes = self.is_hermes();
+        if self.prompts.is_some()
+            && self.prompts_hermes == hermes
+            && (!hermes || self.prompts_connection == hermes_connection)
+        {
             return;
         }
         self.prompts = Some(vec![]);
-        let call = self.rpc.call::<methods::PromptsList>(&NoParams);
+        self.prompts_hermes = hermes;
+        self.prompts_connection = hermes.then(|| hermes_connection.clone()).flatten();
         let scope = self.scope;
+        if hermes {
+            let call = self.rpc.call::<methods::HermesCatalog>(&NoParams);
+            cx.spawn(async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
+                let result = call.await;
+                let _ = this.update(cx, |s, cx| {
+                    // Another account's, the chat left Hermes since, or
+                    // another connection's commands were asked for since.
+                    if s.scope != scope
+                        || !s.prompts_hermes
+                        || s.prompts_connection != hermes_connection
+                    {
+                        return;
+                    }
+                    match result {
+                        Ok(catalog) => s.prompts = Some(hermes_prompts(&catalog)),
+                        Err(e) => {
+                            log::info!("hermes.catalog: {e}");
+                            s.prompts = None;
+                        }
+                    }
+                    cx.notify();
+                });
+            })
+            .detach();
+            return;
+        }
+        let call = self.rpc.call::<methods::PromptsList>(&NoParams);
         cx.spawn(async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
             let result = call.await;
             let _ = this.update(cx, |s, cx| {
-                // Another account's list never fills this one's.
-                if s.scope != scope {
+                // Another account's list never fills this one's, nor a
+                // Hermes chat's (moved there since).
+                if s.scope != scope || s.prompts_hermes {
                     return;
                 }
                 match result {
@@ -864,23 +1085,50 @@ impl ComposerStore {
         if !self.options.mentions {
             return;
         }
-        self.search::<methods::MentionsSearch>(Search::Mentions, query, cx, |s, list| {
-            s.mention_results = list
-        });
+        // In a channel: its members and the channels to link.
+        if let Some(channel_id) = self.channel.clone() {
+            let params = conduit_protocol::ChannelMentionQuery {
+                channel_id,
+                query: query.to_string(),
+            };
+            self.search::<methods::ChannelsMentions>(
+                Search::Mentions,
+                query,
+                params,
+                cx,
+                |s, list| s.mention_results = list,
+            );
+            return;
+        }
+        self.search::<methods::MentionsSearch>(
+            Search::Mentions,
+            query,
+            search(query),
+            cx,
+            |s, list| s.mention_results = list,
+        );
     }
 
     /// `context.search` for what follows a `#`.
     pub fn search_context(&mut self, query: &str, cx: &mut Context<Self>) {
-        self.search::<methods::ContextSearch>(Search::Context, query, cx, |s, list| {
-            s.context_results = list.items
-        });
+        self.search::<methods::ContextSearch>(
+            Search::Context,
+            query,
+            search(query),
+            cx,
+            |s, list| s.context_results = list.items,
+        );
     }
 
     /// `skills.search` for what follows a `$`.
     pub fn search_skills(&mut self, query: &str, cx: &mut Context<Self>) {
-        self.search::<methods::SkillsSearch>(Search::Skills, query, cx, |s, list| {
-            s.skill_results = list.items
-        });
+        self.search::<methods::SkillsSearch>(
+            Search::Skills,
+            query,
+            search(query),
+            cx,
+            |s, list| s.skill_results = list.items,
+        );
     }
 
     /// Asks `M` 150 ms after `query` last changed, and keeps its answer.
@@ -892,10 +1140,12 @@ impl ComposerStore {
         &mut self,
         kind: Search,
         query: &str,
+        params: M::Params,
         cx: &mut Context<Self>,
         keep: fn(&mut Self, M::Result),
     ) where
-        M: conduit_protocol::RpcMethod<Params = ComposerSearch>,
+        M: conduit_protocol::RpcMethod,
+        M::Params: 'static,
         M::Result: Default + Send + 'static,
     {
         let slot = kind as usize;
@@ -904,7 +1154,7 @@ impl ComposerStore {
         }
         self.searched[slot] = Some(query.to_string());
         let rpc = self.rpc.clone();
-        let (params, scope) = (search(query), self.scope);
+        let scope = self.scope;
         self._searches[slot] = Some(cx.spawn(
             async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
                 cx.background_executor()
@@ -1101,8 +1351,12 @@ impl ComposerStore {
         id
     }
 
+    /// The attachment `id`, shown or parked with a draft taken.
     fn get(&mut self, id: u64) -> Option<&mut Attachment> {
-        self.attachments.iter_mut().find(|a| a.local_id == id)
+        match self.attachments.iter().position(|a| a.local_id == id) {
+            Some(at) => self.attachments.get_mut(at),
+            None => self.parked.iter_mut().find(|a| a.local_id == id),
+        }
     }
 
     fn fail(&mut self, id: u64, error: String, retry: bool, cx: &mut Context<Self>) {
@@ -1154,6 +1408,7 @@ impl ComposerStore {
             bytes: bytes.to_vec(),
             progress,
             attempt,
+            channel_id: self.channel.clone(),
         });
         // Progress, as it comes.
         cx.spawn(async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
@@ -1303,11 +1558,7 @@ impl ComposerStore {
                 .as_ref()
                 .map(|m| m.id.clone())
                 .or_else(|| self.offered_draft_model()),
-            folder_id: self
-                .draft
-                .as_ref()
-                .filter(|k| k.chat_id.is_none())
-                .and_then(|k| k.folder_id.clone()),
+            folder_id: new_chat.then(|| self.new_chat_folder.clone()).flatten(),
             chat_params: (new_chat && has_params(&self.draft_params))
                 .then(|| self.draft_params.clone()),
             tool_ids: self.tool_ids.iter().cloned().collect(),
@@ -1373,6 +1624,7 @@ impl ComposerStore {
         self.params_rev += 1;
         self.params_owner = (!params.is_null()).then(|| ParamsOwner {
             draft: self.draft.clone(),
+            folder: self.new_chat_folder.clone(),
             round: self.draft_round,
             rev: self.params_rev,
         });
@@ -1413,6 +1665,7 @@ impl ComposerStore {
         // temporary chat keeps no draft key to tell it by) saves nowhere.
         self.draft_round += 1;
         self.set_params(serde_json::Value::Null);
+        self.new_chat_folder = None;
         self.draft_model = None;
         self._draft_model = None;
         cx.notify();
@@ -1429,9 +1682,8 @@ impl ComposerStore {
             async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
                 let result = call.await;
                 let _ = this.update(cx, |s, cx| {
-                    let still = s.draft.as_ref().is_some_and(|k| {
-                        k.chat_id.is_none() && k.folder_id.as_deref() == Some(&folder_id)
-                    });
+                    let still = s.draft.as_ref().is_none_or(|k| k.chat_id.is_none())
+                        && s.new_chat_folder.as_deref() == Some(folder_id.as_str());
                     if !still {
                         return;
                     }
@@ -1512,7 +1764,39 @@ impl ComposerStore {
     /// [`ComposerEvent::DraftLoaded`]). `None`: a chat that keeps none (a
     /// temporary one).
     pub fn switch_draft(&mut self, key: Option<DraftKey>, text: &str, cx: &mut Context<Self>) {
-        if self.draft == key {
+        let folder = key
+            .as_ref()
+            .filter(|k| k.chat_id.is_none())
+            .and_then(|k| k.folder_id.clone());
+        self.switch_to(key, folder, text, cx);
+    }
+
+    /// A new chat opened in `folder` (or none): one that keeps a draft, or
+    /// a `temporary` one, which keeps none but still starts in the folder.
+    pub fn switch_new_chat(
+        &mut self,
+        folder: Option<String>,
+        temporary: bool,
+        text: &str,
+        cx: &mut Context<Self>,
+    ) {
+        let key = (!temporary).then(|| DraftKey {
+            chat_id: None,
+            folder_id: folder.clone(),
+        });
+        self.switch_to(key, folder, text, cx);
+    }
+
+    /// [`Self::switch_draft`] with the new chat's folder (None for an
+    /// opened chat).
+    fn switch_to(
+        &mut self,
+        key: Option<DraftKey>,
+        folder: Option<String>,
+        text: &str,
+        cx: &mut Context<Self>,
+    ) {
+        if self.draft == key && self.new_chat_folder == folder {
             return;
         }
         if let Some(old) = self.draft.take()
@@ -1523,6 +1807,7 @@ impl ComposerStore {
         self._draft = None;
         self.draft_saved = String::new();
         self.draft = key.clone();
+        self.new_chat_folder = folder.clone();
         // Another chat's draft: a send still on its way from the last one
         // gives nothing back to this one.
         self.draft_round += 1;
@@ -1530,15 +1815,18 @@ impl ComposerStore {
         // drops a new chat's settings (mobile drops its pending ones).
         self.draft_model = None;
         self._draft_model = None;
-        match key.as_ref() {
-            Some(DraftKey {
-                chat_id: None,
-                folder_id: Some(folder),
-            }) => self.resolve_draft_model(folder.clone(), cx),
-            Some(DraftKey {
-                chat_id: Some(_), ..
-            }) => self.set_params(serde_json::Value::Null),
-            _ => {}
+        // Another folder's new chat: settings saved on this one stay
+        // behind (a temporary switch in the same folder keeps them).
+        let opened = key.as_ref().is_some_and(|k| k.chat_id.is_some());
+        let elsewhere = self
+            .params_owner
+            .as_ref()
+            .is_some_and(|o| o.folder != folder);
+        if opened || elsewhere {
+            self.set_params(serde_json::Value::Null);
+        }
+        if !opened && let Some(folder) = folder {
+            self.resolve_draft_model(folder, cx);
         }
         cx.emit(ComposerEvent::DraftSwitched);
         let Some(key) = key else {
@@ -1650,6 +1938,7 @@ impl ComposerStore {
             mention: self.mention.clone(),
             mentions: vec![],
             compare_with: self.compare_with.clone(),
+            recordings: None,
         }
     }
 
@@ -1693,6 +1982,38 @@ impl ComposerStore {
         true
     }
 
+    /// Another draft is shown in the same composer (a channel's thread
+    /// composer, another thread): what one message would use is taken with
+    /// it, to come back with [`Self::put_draft`], and a send still on its
+    /// way gives nothing back to the next draft.
+    /// Every file goes with it, those still reading, uploading or waiting
+    /// too: their uploads land in [`Self::parked`] meanwhile.
+    pub fn take_draft(&mut self, cx: &mut Context<Self>) -> OneShot {
+        let mut used = self.one_shot();
+        let all = std::mem::take(&mut self.attachments);
+        self.parked
+            .extend(all.iter().filter(|a| a.in_flight()).cloned());
+        used.attachments = all;
+        self.start_over(cx);
+        used
+    }
+
+    /// Puts back what [`Self::take_draft`] (or a send that failed) took from
+    /// a draft shown again, under the same account only.
+    pub fn put_draft(&mut self, mut used: OneShot, cx: &mut Context<Self>) -> bool {
+        if used.scope != self.scope {
+            return false;
+        }
+        // Parked files come back as they are now (uploaded since, or failed).
+        for a in &mut used.attachments {
+            if let Some(at) = self.parked.iter().position(|p| p.local_id == a.local_id) {
+                *a = self.parked.remove(at);
+            }
+        }
+        used.draft = self.draft_round;
+        self.give_back(used, cx)
+    }
+
     /// A new draft: what one message would use goes (attachments,
     /// knowledge, context, the `@` model), and a send still on its way gives
     /// nothing back to it.
@@ -1711,12 +2032,14 @@ impl ComposerStore {
     pub fn reset(&mut self, cx: &mut Context<Self>) {
         self.scope += 1;
         self.draft_round += 1;
+        self.parked.clear();
         self._searches = [None, None, None];
         self._options = None;
         self._model_options = None;
         self.model_options = None;
         self.models = None;
         self.options = ComposerOptions::default();
+        self.librechat = LibreChatComposer::default();
         self.prompts = None;
         self.mention_results = MentionList::default();
         self.context_results.clear();
@@ -1734,6 +2057,7 @@ impl ComposerStore {
         self.image_generation = false;
         self.code_interpreter = false;
         self.draft = None;
+        self.new_chat_folder = None;
         self.draft_saved = String::new();
         self._draft = None;
         self.set_params(serde_json::Value::Null);
@@ -1852,6 +2176,8 @@ pub enum MentionTarget {
     User(String),
     Channel(String),
     Skill(String),
+    /// A model asked in a channel (`<@M:id|Name>`), which answers there.
+    Model(String),
 }
 
 impl MentionTarget {
@@ -1860,6 +2186,7 @@ impl MentionTarget {
             Self::User(id) => format!("U:{id}"),
             Self::Channel(id) => format!("C:{id}"),
             Self::Skill(id) => format!("S:{id}"),
+            Self::Model(id) => format!("M:{id}"),
         }
     }
 
@@ -1869,6 +2196,7 @@ impl MentionTarget {
             "U" => Some(Self::User(id.to_string())),
             "C" => Some(Self::Channel(id.to_string())),
             "S" => Some(Self::Skill(id.to_string())),
+            "M" => Some(Self::Model(id.to_string())),
             _ => None,
         }
     }
@@ -1905,6 +2233,7 @@ pub fn mentions_in(
                 MentionTarget::User(id) => ("U", conduit_protocol::MentionKind::Entity, id),
                 MentionTarget::Channel(id) => ("C", conduit_protocol::MentionKind::Entity, id),
                 MentionTarget::Skill(id) => ("M", conduit_protocol::MentionKind::Skill, id),
+                MentionTarget::Model(id) => ("M", conduit_protocol::MentionKind::Entity, id),
             };
             Some(ComposerMentionDto {
                 start,
@@ -1999,6 +2328,29 @@ pub fn match_models<'a>(
     starts.extend(contains);
     starts.truncate(limit);
     starts
+}
+
+/// A Hermes catalog's `/` commands as the menu lists prompts: `/name`,
+/// titled by what it does (its name when Hermes says nothing).
+pub fn hermes_prompts(catalog: &conduit_protocol::HermesCatalog) -> Vec<PromptSummary> {
+    catalog
+        .commands
+        .iter()
+        .map(|c| {
+            let description = c
+                .description
+                .as_deref()
+                .map(str::trim)
+                .filter(|d| !d.is_empty())
+                .map(String::from);
+            PromptSummary {
+                command: format!("/{}", c.name),
+                title: description.clone().unwrap_or_else(|| c.name.clone()),
+                description,
+                uses_clipboard: false,
+            }
+        })
+        .collect()
 }
 
 /// Prompts whose command starts with `query`, then those whose title
@@ -2108,6 +2460,7 @@ mod tests {
             pinned,
             capabilities: vec![],
             connection: None,
+            logo: None,
         }
     }
 
@@ -2222,6 +2575,7 @@ mod tests {
             pinned: false,
             capabilities: vec![],
             connection: None,
+            logo: None,
         }
     }
 
@@ -2349,6 +2703,57 @@ mod tests {
         });
     }
 
+    /// Another thread shown while a file still uploads, and one whose
+    /// upload failed: both are parked with their thread's draft, the upload
+    /// lands there, and both come back with the draft (the failed one still
+    /// offering Try Again).
+    #[gpui_kit::test]
+    fn a_draft_taken_mid_upload_keeps_its_files(cx: &mut TestAppContext) {
+        let daemon = FakeDaemon::new();
+        let (tx, rx) = futures::channel::oneshot::channel::<Result<UploadedFile, UploadError>>();
+        let pending = Arc::new(Mutex::new(Some(rx)));
+        let upload: Uploader = Arc::new(move |req: UploadRequest| {
+            if req.name.starts_with("Pasted") && pending.lock().unwrap().is_some() {
+                let rx = pending.lock().unwrap().take().unwrap();
+                return Box::pin(async move { rx.await.unwrap() });
+            }
+            Box::pin(async move { Err(UploadError::manual("refused")) })
+        });
+        let rpc = daemon.rpc();
+        let store = cx.new(|_| ComposerStore::new(rpc, Some(upload)).with_converter(None));
+        let png = Image::from_bytes(ImageFormat::Png, b"\x89PNG".to_vec());
+        store.update(cx, |s, cx| s.add_image(&png, cx));
+        let dir = std::env::temp_dir().join(format!("q3r-park-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let notes = dir.join("notes.md");
+        std::fs::write(&notes, b"# Notes").unwrap();
+        store.update(cx, |s, cx| s.add_paths(std::slice::from_ref(&notes), cx));
+        cx.run_until_parked();
+        store.read_with(cx, |s, _| {
+            assert!(matches!(
+                s.attachments[0].state,
+                UploadState::Uploading { .. }
+            ));
+            assert!(s.attachments[1].can_retry());
+        });
+        let parked = store.update(cx, |s, cx| s.take_draft(cx));
+        store.read_with(cx, |s, _| assert!(s.attachments.is_empty()));
+        tx.send(uploaded("f9")).unwrap();
+        cx.run_until_parked();
+        store.update(cx, |s, cx| assert!(s.put_draft(parked, cx)));
+        store.read_with(cx, |s, _| {
+            assert_eq!(s.attachments.len(), 2, "a file went with the thread switch");
+            assert_eq!(
+                s.attachments[0].state,
+                UploadState::Done {
+                    file_id: "f9".into()
+                },
+                "the parked file's upload did not land in its draft"
+            );
+            assert!(s.attachments[1].can_retry());
+        });
+    }
+
     #[gpui_kit::test]
     fn a_pasted_image_uploads_with_a_thumbnail(cx: &mut TestAppContext) {
         let daemon = FakeDaemon::new();
@@ -2465,6 +2870,43 @@ mod tests {
             assert!(
                 s.draft_params.is_null(),
                 "the new chat's settings came back"
+            );
+        });
+    }
+
+    /// Chat Settings saved on one folder's new chat are that chat's: another
+    /// folder's new chat starts without them, and a temporary switch in the
+    /// same folder keeps them.
+    #[gpui_kit::test]
+    fn a_new_chats_settings_stay_with_its_folder(cx: &mut TestAppContext) {
+        let daemon = FakeDaemon::new();
+        let store = store(&daemon, Arc::default(), cx);
+        let saved = serde_json::json!({"temperature": 0.3});
+        let new_chat = |folder: &str| DraftKey {
+            chat_id: None,
+            folder_id: Some(folder.into()),
+        };
+        store.update(cx, |s, cx| {
+            s.switch_draft(Some(new_chat("trips")), "", cx);
+            s.set_draft_params(saved.clone(), cx);
+            s.switch_new_chat(Some("trips".into()), true, "", cx);
+        });
+        store.read_with(cx, |s, _| {
+            assert_eq!(
+                s.turn_options(vec![]).chat_params,
+                Some(saved.clone()),
+                "a temporary switch in the same folder dropped them"
+            );
+        });
+        store.update(cx, |s, cx| {
+            s.switch_draft(Some(new_chat("recipes")), "", cx)
+        });
+        store.read_with(cx, |s, _| {
+            let options = s.turn_options(vec![]);
+            assert_eq!(options.folder_id.as_deref(), Some("recipes"));
+            assert_eq!(
+                options.chat_params, None,
+                "Trips' settings went with the other folder's first message"
             );
         });
     }
@@ -2665,6 +3107,49 @@ mod tests {
         });
     }
 
+    /// A Hermes chat's `/` list is the connection in use now's: another
+    /// connection reads its own, and the last one's answer never fills it.
+    #[gpui_kit::test]
+    fn another_hermes_connection_reads_its_own_commands(cx: &mut TestAppContext) {
+        let daemon = FakeDaemon::new();
+        daemon.returns::<methods::DraftsGet>(Draft::default());
+        let n = Arc::new(Mutex::new(0usize));
+        let count = n.clone();
+        daemon.on::<methods::HermesCatalog>(move |_| {
+            let mut n = count.lock().unwrap();
+            *n += 1;
+            let name = if *n == 1 { "prune-roses" } else { "sow-beans" };
+            Ok(json!({"commands": [{"name": name}]}))
+        });
+        let first = daemon.hold_one::<methods::HermesCatalog>(0);
+        let store = store(&daemon, Arc::default(), cx);
+        store.update(cx, |s, cx| {
+            s.switch_draft(Some(key(Some("local:hermes_s1"))), "", cx)
+        });
+        cx.run_until_parked();
+        store.update(cx, |s, cx| {
+            s.load_prompts(Some("0a1b2c3d:1".into()), cx);
+            s.load_prompts(Some("0a1b2c3d:2".into()), cx);
+        });
+        cx.run_until_parked();
+        drop(first);
+        cx.run_until_parked();
+        assert_eq!(daemon.calls::<methods::HermesCatalog>().len(), 2);
+        store.read_with(cx, |s, _| {
+            let commands: Vec<&str> = s
+                .prompts
+                .iter()
+                .flatten()
+                .map(|p| p.command.as_str())
+                .collect();
+            assert_eq!(
+                commands,
+                vec!["/sow-beans"],
+                "the last connection's commands are shown"
+            );
+        });
+    }
+
     #[gpui_kit::test]
     fn an_old_accounts_answers_never_fill_the_new_ones(cx: &mut TestAppContext) {
         let daemon = FakeDaemon::new();
@@ -2678,7 +3163,7 @@ mod tests {
         let store = store(&daemon, Arc::default(), cx);
         store.update(cx, |s, cx| {
             s.code_interpreter = true;
-            s.load_prompts(cx);
+            s.load_prompts(None, cx);
             s.reset(cx);
         });
         held.release();

@@ -48,7 +48,8 @@ use std::time::Duration;
 use conduit_daemon::{Handshake, RpcError};
 use conduit_protocol::{
     AccountList, AuthPhase, AuthSnapshot, Capabilities, DirectConnectionList, HandshakeRequest,
-    HandshakeResponse, HermesSettings, NoParams, ServerReachability, ServerStatus, methods,
+    HandshakeResponse, HermesSettings, LibreChatSessionPhase, NoParams, PrimaryAccount,
+    ServerReachability, ServerStatus, methods,
 };
 use gpui_kit::{AsyncApp, Context, Entity, EventEmitter, Subscription, Task, WeakEntity};
 use serde_json::Value;
@@ -93,7 +94,8 @@ pub enum Route {
     /// No backend chosen yet: the backend chooser.
     Onboarding,
     /// An Open WebUI account is active and needs a sign-in (a first sign-in,
-    /// an addition, or an expired session).
+    /// an addition, or an expired session), or the LibreChat account in
+    /// charge needs one (its session ended).
     SignIn,
     /// Ready: signed in, or a Direct-only or Hermes-only setup.
     Main,
@@ -103,6 +105,8 @@ pub enum Route {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Backend {
     OpenWebUi,
+    /// A LibreChat account owns the chats.
+    LibreChat,
     Direct,
     Hermes,
     /// The reviewer/demo session, with no server.
@@ -134,6 +138,17 @@ pub fn derive_route(inputs: RouteInputs<'_>) -> Route {
     if accounts.adding_account {
         return Route::SignIn;
     }
+    // A LibreChat account owns the chats: its own session routes, and Open
+    // WebUI (parked) does not.
+    if accounts.primary == PrimaryAccount::LibreChat
+        && accounts.active_libre_chat_account_id.is_some()
+    {
+        return match accounts.libre_chat_session {
+            LibreChatSessionPhase::SignedIn => Route::Main,
+            LibreChatSessionPhase::NeedsSignIn => Route::SignIn,
+            _ => Route::Unknown,
+        };
+    }
     if accounts.active_account_id.is_some() {
         if auth.is_authenticated {
             return Route::Main;
@@ -160,8 +175,10 @@ pub struct SessionStore {
     accounts: Entity<AccountsStore>,
     pub auth: Option<AuthSnapshot>,
     pub server: Option<ServerStatus>,
-    /// The active account `auth` and `server` were asked for (`None`: no
-    /// account). Another account's are dropped, never routed on.
+    /// The account in charge `auth` and `server` were asked for (its
+    /// [`AccountsStore::scope_key`]; `None`: no account). Another account's
+    /// are dropped, never routed on: one LibreChat account after another
+    /// changes no Open WebUI id.
     facts_for: Option<String>,
     pub direct: Option<DirectConnectionList>,
     pub hermes: Option<HermesSettings>,
@@ -205,8 +222,18 @@ pub struct SessionStore {
 impl EventEmitter<SessionEvent> for SessionStore {}
 
 fn signature(list: &AccountList) -> String {
-    let mut s = format!("{:?}|{}", list.active_account_id, list.adding_account);
+    let mut s = format!(
+        "{:?}|{}|{:?}|{:?}|{:?}",
+        list.active_account_id,
+        list.adding_account,
+        list.primary,
+        list.active_libre_chat_account_id,
+        list.libre_chat_session,
+    );
     for a in &list.accounts {
+        s.push_str(&format!("|{}:{}", a.id, a.has_session));
+    }
+    for a in &list.libre_chat_accounts {
         s.push_str(&format!("|{}:{}", a.id, a.has_session));
     }
     s
@@ -217,9 +244,9 @@ impl SessionStore {
         let subscription = cx.observe(&accounts, |this, accounts, cx| {
             let list = accounts.read(cx).list.as_ref();
             let sig = list.map(signature);
-            if let Some(list) = list {
-                let active = list.active_account_id.clone();
-                this.forget_other_account(active);
+            if list.is_some() {
+                let in_charge = accounts.read(cx).scope_key();
+                this.forget_other_account(in_charge);
             }
             if sig.is_some() && sig != this.seen_accounts {
                 this.seen_accounts = sig;
@@ -276,6 +303,7 @@ impl SessionStore {
     /// Direct connections chosen and usable, with no Open WebUI account.
     pub fn direct_only(&self, cx: &gpui_kit::App) -> bool {
         self.accounts.read(cx).active().is_none()
+            && !self.accounts.read(cx).libre_chat_in_charge()
             && self
                 .direct
                 .as_ref()
@@ -285,6 +313,7 @@ impl SessionStore {
     /// Hermes usable, with no Open WebUI account and no Direct preference.
     pub fn hermes_only(&self, cx: &gpui_kit::App) -> bool {
         self.accounts.read(cx).active().is_none()
+            && !self.accounts.read(cx).libre_chat_in_charge()
             && !self.direct_only(cx)
             && self.hermes.as_ref().is_some_and(|h| h.usable)
     }
@@ -292,6 +321,11 @@ impl SessionStore {
     pub fn backend(&self, cx: &gpui_kit::App) -> Option<Backend> {
         if self.auth.as_ref().is_some_and(|a| a.is_reviewer_mode) {
             return Some(Backend::Demo);
+        }
+        if self.accounts.read(cx).libre_chat_in_charge()
+            && self.accounts.read(cx).libre_chat_active().is_some()
+        {
+            return Some(Backend::LibreChat);
         }
         if self.accounts.read(cx).active().is_some() {
             return Some(Backend::OpenWebUi);
@@ -331,8 +365,8 @@ impl SessionStore {
     }
 
     /// Drops the auth snapshot and server status when they were asked for
-    /// another account than `active`: the route waits for the new account's
-    /// own answers rather than pairing it with the last one's.
+    /// another account in charge than `active`: the route waits for the new
+    /// account's own answers rather than pairing it with the last one's.
     fn forget_other_account(&mut self, active: Option<String>) {
         if self.handshake_for.is_none() {
             self.handshake_for = Some(active.clone());
@@ -464,7 +498,6 @@ impl SessionStore {
     /// own fetch may have failed while the core started). Account-scoped
     /// reads start only once the store shows this list.
     fn accounts_listed(&mut self, list: AccountList, cx: &mut Context<Self>) {
-        let active = list.active_account_id.clone();
         let seen = self.seen_accounts.replace(signature(&list));
         if !self.accounts.update(cx, |a, cx| a.adopt(list, cx)) {
             // A change of the accounts store is in flight: the list it shows
@@ -473,7 +506,8 @@ impl SessionStore {
             self.keep_resolving(None, cx);
             return;
         }
-        self.forget_other_account(active);
+        let in_charge = self.accounts.read(cx).scope_key();
+        self.forget_other_account(in_charge);
         let auth = self.rpc.call::<methods::AuthStatus>(&NoParams);
         // Asked again now that the core is up: its own answer.
         let rpc = self.rpc.clone();
@@ -1336,6 +1370,37 @@ mod tests {
                 });
             }
         }
+    }
+
+    /// Another LibreChat account in charge, with Open WebUI's account as it
+    /// was: the last account's capabilities are not kept for it.
+    #[gpui_kit::test]
+    fn another_librechat_account_drops_the_last_ones_facts(cx: &mut TestAppContext) {
+        let daemon = FakeDaemon::new();
+        let store = session(cx, &daemon);
+        let accounts = store.read_with(cx, |s, _| s.accounts().clone());
+        let in_charge = |id: &str| {
+            let mut l = list(vec![account("a", "Avery", true, true)]);
+            l.primary = PrimaryAccount::LibreChat;
+            l.active_libre_chat_account_id = Some(id.into());
+            l
+        };
+        accounts.update(cx, |a, cx| a.adopt(in_charge("lc-avery"), cx));
+        cx.run_until_parked();
+        store.update(cx, |s, _| {
+            s.system_capabilities = Some(Capabilities {
+                notes: true,
+                ..Default::default()
+            })
+        });
+        accounts.update(cx, |a, cx| a.adopt(in_charge("lc-blake"), cx));
+        cx.run_until_parked();
+        store.read_with(cx, |s, _| {
+            assert!(
+                s.system_capabilities.is_none(),
+                "the last LibreChat account's capabilities stayed"
+            )
+        });
     }
 
     #[gpui_kit::test]

@@ -9,13 +9,17 @@
 //! Advanced Settings open), up to what fits under Settings' title bar, and
 //! scrolls beyond that. Sign-in for the new account follows in the setup
 //! window once the server answers.
+//!
+//! A switch at the top picks the kind, as the phone's account sheet has a
+//! tab per kind: Open WebUI (the server form), or LibreChat, whose whole
+//! sign-in happens in the sheet ([`LibreChatSignInView`]).
 
 use std::cell::Cell;
 use std::rc::Rc;
 
 use conduit_components::ActiveConduitTheme as _;
 use conduit_components::theme::UI_FONT;
-use conduit_components::views::kit::grouped_tones;
+use conduit_components::views::kit::{Segment, Segmented, grouped_tones};
 use gpui_kit::prelude::*;
 use gpui_kit::{
     App, Bounds, Context, Entity, EventEmitter, FocusHandle, Focusable, Pixels, Role, SharedString,
@@ -26,6 +30,7 @@ use gpui_kit::{
 use crate::actions::CloseWindow;
 use crate::l10n::ActiveL10n as _;
 use crate::stores::Stores;
+use crate::views::librechat_sign_in::{LibreChatSignInEvent, LibreChatSignInView};
 use crate::views::server_form::{ServerForm, ServerFormEvent};
 
 /// The sheet's width (Mail's account sheet is about this wide).
@@ -67,8 +72,17 @@ pub fn needs_fit(requested: Option<f32>, measured: f32) -> bool {
     requested.is_none_or(|r| (r - measured).abs() >= 0.5)
 }
 
+/// Which kind of account the sheet adds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Kind {
+    OpenWebUi,
+    LibreChat,
+}
+
 pub struct AddAccountSheet {
     pub form: Entity<ServerForm>,
+    pub librechat: Entity<LibreChatSignInView>,
+    pub kind: Kind,
     focus: FocusHandle,
     /// The height last asked of the window, so a request never repeats
     /// while AppKit resizes it.
@@ -81,10 +95,15 @@ impl EventEmitter<ServerFormEvent> for AddAccountSheet {}
 impl AddAccountSheet {
     pub fn new(stores: Stores, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let form = cx.new(|cx| {
-            let mut f = ServerForm::new(stores, window, cx);
+            let mut f = ServerForm::new(stores.clone(), window, cx);
             f.reset(true, window, cx);
             f.sheet = true;
             f
+        });
+        let librechat = cx.new(|cx| {
+            let mut view = LibreChatSignInView::new(stores.clone(), window, cx);
+            view.sheet = true;
+            view
         });
         // The address takes the caret, as the sheet drops in.
         let url = form.read(cx).url.clone();
@@ -93,9 +112,18 @@ impl AddAccountSheet {
         let subscriptions = vec![
             // Cancel and Connected reach Settings, which ends the sheet.
             cx.subscribe(&form, |_, _, e: &ServerFormEvent, cx| cx.emit(e.clone())),
+            // A LibreChat account is signed in within the sheet: done.
+            cx.subscribe(&librechat, |_, _, e: &LibreChatSignInEvent, cx| {
+                cx.emit(match e {
+                    LibreChatSignInEvent::Back => ServerFormEvent::Back,
+                    LibreChatSignInEvent::SignedIn => ServerFormEvent::Connected,
+                })
+            }),
         ];
         Self {
             form,
+            librechat,
+            kind: Kind::OpenWebUi,
             focus: cx.focus_handle(),
             requested: Rc::new(Cell::new(None)),
             _subscriptions: subscriptions,
@@ -105,9 +133,40 @@ impl AddAccountSheet {
     /// Cancel, as the form's Cancel button: unless a server is being
     /// checked.
     pub fn cancel(&mut self, cx: &mut Context<Self>) {
-        if !self.form.read(cx).busy {
+        if !self.busy(cx) {
             cx.emit(ServerFormEvent::Back);
         }
+    }
+
+    /// Either form has a server check or a sign-in out: one that can still
+    /// put its account in charge is never hidden or cancelled under it.
+    fn busy(&self, cx: &App) -> bool {
+        self.form.read(cx).busy || self.librechat.read(cx).busy
+    }
+
+    /// Shows the form for `kind`, its first field focused (not while a form
+    /// is busy).
+    pub fn set_kind(&mut self, kind: Kind, window: &mut Window, cx: &mut Context<Self>) {
+        if self.kind == kind || self.busy(cx) {
+            return;
+        }
+        self.kind = kind;
+        let field = match kind {
+            Kind::OpenWebUi => self.form.read(cx).url.clone(),
+            Kind::LibreChat => {
+                self.librechat.update(cx, |l, cx| {
+                    if !l.busy {
+                        l.reset(window, cx)
+                    }
+                });
+                self.librechat.read(cx).first_field()
+            }
+        };
+        window.on_next_frame(move |window, cx| {
+            let handle = gpui_kit::Focusable::focus_handle(field.read(cx), cx);
+            window.focus(&handle, cx);
+        });
+        cx.notify();
     }
 }
 
@@ -137,7 +196,38 @@ fn fit(height: f32, first: bool, window: &Window, cx: &App) {
 impl Render for AddAccountSheet {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let t = cx.conduit().clone();
+        let l10n = cx.l10n().clone();
         let (page, _) = grouped_tones(&t);
+        let this = cx.entity().downgrade();
+        let kinds = Segmented::new(
+            "add-account-kind",
+            l10n.desktop_add_account(),
+            vec![
+                Segment::new(l10n.backend_chooser_open_web_ui_title()),
+                Segment::new(l10n.libre_chat_title()),
+            ],
+            match self.kind {
+                Kind::OpenWebUi => 0,
+                Kind::LibreChat => 1,
+            },
+        )
+        .on_select(Rc::new(move |i, window, cx| {
+            let _ = this.update(cx, |s, cx| {
+                s.set_kind(
+                    if i == 1 {
+                        Kind::LibreChat
+                    } else {
+                        Kind::OpenWebUi
+                    },
+                    window,
+                    cx,
+                )
+            });
+        }));
+        let form = match self.kind {
+            Kind::OpenWebUi => self.form.clone().into_any_element(),
+            Kind::LibreChat => self.librechat.clone().into_any_element(),
+        };
         let requested = self.requested.clone();
         // The form's natural height (the content box, padding included).
         let probe = gpui_kit::canvas(
@@ -183,7 +273,11 @@ impl Render for AddAccountSheet {
                     .relative()
                     .w_full()
                     .p(px(PADDING))
-                    .child(self.form.clone())
+                    .flex()
+                    .flex_col()
+                    .gap(px(16.))
+                    .child(div().flex().justify_center().child(kinds))
+                    .child(form)
                     .child(probe),
             )
     }
@@ -205,6 +299,39 @@ mod tests {
             }
             other => panic!("{other:?}"),
         }
+    }
+
+    /// A sign-in still out keeps its form: the other kind is not shown over
+    /// it, and Cancel waits, so a sign-in that can still put its account in
+    /// charge is never hidden behind an idle form.
+    #[gpui_kit::test]
+    fn a_sign_in_still_out_keeps_its_form(cx: &mut gpui_kit::TestAppContext) {
+        let (_daemon, stores, vcx) = crate::views::sheet::bench::bench(cx);
+        let sheet = vcx.update(|window, cx| cx.new(|cx| AddAccountSheet::new(stores, window, cx)));
+        let backs = Rc::new(Cell::new(0));
+        let b = backs.clone();
+        let _watch = vcx.update(|_, cx| {
+            cx.subscribe(&sheet, move |_, e: &ServerFormEvent, _| {
+                if matches!(e, ServerFormEvent::Back) {
+                    b.set(b.get() + 1);
+                }
+            })
+        });
+        sheet.update_in(vcx, |s, window, cx| s.set_kind(Kind::LibreChat, window, cx));
+        sheet.update(vcx, |s, cx| s.librechat.update(cx, |l, _| l.busy = true));
+        sheet.update_in(vcx, |s, window, cx| s.set_kind(Kind::OpenWebUi, window, cx));
+        assert_eq!(
+            sheet.read_with(vcx, |s, _| s.kind),
+            Kind::LibreChat,
+            "the LibreChat sign-in still out was hidden"
+        );
+        // Either form busy: Cancel waits, whichever kind is shown.
+        sheet.update(vcx, |s, cx| {
+            s.librechat.update(cx, |l, _| l.busy = false);
+            s.form.update(cx, |f, _| f.busy = true);
+        });
+        sheet.update(vcx, |s, cx| s.cancel(cx));
+        assert_eq!(backs.get(), 0, "Cancel left a sign-in still out");
     }
 
     #[test]

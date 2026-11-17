@@ -11,6 +11,7 @@ import 'package:conduit_core/features/direct_connections/services/direct_model_r
 import 'package:conduit_core/features/notes/utils/note_page_data.dart';
 import 'package:conduit_core/models/chat_message.dart';
 import 'package:conduit_core/features/workspace/models/workspace_resources.dart';
+import 'package:conduit_core/features/auth/providers/unified_auth_providers.dart';
 import 'package:conduit_core/providers/app_providers.dart';
 import 'package:conduit_protocol/conduit_protocol.dart';
 import 'package:conduitd/conduitd.dart';
@@ -507,10 +508,13 @@ void main() {
           final events = EventBus();
           final turns = TurnsService(runtime.container, events);
           addTearDown(turns.dispose);
+          final started = <String>[];
           final completed = <String>[];
           final queues = <QueueState>[];
           events.attach('probe', (envelope) {
-            if (envelope.event == ConduitEvents.turnCompleted) {
+            if (envelope.event == ConduitEvents.turnStarted) {
+              started.add(TurnStarted.fromJson(envelope.payload).messageId);
+            } else if (envelope.event == ConduitEvents.turnCompleted) {
               completed.add(TurnCompleted.fromJson(envelope.payload).messageId);
             } else if (envelope.event == ConduitEvents.queueChanged) {
               queues.add(QueueState.fromJson(envelope.payload));
@@ -561,13 +565,19 @@ void main() {
             QueueDraftRef(chatId: first.chatId, draftId: two.drafts.first.id),
           );
           expect(now.outcome, 'admitted');
-          // The one left goes out once that answer is done.
+          // The one left goes out once that answer is done -- the moment it
+          // ends, while that turn's stored copy is still being fetched --
+          // and the window follows its answer like any other: it starts,
+          // streams and ends here, not only in the stored copy.
           await _waitFor(
             () =>
                 completed.length >= 4 &&
-                turns.queueGet(first.chatId).drafts.isEmpty,
-            seconds: 120,
+                turns.queueGet(first.chatId).drafts.isEmpty &&
+                !turns.isRunning(first.chatId),
+            seconds: 60,
           );
+          expect(completed, hasLength(4));
+          expect(started, completed);
           expect(completed, contains(slow.assistantMessageId));
           expect(turns.queueGet(first.chatId).drafts, isEmpty);
           final detail = await ChatsService(
@@ -584,6 +594,20 @@ void main() {
             'And the east side?',
             'And the south side?',
           ]);
+          // And the chat takes the next message straight away: nothing is
+          // left looking as if it were still being written.
+          final next = await turns.send(
+            SendTurn(
+              chatId: first.chatId,
+              model: turnModel,
+              text: 'Reply with exactly the word: kite',
+            ),
+          );
+          await _waitFor(
+            () => completed.contains(next.assistantMessageId),
+            seconds: 60,
+          );
+          expect(completed, contains(next.assistantMessageId));
         },
         timeout: const Timeout(Duration(minutes: 4)),
       );
@@ -696,20 +720,26 @@ void main() {
           return (await ChatsService(runtime.container).get(chatId))!;
         }
 
-        test('a chat says what it offers, and its answers carry usage', () async {
-          final accepted = await answered('Say the word: offers');
-          final detail = await reopened(accepted.chatId);
-          expect(detail.abilities.fork, isTrue, reason: 'admin may import');
-          expect(detail.abilities.export, isTrue);
-          expect(detail.abilities.branch, isTrue);
-          expect(detail.abilities.deleteMessages, isTrue);
-          expect(detail.abilities.share, isTrue);
-          expect(detail.abilities.generateTitle, isTrue);
-          expect(detail.abilities.saveTemporary, isFalse);
-          final answer = detail.messages.lastWhere((m) => m.role == 'assistant');
-          expect(answer.parentId, accepted.userMessageId);
-          expect(answer.usage?.generationTokens, isNotNull);
-        }, timeout: const Timeout(Duration(minutes: 3)));
+        test(
+          'a chat says what it offers, and its answers carry usage',
+          () async {
+            final accepted = await answered('Say the word: offers');
+            final detail = await reopened(accepted.chatId);
+            expect(detail.abilities.fork, isTrue, reason: 'admin may import');
+            expect(detail.abilities.export, isTrue);
+            expect(detail.abilities.branch, isTrue);
+            expect(detail.abilities.deleteMessages, isTrue);
+            expect(detail.abilities.share, isTrue);
+            expect(detail.abilities.generateTitle, isTrue);
+            expect(detail.abilities.saveTemporary, isFalse);
+            final answer = detail.messages.lastWhere(
+              (m) => m.role == 'assistant',
+            );
+            expect(answer.parentId, accepted.userMessageId);
+            expect(answer.usage?.generationTokens, isNotNull);
+          },
+          timeout: const Timeout(Duration(minutes: 3)),
+        );
 
         test('compares two models: both stream under their own ids, then '
             'merge into one', () async {
@@ -795,9 +825,8 @@ void main() {
           expect(last.text, contains('merged'));
           await _waitFor(
             () async =>
-                (await reopened(accepted.chatId)).messages.any(
-                  (m) => (m.merged ?? '').contains('merged'),
-                ) ||
+                (await reopened(accepted.chatId)).messages
+                    .any((m) => (m.merged ?? '').contains('merged')) ||
                 (await reopened(accepted.chatId)).messages.any(
                   (m) => m.versions.any(
                     (v) => (v.merged ?? '').contains('merged'),
@@ -903,9 +932,9 @@ void main() {
             1,
           );
           await _waitFor(
-            () async => !(await reopened(
-              first.chatId,
-            )).messages.any((m) => m.id == second.assistantMessageId),
+            () async =>
+                !(await reopened(first.chatId)).messages
+                    .any((m) => m.id == second.assistantMessageId),
             seconds: 30,
           );
           final after = await reopened(first.chatId);
@@ -932,10 +961,10 @@ void main() {
           created.add(fork.chatId);
           expect(fork.chatId, isNot(first.chatId));
           final forked = await reopened(fork.chatId);
-          expect(
-            forked.messages.map((m) => m.content),
-            <String>['Say the word: trunk', 'trunk'],
-          );
+          expect(forked.messages.map((m) => m.content), <String>[
+            'Say the word: trunk',
+            'trunk',
+          ]);
 
           final json = await chats.export(
             ExportChat(chatId: first.chatId, format: ChatExportFormat.json),
@@ -1142,6 +1171,7 @@ void main() {
         final uploaded = await files.upload(
           name: 'conduit-e2e-$pid.png',
           bytes: png,
+          session: files.session(),
           contentType: 'image/png',
         );
         try {
@@ -2015,6 +2045,7 @@ void main() {
         );
         final id = created.summary.id;
         final uploaded = await FilesService(runtime.container).upload(
+          session: FilesService(runtime.container).session(),
           name: 'live-recording.webm',
           bytes: Uint8List.fromList(List<int>.generate(256, (i) => i)),
           contentType: 'audio/webm',
@@ -2080,6 +2111,224 @@ void main() {
         expect(detached.files, isEmpty);
         await _waitFor(() async => (await serverFiles()).isEmpty, seconds: 30);
         expect(await serverFiles(), isEmpty);
+      }, timeout: const Timeout(Duration(minutes: 2)));
+
+      // The notes list's access flags and time groups.
+      test(
+        'summarizes notes with their group and what the account may do',
+        () async {
+          final notes = NotesService(runtime.container);
+          final list = (await notes.list('')).notes;
+          expect(list, isNotEmpty);
+          // The admin's own notes: editable; sharing follows the server.
+          expect(list.every((n) => n.canEdit), isTrue);
+          expect(list.every((n) => n.owner == null), isTrue);
+          // Seeded today, so today's group.
+          expect(list.any((n) => n.section == NoteSection.today), isTrue);
+        },
+      );
+
+      // A note with pages (Open WebUI 0.12.5), seeded: each page reads and
+      // saves on its own, and a file the page gained after the editor
+      // loaded it is kept by the save (the phone's link merge).
+      test('reads and saves a page, keeping a file the page gained', () async {
+        final paged = credentials!.values['OWUI_PAGED_NOTE'];
+        if (paged == null) {
+          markTestSkipped('the seed has no paged note');
+          return;
+        }
+        final notes = NotesService(runtime.container);
+        final opened = (await notes.get(paged))!;
+        expect(opened.pageId, kNoteMainPageId);
+        expect(
+          opened.pages.map((p) => p.title),
+          containsAll(<String>['Day one', 'Day two', 'Evening walk']),
+        );
+        expect(
+          opened.pages.firstWhere((p) => p.title == 'Evening walk').depth,
+          1,
+        );
+        final dayTwo = opened.pages.firstWhere((p) => p.title == 'Day two').id;
+        final page = (await notes.get(paged, pageId: dayTwo))!;
+        expect(page.pageId, dayTwo);
+        expect(page.markdown, contains('Rain until noon'));
+        // An unknown page reads as the main page.
+        expect((await notes.get(paged, pageId: 'gone'))!.pageId, 'main');
+
+        final uploaded = await FilesService(runtime.container).upload(
+          name: 'live-page.txt',
+          bytes: Uint8List.fromList('A synthetic page file.'.codeUnits),
+          contentType: 'text/plain',
+          session: FilesService(runtime.container).session(),
+        );
+        final api = runtime.container.read(apiServiceProvider)!;
+        addTearDown(() async {
+          try {
+            await api.deleteFile(uploaded.id);
+          } on Object catch (error) {
+            stderr.writeln('could not delete the page test file: $error');
+          }
+        });
+        // Attached to the page while the editor holds it as it loaded.
+        await notes.attach(
+          NoteAttach(
+            noteId: paged,
+            file: NoteFile(id: uploaded.id, name: 'live-page.txt'),
+            pageId: dayTwo,
+          ),
+        );
+        final saved = await notes.save(
+          NoteSave(
+            id: paged,
+            title: opened.summary.title,
+            pageId: dayTwo,
+            ops: const <Map<String, dynamic>>[
+              <String, dynamic>{'insert': 'Rain all day.\n'},
+            ],
+            baseOps: page.ops,
+          ),
+        );
+        expect(saved.pageId, dayTwo);
+        expect(saved.markdown, contains('Rain all day.'));
+        expect(
+          noteFileLinksInMarkdown(saved.markdown).map((l) => l.id),
+          contains(uploaded.id),
+        );
+        // The other pages are untouched.
+        expect(
+          (await notes.get(paged))!.markdown,
+          contains('Notes from the spring field trip.'),
+        );
+
+        // Put back as seeded: the text, and the file taken out.
+        await notes.save(
+          NoteSave(
+            id: paged,
+            title: opened.summary.title,
+            pageId: dayTwo,
+            ops: page.ops,
+            baseOps: saved.ops,
+          ),
+        );
+        final restored = (await notes.get(paged, pageId: dayTwo))!;
+        expect(restored.markdown, contains('Rain until noon'));
+        expect(
+          noteFileLinksInMarkdown(restored.markdown).map((l) => l.id),
+          isNot(contains(uploaded.id)),
+        );
+      }, timeout: const Timeout(Duration(minutes: 2)));
+
+      // A note deleted while its editor still had text to save: the text
+      // is kept as a new note, as the phone's editor recovers it.
+      test('keeps the draft of a deleted note as a new note', () async {
+        final api = runtime.container.read(apiServiceProvider)!;
+        final notes = NotesService(runtime.container);
+        final title = 'Live recovery ${DateTime.now().millisecondsSinceEpoch}';
+        final created = await notes.save(
+          NoteSave(
+            title: title,
+            ops: const <Map<String, dynamic>>[
+              <String, dynamic>{'insert': 'First draft\n'},
+            ],
+          ),
+        );
+        final id = created.summary.id;
+        // The editor has it open.
+        expect(await notes.get(id), isNotNull);
+        await notes.delete(id);
+        final kept = await notes.save(
+          NoteSave(
+            id: id,
+            title: title,
+            ops: const <Map<String, dynamic>>[
+              <String, dynamic>{'insert': 'Second draft\n'},
+            ],
+            baseOps: created.ops,
+          ),
+        );
+        expect(kept.recoveredFrom, id);
+        expect(kept.summary.id, isNot(id));
+        expect(kept.summary.title, title);
+        expect(kept.markdown, contains('Second draft'));
+        // Kept through the outbox under a `local:` id. Once the server has
+        // created it, that id still opens it, answered under the server's
+        // id (the editor that holds the local one follows).
+        expect(kept.summary.id, startsWith('local:'));
+        await _waitFor(() async {
+          final now = await notes.get(kept.summary.id);
+          return now != null && !now.summary.id.startsWith('local:');
+        }, seconds: 30);
+        final synced = (await notes.get(kept.summary.id))!;
+        expect(synced.markdown, contains('Second draft'));
+        expect(synced.summary.title, title);
+        addTearDown(() async {
+          await notes.delete(synced.summary.id);
+          await _waitFor(
+            () async => (await notes.get(synced.summary.id)) == null,
+            seconds: 30,
+          );
+          final (listed, _) = await api.getNotes();
+          for (final note in listed) {
+            final noteId = note['id'];
+            if (note['title'] == title && noteId is String) {
+              try {
+                await api.deleteNote(noteId);
+              } on Object catch (error) {
+                stderr.writeln('could not delete recovery note: $error');
+              }
+            }
+          }
+        });
+      }, timeout: const Timeout(Duration(minutes: 2)));
+
+      // A recording made in a note: kept on this computer, uploaded and
+      // attached through the core's controller (as the phone's recorder).
+      test('keeps, uploads and attaches a recording to a note', () async {
+        final directory = Directory.systemTemp.createTempSync('notes-audio');
+        addTearDown(() => directory.deleteSync(recursive: true));
+        final events = EventBus();
+        final notes = NotesService(
+          runtime.container,
+          events: events,
+          paths: DaemonDirectories.create(directory.path),
+        );
+        addTearDown(notes.dispose);
+        final api = runtime.container.read(apiServiceProvider)!;
+        final created = await notes.save(
+          NoteSave(
+            title: 'Live recording ${DateTime.now().millisecondsSinceEpoch}',
+          ),
+        );
+        final id = created.summary.id;
+        addTearDown(() async {
+          try {
+            await api.deleteNote(id);
+          } on Object catch (error) {
+            stderr.writeln('could not delete the recording note: $error');
+          }
+        });
+        // One second of 16 kHz silence, as a WAV file.
+        final wav = File('${directory.path}/recording.wav')
+          ..writeAsBytesSync(_silentWav(16000));
+        final added = await notes.addRecording(
+          NoteRecordingAdd(noteId: id, path: wav.path),
+        );
+        expect(added.recordings, isNotEmpty);
+        Future<List<NoteFileLink>> links() async {
+          final note = await notes.get(id);
+          return noteFileLinksInMarkdown(note?.markdown ?? '');
+        }
+
+        await _waitFor(
+          () async => (await links()).any((l) => l.name.endsWith('.wav')),
+          seconds: 60,
+        );
+        expect((await links()).map((l) => l.name), contains(endsWith('.wav')));
+        await _waitFor(
+          () async => (await notes.recordings(id)).recordings.isEmpty,
+          seconds: 30,
+        );
+        expect((await notes.recordings(id)).recordings, isEmpty);
       }, timeout: const Timeout(Duration(minutes: 2)));
 
       // Channels. This run's own channel, deleted at the end.
@@ -2170,6 +2419,33 @@ void main() {
 
         expect((await channels.members(channel.id)).users, isNotEmpty);
 
+        // Its pane: a group the user made, whose members they manage.
+        final details = await channels.open(channel.id);
+        expect(details.channel.kind, ChannelKind.group);
+        expect(details.channel.title, name);
+        expect(details.canManageMembers, isTrue);
+        final page = await channels.memberPage(
+          ChannelMemberQuery(channelId: channel.id),
+        );
+        expect(page.phase, ChannelMemberListPhase.ready);
+        expect(page.canManage, isTrue);
+        expect(page.members.where((m) => m.me), hasLength(1));
+        // Notify for mentions only, and back.
+        var listed = await channels.setMuted(
+          ChannelMute(id: channel.id, muted: true),
+        );
+        expect(
+          listed.channels.firstWhere((c) => c.id == channel.id).muted,
+          isTrue,
+        );
+        listed = await channels.setMuted(
+          ChannelMute(id: channel.id, muted: false),
+        );
+        expect(
+          listed.channels.firstWhere((c) => c.id == channel.id).muted,
+          isFalse,
+        );
+
         await channels.deleteMessage(
           ChannelMessageRef(channelId: channel.id, messageId: posted.id),
         );
@@ -2187,6 +2463,46 @@ void main() {
         final after = await channels.delete(channel.id);
         deleted = true;
         expect(after.channels.map((c) => c.id), isNot(contains(channel.id)));
+      }, timeout: const Timeout(Duration(minutes: 2)));
+
+      // The seeded group with the second user: `@` offers its members, and
+      // the members sheet adds and removes them.
+      test('mentions and members of the seeded group', () async {
+        final channelId = credentials!.values['OWUI_CHANNEL'];
+        final second = credentials.values['OWUI_SECOND_NAME'];
+        if (channelId == null || second == null) {
+          markTestSkipped('no seeded group (owui.sh reset)');
+          return;
+        }
+        final channels = ChannelsService(runtime.container);
+        final details = await channels.open(channelId);
+        expect(details.channel.unread, 0);
+        final mentions = await channels.mentions(
+          ChannelMentionQuery(
+            channelId: channelId,
+            query: second.substring(0, 3),
+          ),
+        );
+        expect(mentions.users.map((u) => u.name), contains(second));
+        var page = await channels.memberPage(
+          ChannelMemberQuery(channelId: channelId),
+        );
+        final riley = page.members.firstWhere((m) => m.name == second);
+        expect(page.canManage, isTrue);
+        var change = await channels.removeMember(
+          ChannelMemberRemove(channelId: channelId, userId: riley.id),
+        );
+        expect(change.result, ChannelMemberChangeResult.done);
+        expect(change.page.members.map((m) => m.id), isNot(contains(riley.id)));
+        change = await channels.addMembers(
+          ChannelMembersAdd(channelId: channelId, userIds: <String>[riley.id]),
+        );
+        expect(change.result, ChannelMemberChangeResult.done);
+        expect(change.page.members.map((m) => m.id), contains(riley.id));
+        page = await channels.memberPage(
+          ChannelMemberQuery(channelId: channelId, query: 'zzz-nobody'),
+        );
+        expect(page.members, isEmpty);
       }, timeout: const Timeout(Duration(minutes: 2)));
 
       // A terminal. A fake terminal server on this computer, added to
@@ -2388,6 +2704,164 @@ void main() {
         timeout: const Timeout(Duration(minutes: 2)),
       );
 
+      // The server's own terminal (owui.sh's fake Open Terminal, "Build
+      // box"): live changes through its events socket, a preview that lands
+      // on a page, and the Computer relay putting the token in.
+      test(
+        "the server's terminal: live changes, a preview, Computer",
+        () async {
+          final events = EventBus();
+          final portsSeen = Completer<TerminalChanged>();
+          var filesSeen = Completer<void>();
+          var count = 0;
+          events
+            ..attach('window', (e) {
+              if (e.event != ConduitEvents.terminalChanged) return;
+              count++;
+              final changed = TerminalChanged.fromJson(e.payload);
+              if (changed.ports != null && !portsSeen.isCompleted) {
+                portsSeen.complete(changed);
+              }
+              if (changed.files && !filesSeen.isCompleted) {
+                filesSeen.complete();
+              }
+            })
+            ..subscribe(
+              'window',
+              EventSubscription(
+                events: <String>[ConduitEvents.terminalChanged],
+              ),
+            );
+          final terminals = TerminalsService(runtime.container, events: events);
+          addTearDown(terminals.dispose);
+          final listed = await terminals.servers('');
+          final box = listed.servers.where((s) => s.id == 'buildbox');
+          if (box.isEmpty) {
+            markTestSkipped('the server runs without the fake terminal');
+            return;
+          }
+          final previous = listed.selectedId;
+          addTearDown(() => terminals.select(previous));
+          await terminals.select('buildbox');
+          final attached = await terminals.attach(
+            const TerminalAttach(serverId: 'buildbox'),
+          );
+          final handle = attached.handle;
+          final watching = terminals.watch(
+            TerminalWatch(handle: handle, path: '/home/demo'),
+          );
+          expect(watching.live, isTrue);
+          expect((await portsSeen.future).ports!.single.port, 5173);
+          final folder =
+              '/home/demo/live-${DateTime.now().millisecondsSinceEpoch}';
+          // Only the folder's own change counts: the wait starts here.
+          filesSeen = Completer<void>();
+          await terminals.fileAction(
+            TerminalFileAction(
+              handle: handle,
+              op: TerminalFileOp.mkdir,
+              path: folder,
+            ),
+          );
+          addTearDown(() async {
+            try {
+              await terminals.fileAction(
+                TerminalFileAction(
+                  handle: handle,
+                  op: TerminalFileOp.delete,
+                  path: folder,
+                ),
+              );
+            } on RpcError {
+              // Gone already, or the handle went with the test's end.
+            }
+          });
+          await filesSeen.future;
+          await terminals.fileAction(
+            TerminalFileAction(
+              handle: handle,
+              op: TerminalFileOp.delete,
+              path: folder,
+            ),
+          );
+
+          // The preview lands on the page asked for; a request with Open
+          // WebUI's proxy prefix in it loses the prefix.
+          final preview = await terminals.previewPort(
+            TerminalPortRef(handle: handle, port: 5173),
+          );
+          expect(preview.scripts, isNotEmpty);
+          final client = HttpClient();
+          addTearDown(() => client.close(force: true));
+          final entry = Uri.parse(preview.url);
+          final first = await client.getUrl(
+            entry.replace(queryParameters: <String, String>{'to': '/about'}),
+          );
+          first.followRedirects = false;
+          final keyed = await first.close();
+          expect(keyed.headers.value('location'), '/about');
+          final cookie = keyed.cookies.single;
+          await keyed.drain<void>();
+          final about = await client.getUrl(entry.replace(path: '/about'));
+          about.cookies.add(cookie);
+          final shown = await about.close();
+          expect(
+            await utf8.decoder.bind(shown).join(),
+            contains('About the Log'),
+          );
+          final style = await client.getUrl(
+            entry.replace(
+              path: '/api/v1/terminals/buildbox/proxy/5173/style.css',
+            ),
+          );
+          style.cookies.add(cookie);
+          final css = await style.close();
+          expect(css.statusCode, HttpStatus.ok);
+          expect(await utf8.decoder.bind(css).join(), contains('font:'));
+
+          await terminals.detach(handle);
+          final before = count;
+          await terminals.detach(handle);
+          expect(count, before);
+
+          // Computer: the desktop streams through a relay that holds the
+          // token; the viewer's own auth carries none.
+          final computer = ComputerRpcService(runtime.container);
+          addTearDown(computer.dispose);
+          const chatId = 'live-computer-chat';
+          final status = await computer.status(chatId);
+          expect(status.enabled, isTrue);
+          expect(status.desktop, isTrue);
+          expect((await computer.status('')).desktop, isFalse);
+          final view = await computer.open(
+            const ComputerOpen(
+              chatId: chatId,
+              surface: ComputerSurfaceKind.desktop,
+            ),
+          );
+          expect(view.state, ComputerViewState.live);
+          expect(view.transport, 'frames');
+          final socket = await WebSocket.connect(
+            view.streamUrl!,
+            headers: <String, String>{'origin': 'http://127.0.0.1'},
+          );
+          addTearDown(socket.close);
+          socket.add(
+            jsonEncode(<String, String>{
+              'type': 'auth',
+              'token': '',
+              'chat_id': chatId,
+            }),
+          );
+          final frame = jsonDecode(
+            await socket.first.timeout(const Duration(seconds: 10)) as String,
+          ) as Map<String, dynamic>;
+          expect(frame['type'], 'frame');
+          await computer.close(view.handle!);
+        },
+        timeout: const Timeout(Duration(minutes: 2)),
+      );
+
       // Dictation and speech. The server transcribes a recording: the local
       // server's speech-to-text is the fake model, which answers every
       // recording with the same synthetic sentence, so a tone checks the
@@ -2425,6 +2899,53 @@ void main() {
           expect(audio.contentType, startsWith('audio/'));
         }
       }, timeout: const Timeout(Duration(minutes: 2)));
+
+      // Dictation: the server's engine for an Open WebUI model, and a
+      // recording kept with a new chat's draft, transcribed from there.
+      test(
+        'dictates through the model\'s server and keeps the recording',
+        () async {
+          final voice = VoiceService(runtime.container);
+          final dictation = DictationService(runtime.container, voice: voice);
+          final status = await dictation.status(const DictationTarget());
+          if (!status.serverAvailable) {
+            markTestSkipped('the server does not transcribe');
+            return;
+          }
+          expect(status.serverSource, 'openWebUi');
+          final heard = await dictation.transcribe(
+            _toneWav(),
+            contentType: 'audio/wav',
+            engine: 'server',
+          );
+          expect(heard.text, isNotEmpty);
+
+          final recordings = RecordingsService(
+            drafts: DraftsService(
+              runtime.container,
+              temporary: TemporaryChats(),
+            ),
+            dictation: dictation,
+          );
+          const target = RecordingTarget(folderId: 'live-dictation');
+          final id = (await recordings.begin(target, sessionId: 'live')).id!;
+          addTearDown(
+            () => recordings.discard(
+              RecordingRef(id: id, folderId: 'live-dictation'),
+            ),
+          );
+          final tone = _toneWav();
+          await recordings.append(
+            RecordingChunk(id: id, pcm: base64Encode(tone.sublist(44))),
+          );
+          await recordings.close(RecordingRef(id: id));
+          final transcript = await recordings.transcribe(
+            RecordingTranscribe(id: id, folderId: 'live-dictation'),
+          );
+          expect(transcript.text, isNotEmpty);
+        },
+        timeout: const Timeout(Duration(minutes: 2)),
+      );
 
       // Settings parity: the account's profile, its memories and
       // system prompt, a model's prompt, the composer's pills, Chat Data
@@ -2965,6 +3486,7 @@ void main() {
           cleanups['knowledge'] = () => api.deleteKnowledgeBase(id);
 
           final uploaded = await FilesService(runtime.container).upload(
+            session: FilesService(runtime.container).session(),
             name: 'live-notes-$stamp.txt',
             bytes: Uint8List.fromList(
               utf8.encode('The deploy password rotates every Tuesday.'),
@@ -3056,6 +3578,214 @@ void main() {
           );
           cleanups.remove('knowledge');
         }, timeout: const Timeout(Duration(minutes: 3)));
+
+        test(
+          'the desktop editors: duplicate, typed valves, a tool switched off, '
+          'limits, uploads and text files, and access through access.*',
+          () async {
+            final api = runtime.container.read(apiServiceProvider)!;
+            final access = AccessService(
+              runtime.container,
+              workspace: workspace,
+            );
+
+            // A prompt and its copy, named as the phone's Duplicate names it.
+            final command = 'live-dup-$stamp';
+            final prompt = await workspace.save(
+              WorkspaceSave(
+                create: true,
+                detail: WorkspaceDetail(
+                  kind: WorkspaceKind.prompts,
+                  prompt: WorkspacePromptDto(
+                    command: command,
+                    name: 'Live duplicate',
+                    content: 'Say hello.',
+                  ),
+                ),
+              ),
+            );
+            final promptId = prompt.prompt!.id;
+            cleanups['dup-prompt'] = () => api.deletePrompt(promptId);
+            final copy = await workspace.duplicate(
+              WorkspaceDuplicate(kind: WorkspaceKind.prompts, id: promptId),
+            );
+            final copyId = copy.prompt!.id;
+            cleanups['dup-copy'] = () => api.deletePrompt(copyId);
+            expect(copy.prompt!.command, '$command-copy');
+            expect(copy.prompt!.name, 'Live duplicate (copy)');
+            expect(copy.prompt!.content, 'Say hello.');
+            expect(copy.grants, isEmpty);
+
+            // Share it with the seeded group as an editor, and every user.
+            final groups = await access.principals(
+              const AccessPrincipalQuery(),
+            );
+            final group = groups.items.firstWhere((p) => p.type == 'group');
+            final shared = await access.set(
+              AccessEdit(
+                kind: AccessResourceKind.prompt,
+                id: copyId,
+                grants: <AccessGrantDto>[
+                  AccessGrantDto(
+                    principalType: 'group',
+                    principalId: group.id,
+                    write: true,
+                  ),
+                ],
+                audience: AccessAudience.public,
+              ),
+            );
+            expect(shared.canEdit, isTrue);
+            expect(shared.audience, AccessAudience.public);
+            final granted = shared.grants.single;
+            expect(granted.principalId, group.id);
+            expect(granted.write, isTrue);
+            expect(granted.name, group.name);
+            final read = await access.get(
+              AccessRef(kind: AccessResourceKind.prompt, id: copyId),
+            );
+            expect(read.grants.single.write, isTrue);
+            final private = await access.set(
+              AccessEdit(
+                kind: AccessResourceKind.prompt,
+                id: copyId,
+                audience: AccessAudience.private,
+              ),
+            );
+            expect(private.grants, isEmpty);
+            expect(private.audience, AccessAudience.private);
+
+            await workspace.delete(
+              WorkspaceRef(kind: WorkspaceKind.prompts, id: copyId),
+            );
+            cleanups.remove('dup-copy');
+            await workspace.delete(
+              WorkspaceRef(kind: WorkspaceKind.prompts, id: promptId),
+            );
+            cleanups.remove('dup-prompt');
+
+            // A tool: valves typed from the form's text, switched off.
+            final toolId = 'live_typed_$stamp';
+            cleanups['typed-tool'] = () => api.deleteTool(toolId);
+            await workspace.save(
+              WorkspaceSave(
+                create: true,
+                detail: WorkspaceDetail(
+                  kind: WorkspaceKind.tools,
+                  tool: WorkspaceToolDto(
+                    id: toolId,
+                    name: 'Live typed',
+                    content: _liveToolSource,
+                  ),
+                ),
+              ),
+            );
+            final valves = await workspace.valves(
+              WorkspaceValvesQuery(toolId: toolId),
+            );
+            final limit = valves.fields.singleWhere((f) => f.key == 'limit');
+            expect(limit.type, ValveFieldType.integer);
+            final typed = await workspace.saveValves(
+              WorkspaceValves(
+                toolId: toolId,
+                edits: const <ValveEdit>[
+                  ValveEdit(key: 'limit', isDefault: false, text: '9'),
+                ],
+              ),
+            );
+            expect(typed.values['limit'], 9);
+            expect(
+              typed.fields.singleWhere((f) => f.key == 'limit').text,
+              '9',
+            );
+            final listedTool = await workspace.list(
+              WorkspaceQuery(kind: WorkspaceKind.tools, query: 'Live typed'),
+            );
+            final row = listedTool.items.singleWhere((i) => i.id == toolId);
+            expect(row.functionCount, greaterThan(0));
+            if (row.active != null) {
+              final off = await workspace.toggle(
+                WorkspaceRef(kind: WorkspaceKind.tools, id: toolId),
+              );
+              expect(off.active, isFalse);
+            }
+            final toolCopy = await workspace.duplicate(
+              WorkspaceDuplicate(
+                kind: WorkspaceKind.tools,
+                id: toolId,
+                suffix: '(Clone)',
+              ),
+            );
+            expect(toolCopy.tool!.id, '${toolId}_clone');
+            await workspace.delete(
+              WorkspaceRef(kind: WorkspaceKind.tools, id: toolCopy.tool!.id),
+            );
+            await workspace.delete(
+              WorkspaceRef(kind: WorkspaceKind.tools, id: toolId),
+            );
+            cleanups.remove('typed-tool');
+
+            // A knowledge base with limits, a fresh upload and a text file.
+            final base = await workspace.save(
+              WorkspaceSave(
+                create: true,
+                detail: WorkspaceDetail(
+                  kind: WorkspaceKind.knowledge,
+                  knowledge: WorkspaceKnowledgeDto(
+                    name: 'Live limits $stamp',
+                    maxFileCount: 5,
+                  ),
+                ),
+              ),
+            );
+            final baseId = base.knowledge!.id;
+            cleanups['limits'] = () => api.deleteKnowledgeBase(baseId);
+            expect(base.knowledge!.maxFileCount, 5);
+            final changed = await workspace.save(
+              WorkspaceSave(
+                detail: base.copyWith(
+                  knowledge: base.knowledge!.copyWith(
+                    maxFileCount: 6,
+                    maxFileSize: 2,
+                  ),
+                ),
+              ),
+            );
+            expect(changed.knowledge!.maxFileCount, 6);
+            expect(changed.knowledge!.maxFileSize, 2);
+
+            final uploaded = await FilesService(runtime.container).upload(
+              session: FilesService(runtime.container).session(),
+              name: 'live-fresh-$stamp.md',
+              bytes: Uint8List.fromList(utf8.encode('# Fresh\n\nBeans.')),
+              contentType: 'text/markdown',
+            );
+            var files = await workspace.attachFiles(
+              WorkspaceFilesAttach(
+                knowledgeId: baseId,
+                fileIds: <String>[uploaded.id],
+                uploaded: true,
+              ),
+            );
+            expect(files.files.map((f) => f.id), contains(uploaded.id));
+            files = await workspace.addText(
+              WorkspaceTextFile(
+                knowledgeId: baseId,
+                filename: 'typed-$stamp',
+                content: 'Water the beans at dawn.',
+              ),
+            );
+            expect(
+              files.files.map((f) => f.filename),
+              contains('typed-$stamp.txt'),
+            );
+            await workspace.delete(
+              WorkspaceRef(kind: WorkspaceKind.knowledge, id: baseId),
+            );
+            cleanups.remove('limits');
+          },
+          timeout: const Timeout(Duration(minutes: 3)),
+        );
       });
 
       group('chat and folder settings', () {
@@ -3369,6 +4099,346 @@ void main() {
           expect(restored.systemPrompt, before.systemPrompt);
         }, timeout: const Timeout(Duration(minutes: 2)));
       });
+
+      group('calendar and scheduled tasks', () {
+        late CalendarService calendar;
+        late AutomationsService tasks;
+        final stamp = DateTime.now().millisecondsSinceEpoch;
+
+        setUpAll(() {
+          calendar = CalendarService(runtime.container, events: EventBus());
+          tasks = AutomationsService(
+            runtime.container,
+            events: EventBus(),
+            pollInterval: const Duration(seconds: 1),
+            pollLimit: 90,
+          );
+        });
+
+        tearDownAll(() {
+          calendar.dispose();
+          tasks.dispose();
+        });
+
+        /// Every item of [agenda] titled [title].
+        List<CalendarItemDto> titled(CalendarAgenda agenda, String title) => [
+          for (final day in agenda.days)
+            for (final item in day.items)
+              if (item.title == title) item,
+        ];
+
+        CalendarWallTime tomorrowAt(CalendarAgenda agenda, int hour) {
+          final today = agenda.today!;
+          final day = DateTime(
+            today.year,
+            today.month,
+            today.day,
+          ).add(const Duration(days: 1));
+          return CalendarWallTime(
+            year: day.year,
+            month: day.month,
+            day: day.day,
+            hour: hour,
+          );
+        }
+
+        test('creates, edits, answers and deletes an event', () async {
+          var agenda = await calendar.agenda(
+            const CalendarAgendaQuery(refresh: true),
+          );
+          expect(agenda.failure, isNull);
+          expect(agenda.available, isTrue);
+          expect(agenda.canCreate, isTrue);
+          expect(agenda.calendars.where((c) => c.writable), isNotEmpty);
+          // The admin may use scheduled tasks: their calendar is listed.
+          expect(agenda.calendars.where((c) => c.scheduled), hasLength(1));
+
+          final title = 'Live seed swap $stamp';
+          final opened = await calendar.editor(const CalendarEditorOpen());
+          expect(opened.isNew, isTrue);
+          expect(opened.fields.calendarId, isNotEmpty);
+          final start = tomorrowAt(agenda, 10).copyWith(minute: 30);
+          final empty = await calendar.save(
+            CalendarDraftEdit(token: opened.token, fields: opened.fields),
+          );
+          expect(empty.saved, isFalse);
+          expect(empty.issues, contains('titleRequired'));
+
+          // Moving the start past the end takes the end along.
+          final moved = await calendar.checkDraft(
+            CalendarDraftEdit(
+              token: opened.token,
+              fields: opened.fields.copyWith(
+                title: title,
+                start: start.copyWith(hour: 9, minute: 0),
+                end: start.copyWith(hour: 10, minute: 0),
+              ),
+              movedStart: start,
+            ),
+          );
+          expect(moved.fields.start, start);
+          expect(moved.fields.end, start.copyWith(hour: 11));
+          expect(moved.issues, isEmpty);
+          expect(moved.changed, isTrue);
+
+          final me = runtime.container.read(currentUserProvider2)!.id;
+          final saved = await calendar.save(
+            CalendarDraftEdit(
+              token: opened.token,
+              fields: moved.fields.copyWith(
+                location: 'Community hall',
+                attendees: [CalendarAttendeeDto(userId: me, name: 'Me')],
+              ),
+            ),
+          );
+          expect(saved.saved, isTrue);
+          agenda = await calendar.agenda(const CalendarAgendaQuery());
+          final item = titled(agenda, title).single;
+          expect(item.location, 'Community hall');
+          expect(item.time.kind, 'range');
+          expect(item.time.start, start);
+          expect(item.editable, isTrue);
+          expect(item.invited, isTrue);
+          expect(item.answer, 'pending');
+          addTearDown(() async {
+            final now = await calendar.agenda(
+              const CalendarAgendaQuery(today: true),
+            );
+            for (final left in titled(now, '$title (moved)')) {
+              await calendar.deleteEvent(CalendarItemRef(key: left.key));
+            }
+          });
+
+          final detail = await calendar.event(CalendarItemRef(key: item.key));
+          expect(detail.status, 'fresh');
+          expect(detail.canEdit, isTrue);
+          expect(detail.attendeeCount, 1);
+
+          final answered = await calendar.respond(
+            CalendarRsvpEdit(key: item.key, answer: 'tentative'),
+          );
+          expect(answered.item.answer, 'tentative');
+
+          final editing = await calendar.editor(
+            CalendarEditorOpen(key: item.key),
+          );
+          expect(editing.isNew, isFalse);
+          expect(editing.fields.title, title);
+          final untouched = await calendar.checkDraft(
+            CalendarDraftEdit(token: editing.token, fields: editing.fields),
+          );
+          expect(untouched.changed, isFalse);
+          final renamed = await calendar.save(
+            CalendarDraftEdit(
+              token: editing.token,
+              fields: editing.fields.copyWith(title: '$title (moved)'),
+            ),
+          );
+          expect(renamed.saved, isTrue);
+          agenda = await calendar.agenda(const CalendarAgendaQuery());
+          expect(titled(agenda, title), isEmpty);
+          final again = titled(agenda, '$title (moved)').single;
+          // An edit keeps the answer the account gave.
+          expect(again.answer, 'tentative');
+
+          // The next page does not hold it; Today brings it back.
+          final later = await calendar.agenda(
+            const CalendarAgendaQuery(shift: 1),
+          );
+          expect(titled(later, '$title (moved)'), isEmpty);
+          expect(later.firstDay, isNot(agenda.firstDay));
+          final back = await calendar.agenda(
+            const CalendarAgendaQuery(today: true),
+          );
+          expect(titled(back, '$title (moved)'), hasLength(1));
+
+          final afterDelete = await calendar.deleteEvent(
+            CalendarItemRef(key: again.key),
+          );
+          expect(titled(afterDelete, '$title (moved)'), isEmpty);
+        }, timeout: const Timeout(Duration(minutes: 2)));
+
+        test('edits a daily series from one of its days', () async {
+          var agenda = await calendar.agenda(
+            const CalendarAgendaQuery(today: true),
+          );
+          final title = 'Live watering $stamp';
+          final opened = await calendar.editor(const CalendarEditorOpen());
+          final start = tomorrowAt(agenda, 7);
+          final saved = await calendar.save(
+            CalendarDraftEdit(
+              token: opened.token,
+              fields: opened.fields.copyWith(
+                title: title,
+                start: start,
+                end: start.copyWith(minute: 30),
+                repeat: 'daily',
+              ),
+            ),
+          );
+          expect(saved.saved, isTrue);
+          agenda = await calendar.agenda(const CalendarAgendaQuery());
+          final days = titled(agenda, title);
+          expect(days.length, greaterThan(3));
+          expect(days.every((d) => d.recurring), isTrue);
+          addTearDown(() async {
+            final now = await calendar.agenda(const CalendarAgendaQuery());
+            final left = [
+              ...titled(now, title),
+              ...titled(now, '$title, earlier'),
+            ];
+            if (left.isNotEmpty) {
+              await calendar.deleteEvent(CalendarItemRef(key: left.first.key));
+            }
+          });
+
+          final third = days[2];
+          final detail = await calendar.event(CalendarItemRef(key: third.key));
+          expect(detail.repeat, 'daily');
+          final editing = await calendar.editor(
+            CalendarEditorOpen(key: third.key),
+          );
+          expect(editing.series, isTrue);
+          // The series starts where it was made, not on the third day.
+          expect(editing.fields.start, start);
+          final renamed = await calendar.save(
+            CalendarDraftEdit(
+              token: editing.token,
+              fields: editing.fields.copyWith(title: '$title, earlier'),
+            ),
+          );
+          expect(renamed.saved, isTrue);
+          agenda = await calendar.agenda(const CalendarAgendaQuery());
+          expect(titled(agenda, title), isEmpty);
+          expect(titled(agenda, '$title, earlier').length, days.length);
+        }, timeout: const Timeout(Duration(minutes: 2)));
+
+        test('hides and shows a calendar', () async {
+          final agenda = await calendar.agenda(const CalendarAgendaQuery());
+          expect(agenda.filterable, isTrue);
+          final scheduled = agenda.calendars.firstWhere((c) => c.scheduled);
+          final hidden = await calendar.setVisible(
+            CalendarVisibility(calendarId: scheduled.id, visible: false),
+          );
+          expect(
+            hidden.calendars.firstWhere((c) => c.id == scheduled.id).visible,
+            isFalse,
+          );
+          final shown = await calendar.setVisible(
+            CalendarVisibility(calendarId: scheduled.id, visible: true),
+          );
+          expect(shown.calendars.every((c) => c.visible), isTrue);
+        });
+
+        test('runs a task now and finds its run, then deletes it', () async {
+          final listed = await tasks.list(const AutomationQuery(refresh: true));
+          expect(listed.failure, isNull);
+          expect(listed.available, isTrue);
+
+          final name = 'Live digest $stamp';
+          final opened = await tasks.editor(const AutomationEditorOpen());
+          expect(opened.isNew, isTrue);
+          expect(opened.models?.map((m) => m.id), contains(turnModel));
+          final weekly = await tasks.checkDraft(
+            AutomationDraftEdit(
+              token: opened.token,
+              fields: opened.fields,
+              chooseKind: 'weekly',
+            ),
+          );
+          expect(weekly.fields.schedule.kind, 'weekly');
+          expect(weekly.fields.schedule.days, hasLength(1));
+          expect(weekly.issues, containsAll(['nameRequired', 'modelRequired']));
+          // A typed rule the controls can write reads back as their kind.
+          final typed = await tasks.checkDraft(
+            AutomationDraftEdit(
+              token: opened.token,
+              fields: weekly.fields.copyWith(
+                schedule: const AutomationScheduleDto(
+                  kind: 'custom',
+                  rrule: 'RRULE:FREQ=DAILY;BYHOUR=6;BYMINUTE=45',
+                ),
+              ),
+            ),
+          );
+          expect(typed.fields.schedule.kind, 'daily');
+          expect(typed.fields.schedule.hour, 6);
+
+          final saved = await tasks.save(
+            AutomationDraftEdit(
+              token: opened.token,
+              fields: typed.fields.copyWith(
+                name: name,
+                prompt: 'Say the word: kestrel',
+                modelId: turnModel,
+              ),
+            ),
+          );
+          expect(saved.failure, isNull);
+          expect(saved.saved, isTrue);
+          final id = saved.id!;
+          addTearDown(() async {
+            try {
+              await tasks.delete(AutomationRef(id: id));
+            } on RpcError {
+              // Deleted by the test.
+            }
+          });
+
+          final list = await tasks.list(const AutomationQuery(query: ''));
+          final row = list.items.firstWhere((t) => t.id == id);
+          expect(row.active, isTrue);
+          expect(row.schedule.kind, 'daily');
+          expect(row.nextRunAt, isNotNull);
+
+          final detail = await tasks.get(AutomationRef(id: id));
+          expect(detail.prompt, 'Say the word: kestrel');
+          expect(detail.target, 'chat');
+          expect(detail.nextRuns, isNotEmpty);
+
+          final started = await tasks.run(AutomationRef(id: id));
+          expect(started.phase, anyOf('waiting', 'finished'));
+          var progress = started;
+          for (var i = 0; i < 120 && progress.phase == 'waiting'; i++) {
+            await Future<void>.delayed(const Duration(milliseconds: 500));
+            progress = tasks.runState(AutomationRef(id: id));
+          }
+          expect(progress.phase, 'finished', reason: '${progress.failure}');
+          final chatId = progress.run?.resultChatId;
+          expect(chatId, isNotNull);
+          created.add(chatId!);
+
+          final history = await tasks.runs(AutomationRunsQuery(id: id));
+          expect(history.items.first.id, progress.run!.id);
+
+          // The run is on the calendar's scheduled-tasks calendar.
+          final agenda = await calendar.agenda(
+            const CalendarAgendaQuery(today: true),
+          );
+          final entries = [
+            for (final day in agenda.days)
+              for (final item in day.items)
+                if (item.runId == progress.run!.id) item,
+          ];
+          expect(entries, hasLength(1));
+          expect(entries.single.resultChatId, chatId);
+          expect(entries.single.scheduledState, 'finished');
+
+          final paused = await tasks.setActive(
+            AutomationToggle(id: id, active: false),
+          );
+          expect(paused.summary.active, isFalse);
+          expect(paused.nextRuns, isEmpty);
+          final pausedList = await tasks.list(
+            const AutomationQuery(status: 'paused'),
+          );
+          expect(pausedList.items.map((t) => t.id), contains(id));
+
+          final left = await tasks.delete(AutomationRef(id: id));
+          expect(left.items.map((t) => t.id), isNot(contains(id)));
+          await tasks.list(const AutomationQuery(status: 'all'));
+        }, timeout: const Timeout(Duration(minutes: 3)));
+      });
     },
   );
 }
@@ -3416,6 +4486,29 @@ Future<void> _waitFor(
     if (await condition()) return;
     await Future<void>.delayed(const Duration(milliseconds: 250));
   }
+}
+
+/// [samples] of silence as a 16 kHz mono 16-bit WAV file.
+List<int> _silentWav(int samples) {
+  final data = samples * 2;
+  final out = BytesBuilder();
+  void u32(int v) =>
+      out.add(<int>[v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >> 24) & 255]);
+  void u16(int v) => out.add(<int>[v & 255, (v >> 8) & 255]);
+  out.add('RIFF'.codeUnits);
+  u32(36 + data);
+  out.add('WAVEfmt '.codeUnits);
+  u32(16);
+  u16(1);
+  u16(1);
+  u32(16000);
+  u32(32000);
+  u16(2);
+  u16(16);
+  out.add('data'.codeUnits);
+  u32(data);
+  out.add(List<int>.filled(data, 0));
+  return out.takeBytes();
 }
 
 /// The transcript as the daemon would serve it.

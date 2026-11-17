@@ -67,7 +67,14 @@ enum UiRequestKind {
   @JsonValue('mcpApproval')
   mcpApproval,
 
-  /// A Hermes run needs a decision before it continues.
+  /// A Hermes run needs a decision before it continues. `messageCode`
+  /// says which: `hermes.approval` (run a command or write a file:
+  /// `messageArgs.summary`, `detail.choices` from `once`, `session`,
+  /// `always` and `deny`, and a paid tool's `detail.cost` `{price,
+  /// approximate, note, spent, limit, server, overLimit}`), answered with
+  /// `ui.respond`; or `hermes.mcpSetup` (set up an MCP server:
+  /// `messageArgs.server`, `messageArgs.action`), answered with
+  /// `hermes.decisions.answer` (`approve` or `decline`).
   @JsonValue('hermesDecision')
   hermesDecision,
 
@@ -86,6 +93,40 @@ enum UiRequestKind {
   /// `allow` opens it in the browser (the window does, on `openUrl`).
   @JsonValue('mcpAppOpenLink')
   mcpAppOpenLink,
+
+  /// A Hermes agent asks one or more questions as a form: `detail.chatId`,
+  /// `detail.questions` (each `{id, text, choices: [{value, label,
+  /// recommended}], multiSelect, locked, lockedAnswer}`; up to five) and
+  /// `messageArgs.prompt`. Answered with `hermes.decisions.answer`
+  /// (`answers`, one per open question, null to skip); `deny` only closes
+  /// the card here.
+  @JsonValue('hermesClarify')
+  hermesClarify,
+
+  /// A Hermes agent needs the sudo password to run a command:
+  /// `messageArgs.prompt`, `detail.chatId`. Answered with
+  /// `hermes.decisions.answer` (`value`), which is never logged or kept.
+  @JsonValue('hermesSudo')
+  hermesSudo,
+
+  /// A Hermes agent needs a secret (an API key, a token):
+  /// `messageArgs.prompt`, `detail.chatId`. Answered with
+  /// `hermes.decisions.answer` (`value`), which is never logged or kept.
+  @JsonValue('hermesSecret')
+  hermesSecret,
+
+  /// A LibreChat agent paused its run to ask the user something.
+  /// `detail` has `question`, an optional `description`, `options` (a list
+  /// of `{label, description?}`) and `multiSelect`; `messageArgs.chatId`
+  /// names the chat. The answer goes back as [UiResponse.text] (an
+  /// option's label, several joined with ", ", or the user's own words)
+  /// with choice `answer` (or `allow`, as the window's question card says
+  /// it); `cancel` stops the reply.
+  ///
+  /// A LibreChat tool call waiting for approval is a [toolApproval] with
+  /// `detail.backend` `libreChat`.
+  @JsonValue('libreChatQuestion')
+  libreChatQuestion,
 }
 
 /// How an [UiRequestKind.inputPrompt] wants its value entered.

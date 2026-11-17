@@ -84,6 +84,9 @@ pub struct ChatPane {
     starting: bool,
     /// The active account the composer's attachments belong to.
     account: Option<String>,
+    /// The read-only notice's Continue Here or Continue in a Copy is on its
+    /// way: its buttons wait.
+    hermes_continuing: bool,
     /// A new chat's first send handing over to its transcript: when it
     /// began, and the greeting that fades out (see [`Handoff`]).
     handoff: Option<Handoff>,
@@ -119,8 +122,18 @@ pub struct ChatPane {
     /// (Open WebUI chats with something to show or edit) and Tool Settings
     /// (the tools, filters and pipe with personal valves).
     pub settings_offer: SettingsOffer,
+    /// Chat › Context & Usage… was last offered (the menus refresh when it
+    /// changes).
+    context_offered: std::cell::Cell<bool>,
     settings_key: Option<OfferKey>,
     _offer: Option<gpui_kit::Task<()>>,
+    /// Whether the header offers Computer for the open chat, and what the
+    /// answer was asked for (the chat, the setting, the selected terminal,
+    /// a revision bumped by a reconnect).
+    pub computer: Option<crate::views::terminal::chat::ComputerOffer>,
+    computer_key: Option<(String, bool, Option<String>, u64)>,
+    computer_revision: u64,
+    _computer: Option<gpui_kit::Task<()>>,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -192,12 +205,13 @@ pub fn daemon_uploader() -> Uploader {
             conduit_daemon::runtime::shared().spawn(async move {
                 let progress = req.progress.clone();
                 let result = http
-                    .upload(
+                    .upload_to(
                         &req.name,
                         req.content_type.as_deref(),
                         bytes::Bytes::from(req.bytes),
                         Some(Arc::new(move |sent, total| progress(sent, total))),
                         req.attempt,
+                        req.channel_id.as_deref(),
                     )
                     .await
                     .map_err(|e| UploadError::from_rpc(&e))
@@ -244,10 +258,16 @@ impl ChatPane {
         // Settings › Chat's choices, before the composer first draws.
         let prefs = ComposerPrefs::from_settings(stores.app_settings.read(cx).settings());
         composer_store.update(cx, |c, cx| c.set_prefs(prefs, cx));
+        // Dictation into the composer (the mic, ⇧⌘L, saved recordings).
+        let dictation = {
+            let connection = stores.connection.clone();
+            cx.new(|cx| crate::stores::dictation::DictationStore::for_connection(connection, cx))
+        };
         let composer = cx.new(|cx| {
             let mut c = ChatComposer::new(composer_store.clone(), window, cx);
             // The model and the temporary switch are in the toolbar here.
             c.inline_model = false;
+            c.set_dictation(dictation.clone(), window, cx);
             c
         });
         let find_input = cx.new(|cx| InputState::new(window, cx));
@@ -268,7 +288,7 @@ impl ChatPane {
             cx.observe(&stores.accounts, |this, accounts, cx| {
                 // Another account: nothing the composer holds for one
                 // message (files, knowledge, an `@` model) carries over.
-                let active = accounts.read(cx).active().map(|a| a.id.clone());
+                let active = accounts.read(cx).scope_key();
                 if active != this.account {
                     this.account = active;
                     // A first send of the last account's no longer holds
@@ -278,6 +298,35 @@ impl ChatPane {
                     this.composer.update(cx, |c, cx| c.forget_account(cx));
                     // The new account's draft for what is shown.
                     this.sync_selection(cx);
+                }
+            }),
+            // The Chat menu says Start or Stop Dictation.
+            cx.observe(&dictation, {
+                let mut was = false;
+                move |_, store, cx| {
+                    let now = store.read(cx).is_active();
+                    if now != was {
+                        was = now;
+                        cx.defer(crate::menus::refresh_menus);
+                    }
+                }
+            }),
+            // A reading that starts, or goes on, while the composer
+            // dictates ends the dictation as Stop does (what was said is
+            // transcribed): the microphone would hear it. Dictating pauses
+            // a reading in turn (`SpeechStore::yield_to_dictation`).
+            cx.observe(&stores.speech, {
+                let mut was_speaking = false;
+                move |this, speech, cx| {
+                    let speaking = speech.read(cx).is_speaking();
+                    if speaking && !was_speaking {
+                        let dictation = this.composer.read(cx).dictation.clone();
+                        if let Some(d) = dictation.filter(|d| d.read(cx).is_listening()) {
+                            d.update(cx, |d, cx| d.stop(cx));
+                        }
+                    }
+                    was_speaking = speaking;
+                    this.sync_speech(cx);
                 }
             }),
             // Settings › Chat changes the composer as it changes.
@@ -323,9 +372,11 @@ impl ChatPane {
                         let on = *on;
                         this.temporary_chosen = true;
                         this.temporary_hand_chosen = true;
+                        // The same new chat, in its folder, with the
+                        // settings saved on it.
                         this.stores
                             .navigation
-                            .update(cx, |n, cx| n.new_chat(on, cx));
+                            .update(cx, |n, cx| n.set_new_chat_temporary(on, cx));
                     }
                     ChatComposerEvent::PickerChanged => cx.notify(),
                     ChatComposerEvent::SaveAsNote(text) => {
@@ -334,12 +385,21 @@ impl ChatPane {
                     // The composer runs Compare Models itself, from its +
                     // menu (`choose_compare_model`).
                     ChatComposerEvent::CompareModels => {}
+                    ChatComposerEvent::StartCall => this.start_call(cx),
                 },
             ),
+            // The voice call: its strip or capsule, the composer's call
+            // button, and the new chat a call started, once it has an id.
+            cx.subscribe(
+                &stores.call,
+                |this, _, _: &crate::stores::call::CallChanged, cx| this.on_call_changed(cx),
+            ),
+            cx.observe(&stores.call, |_, _, cx| cx.notify()),
             // The title capsule shows the selected model; the menus follow
             // what the chat's settings offer.
             cx.observe(&composer_store, |this, _, cx| {
                 this.sync_settings_offer(cx);
+                this.sync_call_offer(cx);
                 cx.notify()
             }),
             // Toasts dock above the composer.
@@ -357,7 +417,7 @@ impl ChatPane {
                 this.toast(NoticeLevel::Warning, text, cx);
             }),
         ];
-        let account = stores.accounts.read(cx).active().map(|a| a.id.clone());
+        let account = stores.accounts.read(cx).scope_key();
         let prompt_card = cx.new(|cx| crate::views::chat::prompt::PromptCard::new(window, cx));
         let mut this = Self {
             stores,
@@ -370,6 +430,7 @@ impl ChatPane {
             chat: None,
             starting: false,
             account,
+            hermes_continuing: false,
             handoff: None,
             handoff_ask: None,
             handoff_settled: Default::default(),
@@ -383,8 +444,13 @@ impl ChatPane {
             temporary_chosen: false,
             temporary_hand_chosen: false,
             settings_offer: SettingsOffer::default(),
+            context_offered: std::cell::Cell::new(false),
             settings_key: None,
             _offer: None,
+            computer: None,
+            computer_key: None,
+            computer_revision: 0,
+            _computer: None,
             _subscriptions: subscriptions,
         };
         // The composer follows the models on offer and the network.
@@ -641,6 +707,11 @@ impl ChatPane {
     /// Follows the navigation store's selection.
     fn sync_selection(&mut self, cx: &mut Context<Self>) {
         let selection = self.stores.navigation.read(cx).selection().clone();
+        // A Hermes session's chat opens in this pane as any chat does.
+        let selection = match selection.chat_id() {
+            Some(id) => Selection::Chat(id),
+            None => selection,
+        };
         match selection {
             Selection::Chat(id) => {
                 self.temporary_hand_chosen = false;
@@ -669,6 +740,7 @@ impl ChatPane {
                     cx,
                 );
                 self.open_chat(id, cx);
+                self.sync_call_offer(cx);
             }
             // Another area's item: the main window shows its pane, and the
             // chat stays loaded for when it comes back.
@@ -683,21 +755,24 @@ impl ChatPane {
                 } else {
                     temporary || self.composer_store.read(cx).prefs.temporary_by_default
                 };
-                // A temporary chat keeps no draft.
+                // A temporary chat keeps no draft, but starts in its folder
+                // all the same.
                 let folder = self
                     .stores
                     .navigation
                     .read(cx)
                     .new_chat_folder()
                     .map(str::to_string);
-                self.switch_draft(
-                    (!temporary).then_some(DraftKey {
-                        chat_id: None,
-                        folder_id: folder,
-                    }),
-                    cx,
-                );
+                let text = self.composer.read(cx).text(cx);
+                self.composer_store
+                    .update(cx, |c, cx| c.switch_new_chat(folder, temporary, &text, cx));
                 self.chat = None;
+                self.forget_context_offer(cx);
+                // The menus were built for this selection before the pane
+                // followed it: Read Aloud follows the chat now shown.
+                cx.defer(crate::menus::refresh_menus);
+                self.sync_speech(cx);
+                self.sync_call_offer(cx);
                 self.prompt_card.update(cx, |p, cx| p.set_store(None, cx));
                 self.queue_edit = None;
                 // Nothing to find in a new chat.
@@ -713,6 +788,126 @@ impl ChatPane {
             }
         }
         cx.notify();
+    }
+
+    /// A Hermes session another Hermes app owns, in place of the composer
+    /// (the phone's `HermesReadOnlySessionNotice`): who owns it, what each
+    /// way on does, and the two ways on.
+    fn hermes_read_only_notice(
+        &self,
+        hermes: &conduit_protocol::HermesChatDto,
+        t: &conduit_components::theme::ConduitTheme,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let l10n = cx.l10n().clone();
+        let r = t.roles;
+        let notice = if hermes.owner.trim().is_empty() {
+            l10n.hermes_read_only_session_notice()
+        } else {
+            l10n.hermes_read_only_session_notice_from(&hermes.owner)
+        };
+        let explanation = l10n.hermes_continue_choice_explanation();
+        let busy = self.hermes_continuing;
+        let button = |id: &'static str, label: String, copy: bool| {
+            let pane = cx.entity().downgrade();
+            let mut b = conduit_components::views::kit::Button::new(id, label)
+                .disabled(busy)
+                .on_click(Rc::new(move |_, _, cx| {
+                    let _ = pane.update(cx, |p, cx| p.continue_hermes(copy, cx));
+                }));
+            if copy {
+                b = b.primary();
+            }
+            b
+        };
+        div()
+            .id("hermes-read-only-notice")
+            .role(Role::Group)
+            .aria_label(SharedString::from(notice.clone()))
+            .w_full()
+            .px(px(14.))
+            .py(px(12.))
+            .rounded(px(12.))
+            .bg(conduit_components::views::kit::raised_fill(t))
+            .border_1()
+            .border_color(r.border)
+            .flex()
+            .flex_col()
+            .gap(px(10.))
+            .child(
+                div()
+                    .flex()
+                    .items_start()
+                    .gap(px(10.))
+                    .child(div().pt(px(1.)).child(conduit_components::assets::icon(
+                        IconName::Eye,
+                        15.,
+                        r.text_subtle,
+                    )))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .flex()
+                            .flex_col()
+                            .gap(px(4.))
+                            .child(
+                                div()
+                                    .text_size(px(t.metrics.control))
+                                    .text_color(r.text)
+                                    .child(SharedString::from(notice)),
+                            )
+                            .child(
+                                div()
+                                    .text_size(px(t.metrics.small))
+                                    .text_color(r.text_subtle)
+                                    .child(SharedString::from(explanation)),
+                            ),
+                    ),
+            )
+            .child(
+                div()
+                    .flex()
+                    .justify_end()
+                    .gap(px(8.))
+                    .child(button(
+                        "hermes-continue-here",
+                        l10n.hermes_continue_here(),
+                        false,
+                    ))
+                    .child(button(
+                        "hermes-continue-in-copy",
+                        l10n.hermes_continue_in_copy(),
+                        true,
+                    )),
+            )
+            .into_any_element()
+    }
+
+    /// Continue Here (`copy` false) or Continue in a Copy, from the open
+    /// read-only Hermes chat: the session it goes on in opens.
+    pub fn continue_hermes(&mut self, copy: bool, cx: &mut Context<Self>) {
+        let Some(chat_id) = self.open_chat_id(cx) else {
+            return;
+        };
+        if self.hermes_continuing {
+            return;
+        }
+        self.hermes_continuing = true;
+        cx.notify();
+        let pane = cx.entity().downgrade();
+        crate::views::hermes_sessions::continue_chat(
+            &self.stores,
+            &chat_id,
+            copy,
+            move |cx| {
+                let _ = pane.update(cx, |p, cx| {
+                    p.hermes_continuing = false;
+                    cx.notify();
+                });
+            },
+            cx,
+        );
     }
 
     /// Opens or closes the open chat's task checklist.
@@ -758,7 +953,19 @@ impl ChatPane {
 
     /// Opens `id` in a fresh store and transcript. Opening reads it, and
     /// the chat left is read up to now.
+    /// The chat shown goes: Chat › Context & Usage… with it, and the next
+    /// chat's detail offers it again (or not).
+    fn forget_context_offer(&mut self, cx: &mut Context<Self>) {
+        if self.context_offered.replace(false) {
+            cx.defer(crate::menus::refresh_menus);
+        }
+    }
+
     fn open_chat(&mut self, id: String, cx: &mut Context<Self>) -> Entity<ChatStore> {
+        self.forget_context_offer(cx);
+        // The menus were built for this selection before the pane opened
+        // the chat: Read Aloud follows it now.
+        cx.defer(crate::menus::refresh_menus);
         let left = self
             .chat
             .as_ref()
@@ -807,6 +1014,15 @@ impl ChatPane {
         }
         let subscriptions = vec![
             cx.observe(&store, |this, store, cx| {
+                // Chat › Context & Usage… comes with a Hermes chat.
+                let context = store
+                    .read(cx)
+                    .detail
+                    .as_ref()
+                    .is_some_and(|d| d.abilities.hermes_context);
+                if this.context_offered.replace(context) != context {
+                    cx.defer(crate::menus::refresh_menus);
+                }
                 let streaming = store.read(cx).is_streaming();
                 let offer = store.read(cx).queue_offered();
                 this.composer.update(cx, |c, cx| {
@@ -850,6 +1066,7 @@ impl ChatPane {
             transcript,
             _subscriptions: subscriptions,
         });
+        self.sync_speech(cx);
         cx.notify();
         store
     }
@@ -861,6 +1078,10 @@ impl ChatPane {
                     chat.store.update(cx, |s, cx| s.on_reconnected(cx));
                 }
                 self.composer_store.update(cx, |c, cx| c.refresh_models(cx));
+                // A new daemon session: handles and the Computer offer anew.
+                crate::views::terminal::chat::forget_handles(cx);
+                self.computer_revision += 1;
+                cx.notify();
             }
             ConnectionEvent::Gap => {
                 if let Some(chat) = &self.chat {
@@ -889,6 +1110,21 @@ impl ChatPane {
                             }
                         }
                     }
+                    Event::TerminalDisplayFile(request)
+                        if self.open_chat_id(cx).as_deref() == Some(request.chat_id.as_str()) =>
+                    {
+                        if let Some(window) = cx
+                            .try_global::<crate::AppState>()
+                            .and_then(|s| s.main_window)
+                        {
+                            crate::views::terminal::chat::display_file(
+                                self.stores.clone(),
+                                window,
+                                request.clone(),
+                                cx,
+                            );
+                        }
+                    }
                     _ => {}
                 }
                 if let Some(chat) = &self.chat {
@@ -906,6 +1142,10 @@ impl ChatPane {
         // its tooltip (no second word beside it).
         let reason = offline
             .then(|| crate::views::status::send_waits(&connection.status(true, None), cx.l10n()));
+        if self.composer.read(cx).offline != offline {
+            // Chat › Start Voice Call follows the window going offline and back.
+            cx.defer(crate::menus::refresh_menus);
+        }
         self.composer.update(cx, |c, cx| {
             if c.offline != offline || c.offline_reason != reason || c.offline_word.is_some() {
                 c.offline = offline;
@@ -933,8 +1173,12 @@ impl ChatPane {
         // A new chat's first message is still on its way: keep this one in
         // the composer rather than starting a second chat.
         if self.chat.is_none() && self.starting {
-            self.composer
-                .update(cx, |c, cx| c.restore_with(&text, &mentions, window, cx));
+            self.composer.update(cx, |c, cx| {
+                // Not sent: its recordings stay with the draft too.
+                let held = c.take_sent_recordings();
+                c.recordings_kept(held, cx);
+                c.restore_with(&text, &mentions, window, cx)
+            });
             return;
         }
         let files = self.composer_store.read(cx).pending_files();
@@ -944,11 +1188,13 @@ impl ChatPane {
             .next_model()
             .map(|m| m.name.clone());
         // Given back with the text if the send fails.
+        let held = self.composer.update(cx, |c, _| c.take_sent_recordings());
         let used = self
             .composer_store
             .read(cx)
             .one_shot()
-            .with_mentions(mentions.clone());
+            .with_mentions(mentions.clone())
+            .with_recordings(held);
         let options = self
             .composer_store
             .update(cx, |c, cx| c.take_turn(mentions, cx));
@@ -973,6 +1219,8 @@ impl ChatPane {
                 if task.await.is_err() {
                     let _ = composer
                         .update_in(cx, |c, window, cx| c.give_back(&text, used, window, cx));
+                } else {
+                    let _ = composer.update(cx, |c, cx| c.recordings_taken(held, cx));
                 }
                 // `turns.send` with no model lets the daemon pick (and keep)
                 // one: the label shows it without opening the picker.
@@ -992,9 +1240,9 @@ impl ChatPane {
             .read(cx)
             .rpc()
             .call::<methods::TurnsSend>(&turn);
-        // "New Chat in Folder": the daemon makes the chat in the folder (its
-        // draft key says which), so the folder's prompt and knowledge apply
-        // to the first answer.
+        // "New Chat in Folder": the daemon makes the chat in the folder (the
+        // composer keeps which, a temporary chat's too), so the folder's
+        // prompt and knowledge apply to the first answer.
         self.starting = true;
         // The new chat this send came from: if the user has gone elsewhere
         // by the reply, the chat is made but not opened over their choice.
@@ -1026,8 +1274,12 @@ impl ChatPane {
                     Ok(_) if !still_here => {
                         this.composer_store
                             .update(cx, |m, cx| m.forget_sent_params(sent_params.as_ref(), cx));
+                        this.composer
+                            .update(cx, |c, cx| c.recordings_taken(held, cx));
                     }
                     Ok(accepted) => {
+                        this.composer
+                            .update(cx, |c, cx| c.recordings_taken(held, cx));
                         // Its folder's model and its own settings went with it.
                         this.composer_store.update(cx, |m, cx| m.new_chat_sent(cx));
                         let greeting = this.greeting(cx);
@@ -1089,11 +1341,13 @@ impl ChatPane {
         };
         let chat_id = chat.store.read(cx).chat_id().to_string();
         // Given back with the text if the queue refuses it.
+        let held = self.composer.update(cx, |c, _| c.take_sent_recordings());
         let used = self
             .composer_store
             .read(cx)
             .one_shot()
-            .with_mentions(mentions.clone());
+            .with_mentions(mentions.clone())
+            .with_recordings(held);
         let add = self
             .composer_store
             .update(cx, |c, cx| c.take_turn(mentions, cx))
@@ -1103,6 +1357,8 @@ impl ChatPane {
             let queued = task.await;
             let _ = this.update_in(cx, |this, window, cx| {
                 if queued {
+                    this.composer
+                        .update(cx, |c, cx| c.recordings_taken(held, cx));
                     // The queue lives only while Conduit is open: said once.
                     if !std::mem::replace(&mut this.queue_noted, true) {
                         let note = cx.l10n().queued_drafts_session_note();
@@ -1131,11 +1387,13 @@ impl ChatPane {
         let Some(chat) = &self.chat else {
             return;
         };
+        let held = self.composer.update(cx, |c, _| c.take_sent_recordings());
         let used = self
             .composer_store
             .read(cx)
             .text_only()
-            .with_mentions(mentions.clone());
+            .with_mentions(mentions.clone())
+            .with_recordings(held);
         let task = chat
             .store
             .update(cx, |s, cx| s.steer(text.clone(), mentions, steer, cx));
@@ -1156,6 +1414,9 @@ impl ChatPane {
                     this.composer
                         .update(cx, |c, cx| c.give_back(&text, used, window, cx));
                     this.toast(NoticeLevel::Warning, message, cx);
+                } else {
+                    this.composer
+                        .update(cx, |c, cx| c.recordings_taken(held, cx));
                 }
             });
         })
@@ -1174,6 +1435,11 @@ impl ChatPane {
             ops: Some(vec![
                 serde_json::json!({ "insert": format!("{}\n", text.trim_end()) }),
             ]),
+            page_id: None,
+            base_ops: None,
+            // Made under the account the words were written under, or
+            // refused (a switch conduitd heard of first).
+            account_id: self.stores.accounts.read(cx).active().map(|a| a.id.clone()),
         };
         let call = self
             .stores
@@ -1183,12 +1449,18 @@ impl ChatPane {
             .call::<methods::NotesSave>(&note);
         let used = self.composer_store.read(cx).text_only();
         self.composer.update(cx, |c, cx| c.clear_text(window, cx));
+        let held = self.composer.update(cx, |c, _| c.take_sent_recordings());
+        let used = used.with_recordings(held);
         cx.spawn_in(window, async move |this, cx| {
             let result = call.await;
             let _ = this.update_in(cx, |this, window, cx| {
                 let l10n = cx.l10n().clone();
                 match result {
-                    Ok(_) => this.toast(NoticeLevel::Info, l10n.desktop_saved_as_note(), cx),
+                    Ok(_) => {
+                        this.composer
+                            .update(cx, |c, cx| c.recordings_taken(held, cx));
+                        this.toast(NoticeLevel::Info, l10n.desktop_saved_as_note(), cx)
+                    }
                     Err(e) => {
                         log::warn!("notes.save: {e}");
                         this.composer
@@ -1318,6 +1590,223 @@ impl ChatPane {
         }
     }
 
+    /// Chat › Read Aloud has a chat to read from: a chat the window shows,
+    /// whether it takes changes or not (read-only, temporary, Hermes); not
+    /// the chat kept loaded behind another area's pane. Without an answer
+    /// yet it reads nothing.
+    pub fn can_read_aloud(&self, cx: &App) -> bool {
+        self.chat.is_some()
+            && self
+                .stores
+                .navigation
+                .read(cx)
+                .selection()
+                .chat_id()
+                .is_some()
+    }
+
+    /// Chat › Read Aloud: the newest answer, or Stop Speaking while it is
+    /// read (Resume while paused), as its own Read Aloud does.
+    pub fn read_aloud_last(&mut self, cx: &mut Context<Self>) {
+        if !self.can_read_aloud(cx) {
+            return;
+        }
+        let Some(chat) = &self.chat else { return };
+        let store = chat.store.read(cx);
+        let Some(answer) = store.last_answer_id() else {
+            return;
+        };
+        let chat_id = store.chat_id().to_string();
+        self.stores
+            .speech
+            .update(cx, |s, cx| s.toggle(chat_id, answer, cx));
+    }
+
+    // ── Voice calls ───────────────────────────────────────────────────
+
+    /// Start Voice Call: in the open chat, or in the new chat this pane
+    /// shows (its model, folder and temporary switch, as a send would).
+    /// Dictation stops: the call owns the microphone.
+    pub fn start_call(&mut self, cx: &mut Context<Self>) {
+        if self.stores.call.read(cx).is_active() {
+            return;
+        }
+        // ⌥⌘V as the button: only when the core admits a call, online.
+        if !self.call_startable(cx) {
+            return;
+        }
+        if self
+            .chat
+            .as_ref()
+            .is_some_and(|c| c.store.read(cx).read_only())
+        {
+            return;
+        }
+        self.begin_call(cx);
+    }
+
+    /// Starts the call this pane shows the way to: in the open chat, or in
+    /// the new chat with its model, folder and Temporary switch as shown.
+    /// Every start of a call in the main window comes here, so a call never
+    /// saves a chat the composer shows as temporary. Dictation stops: the
+    /// call owns the microphone.
+    fn begin_call(&mut self, cx: &mut Context<Self>) {
+        if let Some(dictation) = self.composer.read(cx).dictation.clone()
+            && dictation.read(cx).is_active()
+        {
+            dictation.update(cx, |d, cx| d.cancel(cx));
+        }
+        let chat_id = self.open_chat_id(cx);
+        let model = self
+            .composer_store
+            .read(cx)
+            .selected_model()
+            .map(|m| m.id.clone());
+        let navigation = self.stores.navigation.read(cx);
+        let temporary = chat_id.is_none()
+            && (matches!(navigation.selection(), Selection::New { temporary: true })
+                || self.composer.read(cx).temporary);
+        let folder = chat_id
+            .is_none()
+            .then(|| navigation.new_chat_folder().map(str::to_string))
+            .flatten();
+        self.stores
+            .call
+            .update(cx, |c, cx| c.start(chat_id, model, folder, temporary, cx));
+    }
+
+    /// The widget's Voice Call and Shortcuts' Start Voice Call, once this
+    /// pane shows the new chat they opened: the call starts there as the
+    /// composer's call button would start it (its Temporary switch, folder
+    /// and model). When another chat took the pane's place first (a later
+    /// link), no call starts: never one in a chat it was not asked for.
+    /// The core's refusal shows on the call strip, so no readiness check.
+    pub fn call_in_new_chat(&mut self, cx: &mut Context<Self>) {
+        if self.stores.call.read(cx).is_active() || self.chat.is_some() {
+            return;
+        }
+        if !matches!(
+            self.stores.navigation.read(cx).selection(),
+            Selection::New { .. }
+        ) {
+            return;
+        }
+        self.begin_call(cx);
+    }
+
+    /// A call can start here now, as the composer's call button would
+    /// take it: the core admits one with the chosen model, and the window is
+    /// online.
+    pub fn call_startable(&self, cx: &App) -> bool {
+        let composer = self.composer.read(cx);
+        composer.call_ready && !composer.offline
+    }
+
+    /// Chat › Start Voice Call, or End Voice Call while one is on.
+    pub fn toggle_call(&mut self, cx: &mut Context<Self>) {
+        if self.stores.call.read(cx).is_active() {
+            self.stores.call.update(cx, |c, cx| c.end(cx));
+        } else {
+            self.start_call(cx);
+        }
+    }
+
+    /// Show Call: the call's chat, with its strip open.
+    pub fn show_call(&mut self, cx: &mut Context<Self>) {
+        let Some(id) = self.stores.call.read(cx).chat_id().map(str::to_string) else {
+            return;
+        };
+        self.stores.call.update(cx, |c, cx| {
+            if c.collapsed {
+                c.toggle_collapsed(cx);
+            }
+        });
+        if self.open_chat_id(cx).as_deref() != Some(id.as_str()) {
+            self.stores.navigation.update(cx, |n, cx| n.open(id, cx));
+        }
+    }
+
+    fn on_call_changed(&mut self, cx: &mut Context<Self>) {
+        let call = self.stores.call.read(cx);
+        let chat_id = call.chat_id().map(str::to_string);
+        // A call started in a new chat (here, or from Quick Ask): once its
+        // first turn has made the chat, the chat opens where a new chat is
+        // shown; over another chat, the capsule offers Show Call.
+        if call.follow_new
+            && let Some(id) = chat_id
+        {
+            self.stores.call.update(cx, |c, _| c.follow_new = false);
+            if self.chat.is_none() {
+                self.stores.navigation.update(cx, |n, cx| n.open(id, cx));
+            }
+        }
+        self.sync_call_offer(cx);
+        cx.defer(crate::menus::refresh_menus);
+        cx.notify();
+    }
+
+    /// The composer's call button: offered in a chat that takes answers,
+    /// ready while no call is on and the core admits a call with the chosen
+    /// model (`ComposerOptions::voice_call`, the phone's rule: a Hermes
+    /// chat's call is a Standard one).
+    fn sync_call_offer(&mut self, cx: &mut Context<Self>) {
+        let offer = !self
+            .chat
+            .as_ref()
+            .is_some_and(|c| c.store.read(cx).read_only());
+        let on = self.stores.call.read(cx).is_active();
+        let composer = self.composer_store.read(cx);
+        let ready = !on && composer.selected_model().is_some() && composer.options.voice_call;
+        self.composer.update(cx, |c, cx| {
+            if c.call_offer != offer || c.call_ready != ready || c.call_on != on {
+                c.call_offer = offer;
+                c.call_ready = ready;
+                c.call_on = on;
+                cx.notify();
+            }
+        });
+    }
+
+    /// Whether the call's strip belongs in this pane now: the call is in
+    /// the open chat, or it is starting the new chat this pane shows.
+    fn call_here(&self, cx: &App) -> bool {
+        let call = self.stores.call.read(cx);
+        if !call.is_shown() {
+            return false;
+        }
+        match call.chat_id() {
+            Some(id) => self.open_chat_id(cx).as_deref() == Some(id),
+            None => self.chat.is_none() && call.follow_new,
+        }
+    }
+
+    /// Follows the reading: its answer's Read Aloud says Stop Speaking and
+    /// its words are marked in place; a reading of another chat pauses when
+    /// this one opens, as the phone's does when its chat goes.
+    fn sync_speech(&mut self, cx: &mut Context<Self>) {
+        let open = self.open_chat_id(cx);
+        let (reading_chat, message, speaking) = {
+            let s = self.stores.speech.read(cx);
+            (
+                s.chat_id().map(str::to_string),
+                s.progress().message_id.clone(),
+                s.is_speaking(),
+            )
+        };
+        if let Some(chat) = &self.chat {
+            let here = reading_chat.is_some() && reading_chat == open;
+            let speech = self.stores.speech.clone();
+            chat.transcript.update(cx, |t, cx| {
+                t.set_reading(message.filter(|_| here), cx);
+                t.follow_reading(here.then_some(&speech), cx);
+            });
+        }
+        if speaking && reading_chat.is_some() && reading_chat != open {
+            self.stores.speech.update(cx, |s, cx| s.pause(cx));
+        }
+        cx.notify();
+    }
+
     /// Chat › Regenerate: the newest answer again.
     pub fn regenerate_last(&mut self, cx: &mut Context<Self>) {
         if let Some(chat) = &self.chat {
@@ -1329,7 +1818,13 @@ impl ChatPane {
         }
     }
 
+    /// Esc: stops the reading aloud while there is one (what is heard
+    /// first), else the running answer.
     pub fn stop(&mut self, cx: &mut Context<Self>) {
+        if self.stores.speech.read(cx).is_active() {
+            self.stores.speech.update(cx, |s, cx| s.stop(cx));
+            return;
+        }
         if let Some(chat) = &self.chat {
             chat.store.update(cx, |s, cx| {
                 if s.is_streaming() {
@@ -1343,6 +1838,36 @@ impl ChatPane {
 
     pub fn focus_composer(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.composer.update(cx, |c, cx| c.focus_input(window, cx));
+    }
+
+    /// What is handed to the new chat just selected (a share's words and
+    /// files, Open With, a Services selection, Quick Ask's Open in
+    /// Conduit): the pane moves to that chat's draft now, and the words and
+    /// files go in once the composer has switched to it (it clears for a
+    /// new draft as the switch lands), so they never end up in the draft of
+    /// the chat shown before, or cleared.
+    pub fn hand_to_new_chat(
+        &mut self,
+        text: Option<String>,
+        paths: Vec<std::path::PathBuf>,
+        carried: Vec<crate::stores::composer::Attachment>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.sync_selection(cx);
+        cx.defer_in(window, move |p, window, cx| {
+            if let Some(text) = &text {
+                p.composer.update(cx, |c, cx| c.set_text(text, window, cx));
+            }
+            if !paths.is_empty() {
+                p.composer_store.update(cx, |c, cx| c.add_paths(&paths, cx));
+            }
+            if !carried.is_empty() {
+                p.composer_store
+                    .update(cx, |c, cx| c.adopt_attachments(carried, cx));
+            }
+            p.focus_composer(window, cx);
+        });
     }
 
     pub fn open_model_picker(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -1360,6 +1885,49 @@ impl ChatPane {
 
     /// Asks the daemon again what the menus offer, when what that depends
     /// on changed.
+    /// Asks again whether the header offers Computer, when what it
+    /// depends on moved.
+    fn sync_computer(&mut self, cx: &mut Context<Self>) {
+        let Some(chat_id) = self.open_chat_id(cx) else {
+            self.computer = None;
+            self.computer_key = None;
+            return;
+        };
+        let enabled = self
+            .stores
+            .app_settings
+            .read(cx)
+            .settings()
+            .computer_enabled;
+        let selected = self.stores.areas.read(cx).terminal_selected.clone();
+        let key = (chat_id.clone(), enabled, selected, self.computer_revision);
+        if self.computer_key.as_ref() == Some(&key) {
+            return;
+        }
+        self.computer_key = Some(key.clone());
+        if self.computer.as_ref().is_some_and(|c| c.chat_id != chat_id) {
+            self.computer = None;
+        }
+        if !enabled {
+            self.computer = None;
+            return;
+        }
+        let rpc = self.stores.connection.read(cx).rpc();
+        let asked = crate::views::terminal::chat::computer_status(&rpc, chat_id, cx);
+        self._computer = Some(cx.spawn(async move |this: gpui_kit::WeakEntity<Self>, cx| {
+            let offer = asked.await;
+            let _ = this.update(cx, |this, cx| {
+                if this.computer_key.as_ref() != Some(&key) {
+                    return;
+                }
+                if this.computer != offer {
+                    this.computer = offer;
+                    cx.notify();
+                }
+            });
+        }));
+    }
+
     pub fn sync_settings_offer(&mut self, cx: &mut Context<Self>) {
         let composer = self.composer_store.read(cx);
         let key = OfferKey {
@@ -1519,13 +2087,49 @@ impl ChatPane {
                 Box::new(crate::actions::ToolSettings),
             ));
         }
-        if self.chat.is_some() {
+        // Branches are an Open WebUI chat's; a Hermes chat branches from a
+        // reply (Branch from Here).
+        if self
+            .chat
+            .as_ref()
+            .is_some_and(|c| c.store.read(cx).hermes().is_none())
+        {
             items.push((
                 l10n.desktop_menu_show_branches(),
                 Box::new(crate::actions::ShowBranches),
             ));
         }
+        if self.hermes_context(cx) {
+            items.push((
+                l10n.desktop_hermes_context_usage_menu(),
+                Box::new(crate::actions::ShowContextUsage),
+            ));
+        }
         items
+    }
+
+    /// The open chat is a Hermes session whose context window can be read.
+    pub fn hermes_context(&self, cx: &App) -> bool {
+        self.chat.as_ref().is_some_and(|chat| {
+            chat.store
+                .read(cx)
+                .detail
+                .as_ref()
+                .is_some_and(|d| d.abilities.hermes_context)
+        })
+    }
+
+    /// Chat › Context & Usage…: the open Hermes chat's context window,
+    /// usage and Compact Now.
+    pub fn show_context_usage(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.hermes_context(cx) {
+            return;
+        }
+        let Some(chat) = self.chat.as_ref() else {
+            return;
+        };
+        let chat_id = chat.store.read(cx).chat_id().to_string();
+        crate::views::hermes_context_sheet::open(chat_id, window, cx);
     }
 
     /// Ask Conduit: the text selected in an answer goes into the composer,
@@ -1883,9 +2487,46 @@ impl ChatPane {
             .into_any_element()
     }
 
+    /// A Hermes agent's work over the composer: the chip naming what runs
+    /// (it opens the background work sheet), then the plan.
+    fn hermes_docked(&self, window: &mut Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
+        let Some(chat) = self.chat.as_ref() else {
+            return vec![];
+        };
+        let hermes = chat.store.read(cx).hermes.clone();
+        let (agents, processes) = hermes.read(cx).running();
+        let plan = hermes.read(cx).work.as_ref().and_then(|w| w.plan.clone());
+        let chat_id = hermes.read(cx).chat_id().to_string();
+        let t = cx.conduit().clone();
+        let l10n = cx.l10n().clone();
+        let open_work: crate::views::chat::hermes_work::Action = {
+            let hermes = hermes.clone();
+            std::rc::Rc::new(move |window, cx| {
+                crate::views::hermes_work_sheet::open(hermes.clone(), window, cx)
+            })
+        };
+        let chip = crate::views::chat::hermes_work::work_chip(
+            agents, processes, open_work, &l10n, &t, window, cx,
+        );
+        let plan = plan.and_then(|plan| {
+            let folded = crate::stores::hermes_work::plan_folded(&chat_id, plan.active, cx);
+            let pane = cx.entity().downgrade();
+            let toggle: crate::views::chat::hermes_work::Action = {
+                let chat_id = chat_id.clone();
+                std::rc::Rc::new(move |_, cx| {
+                    crate::stores::hermes_work::set_plan_folded(&chat_id, !folded, cx);
+                    let _ = pane.update(cx, |_, cx| cx.notify());
+                })
+            };
+            crate::views::chat::hermes_work::plan_card(&plan, folded, toggle, &l10n, &t, window, cx)
+        });
+        chip.into_iter().chain(plan).collect()
+    }
+
     /// What docks above the composer: the messages queued behind the
     /// answer, and an approval card.
     fn docked(&self, window: &mut Window, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let hermes = self.hermes_docked(window, cx);
         let queue = self.chat.as_ref().and_then(|chat| {
             let t = cx.conduit().clone();
             let queue = chat.store.read(cx).queue.clone();
@@ -1911,14 +2552,40 @@ impl ChatPane {
                 cx,
             )
         });
+        let t = cx.conduit().clone();
+        let chat_id = self.open_chat_id(cx);
+        let speech = crate::views::chat::speech_bar::speech_bar(
+            &self.stores.speech,
+            &self.stores.app_settings,
+            chat_id.as_deref(),
+            &t,
+            cx,
+        );
+        // The call, minimised or on in another chat: its capsule.
+        let call = self.stores.call.read(cx);
+        let here = self.call_here(cx);
+        let capsule = (call.is_active() && (!here || call.collapsed)).then(|| {
+            div()
+                .flex()
+                .justify_center()
+                .pb(px(6.))
+                .child(crate::views::chat::call::capsule(
+                    &self.stores.call,
+                    !here,
+                    cx,
+                ))
+        });
         Some(
             div()
                 .flex()
                 .flex_col()
+                .children(hermes)
                 .children(tasks)
                 .children(queue)
+                .children(speech)
                 .child(self.approvals.clone())
                 .when(self.chat.is_some(), |d| d.child(self.prompt_card.clone()))
+                .children(capsule)
                 .into_any_element(),
         )
     }
@@ -1963,6 +2630,25 @@ pub fn register_actions(cx: &mut App) {
     cx.on_action(|_: &FocusModelPicker, cx| with_pane(cx, |p, w, cx| p.open_model_picker(w, cx)));
     cx.on_action(|_: &ChooseModel, cx| with_pane(cx, |p, w, cx| p.open_model_picker(w, cx)));
     cx.on_action(|_: &StopGenerating, cx| with_pane(cx, |p, _, cx| p.stop(cx)));
+    cx.on_action(|_: &crate::actions::ReadAloud, cx| {
+        with_pane(cx, |p, _, cx| p.read_aloud_last(cx))
+    });
+    cx.on_action(|_: &crate::actions::VoiceCall, cx| with_pane(cx, |p, _, cx| p.toggle_call(cx)));
+    cx.on_action(|_: &crate::actions::ShowCall, cx| {
+        crate::open_main_window(cx);
+        cx.defer(|cx| with_pane_now(cx, |p, _, cx| p.show_call(cx)));
+    });
+    cx.on_action(|_: &crate::actions::EndCall, cx| {
+        if let Some(call) = cx.try_global::<AppState>().map(|s| s.stores.call.clone()) {
+            call.update(cx, |c, cx| c.end(cx));
+        }
+    });
+    // ⌘. ends the reading from anywhere (Settings' preview too).
+    cx.on_action(|_: &crate::actions::StopSpeaking, cx| {
+        if let Some(speech) = cx.try_global::<AppState>().map(|s| s.stores.speech.clone()) {
+            speech.update(cx, |s, cx| s.stop(cx));
+        }
+    });
     cx.on_action(|_: &CopyLastResponse, cx| with_pane(cx, |p, _, cx| p.copy_last_response(cx)));
     cx.on_action(|_: &CopyLastCodeBlock, cx| with_pane(cx, |p, _, cx| p.copy_last_code_block(cx)));
     cx.on_action(|_: &crate::actions::AskConduit, cx| {
@@ -1979,6 +2665,11 @@ pub fn register_actions(cx: &mut App) {
     cx.on_action(|_: &crate::actions::ToolSettings, cx| {
         with_pane(cx, |p, w, cx| p.open_tool_settings(w, cx))
     });
+    cx.on_action(|_: &crate::actions::Dictate, cx| {
+        with_pane(cx, |p, w, cx| {
+            p.composer.update(cx, |c, cx| c.toggle_dictation(w, cx))
+        })
+    });
     cx.on_action(|_: &crate::actions::ExpandEditor, cx| {
         with_pane(cx, |p, w, cx| {
             p.composer.update(cx, |c, cx| {
@@ -1991,10 +2682,11 @@ pub fn register_actions(cx: &mut App) {
 
 impl Render for ChatPane {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.sync_computer(cx);
         let l10n = cx.l10n().clone();
         let t = cx.conduit().clone();
         let r = t.roles;
-        let (title, temporary, missing, read_only) = match &self.chat {
+        let (title, temporary, missing, read_only, hermes) = match &self.chat {
             Some(chat) => {
                 let s = chat.store.read(cx);
                 (
@@ -2005,6 +2697,7 @@ impl Render for ChatPane {
                     s.temporary,
                     s.missing,
                     s.read_only(),
+                    s.hermes().cloned(),
                 )
             }
             None => (
@@ -2012,8 +2705,10 @@ impl Render for ChatPane {
                 self.composer.read(cx).temporary,
                 false,
                 false,
+                None,
             ),
         };
+        let hermes_read_only = hermes.as_ref().is_some_and(|h| h.read_only);
         // The phone's header: a capsule with the chat's title over the
         // model, which opens the model picker.
         let model_name = self.composer.read(cx).model_name(cx);
@@ -2025,20 +2720,50 @@ impl Render for ChatPane {
         let pill_label = l10n.desktop_model_chip(&model_name);
         let composer = self.composer.downgrade();
         let previous = self.title_crossfade(pill_title.as_ref(), window, cx);
-        let pill = TitlePill::new(model_name.clone(), pill_label)
-            .title(pill_title)
-            .previous(previous)
-            .open(picker_open)
-            .on_click(Rc::new(move |_, window, cx| {
-                let _ = composer.update(cx, |c, cx| c.toggle_picker(window, cx));
-            }));
+        let pill = match hermes.as_ref().and_then(|h| h.bot.clone()) {
+            // A Bot Chat runs as its bot, on the bot's own model: the
+            // header names the bot, with its face (it bobs while it
+            // answers), as the phone's does.
+            Some(bot) => {
+                let streaming = self
+                    .chat
+                    .as_ref()
+                    .is_some_and(|c| c.store.read(cx).is_streaming());
+                let rooms = self.stores.hermes_rooms.read(cx);
+                let face = crate::views::hermes_faces::bot_face(&bot, rooms);
+                if bot.has_avatar && face.image.is_none() {
+                    crate::views::hermes_faces::request_avatars(
+                        [bot.name.as_str()],
+                        &self.stores.hermes_rooms,
+                        cx,
+                    );
+                }
+                TitlePill::new(bot.title.clone(), bot.title.clone()).face(
+                    crate::views::hermes_faces::face(
+                        "bot-title-face",
+                        &face,
+                        22.,
+                        streaming,
+                        cx.reduce_motion(),
+                    ),
+                )
+            }
+            None => TitlePill::new(model_name.clone(), pill_label)
+                .title(pill_title)
+                .previous(previous)
+                .open(picker_open)
+                .on_click(Rc::new(move |_, window, cx| {
+                    let _ = composer.update(cx, |c, cx| c.toggle_picker(window, cx));
+                })),
+        };
         let sidebar_visible = self.layout.read(cx).state.sidebar_visible;
         let mut toolbar = ChatToolbar::new(title, SharedString::default())
             .temporary(temporary)
             .bare()
             .pill(pill);
         // Another user's chat, shared through a folder: read, never answered.
-        if read_only {
+        // So is a Hermes session another Hermes app owns, until continued.
+        if read_only || hermes_read_only {
             toolbar = toolbar.note(l10n.read_only());
         }
         // With the sidebar hidden the toolbar starts under the traffic
@@ -2104,9 +2829,33 @@ impl Render for ChatPane {
                         })),
                 );
             }
-            // The chat's commands, as the sidebar's context menu has them.
+            // The chat's commands, as the sidebar's context menu has them;
+            // Computer before them when the chat's terminal has one.
             Some(chat) if !read_only => {
                 let chat_id = chat.store.read(cx).chat_id().to_string();
+                if self
+                    .computer
+                    .as_ref()
+                    .is_some_and(|c| c.available() && c.chat_id == chat_id)
+                {
+                    let offer = self.computer.clone();
+                    let stores = self.stores.clone();
+                    toolbar = toolbar.trailing(
+                        IconButton::new("chat-computer", IconName::Monitor, l10n.computer_title())
+                            .size(30., 16.)
+                            .round()
+                            .on_click(Rc::new(move |_, _, cx| {
+                                if let Some(offer) = &offer {
+                                    crate::views::terminal::computer::open(
+                                        stores.clone(),
+                                        offer.chat_id.clone(),
+                                        offer.status.clone(),
+                                        cx,
+                                    );
+                                }
+                            })),
+                    );
+                }
                 toolbar = toolbar.trailing(
                     IconButton::new("chat-more", IconName::Ellipsis, l10n.more())
                         .size(30., 16.)
@@ -2163,6 +2912,9 @@ impl Render for ChatPane {
         let docked = self.docked(window, cx);
         let toasts = crate::views::toasts::toast_dock(&self.stores.toasts, window, cx)
             .map(IntoElement::into_any_element);
+        // The voice call in this chat, open: its strip where the composer is.
+        let mut call_strip = (self.call_here(cx) && !self.stores.call.read(cx).collapsed)
+            .then(|| crate::views::chat::call::strip(&self.stores.call, cx));
         let body: AnyElement = match &self.chat {
             // The phone's new chat: the greeting in the middle of the page,
             // the composer at the bottom where every chat has it.
@@ -2200,11 +2952,15 @@ impl Render for ChatPane {
                             )
                         }),
                 )
-                .child(div().track_focus(&self.dock_focus).child(composer_dock(
-                    toasts,
-                    docked,
-                    self.composer.clone().into_any_element(),
-                )))
+                .child(
+                    div().track_focus(&self.dock_focus).child(composer_dock(
+                        toasts,
+                        docked,
+                        call_strip
+                            .take()
+                            .unwrap_or_else(|| self.composer.clone().into_any_element()),
+                    )),
+                )
                 .into_any_element(),
             Some(chat) => div()
                 .flex_1()
@@ -2228,7 +2984,9 @@ impl Render for ChatPane {
                 .child(div().track_focus(&self.dock_focus).child(composer_dock(
                     toasts,
                     docked,
-                    if read_only {
+                    if let Some(hermes) = hermes.as_ref().filter(|h| h.read_only) {
+                        self.hermes_read_only_notice(hermes, &t, cx)
+                    } else if read_only {
                         div()
                             .id("read-only-notice")
                             .role(Role::Status)
@@ -2242,7 +3000,9 @@ impl Render for ChatPane {
                             .child(SharedString::from(l10n.read_only_shared_chat()))
                             .into_any_element()
                     } else {
-                        self.composer.clone().into_any_element()
+                        call_strip
+                            .take()
+                            .unwrap_or_else(|| self.composer.clone().into_any_element())
                     },
                 )))
                 .into_any_element(),
@@ -2401,6 +3161,7 @@ fn composer_dock(
 pub fn failure_text(action: ChatAction, reason: Option<&str>, l10n: &crate::l10n::L10n) -> String {
     match (action, reason) {
         (ChatAction::Load, _) => l10n.desktop_chat_load_failed(),
+        (ChatAction::Send, Some("libreChatTemporaryChat")) => l10n.libre_chat_temporary_chat_off(),
         (ChatAction::Rate, _) => l10n.desktop_rating_not_saved(),
         (ChatAction::Branch | ChatAction::Fork, Some("responseRunning" | "forkConflict")) => {
             l10n.chat_branch_wait_for_response()
@@ -2442,6 +3203,14 @@ fn show_chat_menu(
     };
     let sidebar = view.read(cx).sidebar.clone();
     let leading = view.read(cx).chat_pane.read(cx).more_menu_items(cx);
+    // A Hermes session's chat: its session's commands.
+    if let Some(session) = crate::stores::navigation::hermes_session_of(&chat_id) {
+        let session = session.to_string();
+        sidebar.update(cx, |s, cx| {
+            s.hermes_context_menu(&session, leading, position, window, cx)
+        });
+        return;
+    }
     sidebar.update(cx, |s, cx| {
         s.context_menu_with(&chat_id, leading, position, window, cx)
     });
@@ -2528,6 +3297,139 @@ mod tests {
                     .map(|a| a.name.clone())
                     .collect()
             })
+        }
+
+        /// The widget's and Shortcuts' calls start in the new chat as it
+        /// shows: temporary when Temporary by Default makes it so, in its
+        /// folder, as the composer's call button would start them.
+        #[gpui_kit::test]
+        fn a_call_from_outside_keeps_the_new_chats_temporary_and_folder(cx: &mut TestAppContext) {
+            let (daemon, stores, pane, vcx) = bench(cx);
+            // Each start is answered as refused at once (idle), so the next
+            // one is not taken for a call already on.
+            let starting = || -> conduit_protocol::CallState {
+                serde_json::from_value(serde_json::json!({"phase": "idle", "call": 0})).unwrap()
+            };
+            pane.update(vcx, |p, cx| {
+                p.composer_store
+                    .update(cx, |c, _| c.prefs.temporary_by_default = true)
+            });
+            // A chat was open: the link's New Chat replaces it.
+            stores.navigation.update(vcx, |n, cx| n.open("c0", cx));
+            vcx.run_until_parked();
+            stores.navigation.update(vcx, |n, cx| n.new_chat(false, cx));
+            vcx.run_until_parked();
+            assert!(pane.read_with(vcx, |p, cx| p.composer.read(cx).temporary));
+            daemon.returns::<methods::CallsStart>(starting());
+            pane.update(vcx, |p, cx| p.call_in_new_chat(cx));
+            vcx.run_until_parked();
+            let started = daemon.calls::<methods::CallsStart>();
+            assert_eq!(started.len(), 1);
+            assert_eq!(
+                started[0]["temporary"], true,
+                "the call saved a chat the composer showed as temporary"
+            );
+
+            // A folder's new chat, not temporary: the call starts in it.
+            pane.update(vcx, |p, cx| {
+                p.composer_store
+                    .update(cx, |c, _| c.prefs.temporary_by_default = false)
+            });
+            stores
+                .navigation
+                .update(vcx, |n, cx| n.new_chat_in_folder("f1".into(), cx));
+            vcx.run_until_parked();
+            daemon.returns::<methods::CallsStart>(starting());
+            pane.update(vcx, |p, cx| p.call_in_new_chat(cx));
+            vcx.run_until_parked();
+            let started = daemon.calls::<methods::CallsStart>();
+            assert_eq!(started.len(), 2);
+            assert_eq!(started[1]["temporary"], false);
+            assert_eq!(started[1]["folderId"], "f1", "the call left its folder");
+
+            // Another chat opened before the call could start (a later link
+            // in the same batch): no call starts, and none in that chat.
+            stores.navigation.update(vcx, |n, cx| n.open("c9", cx));
+            vcx.run_until_parked();
+            pane.update(vcx, |p, cx| p.call_in_new_chat(cx));
+            vcx.run_until_parked();
+            assert_eq!(
+                daemon.calls::<methods::CallsStart>().len(),
+                2,
+                "a call meant for a new chat started in another one"
+            );
+        }
+
+        /// Offline, Chat › Start Voice Call and ⌥⌘V start no call, as the
+        /// composer's call button (disabled offline) starts none.
+        #[gpui_kit::test]
+        fn no_call_starts_while_offline(cx: &mut TestAppContext) {
+            let (daemon, _stores, pane, vcx) = bench(cx);
+            pane.update(vcx, |p, cx| {
+                p.composer.update(cx, |c, _| {
+                    c.call_ready = true;
+                    c.offline = true;
+                })
+            });
+            pane.update(vcx, |p, cx| p.toggle_call(cx));
+            vcx.run_until_parked();
+            assert!(
+                daemon.calls::<methods::CallsStart>().is_empty(),
+                "a call started while offline"
+            );
+        }
+
+        /// Chat › Read Aloud reads only a chat the window shows: with Notes
+        /// shown over it, the chat kept loaded behind is not read.
+        #[gpui_kit::test]
+        fn read_aloud_needs_the_chat_on_screen(cx: &mut TestAppContext) {
+            let (_daemon, stores, pane, vcx) = bench(cx);
+            stores.navigation.update(vcx, |n, cx| n.open("c1", cx));
+            vcx.run_until_parked();
+            assert!(
+                pane.read_with(vcx, |p, cx| p.can_read_aloud(cx)),
+                "the shown chat is not read"
+            );
+            stores.navigation.update(vcx, |n, cx| {
+                n.open_item(crate::stores::navigation::AreaItem::Note("n1".into()), cx)
+            });
+            vcx.run_until_parked();
+            assert!(
+                !pane.read_with(vcx, |p, cx| p.can_read_aloud(cx)),
+                "a chat behind Notes is read aloud"
+            );
+        }
+
+        /// New Chat forgets that the last chat offered Context & Usage, so
+        /// the next Hermes chat puts it back in the Chat menu.
+        #[gpui_kit::test]
+        fn new_chat_forgets_the_last_chats_context_item(cx: &mut TestAppContext) {
+            let (_daemon, stores, pane, vcx) = bench(cx);
+            pane.update(vcx, |p, _| p.context_offered.set(true));
+            stores.navigation.update(vcx, |n, cx| n.new_chat(true, cx));
+            vcx.run_until_parked();
+            assert!(
+                !pane.read_with(vcx, |p, _| p.context_offered.get()),
+                "a new chat still counts the last chat's Context & Usage as offered"
+            );
+        }
+
+        /// Save as Note names the account the words were written under, so
+        /// conduitd makes the note under no other (an account switch it hears
+        /// of first refuses it).
+        #[gpui_kit::test]
+        fn save_as_note_names_the_account_it_was_written_under(cx: &mut TestAppContext) {
+            let (daemon, _stores, pane, vcx) = bench(cx);
+            pane.update_in(vcx, |p, window, cx| {
+                p.save_as_note("Glaze ratios for the next firing".into(), window, cx)
+            });
+            vcx.run_until_parked();
+            let saves = daemon.calls::<methods::NotesSave>();
+            assert_eq!(saves.len(), 1);
+            assert_eq!(
+                saves[0]["accountId"], "a",
+                "the note was asked for under no account"
+            );
         }
 
         #[gpui_kit::test]
@@ -2844,6 +3746,110 @@ mod tests {
         }
 
         #[gpui_kit::test]
+        fn a_temporary_new_chat_in_a_folder_is_sent_to_the_folder(cx: &mut TestAppContext) {
+            let (daemon, stores, pane, vcx) = bench(cx);
+            daemon.returns::<methods::FoldersDraftModel>(
+                serde_json::from_value(
+                    serde_json::json!({"folderId": "f1", "modelIds": ["trip-model"]}),
+                )
+                .unwrap(),
+            );
+            daemon.returns::<methods::ModelsList>(conduit_protocol::ModelList {
+                models: vec![
+                    serde_json::from_value(serde_json::json!({"id": "base", "name": "Base"}))
+                        .unwrap(),
+                    serde_json::from_value(
+                        serde_json::json!({"id": "trip-model", "name": "Trip Model"}),
+                    )
+                    .unwrap(),
+                ],
+                selected_id: Some("base".into()),
+                ..Default::default()
+            });
+            daemon.returns::<methods::TurnsSend>(
+                serde_json::from_value(serde_json::json!({
+                    "chatId": "c1", "userMessageId": "m1", "assistantMessageId": "a1"
+                }))
+                .unwrap(),
+            );
+            pane.update(vcx, |p, cx| {
+                p.composer_store.update(cx, |c, cx| {
+                    c.prefs.temporary_by_default = true;
+                    c.refresh_models(cx);
+                })
+            });
+            stores
+                .navigation
+                .update(vcx, |n, cx| n.new_chat_in_folder("f1".into(), cx));
+            vcx.run_until_parked();
+            assert!(pane.read_with(vcx, |p, cx| p.composer.read(cx).temporary));
+            pane.update_in(vcx, |p, window, cx| {
+                p.send_text("Plan the trip".into(), vec![], window, cx)
+            });
+            vcx.run_until_parked();
+            let sent = daemon.calls::<methods::TurnsSend>();
+            assert_eq!(sent.len(), 1);
+            assert_eq!(sent[0]["temporary"], true);
+            assert_eq!(
+                sent[0]["folderId"], "f1",
+                "the folder's prompt and knowledge were left out"
+            );
+            assert_eq!(sent[0]["model"], "trip-model", "not the folder's model");
+        }
+
+        /// The composer's Temporary switch on a folder's new chat keeps the
+        /// folder and the Chat Settings saved on it.
+        #[gpui_kit::test]
+        fn the_temporary_switch_keeps_a_folders_new_chat_and_its_settings(cx: &mut TestAppContext) {
+            let (daemon, stores, pane, vcx) = bench(cx);
+            daemon.returns::<methods::ModelsList>(
+                serde_json::from_value(serde_json::json!({
+                    "models": [{"id": "m", "name": "M"}], "selectedId": "m"
+                }))
+                .unwrap(),
+            );
+            daemon.returns::<methods::TurnsSend>(
+                serde_json::from_value(serde_json::json!({
+                    "chatId": "local:t1", "userMessageId": "m1", "assistantMessageId": "a1"
+                }))
+                .unwrap(),
+            );
+            pane.update(vcx, |p, cx| {
+                p.composer_store.update(cx, |c, cx| c.refresh_models(cx))
+            });
+            stores
+                .navigation
+                .update(vcx, |n, cx| n.new_chat_in_folder("f1".into(), cx));
+            vcx.run_until_parked();
+            let saved = serde_json::json!({"temperature": 0.3});
+            pane.update(vcx, |p, cx| {
+                p.composer_store
+                    .update(cx, |c, cx| c.set_draft_params(saved.clone(), cx))
+            });
+            pane.update(vcx, |p, cx| {
+                p.composer.update(cx, |_, cx| {
+                    cx.emit(crate::views::chat::composer::ChatComposerEvent::Temporary(
+                        true,
+                    ))
+                })
+            });
+            vcx.run_until_parked();
+            assert!(pane.read_with(vcx, |p, cx| p.composer.read(cx).temporary));
+            pane.update_in(vcx, |p, window, cx| {
+                p.send_text("Plan the trip".into(), vec![], window, cx)
+            });
+            vcx.run_until_parked();
+            let sent = daemon.calls::<methods::TurnsSend>();
+            assert_eq!(sent.len(), 1);
+            assert_eq!(sent[0]["temporary"], true);
+            assert_eq!(sent[0]["folderId"], "f1", "the switch lost the folder");
+            assert_eq!(
+                sent[0]["chatParams"], saved,
+                "the switch dropped the settings saved on this new chat"
+            );
+        }
+
+        #[gpui_kit::test]
         fn a_first_send_from_one_folder_leaves_anothers_draft_alone(cx: &mut TestAppContext) {
             let (daemon, stores, pane, vcx) = bench(cx);
             daemon.returns::<methods::TurnsSend>(
@@ -3128,6 +4134,50 @@ mod tests {
             });
         }
 
+        /// Words handed to a new chat opened from another chat land in the
+        /// new chat, not in the draft of the chat shown before.
+        #[gpui_kit::test]
+        fn words_handed_to_a_new_chat_land_in_it(cx: &mut TestAppContext) {
+            let (daemon, stores, pane, vcx) = bench(cx);
+            keep_drafts(&daemon);
+            stores.navigation.update(vcx, |n, cx| n.open("c1", cx));
+            vcx.run_until_parked();
+            pane.update_in(vcx, |p, window, cx| {
+                p.stores
+                    .navigation
+                    .update(cx, |n, cx| n.new_chat(false, cx));
+                p.hand_to_new_chat(
+                    Some("> Moss on a north wall\n\n".into()),
+                    vec![],
+                    vec![],
+                    window,
+                    cx,
+                );
+            });
+            vcx.executor()
+                .advance_clock(std::time::Duration::from_millis(450));
+            vcx.run_until_parked();
+            assert!(matches!(
+                stores
+                    .navigation
+                    .read_with(vcx, |n, _| n.selection().clone()),
+                crate::stores::navigation::Selection::New { .. }
+            ));
+            pane.read_with(vcx, |p, cx| {
+                assert_eq!(p.composer.read(cx).text(cx), "> Moss on a north wall\n\n");
+            });
+            let saved: Vec<String> = daemon
+                .calls::<methods::DraftsSave>()
+                .iter()
+                .filter(|c| c["chatId"] == "c1")
+                .map(|c| c["text"].as_str().unwrap_or_default().to_string())
+                .collect();
+            assert!(
+                saved.iter().all(|t| !t.contains("Moss")),
+                "the words went to the last chat's draft: {saved:?}"
+            );
+        }
+
         #[gpui_kit::test]
         fn a_follow_up_typed_while_the_first_send_waits_moves_with_its_chat(
             cx: &mut TestAppContext,
@@ -3299,6 +4349,174 @@ mod tests {
             assert!(
                 pane.read_with(vcx, |p, cx| p.composer_store.read(cx).draft_key().is_some()),
                 "B's new chat keeps no draft"
+            );
+        }
+
+        /// A draft's recordings go with its message only once the message
+        /// is taken: a refused send keeps them with the draft it gives back.
+        #[gpui_kit::test]
+        fn a_refused_send_keeps_the_drafts_recordings(cx: &mut TestAppContext) {
+            let (daemon, _stores, pane, vcx) = bench(cx);
+            daemon.returns::<methods::RecordingsList>(
+                serde_json::from_value(serde_json::json!({
+                    "stored": true,
+                    "recordings": [{"id": "r1", "createdAt": 0, "byteCount": 64000,
+                                    "durationMs": 2000}]
+                }))
+                .unwrap(),
+            );
+            daemon.returns::<methods::RecordingsDiscard>(
+                serde_json::from_value(serde_json::json!({"stored": true, "recordings": []}))
+                    .unwrap(),
+            );
+            pane.update(vcx, |p, cx| {
+                let dictation = p.composer.read(cx).dictation.clone().unwrap();
+                dictation.update(cx, |d, cx| d.refresh_recordings(cx))
+            });
+            vcx.run_until_parked();
+            let submit = |vcx: &mut VisualTestContext| {
+                pane.update_in(vcx, |p, window, cx| {
+                    p.composer.update(cx, |c, cx| {
+                        // The bench has no connection to say it is online.
+                        c.offline = false;
+                        c.set_text("Plan the trip", window, cx);
+                        c.submit(window, cx);
+                    })
+                });
+                vcx.run_until_parked();
+            };
+            // No `turns.send` answer: refused.
+            submit(vcx);
+            assert_eq!(composer_text(&pane, vcx), "Plan the trip", "not given back");
+            assert!(
+                daemon.calls::<methods::RecordingsDiscard>().is_empty(),
+                "a refused send discarded the draft's recording"
+            );
+            assert_eq!(
+                pane.read_with(vcx, |p, cx| p
+                    .composer
+                    .read(cx)
+                    .dictation
+                    .as_ref()
+                    .map(|d| d.read(cx).recordings.len())),
+                Some(1),
+                "the recording is no longer listed with the draft"
+            );
+            // Taken: the recording goes with it.
+            daemon.returns::<methods::TurnsSend>(
+                serde_json::from_value(serde_json::json!({
+                    "chatId": "c1", "userMessageId": "m1", "assistantMessageId": "a1"
+                }))
+                .unwrap(),
+            );
+            pane.update_in(vcx, |p, window, cx| {
+                p.composer.update(cx, |c, cx| {
+                    c.input.update(cx, |s, cx| s.set_value("", window, cx))
+                })
+            });
+            submit(vcx);
+            let discarded = daemon.calls::<methods::RecordingsDiscard>();
+            assert_eq!(discarded.len(), 1);
+            assert_eq!(discarded[0]["id"], "r1");
+        }
+
+        /// A second message refused while the first new chat is still being
+        /// made keeps its recordings with the draft it gives back.
+        #[gpui_kit::test]
+        fn a_send_refused_while_a_new_chat_starts_keeps_its_recordings(cx: &mut TestAppContext) {
+            let (daemon, _stores, pane, vcx) = bench(cx);
+            let listed = |id: &str| -> conduit_protocol::RecordingList {
+                serde_json::from_value(serde_json::json!({
+                    "stored": true,
+                    "recordings": [{"id": id, "createdAt": 0, "byteCount": 64000,
+                                    "durationMs": 2000}]
+                }))
+                .unwrap()
+            };
+            daemon.once::<methods::RecordingsList>(Ok(listed("r1")));
+            daemon.returns::<methods::RecordingsList>(listed("r2"));
+            daemon.returns::<methods::RecordingsDiscard>(listed("r2"));
+            daemon.returns::<methods::TurnsSend>(
+                serde_json::from_value(serde_json::json!({
+                    "chatId": "c1", "userMessageId": "m1", "assistantMessageId": "a1"
+                }))
+                .unwrap(),
+            );
+            let dictation =
+                pane.read_with(vcx, |p, cx| p.composer.read(cx).dictation.clone().unwrap());
+            dictation.update(vcx, |d, cx| d.refresh_recordings(cx));
+            vcx.run_until_parked();
+            let submit = |text: &str, vcx: &mut VisualTestContext| {
+                pane.update_in(vcx, |p, window, cx| {
+                    p.composer.update(cx, |c, cx| {
+                        c.offline = false;
+                        c.set_text(text, window, cx);
+                        c.submit(window, cx);
+                    })
+                });
+                vcx.run_until_parked();
+            };
+            // The first message is on its way, its new chat not made yet.
+            let held = daemon.hold::<methods::TurnsSend>();
+            submit("Plan the trip", vcx);
+            // Another recording, then a second message: refused for now.
+            dictation.update(vcx, |d, cx| d.refresh_recordings(cx));
+            vcx.run_until_parked();
+            submit("And the packing list", vcx);
+            assert_eq!(composer_text(&pane, vcx), "And the packing list");
+            assert_eq!(
+                dictation.read_with(vcx, |d, _| d.recordings.len()),
+                1,
+                "the refused message's recording is no longer listed"
+            );
+            held.release();
+            vcx.run_until_parked();
+            let discarded = daemon.calls::<methods::RecordingsDiscard>();
+            assert_eq!(discarded.len(), 1);
+            assert_eq!(
+                discarded[0]["id"], "r1",
+                "only the sent message's recording goes"
+            );
+        }
+
+        /// A saved recording's words that come back after another account
+        /// took the window go into no composer of that account's.
+        #[gpui_kit::test]
+        fn a_recordings_words_never_reach_another_accounts_composer(cx: &mut TestAppContext) {
+            let (daemon, stores, pane, vcx) = bench(cx);
+            daemon.returns::<methods::RecordingsList>(
+                serde_json::from_value(serde_json::json!({
+                    "stored": true,
+                    "recordings": [{"id": "r1", "createdAt": 0, "byteCount": 64000,
+                                    "durationMs": 2000}]
+                }))
+                .unwrap(),
+            );
+            daemon.returns::<methods::DictationStatus>(
+                serde_json::from_value(serde_json::json!({
+                    "engine": "server", "serverAvailable": true
+                }))
+                .unwrap(),
+            );
+            daemon.returns::<methods::RecordingsTranscribe>(conduit_protocol::VoiceTranscript {
+                text: "Words for Avery".into(),
+            });
+            vcx.run_until_parked();
+            let held = daemon.hold::<methods::RecordingsTranscribe>();
+            pane.update_in(vcx, |p, window, cx| {
+                p.composer
+                    .update(cx, |c, cx| c.transcribe_recording("r1", false, window, cx))
+            });
+            vcx.run_until_parked();
+            assert_eq!(daemon.calls::<methods::RecordingsTranscribe>().len(), 1);
+            switch_account(&stores, vcx);
+            vcx.run_until_parked();
+            held.release();
+            vcx.run_until_parked();
+            assert_eq!(
+                composer_text(&pane, vcx),
+                "",
+                "Avery's recording was written into Blake's composer"
             );
         }
 

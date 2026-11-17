@@ -85,6 +85,12 @@ pub struct ShortcutHints {
     pub temporary_chat: Option<SharedString>,
     /// Chat › Regenerate (the last answer's Regenerate).
     pub regenerate: Option<SharedString>,
+    /// Start or Stop Dictation (the composer's mic).
+    pub dictate: Option<SharedString>,
+    /// Chat › Read Aloud (the last answer's Read Aloud).
+    pub read_aloud: Option<SharedString>,
+    /// Chat › Start Voice Call (the composer's call button).
+    pub voice_call: Option<SharedString>,
 }
 
 impl Global for ShortcutHints {}

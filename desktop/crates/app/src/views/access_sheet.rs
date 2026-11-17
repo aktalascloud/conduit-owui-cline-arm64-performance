@@ -55,6 +55,20 @@ pub fn open_for_folder(
     });
 }
 
+/// A note's Share Access…: who may read it, or read and change it.
+pub fn open_for_note(
+    stores: Stores,
+    note_id: &str,
+    title: String,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let id = note_id.to_string();
+    sheet::open(window, WIDTH, cx, move |w, cx| {
+        AccessSheet::new(stores, AccessResourceKind::Note, id, title, w, cx)
+    });
+}
+
 /// Share Chat's Who Has Access: the access sheet for chat `chat_id`, named
 /// `title`. Share Chat comes back once it is saved or cancelled, as the
 /// phone's share flow returns to its sheet.
@@ -83,6 +97,22 @@ pub fn open_for_chat(
         });
     }
     opened
+}
+
+/// Share Access… for a workspace item of `kind` (a model, knowledge base,
+/// prompt, tool or skill) named `name`.
+pub fn open_for_workspace(
+    stores: Stores,
+    kind: AccessResourceKind,
+    id: &str,
+    name: String,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let id = id.to_string();
+    sheet::open(window, WIDTH, cx, move |w, cx| {
+        AccessSheet::new(stores, kind, id, name, w, cx)
+    });
 }
 
 pub struct AccessSheet {
@@ -580,14 +610,31 @@ impl AccessSheet {
     }
 }
 
+/// The access sheet's title for a resource of `kind`, named for what it
+/// shares (Share Note, Share Folder, Share Model…), as the phone's Share
+/// Note and Share Folder are; a chat's is Who Has Access, the row of Share
+/// Chat that opens it.
+pub fn title_for(kind: AccessResourceKind, l10n: &L10n) -> String {
+    match kind {
+        AccessResourceKind::Chat => l10n.chat_share_audience(),
+        AccessResourceKind::Folder => l10n.folder_share_settings(),
+        AccessResourceKind::Note => l10n.note_share(),
+        AccessResourceKind::Model => l10n.desktop_share_model_title(),
+        AccessResourceKind::Knowledge => l10n.desktop_share_knowledge_title(),
+        AccessResourceKind::Prompt => l10n.desktop_share_prompt_title(),
+        AccessResourceKind::Tool => l10n.desktop_share_tool_title(),
+        AccessResourceKind::Skill => l10n.desktop_share_skill_title(),
+        AccessResourceKind::Unknown => l10n.desktop_workspace_share_access_title(),
+    }
+}
+
 impl AccessSheet {
     /// The sheet's title: Who Has Access for a chat (the Share Chat row that
-    /// opens it), Share Folder for a folder.
+    /// opens it), Share Note for a note (the phone's Share Note), Share
+    /// Folder for a folder, and Share Model, Share Knowledge, Share Prompt,
+    /// Share Tool or Share Skill for a workspace item.
     fn title(&self, l10n: &L10n) -> String {
-        match self.kind {
-            AccessResourceKind::Chat => l10n.chat_share_audience(),
-            _ => l10n.folder_share_settings(),
-        }
+        title_for(self.kind, l10n)
     }
 
     /// General Access: who may open it beyond the people below. A choice
@@ -903,5 +950,36 @@ mod tests {
         });
         sheet.read_with(vcx, |s, _| assert_eq!(s.grants.len(), 1));
         drop(held);
+    }
+
+    #[test]
+    fn each_kind_is_titled_for_what_it_shares() {
+        let l = L10n::new("en");
+        let titles: Vec<String> = [
+            AccessResourceKind::Chat,
+            AccessResourceKind::Folder,
+            AccessResourceKind::Note,
+            AccessResourceKind::Model,
+            AccessResourceKind::Knowledge,
+            AccessResourceKind::Prompt,
+            AccessResourceKind::Tool,
+            AccessResourceKind::Skill,
+        ]
+        .into_iter()
+        .map(|k| title_for(k, &l))
+        .collect();
+        assert_eq!(
+            titles,
+            [
+                "Who Has Access",
+                "Share Folder",
+                "Share Note",
+                "Share Model",
+                "Share Knowledge",
+                "Share Prompt",
+                "Share Tool",
+                "Share Skill"
+            ]
+        );
     }
 }

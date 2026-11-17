@@ -1,7 +1,7 @@
 //! The rebindable shortcuts: the table, its matching rules, the stored form
 //! of a chord, and conflict detection, plus the bridge to GPUI key bindings.
 //!
-//! The table has 13 bindings; a 14th, `toggleSidePane`, waits for the
+//! The table has 15 bindings; a 16th, `toggleSidePane`, waits for the
 //! right-hand pane, which is post-v1. Only [`ShortcutAction::is_live`] ones
 //! are bound to GPUI actions today; the rest keep their chords (rebindable
 //! and conflict-checked) until a view binds them.
@@ -24,10 +24,14 @@ pub enum ShortcutAction {
     DenyRequest,
     Dictate,
     ToggleSidebar,
+    /// Read Aloud: the open chat's last answer (Chat › Read Aloud).
+    ReadAloud,
+    /// Chat › Start Voice Call in the open chat, or End Voice Call.
+    VoiceCall,
 }
 
 impl ShortcutAction {
-    pub const ALL: [Self; 13] = [
+    pub const ALL: [Self; 15] = [
         Self::NewChat,
         Self::OpenPalette,
         Self::FocusComposer,
@@ -41,6 +45,8 @@ impl ShortcutAction {
         Self::DenyRequest,
         Self::Dictate,
         Self::ToggleSidebar,
+        Self::ReadAloud,
+        Self::VoiceCall,
     ];
 
     /// The stored name (`ShortcutAction.name` in Dart).
@@ -59,6 +65,8 @@ impl ShortcutAction {
             Self::DenyRequest => "denyRequest",
             Self::Dictate => "dictate",
             Self::ToggleSidebar => "toggleSidebar",
+            Self::ReadAloud => "readAloud",
+            Self::VoiceCall => "voiceCall",
         }
     }
 
@@ -69,7 +77,7 @@ impl ShortcutAction {
     /// Whether the app can carry this out yet. The others are listed in
     /// Settings › Keyboard as "not available yet" and are not bound.
     ///
-    /// Only dictate (voice) is not live yet.
+    /// Every one is now (dictation came with voice input).
     pub fn is_live(self) -> bool {
         matches!(
             self,
@@ -85,6 +93,9 @@ impl ShortcutAction {
                 | Self::StopGenerating
                 | Self::CopyLastResponse
                 | Self::CopyLastCodeBlock
+                | Self::Dictate
+                | Self::ReadAloud
+                | Self::VoiceCall
         )
     }
 }
@@ -174,6 +185,10 @@ pub fn default_shortcuts() -> Vec<Shortcut> {
         s(A::CopyLastCodeBlock, KeyStroke::new(";").primary().shift()),
         s(A::Dictate, KeyStroke::new("l").primary().shift()),
         s(A::ToggleSidebar, KeyStroke::new("s").primary().ctrl()),
+        // ⌥ beside Regenerate's ⌘R: both act on the last answer.
+        s(A::ReadAloud, KeyStroke::new("r").primary().alt()),
+        // ⌥ as Read Aloud has: the voice's commands.
+        s(A::VoiceCall, KeyStroke::new("v").primary().alt()),
     ]
 }
 
@@ -341,6 +356,8 @@ pub enum FixedCommand {
     Forward,
     /// Go › the `n`th sidebar section (⌘1…⌘8; `n` from 1).
     GoToSection(u8),
+    /// Chat › Stop Speaking (⌘., the Mac's Cancel; Esc too while it reads).
+    StopSpeaking,
 }
 
 impl FixedCommand {
@@ -381,6 +398,7 @@ pub fn fixed_shortcuts() -> Vec<(FixedCommand, KeyStroke)> {
         (F::NextChat, k("tab").ctrl()),
         (F::PreviousChat, k("tab").ctrl().shift()),
         (F::Regenerate, k("r").primary()),
+        (F::StopSpeaking, k(".").primary()),
         (F::ExpandEditor, k("e").primary().shift()),
         (F::AskConduit, k("a").primary().shift()),
         (F::ChatSettings, k("i").primary()),
@@ -429,6 +447,106 @@ pub fn fixed_conflict(stroke: &KeyStroke, action: Option<ShortcutAction>) -> Opt
         .map(|(c, _)| c)
 }
 
+/// A key that works in one area only, listed in Settings › Keyboard under
+/// it: Notes' (its list and editor: New Note and the Format menu's chords),
+/// Workspace's Save, and the Calendar's and Scheduled Tasks' keys (their
+/// panes' and editors' own key handlers). Some share a chord with a command that works
+/// everywhere else (⌘N New Chat, ⌘K the palette, ⌘I Chat Settings): Notes
+/// binds them in its own contexts after the shortcut table, so they win
+/// there (`menus::bind_keys`), and they take no chord from anything else.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AreaKey {
+    NewNote,
+    Title,
+    Heading,
+    Subheading,
+    Body,
+    Bold,
+    Italic,
+    Strikethrough,
+    Code,
+    Link,
+    BulletedList,
+    NumberedList,
+    Checklist,
+    MarkChecked,
+    Quote,
+    CodeBlock,
+    /// ⌘S in a Workspace editor.
+    SaveWorkspaceItem,
+    /// The agenda's earlier and later days, and today (⌘←, ⌘→, ⌘T).
+    CalendarEarlier,
+    CalendarLater,
+    CalendarToday,
+    /// ⌘⌫ on the agenda's selected event.
+    DeleteCalendarItem,
+    /// ⌘S in the event editor.
+    SaveCalendarEvent,
+    /// ⌘⌫ on the selected task.
+    DeleteScheduledTask,
+    /// ⌘S in the task editor.
+    SaveScheduledTask,
+}
+
+impl AreaKey {
+    /// The Settings › Keyboard group it is listed under.
+    pub fn group(self) -> KeyGroup {
+        use AreaKey as A;
+        match self {
+            A::SaveWorkspaceItem => KeyGroup::Workspace,
+            A::CalendarEarlier
+            | A::CalendarLater
+            | A::CalendarToday
+            | A::DeleteCalendarItem
+            | A::SaveCalendarEvent => KeyGroup::Calendar,
+            A::DeleteScheduledTask | A::SaveScheduledTask => KeyGroup::ScheduledTasks,
+            _ => KeyGroup::Notes,
+        }
+    }
+}
+
+/// The area keys and their chords, as Notes binds them (the Format menu
+/// shows them) and a Workspace editor takes ⌘S.
+pub fn area_shortcuts() -> Vec<(AreaKey, KeyStroke)> {
+    use AreaKey as A;
+    let k = KeyStroke::new;
+    vec![
+        (A::NewNote, k("n").primary()),
+        (A::Title, k("t").primary().shift()),
+        (A::Heading, k("h").primary().shift()),
+        (A::Subheading, k("j").primary().shift()),
+        (A::Body, k("b").primary().shift()),
+        (A::Bold, k("b").primary()),
+        (A::Italic, k("i").primary()),
+        (A::Strikethrough, k("x").primary().shift()),
+        (A::Code, k("e").primary()),
+        (A::Link, k("k").primary()),
+        (A::BulletedList, k("7").primary().shift()),
+        (A::NumberedList, k("9").primary().shift()),
+        (A::Checklist, k("8").primary().shift()),
+        (A::MarkChecked, k("u").primary().shift()),
+        (A::Quote, k("'").primary()),
+        (A::CodeBlock, k("c").primary().alt()),
+        (A::SaveWorkspaceItem, k("s").primary()),
+        (A::CalendarEarlier, k("arrowleft").primary()),
+        (A::CalendarLater, k("arrowright").primary()),
+        (A::CalendarToday, k("t").primary()),
+        (A::DeleteCalendarItem, k("backspace").primary()),
+        (A::SaveCalendarEvent, k("s").primary()),
+        (A::DeleteScheduledTask, k("backspace").primary()),
+        (A::SaveScheduledTask, k("s").primary()),
+    ]
+}
+
+/// The chord an area key has.
+pub fn area_stroke(key: AreaKey) -> KeyStroke {
+    area_shortcuts()
+        .into_iter()
+        .find(|(k, _)| *k == key)
+        .map(|(_, s)| s)
+        .unwrap_or_else(|| KeyStroke::new(""))
+}
+
 /// A row of Settings › Keyboard.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KeyRow {
@@ -438,6 +556,8 @@ pub enum KeyRow {
     Fixed(FixedCommand),
     /// Quick Ask's global shortcut (also in General, with its switch).
     QuickAsk,
+    /// Works in one area only (Notes, Workspace); shown, not changed.
+    Area(AreaKey),
 }
 
 /// Settings › Keyboard's groups, as the menus group the commands.
@@ -449,6 +569,14 @@ pub enum KeyGroup {
     /// The Go menu: Back, Forward and the sidebar's sections.
     Go,
     Window,
+    /// New Note and the Format menu, in Notes.
+    Notes,
+    /// Save, in a Workspace editor.
+    Workspace,
+    /// The agenda's days, Delete and Save, in Calendar.
+    Calendar,
+    /// Delete and Save, in Scheduled Tasks.
+    ScheduledTasks,
 }
 
 /// Every shortcut the app has, grouped: the rebindable ones the app can
@@ -474,9 +602,13 @@ pub fn keyboard_groups() -> Vec<(KeyGroup, Vec<KeyRow>)> {
             KeyGroup::Messages,
             vec![
                 R(A::FocusComposer),
+                R(A::Dictate),
                 R(A::FocusModelPicker),
                 R(A::StopGenerating),
                 Fixed(F::Regenerate),
+                R(A::ReadAloud),
+                Fixed(F::StopSpeaking),
+                R(A::VoiceCall),
                 Fixed(F::ExpandEditor),
                 Fixed(F::AskConduit),
                 Fixed(F::ChatSettings),
@@ -506,7 +638,23 @@ pub fn keyboard_groups() -> Vec<(KeyGroup, Vec<KeyRow>)> {
             KeyGroup::Window,
             vec![QuickAsk, R(A::OpenSettings), R(A::ShowShortcuts)],
         ),
+        (KeyGroup::Notes, area_rows(KeyGroup::Notes)),
+        (KeyGroup::Workspace, area_rows(KeyGroup::Workspace)),
+        (KeyGroup::Calendar, area_rows(KeyGroup::Calendar)),
+        (
+            KeyGroup::ScheduledTasks,
+            area_rows(KeyGroup::ScheduledTasks),
+        ),
     ]
+}
+
+/// One area's keys, as rows.
+fn area_rows(group: KeyGroup) -> Vec<KeyRow> {
+    area_shortcuts()
+        .into_iter()
+        .filter(|(k, _)| k.group() == group)
+        .map(|(k, _)| KeyRow::Area(k))
+        .collect()
 }
 
 /// The action other than `action` that `stroke` already fires.
@@ -698,7 +846,7 @@ mod tests {
     #[test]
     fn every_default_is_reachable_and_unique() {
         let t = default_shortcuts();
-        assert_eq!(t.len(), 13);
+        assert_eq!(t.len(), 15);
         let mut seen = std::collections::HashSet::new();
         for s in &t {
             assert!(
@@ -902,7 +1050,10 @@ mod tests {
                 A::CopyLastCodeBlock,
                 A::AllowRequest,
                 A::DenyRequest,
-                A::ToggleSidebar
+                A::Dictate,
+                A::ToggleSidebar,
+                A::ReadAloud,
+                A::VoiceCall
             ]
         );
         for a in ShortcutAction::ALL {
@@ -916,7 +1067,7 @@ mod tests {
             .into_iter()
             .flat_map(|(_, rows)| rows)
             .collect();
-        // Every command the app carries out, once; Dictate waits for voice.
+        // Every command the app carries out, once.
         for a in ShortcutAction::ALL {
             let n = rows.iter().filter(|r| **r == KeyRow::Rebindable(a)).count();
             assert_eq!(n, usize::from(a.is_live()), "{a:?}");
@@ -932,8 +1083,61 @@ mod tests {
             assert_eq!(n, 1, "{c:?}");
         }
         assert_eq!(rows.iter().filter(|r| **r == KeyRow::QuickAsk).count(), 1);
-        // 12 rebindable, 17 fixed (⌘1…⌘8 as one row), Quick Ask.
-        assert_eq!(rows.len(), 31);
+        for (key, _) in area_shortcuts() {
+            let n = rows.iter().filter(|r| **r == KeyRow::Area(key)).count();
+            assert_eq!(n, 1, "{key:?}");
+        }
+        // 15 rebindable, 18 fixed (⌘1…⌘8 as one row), Quick Ask, 16 in
+        // Notes, Workspace's Save, 5 in Calendar and 2 in Scheduled Tasks.
+        assert_eq!(rows.len(), 59);
+        // One area's keys share no chord among themselves (areas may: only
+        // the one in front takes its keys); where one is a fixed command's
+        // too (⌘I Chat Settings), Notes takes it only in its own contexts.
+        for group in [
+            KeyGroup::Notes,
+            KeyGroup::Workspace,
+            KeyGroup::Calendar,
+            KeyGroup::ScheduledTasks,
+        ] {
+            let area: Vec<KeyStroke> = area_shortcuts()
+                .into_iter()
+                .filter(|(k, _)| k.group() == group)
+                .map(|(_, s)| s)
+                .collect();
+            for (i, s) in area.iter().enumerate() {
+                assert!(!area[i + 1..].contains(s), "{s:?} twice in {group:?}");
+            }
+        }
+        // The Calendar's and Scheduled Tasks' keys as their panes take them
+        // (views/calendar, views/tasks: ⌘⌫ also as ⌘Delete, ⌘S also as
+        // ⌘Return in the editors).
+        let shown = |k| describe(&area_stroke(k), true);
+        assert_eq!(shown(AreaKey::CalendarEarlier), "⌘←");
+        assert_eq!(shown(AreaKey::CalendarLater), "⌘→");
+        assert_eq!(shown(AreaKey::CalendarToday), "⌘T");
+        assert_eq!(shown(AreaKey::DeleteCalendarItem), "⌘⌫");
+        assert_eq!(shown(AreaKey::SaveScheduledTask), "⌘S");
+        assert_eq!(describe(&area_stroke(AreaKey::NewNote), true), "⌘N");
+        assert_eq!(describe(&area_stroke(AreaKey::Link), true), "⌘K");
+        assert_eq!(describe(&area_stroke(AreaKey::CodeBlock), true), "⌥⌘C");
+        // Start Voice Call takes no chord the menus have.
+        let call = default_shortcuts()
+            .into_iter()
+            .find(|s| s.action == ShortcutAction::VoiceCall)
+            .unwrap();
+        assert_eq!(describe(&call.stroke, true), "⌥⌘V");
+        assert_eq!(fixed_conflict(&call.stroke, None), None);
+        // Read Aloud beside Regenerate's ⌘R; Stop Speaking is the Mac's ⌘.
+        let read_aloud = default_shortcuts()
+            .into_iter()
+            .find(|s| s.action == ShortcutAction::ReadAloud)
+            .unwrap();
+        assert_eq!(describe(&read_aloud.stroke, true), "⌥⌘R");
+        assert_eq!(fixed_conflict(&read_aloud.stroke, None), None);
+        assert_eq!(
+            describe(&fixed_stroke(FixedCommand::StopSpeaking), true),
+            "⌘."
+        );
         // Go › Back and Forward are Finder's ⌘[ and ⌘].
         assert_eq!(describe(&fixed_stroke(FixedCommand::Back), true), "⌘[");
         assert_eq!(describe(&fixed_stroke(FixedCommand::Forward), true), "⌘]");

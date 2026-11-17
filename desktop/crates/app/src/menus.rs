@@ -63,16 +63,22 @@ pub fn search_chats_stroke() -> KeyStroke {
 /// Chat menu, the sidebar's context menu and the toolbar's More menu.
 /// `MoveTo` stands for the Move To submenu; a menu leaves out what does not
 /// apply (Remove from Folder for a chat in none, Select in the menu bar).
-pub const CHAT_COMMAND_ORDER: [ChatCommandSlot; 11] = [
+/// Fork and Hide are a Hermes session's (its chat menus fill the slots
+/// they share with every chat: Pin, Rename…, Archive and Delete…);
+/// Duplicate is a LibreChat chat's.
+pub const CHAT_COMMAND_ORDER: [ChatCommandSlot; 14] = [
     ChatCommandSlot::Pin,
     ChatCommandSlot::MarkUnread,
     ChatCommandSlot::Rename,
+    ChatCommandSlot::Duplicate,
     ChatCommandSlot::GenerateTitle,
     ChatCommandSlot::Share,
     ChatCommandSlot::Export,
+    ChatCommandSlot::Fork,
     ChatCommandSlot::MoveTo,
     ChatCommandSlot::RemoveFromFolder,
     ChatCommandSlot::Archive,
+    ChatCommandSlot::Hide,
     ChatCommandSlot::Select,
     ChatCommandSlot::Delete,
 ];
@@ -85,14 +91,20 @@ pub enum ChatCommandSlot {
     /// Mark as Unread or Mark as Read.
     MarkUnread,
     Rename,
+    /// Duplicate Chat (a LibreChat chat's copy, on its server).
+    Duplicate,
     GenerateTitle,
     Share,
     /// The Export submenu (Backup, Transcript).
     Export,
+    /// A Hermes session's Fork.
+    Fork,
     MoveTo,
     RemoveFromFolder,
     /// Archive or Unarchive.
     Archive,
+    /// A Hermes session's Hide (Unhide in Hidden Chats).
+    Hide,
     Select,
     Delete,
 }
@@ -103,6 +115,7 @@ impl ChatCommandSlot {
         match command {
             ChatCommand::Pin | ChatCommand::Unpin => Self::Pin,
             ChatCommand::Rename => Self::Rename,
+            ChatCommand::Duplicate => Self::Duplicate,
             ChatCommand::MarkUnread | ChatCommand::MarkRead => Self::MarkUnread,
             ChatCommand::GenerateTitle => Self::GenerateTitle,
             ChatCommand::Export(_) => Self::Export,
@@ -209,6 +222,9 @@ pub fn bind_keys(keymap: &Keymap, cx: &mut App) {
         KeyBinding::new("shift-cmd-n", NewTemporaryChat, None),
         // Chat › Regenerate.
         KeyBinding::new("cmd-r", RegenerateLastAnswer, None),
+        // Chat › Stop Speaking: ⌘., the Mac's Cancel, from a text field too.
+        KeyBinding::new("cmd-.", crate::actions::StopSpeaking, None),
+        KeyBinding::new("cmd-.", crate::actions::StopSpeaking, Some("Input")),
         // Chat › Expand Editor and Ask Conduit, from the message field too.
         KeyBinding::new("shift-cmd-e", crate::actions::ExpandEditor, None),
         KeyBinding::new("shift-cmd-a", crate::actions::AskConduit, None),
@@ -302,6 +318,25 @@ pub fn bind_keys(keymap: &Keymap, cx: &mut App) {
         bindings.push(b);
     }
     cx.bind_keys(bindings);
+    // Notes: the editor's and the list's own keys, and ⌘N as New
+    // Note while the Notes section is shown (Notes' File › New Note).
+    // Bound after the shortcut table: GPUI ranks a binding without a
+    // context as deep as the focus, and the later of two equals wins, so
+    // bound before, New Chat would take ⌘N and the palette ⌘K (Link).
+    cx.bind_keys(crate::views::notes::editor::bindings());
+    cx.bind_keys(crate::views::notes::list::bindings());
+    cx.bind_keys([
+        KeyBinding::new(
+            "cmd-n",
+            crate::views::notes::NewNote,
+            Some(crate::views::notes::list::NOTES_LIST_CONTEXT),
+        ),
+        KeyBinding::new(
+            "cmd-n",
+            crate::views::notes::NewNote,
+            Some(crate::views::notes::pane::NOTE_PANE_CONTEXT),
+        ),
+    ]);
     cx.set_global(shortcut_hints(keymap, quick_ask_stroke(cx).as_ref()));
 }
 
@@ -335,6 +370,9 @@ pub fn shortcut_hints(keymap: &Keymap, quick_ask: Option<&KeyStroke>) -> Shortcu
         find: Some(describe(&search_chats_stroke(), mac).into()),
         temporary_chat: Some(describe(&fixed_stroke(FixedCommand::NewTemporaryChat), mac).into()),
         regenerate: Some(describe(&fixed_stroke(FixedCommand::Regenerate), mac).into()),
+        dictate: chord(ShortcutAction::Dictate),
+        read_aloud: chord(ShortcutAction::ReadAloud),
+        voice_call: chord(ShortcutAction::VoiceCall),
     }
 }
 
@@ -344,12 +382,15 @@ pub struct ChatMenuState {
     pub pinned: bool,
     pub archived: bool,
     pub folder_id: Option<String>,
-    /// It can be shared (an account's server holds it).
-    pub can_share: bool,
     /// It has an unread dot (Mark as Read offered instead).
     pub unread: bool,
-    /// The server holds it: Mark as Unread, Generate Title and Export.
-    pub served: bool,
+    /// What its menus offer, by the core's rule for its backend (Share,
+    /// Duplicate, Move To, Mark as Unread, Generate Title, Export): the
+    /// sidebar's context menu reads the same.
+    pub offered: conduit_protocol::ChatMenuAbilities,
+    /// Show Branches…: the open chat's versions live on the server (the
+    /// core's branch rule, from the chat's detail once loaded).
+    pub branches: bool,
 }
 
 /// What the menu bar follows.
@@ -364,6 +405,8 @@ pub struct MenuState {
     pub full_screen: bool,
     /// The open chat, when it takes changes (not another user's).
     pub chat: Option<ChatMenuState>,
+    /// The open Hermes session, whose commands the Chat menu has instead.
+    pub hermes: Option<conduit_protocol::HermesSessionDto>,
     /// Folders a chat may be filed in: `(id, name)`, by name.
     pub folders: Vec<(String, String)>,
     /// The View menu's zoom items.
@@ -373,6 +416,20 @@ pub struct MenuState {
     pub tool_settings: bool,
     /// Chat › Save Chat: a temporary chat with messages is open.
     pub save_chat: bool,
+    /// The open chat is a Hermes session: Chat › Context & Usage….
+    pub hermes_context: bool,
+    /// The composer is dictating: Chat › Stop Dictation.
+    pub dictating: bool,
+    /// The main window shows a chat to read from (Chat › Read Aloud): a
+    /// read-only, temporary or Hermes chat too.
+    pub read_aloud: bool,
+    /// Something is being read aloud (Chat › Stop Speaking).
+    pub speaking: bool,
+    /// A voice call is on (Chat › End Voice Call).
+    pub in_call: bool,
+    /// A call can start in the open chat (Chat › Start Voice Call): the
+    /// composer's call button is ready, and the window online.
+    pub call_ready: bool,
 }
 
 impl Default for MenuState {
@@ -384,11 +441,18 @@ impl Default for MenuState {
             sidebar_visible: true,
             full_screen: false,
             chat: None,
+            hermes: None,
             folders: vec![],
             zoom: ZoomState::default(),
             chat_settings: false,
             tool_settings: false,
             save_chat: false,
+            hermes_context: false,
+            dictating: false,
+            read_aloud: false,
+            speaking: false,
+            in_call: false,
+            call_ready: false,
         }
     }
 }
@@ -424,8 +488,16 @@ pub fn menu_state(cx: &App) -> MenuState {
     };
     let sidebar_visible = state.layout.read(cx).state.sidebar_visible;
     let zoom = ZoomState::of(&state.settings.read(cx).prefs.appearance);
-    let can_share = state.stores.accounts.read(cx).active().is_some();
     let chat_list = state.stores.chat_list.read(cx);
+    // The open chat's branch rule, once its detail has loaded.
+    let branches = state.main_view.as_ref().is_some_and(|v| {
+        v.read(cx)
+            .chat_pane
+            .read(cx)
+            .chat
+            .as_ref()
+            .is_some_and(|c| c.store.read(cx).abilities().branch)
+    });
     let chat = state
         .stores
         .navigation
@@ -437,9 +509,9 @@ pub fn menu_state(cx: &App) -> MenuState {
             pinned: c.pinned,
             archived: c.archived,
             folder_id: c.folder_id.clone(),
-            can_share,
             unread: c.unread,
-            served: can_share && !c.id.starts_with("local:"),
+            offered: c.menu.clone(),
+            branches,
         });
     let mut folders: Vec<(String, String)> = chat_list
         .list
@@ -479,6 +551,16 @@ pub fn menu_state(cx: &App) -> MenuState {
         .as_ref()
         .filter(|_| main)
         .is_some_and(|v| v.read(cx).chat_pane.read(cx).can_save_temporary(cx));
+    let hermes = match navigation.selected_item() {
+        Some(crate::stores::navigation::AreaItem::HermesSession(id)) if main => {
+            state.stores.areas.read(cx).hermes_session(id).cloned()
+        }
+        _ => None,
+    };
+    let dictating = state.main_view.as_ref().filter(|_| main).is_some_and(|v| {
+        let composer = v.read(cx).chat_pane.read(cx).composer.clone();
+        composer.read(cx).dictating(cx)
+    });
     MenuState {
         areas,
         can_go_back,
@@ -486,11 +568,30 @@ pub fn menu_state(cx: &App) -> MenuState {
         sidebar_visible,
         full_screen,
         chat,
+        hermes,
         folders,
         zoom,
         chat_settings: offer.chat_settings,
         tool_settings: !offer.tool_targets.is_empty(),
         save_chat,
+        hermes_context: state
+            .main_view
+            .as_ref()
+            .filter(|_| main)
+            .is_some_and(|v| v.read(cx).chat_pane.read(cx).hermes_context(cx)),
+        dictating,
+        read_aloud: state
+            .main_view
+            .as_ref()
+            .filter(|_| main)
+            .is_some_and(|v| v.read(cx).chat_pane.read(cx).can_read_aloud(cx)),
+        speaking: state.stores.speech.read(cx).is_active(),
+        in_call: state.stores.call.read(cx).is_active(),
+        call_ready: state
+            .main_view
+            .as_ref()
+            .filter(|_| main)
+            .is_some_and(|v| v.read(cx).chat_pane.read(cx).call_startable(cx)),
     }
 }
 
@@ -547,22 +648,23 @@ fn install(state: MenuState, cx: &mut App) {
     let _ = (move_disabled, export_disabled);
 }
 
-/// Chat › Export Chat has nothing to export: no chat open, or one the
-/// server does not hold (a `local:` chat).
+/// Chat › Export Chat has nothing to export: no chat open, or one whose
+/// backend offers no export (the core's rule, as the menu item reads it).
 pub fn export_disabled(state: &MenuState) -> bool {
-    !state.chat.as_ref().is_some_and(|c| c.served)
+    !state.chat.as_ref().is_some_and(|c| c.offered.export)
 }
 
 /// Chat › Move to has nothing to act on: no chat open (or another user's),
 /// or no folder to file it in.
 pub fn move_to_disabled(state: &MenuState) -> bool {
-    state.chat.is_none() || state.folders.is_empty()
+    !state.chat.as_ref().is_some_and(|c| c.offered.r#move) || state.folders.is_empty()
 }
 
 /// The menu bar for `state`, in `l`'s words.
 pub fn build_menus(l10n: &L10n, state: &MenuState) -> Vec<Menu> {
     let zoom = state.zoom;
-    vec![
+    let notes = state.areas.contains(&Area::Notes);
+    let mut menus = vec![
         Menu::new("Conduit").items([
             MenuItem::action(l10n.about_conduit(), About),
             MenuItem::action(l10n.desktop_check_for_updates(), CheckForUpdates),
@@ -577,15 +679,32 @@ pub fn build_menus(l10n: &L10n, state: &MenuState) -> Vec<Menu> {
             MenuItem::separator(),
             MenuItem::action(l10n.desktop_menu_quit(), Quit),
         ]),
-        Menu::new(l10n.file()).items([
-            MenuItem::action(l10n.new_chat(), NewChat),
-            MenuItem::action(l10n.desktop_new_temporary_chat(), NewTemporaryChat),
-            // Finder's and Notes' New Folder: greyed where folders cannot
-            // be made (no handler answers it then).
-            MenuItem::action(l10n.desktop_new_folder(), NewFolder),
-            MenuItem::separator(),
-            MenuItem::action(l10n.desktop_menu_close_window(), CloseWindow),
-        ]),
+        Menu::new(l10n.file()).items(
+            [
+                MenuItem::action(l10n.new_chat(), NewChat),
+                MenuItem::action(l10n.desktop_new_temporary_chat(), NewTemporaryChat),
+                // Finder's and Notes' New Folder: greyed where folders cannot
+                // be made (no handler answers it then).
+                MenuItem::action(l10n.desktop_new_folder(), NewFolder),
+                // New Channel… likewise, for an account that may make one.
+                MenuItem::action(
+                    l10n.desktop_new_channel(),
+                    crate::views::channels::NewChannel,
+                ),
+            ]
+            .into_iter()
+            // With Hermes on: New Room…, greyed where no room can be made.
+            .chain(state.areas.contains(&Area::Hermes).then(|| {
+                MenuItem::action(
+                    l10n.desktop_hermes_new_room_menu(),
+                    crate::views::hermes_rooms::NewRoom,
+                )
+            }))
+            .chain([
+                MenuItem::separator(),
+                MenuItem::action(l10n.desktop_menu_close_window(), CloseWindow),
+            ]),
+        ),
         Menu::new(l10n.edit()).items([
             MenuItem::os_action(l10n.desktop_menu_undo(), Undo, OsAction::Undo),
             MenuItem::os_action(l10n.desktop_menu_redo(), Redo, OsAction::Redo),
@@ -648,7 +767,47 @@ pub fn build_menus(l10n: &L10n, state: &MenuState) -> Vec<Menu> {
             MenuItem::action(l10n.desktop_menu_conduit_help(), OpenHelp),
             MenuItem::action(l10n.desktop_menu_keyboard_shortcuts(), ShowShortcuts),
         ]),
-    ]
+    ];
+    if notes {
+        // File › New Note, after New Temporary Chat (⌘N while the Notes
+        // section is shown, as Notes' own).
+        if let Some(file) = menus.get_mut(1) {
+            file.items.insert(
+                2,
+                MenuItem::action(l10n.desktop_new_note(), crate::views::notes::NewNote),
+            );
+        }
+        // Format, after Edit, as Notes' and TextEdit's: greyed unless a
+        // note is being edited (the editor answers its actions).
+        menus.insert(3, format_menu(l10n));
+    }
+    menus
+}
+
+/// The Format menu: a note's paragraph styles, text styles, lists and
+/// blocks, with the editor's keys.
+fn format_menu(l10n: &L10n) -> Menu {
+    use crate::views::notes::editor as e;
+    Menu::new(l10n.desktop_note_format()).items([
+        MenuItem::action(l10n.desktop_note_style_title(), e::Title),
+        MenuItem::action(l10n.desktop_note_style_heading(), e::Heading),
+        MenuItem::action(l10n.desktop_note_style_subheading(), e::Subheading),
+        MenuItem::action(l10n.desktop_note_style_body(), e::Body),
+        MenuItem::separator(),
+        MenuItem::action(l10n.desktop_note_bold(), e::ToggleBold),
+        MenuItem::action(l10n.desktop_note_italic(), e::ToggleItalic),
+        MenuItem::action(l10n.desktop_note_strikethrough(), e::ToggleStrike),
+        MenuItem::action(l10n.desktop_note_code(), e::ToggleCode),
+        MenuItem::action(l10n.desktop_add_link_ellipsis(), e::AddLink),
+        MenuItem::separator(),
+        MenuItem::action(l10n.desktop_note_bulleted_list(), e::BulletList),
+        MenuItem::action(l10n.desktop_note_numbered_list(), e::NumberedList),
+        MenuItem::action(l10n.desktop_note_checklist(), e::Checklist),
+        MenuItem::action(l10n.desktop_note_mark_checked(), e::ToggleChecked),
+        MenuItem::separator(),
+        MenuItem::action(l10n.desktop_note_quote(), e::QuoteBlock),
+        MenuItem::action(l10n.desktop_note_code_block(), e::CodeBlock),
+    ])
 }
 
 /// The Go menu, as Finder's: Back and Forward, then each section the
@@ -678,8 +837,10 @@ fn go_menu_items(l10n: &L10n, state: &MenuState) -> Vec<MenuItem> {
 fn chat_menu_items(l10n: &L10n, state: &MenuState) -> Vec<MenuItem> {
     let no_chat = state.chat.is_none();
     let chat = state.chat.clone();
-    let served = chat.as_ref().is_some_and(|c| c.served);
-    let filed = chat.as_ref().is_some_and(|c| c.folder_id.is_some());
+    let offered = chat.as_ref().map(|c| c.offered.clone()).unwrap_or_default();
+    let filed = chat
+        .as_ref()
+        .is_some_and(|c| c.folder_id.is_some() && c.offered.r#move);
     let move_to = state
         .folders
         .iter()
@@ -696,7 +857,40 @@ fn chat_menu_items(l10n: &L10n, state: &MenuState) -> Vec<MenuItem> {
     let move_disabled = move_to_disabled(state);
     let mut move_to = Some(move_to);
     let mut items = vec![];
+    // A Hermes session: its own commands, in the same slots.
+    let hermes = state.hermes.as_ref().map(|session| {
+        (
+            session.id.clone(),
+            crate::views::hermes_sessions::commands(session),
+        )
+    });
     for slot in CHAT_COMMAND_ORDER {
+        if let Some((session_id, commands)) = &hermes {
+            for command in commands.iter().filter(|c| c.slot() == slot) {
+                if slot == ChatCommandSlot::Delete {
+                    items.push(MenuItem::separator());
+                    // The open session's own sheet, as the toolbar's More
+                    // has it before Delete….
+                    if state.hermes_context {
+                        items.extend([
+                            MenuItem::action(
+                                l10n.desktop_hermes_context_usage_menu(),
+                                crate::actions::ShowContextUsage,
+                            ),
+                            MenuItem::separator(),
+                        ]);
+                    }
+                }
+                items.push(MenuItem::action(
+                    command.label(l10n),
+                    crate::views::hermes_sessions::HermesMenu {
+                        session_id: session_id.clone(),
+                        command: *command,
+                    },
+                ));
+            }
+            continue;
+        }
         match slot {
             ChatCommandSlot::Pin => items.push(
                 MenuItem::action(
@@ -712,6 +906,12 @@ fn chat_menu_items(l10n: &L10n, state: &MenuState) -> Vec<MenuItem> {
             ChatCommandSlot::Rename => items.push(
                 MenuItem::action(l10n.desktop_menu_rename_chat(), RenameChat).disabled(no_chat),
             ),
+            // Only a LibreChat chat has it.
+            ChatCommandSlot::Duplicate if offered.duplicate => items.push(MenuItem::action(
+                l10n.libre_chat_duplicate_chat(),
+                DuplicateChat,
+            )),
+            ChatCommandSlot::Duplicate => {}
             ChatCommandSlot::MarkUnread => items.push(
                 MenuItem::action(
                     if chat.as_ref().is_some_and(|c| c.unread) {
@@ -721,10 +921,12 @@ fn chat_menu_items(l10n: &L10n, state: &MenuState) -> Vec<MenuItem> {
                     },
                     MarkChatUnread,
                 )
-                .disabled(!served),
+                .disabled(!offered.mark_unread),
             ),
-            ChatCommandSlot::GenerateTitle => items
-                .push(MenuItem::action(l10n.generate_title(), GenerateChatTitle).disabled(!served)),
+            ChatCommandSlot::GenerateTitle => items.push(
+                MenuItem::action(l10n.generate_title(), GenerateChatTitle)
+                    .disabled(!offered.generate_title),
+            ),
             ChatCommandSlot::Export => items.push(MenuItem::submenu(
                 Menu::new(l10n.chat_export_action())
                     .items(vec![
@@ -741,11 +943,11 @@ fn chat_menu_items(l10n: &L10n, state: &MenuState) -> Vec<MenuItem> {
                             },
                         ),
                     ])
-                    .disabled(!served),
+                    .disabled(!offered.export),
             )),
             ChatCommandSlot::Share => items.push(
                 MenuItem::action(l10n.desktop_share_chat_sheet(), ShareChat)
-                    .disabled(!chat.as_ref().is_some_and(|c| c.can_share)),
+                    .disabled(!offered.share),
             ),
             ChatCommandSlot::MoveTo => items.push(MenuItem::submenu(
                 Menu::new(l10n.desktop_menu_move_to())
@@ -768,8 +970,9 @@ fn chat_menu_items(l10n: &L10n, state: &MenuState) -> Vec<MenuItem> {
                 )
                 .disabled(no_chat),
             ),
-            // Selecting is the sidebar's own mode: its menus only.
-            ChatCommandSlot::Select => {}
+            // Selecting is the sidebar's own mode: its menus only. Fork and
+            // Hide are a Hermes session's.
+            ChatCommandSlot::Select | ChatCommandSlot::Fork | ChatCommandSlot::Hide => {}
             ChatCommandSlot::Delete => {
                 items.extend([
                     MenuItem::separator(),
@@ -784,7 +987,16 @@ fn chat_menu_items(l10n: &L10n, state: &MenuState) -> Vec<MenuItem> {
                     )
                     .disabled(!state.tool_settings),
                     MenuItem::action(l10n.desktop_menu_show_branches(), ShowBranches)
-                        .disabled(no_chat),
+                        .disabled(!chat.as_ref().is_some_and(|c| c.branches)),
+                ]);
+                // Only a Hermes chat has a context window to show.
+                if state.hermes_context {
+                    items.push(MenuItem::action(
+                        l10n.desktop_hermes_context_usage_menu(),
+                        crate::actions::ShowContextUsage,
+                    ));
+                }
+                items.extend([
                     MenuItem::action(l10n.save_chat(), SaveTemporaryChat)
                         .disabled(!state.save_chat),
                     MenuItem::separator(),
@@ -803,10 +1015,32 @@ fn chat_menu_items(l10n: &L10n, state: &MenuState) -> Vec<MenuItem> {
         MenuItem::action(l10n.desktop_menu_choose_model(), FocusModelPicker),
         MenuItem::action(l10n.desktop_shortcut_focus_composer(), FocusComposer),
         MenuItem::action(l10n.desktop_expand_editor(), crate::actions::ExpandEditor),
+        MenuItem::action(
+            if state.dictating {
+                l10n.desktop_stop_dictation()
+            } else {
+                l10n.start_dictation()
+            },
+            crate::actions::Dictate,
+        ),
         MenuItem::action(l10n.ask_conduit_action(), crate::actions::AskConduit).disabled(no_chat),
         MenuItem::separator(),
         MenuItem::action(l10n.regenerate(), RegenerateLastAnswer).disabled(no_chat),
         MenuItem::action(l10n.desktop_stop_generating(), StopGenerating),
+        MenuItem::separator(),
+        MenuItem::action(l10n.desktop_read_aloud(), crate::actions::ReadAloud)
+            .disabled(!state.read_aloud),
+        MenuItem::action(l10n.desktop_stop_speaking(), crate::actions::StopSpeaking)
+            .disabled(!state.speaking),
+        MenuItem::action(
+            if state.in_call {
+                l10n.desktop_end_voice_call()
+            } else {
+                l10n.desktop_start_voice_call()
+            },
+            crate::actions::VoiceCall,
+        )
+        .disabled(!state.in_call && !state.call_ready),
         MenuItem::separator(),
         MenuItem::action(l10n.desktop_menu_copy_last_reply(), CopyLastResponse),
         MenuItem::action(l10n.desktop_menu_copy_last_code_block(), CopyLastCodeBlock),
@@ -862,13 +1096,41 @@ mod tests {
                 pinned: true,
                 archived: false,
                 folder_id: folder.map(str::to_string),
-                can_share: true,
                 unread: false,
-                served: true,
+                // An Open WebUI chat's, as the core offers them.
+                offered: conduit_protocol::ChatMenuAbilities {
+                    share: true,
+                    duplicate: false,
+                    r#move: true,
+                    mark_unread: true,
+                    generate_title: true,
+                    export: true,
+                },
+                branches: true,
             }),
             folders: vec![("f1".into(), "Garden".into()), ("f2".into(), "Work".into())],
             ..MenuState::default()
         }
+    }
+
+    /// Chat › Read Aloud follows the main window showing a chat, not the
+    /// chat commands: a read-only chat, a temporary one and a Hermes
+    /// session's are read too, as their answers' own Read Aloud does.
+    #[test]
+    fn read_aloud_follows_a_shown_chat_not_the_chat_commands() {
+        let l = L10n::new("en");
+        // A read-only chat: no chat commands, still read aloud.
+        let read_only = build_menus(
+            &l,
+            &MenuState {
+                read_aloud: true,
+                ..MenuState::default()
+            },
+        );
+        assert!(!disabled(menu(&read_only, "Chat"), "Read Aloud"));
+        // No chat shown: nothing to read.
+        let none = build_menus(&l, &MenuState::default());
+        assert!(disabled(menu(&none, "Chat"), "Read Aloud"));
     }
 
     #[test]
@@ -931,6 +1193,7 @@ mod tests {
                 "New Chat",
                 "New Temporary Chat",
                 "New Folder",
+                "New Channel…",
                 "—",
                 "Close Window"
             ]
@@ -963,6 +1226,37 @@ mod tests {
         ] {
             assert!(chat.iter().any(|t| t == item), "{item} in {chat:?}");
         }
+    }
+
+    #[test]
+    fn notes_add_new_note_and_a_format_menu() {
+        let l = L10n::new("en");
+        let state = MenuState {
+            areas: vec![Area::Chats, Area::Notes],
+            ..MenuState::default()
+        };
+        let menus = build_menus(&l, &state);
+        assert_eq!(
+            titles(menu(&menus, "File"))[..4],
+            ["New Chat", "New Temporary Chat", "New Note", "New Folder"]
+        );
+        let names: Vec<String> = menus.iter().map(|m| m.name.to_string()).collect();
+        let edit = names.iter().position(|n| n == "Edit").unwrap();
+        assert_eq!(names[edit + 1], "Format");
+        let format = titles(menu(&menus, "Format"));
+        for item in [
+            "Title",
+            "Bold",
+            "Add Link…",
+            "Checklist",
+            "Mark as Checked",
+            "Code Block",
+        ] {
+            assert!(format.iter().any(|t| t == item), "{item} in {format:?}");
+        }
+        // Without notes, neither.
+        let none = build_menus(&l, &MenuState::default());
+        assert!(none.iter().all(|m| m.name.as_ref() != "Format"));
     }
 
     #[test]
@@ -1051,15 +1345,51 @@ mod tests {
                 "Choose a Model…",
                 "Go to Message Field",
                 "Expand Editor",
+                "Start Dictation",
                 "Ask Conduit",
                 "—",
                 "Regenerate",
                 "Stop Generating",
                 "—",
+                "Read Aloud",
+                "Stop Speaking",
+                "Start Voice Call",
+                "—",
                 "Copy Last Answer",
                 "Copy Last Code Block"
             ]
         );
+        // While dictating, the same item stops it.
+        let dictating = build_menus(
+            &l,
+            &MenuState {
+                dictating: true,
+                ..open_chat(None)
+            },
+        );
+        assert!(titles(menu(&dictating, "Chat")).contains(&"Stop Dictation".to_string()));
+        // A call on: the same item ends it.
+        let calling = build_menus(
+            &l,
+            &MenuState {
+                in_call: true,
+                ..open_chat(None)
+            },
+        );
+        assert!(titles(menu(&calling, "Chat")).contains(&"End Voice Call".to_string()));
+        assert!(titles(menu(&dictating, "Chat")).contains(&"Start Voice Call".to_string()));
+        // Start Voice Call as the composer's call button: only when the core
+        // admits a call; End Voice Call always.
+        assert!(disabled(menu(&dictating, "Chat"), "Start Voice Call"));
+        let ready = build_menus(
+            &l,
+            &MenuState {
+                call_ready: true,
+                ..open_chat(None)
+            },
+        );
+        assert!(!disabled(menu(&ready, "Chat"), "Start Voice Call"));
+        assert!(!disabled(menu(&calling, "Chat"), "End Voice Call"));
         let move_to = submenu(menu(&filed, "Chat"), "Move to");
         assert_eq!(titles(move_to), ["Garden", "Work"]);
         assert!(move_to.items[0].is_checked());
@@ -1073,11 +1403,105 @@ mod tests {
         );
         // Without a server to hold the link, Share Chat is off.
         let mut local = open_chat(None);
-        local.chat.as_mut().unwrap().can_share = false;
+        local.chat.as_mut().unwrap().offered.share = false;
         assert!(disabled(
             menu(&build_menus(&l, &local), "Chat"),
             "Share Chat…"
         ));
+        // A Hermes session with a context window: Context & Usage… before
+        // Delete…, as an ordinary chat's sheets are.
+        let hermes = build_menus(
+            &l,
+            &MenuState {
+                hermes: Some(conduit_protocol::HermesSessionDto {
+                    id: "s1".into(),
+                    chat_id: "local:hermes_s1".into(),
+                    title: "Pond plants".into(),
+                    preview: None,
+                    updated_at_ms: None,
+                    pinned: false,
+                    archived: false,
+                    hidden: false,
+                    source: None,
+                    running: false,
+                }),
+                hermes_context: true,
+                ..MenuState::default()
+            },
+        );
+        let items = titles(menu(&hermes, "Chat"));
+        let context = items.iter().position(|t| t == "Context & Usage…");
+        let delete = items.iter().position(|t| t == "Delete…");
+        assert!(
+            context.is_some_and(|c| delete.is_some_and(|d| c < d)),
+            "{items:?}"
+        );
+        assert!(!disabled(menu(&hermes, "Chat"), "Context & Usage…"));
+    }
+
+    #[test]
+    fn a_hermes_sessions_chat_menu_has_its_commands_and_context_before_delete() {
+        let l = L10n::new("en");
+        let session: conduit_protocol::HermesSessionDto = serde_json::from_value(
+            serde_json::json!({"id": "s1", "chatId": "local:hermes_s1", "title": "Tide tables"}),
+        )
+        .expect("a session");
+        let state = MenuState {
+            hermes: Some(session),
+            hermes_context: true,
+            ..open_chat(None)
+        };
+        let items = titles(menu(&build_menus(&l, &state), "Chat"));
+        let head: Vec<&str> = items
+            .iter()
+            .take_while(|t| *t != "Previous Chat")
+            .map(String::as_str)
+            .collect();
+        assert_eq!(
+            head,
+            [
+                "Pin",
+                "Rename…",
+                "Fork",
+                "Archive",
+                "Hide",
+                "—",
+                "Context & Usage…",
+                "—",
+                "Delete…",
+                "—"
+            ]
+        );
+        // Without a context window to read, Delete… stands alone.
+        let state = MenuState {
+            hermes_context: false,
+            ..state
+        };
+        let items = titles(menu(&build_menus(&l, &state), "Chat"));
+        assert!(!items.iter().any(|t| t == "Context & Usage…"));
+    }
+
+    #[test]
+    fn only_a_librechat_chat_offers_duplicate() {
+        let l = L10n::new("en");
+        let owui = titles(menu(&build_menus(&l, &open_chat(None)), "Chat"));
+        assert!(!owui.iter().any(|t| t == "Duplicate Chat"));
+        let mut lc = open_chat(None);
+        if let Some(chat) = lc.chat.as_mut() {
+            // A LibreChat chat's, as the core offers them.
+            chat.offered = conduit_protocol::ChatMenuAbilities {
+                share: true,
+                duplicate: true,
+                ..Default::default()
+            };
+        }
+        lc.folders.clear();
+        let names = titles(menu(&build_menus(&l, &lc), "Chat"));
+        let at = |t: &str| names.iter().position(|n| n == t);
+        // After Rename…, before Share Chat…, as on the phone.
+        assert!(at("Duplicate Chat").is_some());
+        assert!(at("Rename…") < at("Duplicate Chat"));
+        assert!(at("Duplicate Chat") < at("Share Chat…"));
     }
 
     #[test]
@@ -1089,6 +1513,7 @@ mod tests {
             ChatCommand::Pin,
             ChatCommand::Unpin,
             ChatCommand::Rename,
+            ChatCommand::Duplicate,
             ChatCommand::MarkUnread,
             ChatCommand::MarkRead,
             ChatCommand::GenerateTitle,
@@ -1111,6 +1536,7 @@ mod tests {
             "Pin" | "Unpin" => Some(ChatCommandSlot::Pin),
             "Mark as Unread" | "Mark as Read" => Some(ChatCommandSlot::MarkUnread),
             "Rename…" => Some(ChatCommandSlot::Rename),
+            "Duplicate Chat" => Some(ChatCommandSlot::Duplicate),
             "Generate Title" => Some(ChatCommandSlot::GenerateTitle),
             "Share Chat…" => Some(ChatCommandSlot::Share),
             "Export Chat ▸" => Some(ChatCommandSlot::Export),
@@ -1241,6 +1667,7 @@ mod tests {
             F::NextChat => Box::new(NextChat),
             F::PreviousChat => Box::new(PreviousChat),
             F::Regenerate => Box::new(RegenerateLastAnswer),
+            F::StopSpeaking => Box::new(crate::actions::StopSpeaking),
             F::ExpandEditor => Box::new(crate::actions::ExpandEditor),
             F::AskConduit => Box::new(crate::actions::AskConduit),
             F::ChatSettings => Box::new(crate::actions::ChatSettings),
@@ -1263,6 +1690,102 @@ mod tests {
                 index: usize::from(n),
             }),
         }
+    }
+
+    /// Settings › Keyboard's Notes keys are the ones Notes binds.
+    #[cfg(target_os = "macos")]
+    #[gpui_kit::test]
+    fn the_notes_chords_settings_shows_are_bound(cx: &mut gpui_kit::TestAppContext) {
+        use crate::keymap::AreaKey as K;
+        use crate::views::notes::editor as e;
+        cx.update(|cx| {
+            cx.set_global(L10n::new("en"));
+            bind_keys(&Keymap::default(), cx);
+            for (key, stroke) in crate::keymap::area_shortcuts() {
+                let action: Box<dyn gpui_kit::Action> = match key {
+                    K::NewNote => Box::new(crate::views::notes::NewNote),
+                    K::Title => Box::new(e::Title),
+                    K::Heading => Box::new(e::Heading),
+                    K::Subheading => Box::new(e::Subheading),
+                    K::Body => Box::new(e::Body),
+                    K::Bold => Box::new(e::ToggleBold),
+                    K::Italic => Box::new(e::ToggleItalic),
+                    K::Strikethrough => Box::new(e::ToggleStrike),
+                    K::Code => Box::new(e::ToggleCode),
+                    K::Link => Box::new(e::AddLink),
+                    K::BulletedList => Box::new(e::BulletList),
+                    K::NumberedList => Box::new(e::NumberedList),
+                    K::Checklist => Box::new(e::Checklist),
+                    K::MarkChecked => Box::new(e::ToggleChecked),
+                    K::Quote => Box::new(e::QuoteBlock),
+                    K::CodeBlock => Box::new(e::CodeBlock),
+                    // The Workspace editor, the Calendar and Scheduled
+                    // Tasks take theirs in their own key handlers.
+                    K::SaveWorkspaceItem
+                    | K::CalendarEarlier
+                    | K::CalendarLater
+                    | K::CalendarToday
+                    | K::DeleteCalendarItem
+                    | K::SaveCalendarEvent
+                    | K::DeleteScheduledTask
+                    | K::SaveScheduledTask => continue,
+                };
+                let bound = cx
+                    .key_bindings()
+                    .borrow()
+                    .bindings_for_action(action.as_ref())
+                    .any(|b| {
+                        b.keystrokes().len() == 1
+                            && crate::keymap::from_gpui(b.keystrokes()[0].inner()).as_ref()
+                                == Some(&stroke)
+                    });
+                assert!(bound, "{key:?} is not bound to {stroke:?}");
+            }
+        });
+    }
+
+    /// In Notes, ⌘N is New Note and the editor's ⌘K is Add Link, though
+    /// the shortcut table gives both chords to New Chat and the palette
+    /// everywhere else.
+    #[cfg(target_os = "macos")]
+    #[gpui_kit::test]
+    fn notes_keys_win_over_the_shortcut_table(cx: &mut gpui_kit::TestAppContext) {
+        cx.update(|cx| {
+            cx.set_global(L10n::new("en"));
+            bind_keys(&Keymap::default(), cx);
+            let winner = |stroke: &'static str, stack: &[&str]| -> &'static str {
+                let input = [gpui_kit::Keystroke::parse(stroke).unwrap()];
+                let contexts: Vec<gpui_kit::KeyContext> = stack
+                    .iter()
+                    .map(|c| gpui_kit::KeyContext::parse(c).unwrap())
+                    .collect();
+                let (bindings, _) = cx
+                    .key_bindings()
+                    .borrow()
+                    .bindings_for_input(&input, &contexts);
+                bindings.first().map_or("", |b| b.action().name())
+            };
+            use crate::views::notes::{editor, list, pane};
+            use gpui_kit::Action as _;
+            let new_note = crate::views::notes::NewNote.name();
+            assert_eq!(
+                winner("cmd-n", &["Window", list::NOTES_LIST_CONTEXT]),
+                new_note
+            );
+            assert_eq!(
+                winner("cmd-n", &["Window", pane::NOTE_PANE_CONTEXT]),
+                new_note
+            );
+            assert_eq!(
+                winner(
+                    "cmd-k",
+                    &["Window", pane::NOTE_PANE_CONTEXT, editor::EDITOR_CONTEXT]
+                ),
+                editor::AddLink.name()
+            );
+            // Elsewhere the table's own.
+            assert_eq!(winner("cmd-n", &["Window"]), NewChat.name());
+        });
     }
 
     /// Settings › Keyboard's fixed chords are the ones bound (it shows

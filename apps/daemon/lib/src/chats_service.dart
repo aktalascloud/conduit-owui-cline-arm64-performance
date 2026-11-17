@@ -2,16 +2,27 @@ import 'dart:async';
 
 import 'package:conduit_core/features/chat/providers/chat_providers.dart'
     show
+        archiveConversation,
+        copyLibreChatConversation,
+        deleteLibreChatConversation,
+        pinConversation,
+        renameLibreChatConversation,
         captureChatMutationOwner,
         chatActionAvailability,
+        chatMenuAvailability,
         deleteConversationShareLink,
         exportOpenWebUiChat,
         exportOpenWebUiChatTranscript,
         forkChatAtMessage,
         isReasoningEffortRejection,
         markConversationUnread,
+        openWebUiChatActionAllowedProvider,
         selectChatBranch,
         shareConversationLink;
+import 'package:conduit_core/features/librechat/providers/librechat_providers.dart'
+    show libreChatCapabilitiesProvider;
+import 'package:conduit_core/services/connectivity_service.dart'
+    show isOnlineProvider;
 import 'package:conduit_core/features/chat/providers/conversation_title_generation.dart';
 import 'package:conduit_core/features/chat/services/chat_branch_service.dart'
     show ChatBranchException, ChatBranchFailure;
@@ -25,7 +36,10 @@ import 'package:conduit_core/features/direct_connections/services/direct_chat_br
 import 'package:conduit_core/features/sharing/models/resource_access.dart';
 import 'package:conduit_core/features/sharing/providers/resource_access_controller.dart';
 import 'package:conduit_core/features/workspace/models/workspace_common.dart'
-    show WorkspaceAccessGrantInput, WorkspaceGrantPermission, WorkspacePrincipalType;
+    show
+        WorkspaceAccessGrantInput,
+        WorkspaceGrantPermission,
+        WorkspacePrincipalType;
 import 'package:conduit_core/models/chat_comparison.dart';
 import 'package:conduit_core/models/chat_message.dart' as core;
 import 'package:conduit_core/models/model.dart';
@@ -46,9 +60,22 @@ import 'package:conduit_core/services/api_service.dart';
 import 'package:conduit_core/services/conversation_parsing.dart'
     show kMessageRatingMetadataKey;
 import 'package:conduit_core/sync/id_remapper.dart';
+import 'package:conduit_core/providers/backend_mode_providers.dart'
+    show PrimaryAccountKind, primaryAccountKindProvider;
+import 'package:conduit_core/sync/primary_sync_provider.dart';
 import 'package:conduit_core/sync/sync_engine.dart';
+import 'package:conduit_core/features/librechat/providers/librechat_composer_providers.dart'
+    show libreChatFileBaseUrlProvider;
+import 'package:conduit_core/database/chat_database_repository.dart'
+    show ChatStorageIdentity, ChatStorageKind;
 import 'package:conduit_core/utils/debug_logger.dart';
 import 'package:conduit_core/utils/usage_summary.dart';
+import 'package:conduit_core/features/hermes/providers/hermes_providers.dart'
+    show hermesApiServiceProvider;
+import 'package:conduit_core/features/hermes/services/hermes_session_provenance.dart'
+    show isNativeHermesConversation;
+import 'package:conduit_core/features/hermes/services/hermes_run_transport.dart'
+    show kHermesTransport;
 import 'package:conduit_protocol/conduit_protocol.dart';
 import 'package:riverpod/misc.dart' show ProviderListenable;
 import 'package:riverpod/riverpod.dart';
@@ -67,10 +94,14 @@ import 'hermes_service.dart';
 /// Another user's chat, reached through a folder shared with this account,
 /// is read-only, as the core decides it for a phone
 /// ([isReadOnlySharedConversation]): the server refuses every write to it.
+///
+/// [menu] is what its menus offer (the core's `chatMenuAvailability`); a
+/// caller without a container leaves them all off.
 ChatSummary chatSummaryOf(
   Conversation conversation, {
   required String? currentUserId,
   bool generating = false,
+  ChatMenuAbilities menu = const ChatMenuAbilities(),
 }) => ChatSummary(
   id: conversation.id,
   title: conversation.title,
@@ -85,7 +116,29 @@ ChatSummary chatSummaryOf(
   shared: (conversation.shareId ?? '').isNotEmpty,
   readOnly: isReadOnlySharedConversation(conversation, currentUserId),
   unread: isConversationUnread(conversation, generating: generating),
+  menu: menu,
 );
+
+/// [conversation]'s menus, by the core's rule for its backend
+/// ([chatMenuAvailability]); all off when it cannot be read.
+ChatMenuAbilities chatMenuAbilitiesOf(
+  ProviderContainer container,
+  Conversation conversation,
+) {
+  try {
+    final offered = chatMenuAvailability(container, conversation);
+    return ChatMenuAbilities(
+      share: offered.share,
+      duplicate: offered.duplicate,
+      move: offered.move,
+      markUnread: offered.markUnread,
+      generateTitle: offered.generateTitle,
+      export: offered.export,
+    );
+  } on Object {
+    return const ChatMenuAbilities();
+  }
+}
 
 /// What a chat's answers are doing, as the turns service knows it: which
 /// chats are answering (no unread dot while they are), whether one is, or
@@ -100,6 +153,10 @@ abstract interface class ChatTurns {
   /// Waits (briefly) for [chatId]'s last answer to reach the stored copy, so
   /// nothing it pulls lands over a change made after.
   Future<void> settled(String chatId);
+
+  /// The messages of [chatId]'s open scope, as its turns left them; null
+  /// when it has none.
+  List<core.ChatMessage>? openMessages(String chatId);
 }
 
 /// [folder] as the sidebar shows it, with whose it is when it is another
@@ -143,11 +200,13 @@ List<ChatSummary> folderChatSummaries(
   Iterable<Conversation> chats, {
   required String folderId,
   required String? currentUserId,
+  ChatMenuAbilities Function(Conversation chat)? menu,
 }) => <ChatSummary>[
   for (final chat in chats)
     chatSummaryOf(
       chat.folderId == null ? chat.copyWith(folderId: folderId) : chat,
       currentUserId: currentUserId,
+      menu: menu?.call(chat) ?? const ChatMenuAbilities(),
     ),
 ];
 
@@ -296,6 +355,35 @@ final class ChatsService {
         _events?.emit(ConduitEventSpecs.chatsChanged, const ChatsChanged());
       });
     });
+    // What each chat's menus offer reads the account's permissions and
+    // LibreChat's capabilities as loaded when it is listed: list again
+    // when they change (a permission that loads after the list did).
+    void relist() {
+      pending?.cancel();
+      pending = Timer(const Duration(milliseconds: 250), () {
+        _events?.emit(ConduitEventSpecs.chatsChanged, const ChatsChanged());
+      });
+    }
+
+    void follow<T>(ProviderListenable<T> provider) {
+      try {
+        _container.listen<T>(provider, (previous, next) {
+          if (previous != next) relist();
+        });
+      } on Object catch (error) {
+        DebugLogger.error(
+          'chat-menu-follow-failed',
+          scope: 'daemon/chats',
+          error: error,
+        );
+      }
+    }
+
+    follow(openWebUiChatActionAllowedProvider('export'));
+    follow(libreChatCapabilitiesProvider);
+    follow(chatMarkUnreadSupportedProvider);
+    follow(foldersAvailableProvider);
+    follow(isOnlineProvider);
   }
 
   final ProviderContainer _container;
@@ -410,9 +498,9 @@ final class ChatsService {
   /// the local list is then simply what there is.
   Future<void> _pull(String reason) async {
     try {
-      await _container
-          .read(syncEngineProvider.notifier)
-          .requestPull(reason: reason);
+      // The account that owns the chats: Open WebUI's engine, or the
+      // LibreChat account's.
+      await _container.read(primarySyncProvider).requestPull(reason: reason);
     } on Object catch (error) {
       DebugLogger.error('pull-failed', scope: 'daemon/chats', error: error);
     }
@@ -432,7 +520,15 @@ final class ChatsService {
     // A Hermes session: its transcript is Hermes's, not the database's.
     if (hermesSessionOf(id) case final sessionId? when _hermes != null) {
       final hermes = _hermes;
-      final messages = await hermes.transcript(sessionId);
+      // While its scope is open (a window follows its agent's work there,
+      // or a turn just ran), the chat is what the scope holds: an answer a
+      // turn, with all it showed, under the names the scope answers to.
+      // Hermes's record has a row a tool step, which a turn's last row
+      // only partly says.
+      final open = turns?.openMessages(id);
+      final messages = open != null && open.isNotEmpty
+          ? open
+          : await hermes.transcript(sessionId);
       return ChatDetail(
         summary: ChatSummary(
           id: id,
@@ -444,6 +540,10 @@ final class ChatsService {
           updatedAtMs: DateTime.now().millisecondsSinceEpoch,
         ),
         messages: _messages(messages),
+        // Its history's actions, its agent's work, and its context
+        // window and usage.
+        abilities: hermes.abilities(sessionId),
+        hermes: hermes.chatState(sessionId),
       );
     }
     // Never in the database, so never in the list. The transcript lives
@@ -544,6 +644,17 @@ final class ChatsService {
     Conversation conversation, {
     bool temporary = false,
   }) async {
+    // A Hermes chat (or an Open WebUI chat a Hermes turn ran in): its
+    // agent's work can be watched; a Hermes session's own context read.
+    final hermes = _container.read(hermesApiServiceProvider) != null;
+    final native = isNativeHermesConversation(conversation);
+    final hermesWork =
+        hermes &&
+        (native ||
+            conversation.messages.any(
+              (m) => m.metadata?['transport'] == kHermesTransport,
+            ));
+    final hermesContext = hermes && native;
     try {
       final offered = await chatActionAvailability(
         _container,
@@ -562,6 +673,8 @@ final class ChatsService {
         share: offered.share,
         saveTemporary: offered.saveTemporary,
         compare: offered.compare,
+        hermesWork: hermesWork,
+        hermesContext: hermesContext,
       );
     } on Object catch (error) {
       DebugLogger.error(
@@ -569,7 +682,10 @@ final class ChatsService {
         scope: 'daemon/chats',
         error: error,
       );
-      return const ChatAbilities();
+      return ChatAbilities(
+        hermesWork: hermesWork,
+        hermesContext: hermesContext,
+      );
     }
   }
 
@@ -593,7 +709,17 @@ final class ChatsService {
       return _searchByTag(trimmed.substring(4).trim(), limit: query.limit);
     }
 
-    final database = _container.read(appDatabaseProvider);
+    // The account in charge's: LibreChat's own database while it owns the
+    // chats.
+    final libreChat =
+        _container.read(primaryAccountKindProvider) ==
+        PrimaryAccountKind.libreChat;
+    final database = libreChat
+        ? _container
+              .read(chatDatabaseRepositoryProvider)
+              .libreChatLocation
+              ?.database
+        : _container.read(appDatabaseProvider);
     if (database == null) {
       // No local database yet -- the account has not been certified. Falling
       // back to a title scan of the loaded page would be worse than saying
@@ -607,9 +733,12 @@ final class ChatsService {
       // Incomplete until a full sync has succeeded at least once, and while
       // one is running. The watermark is only set by a successful cycle, so
       // its absence means the index has never been known complete.
+      // LibreChat's list is whole once its sync has pulled it, which the
+      // list answering already waited for.
       complete:
-          sync.phase == SyncPhase.idle &&
-          sync.lastSuccessUpdatedAtWatermark != null,
+          libreChat ||
+          (sync.phase == SyncPhase.idle &&
+              sync.lastSuccessUpdatedAtWatermark != null),
       hits: hits
           .map(
             (hit) => ChatSearchHit(
@@ -684,7 +813,7 @@ final class ChatsService {
   /// copy.
   Future<void> _afterEnvelopeChange(String chatId) async {
     try {
-      await _container.read(syncEngineProvider.notifier).pullChatNow(chatId);
+      await _container.read(primarySyncProvider).pullChatNow(chatId);
     } on Object catch (error) {
       DebugLogger.error(
         'envelope-pull-failed',
@@ -731,6 +860,12 @@ final class ChatsService {
       await mutations.renameDirectLocalConversation(_container, id, trimmed);
       return _refresh();
     }
+    if (_isLibreChat(id)) {
+      // Written here at once, and to the server through LibreChat's own
+      // outbox, as the phone renames one.
+      await renameLibreChatConversation(_container, id, trimmed);
+      return _refresh();
+    }
     await _api.updateConversation(id, title: trimmed);
     await _afterEnvelopeChange(id);
     return _refresh();
@@ -739,6 +874,8 @@ final class ChatsService {
   Future<ChatList> setPinned(String id, {required bool value}) async {
     if (_isDirectLocal(id)) {
       await mutations.pinConversation(_container, id, value);
+    } else if (_isLibreChat(id)) {
+      await pinConversation(_container, _libreChatScoped(id), value);
     } else {
       await _api.pinConversation(id, value);
     }
@@ -750,9 +887,49 @@ final class ChatsService {
     return _refresh();
   }
 
-  Future<void> _archive(String id, bool value) => _isDirectLocal(id)
-      ? mutations.archiveConversation(_container, id, value)
-      : _api.archiveConversation(id, value);
+  /// Direct's local chats and LibreChat's are archived where they are kept;
+  /// the rest on the server.
+  Future<void> _archive(String id, bool value) {
+    if (_isDirectLocal(id)) {
+      return mutations.archiveConversation(_container, id, value);
+    }
+    if (_isLibreChat(id)) {
+      return archiveConversation(_container, _libreChatScoped(id), value);
+    }
+    return _api.archiveConversation(id, value);
+  }
+
+  /// Whether chat [id] is one of the LibreChat account's: its changes go
+  /// through the core's LibreChat mutations, which write the account's own
+  /// database and queue the server write, never to Open WebUI.
+  bool _isLibreChat(String id) {
+    final identity = ChatStorageIdentity.parse(id);
+    if (identity.storage == ChatStorageKind.libreChat) return true;
+    final listed = _container
+        .read(conversationsProvider)
+        .value
+        ?.where((conversation) => conversation.id == id)
+        .firstOrNull;
+    if (listed != null) return isLibreChatConversation(listed);
+    // Not listed yet (a copy just made, say): a server chat is the account
+    // in charge's.
+    return identity.storage == null &&
+        !id.startsWith('local:') &&
+        _container.read(primaryAccountKindProvider) ==
+            PrimaryAccountKind.libreChat;
+  }
+
+  /// [id] as the core's mutations know a LibreChat chat whether or not the
+  /// list holds it yet (a copy just made): a bare server id they would
+  /// otherwise take for Open WebUI's.
+  static String _libreChatScoped(String id) {
+    final identity = ChatStorageIdentity.parse(id);
+    if (identity.storage != null) return id;
+    return ChatStorageIdentity(
+      rawId: identity.rawId,
+      storage: ChatStorageKind.libreChat,
+    ).scopedId;
+  }
 
   Future<ChatList> delete(String id) async {
     // Never on the server: forgetting it here is the whole delete.
@@ -763,6 +940,11 @@ final class ChatsService {
     }
     if (_isDirectLocal(id)) {
       await mutations.deleteDirectLocalConversation(_container, id);
+      return _refresh();
+    }
+    if (_isLibreChat(id)) {
+      await deleteLibreChatConversation(_container, id);
+      _conversations.removeConversation(id);
       return _refresh();
     }
     await _api.deleteConversation(id);
@@ -791,6 +973,9 @@ final class ChatsService {
             await _archive(id, false);
           case BulkChatAction.delete when _isDirectLocal(id):
             await mutations.deleteDirectLocalConversation(_container, id);
+          case BulkChatAction.delete when _isLibreChat(id):
+            await deleteLibreChatConversation(_container, id);
+            _conversations.removeConversation(id);
           case BulkChatAction.delete:
             await _api.deleteConversation(id);
             _conversations.removeConversation(id);
@@ -909,9 +1094,7 @@ final class ChatsService {
         return;
       }
       try {
-        await _container
-            .read(syncEngineProvider.notifier)
-            .pullChatNow(chatId);
+        await _container.read(syncEngineProvider.notifier).pullChatNow(chatId);
       } on Object catch (error) {
         DebugLogger.error('pull-failed', scope: 'daemon/chats', error: error);
       }
@@ -935,6 +1118,42 @@ final class ChatsService {
     }
   }
 
+  /// The text of answer [messageId] in [chatId] (or of the version with
+  /// that id), with the model that wrote it: what Read Aloud reads. Read
+  /// where `chats.get` reads it: a Hermes session's transcript is Hermes's,
+  /// a temporary chat's is in this daemon's memory.
+  Future<({String content, String? model})> answerFor(
+    String chatId,
+    String messageId,
+  ) async {
+    final List<core.ChatMessage> messages;
+    if (hermesSessionOf(chatId) case final sessionId? when _hermes != null) {
+      messages = await _hermes.transcript(sessionId);
+    } else if (_temporary.contains(chatId)) {
+      messages = _temporary.transcript(chatId);
+    } else {
+      messages = (await _load(chatId)).messages;
+    }
+    for (final message in messages) {
+      if (message.id == messageId) {
+        return (content: message.content, model: message.model);
+      }
+      for (final version in message.versions) {
+        if (version.id == messageId) {
+          return (content: version.content, model: version.model);
+        }
+      }
+    }
+    throw RpcError(
+      code: ConduitErrorCodes.notFound,
+      args: <String, String>{'messageId': messageId},
+      debugMessage: 'no such message in that chat',
+    );
+  }
+
+  /// The model [chatId] answers with.
+  Future<String?> modelOf(String chatId) async => (await _load(chatId)).model;
+
   /// [chatId] as the core loads it, or not found.
   Future<Conversation> _load(String chatId) async {
     try {
@@ -955,9 +1174,7 @@ final class ChatsService {
     if (turns?.isRunning(chatId) ?? false) {
       throw RpcError(
         code: ConduitErrorCodes.conflict,
-        args: const <String, String>{
-          'reason': 'responseRunning',
-        },
+        args: const <String, String>{'reason': 'responseRunning'},
         debugMessage: 'that chat is still answering',
       );
     }
@@ -992,6 +1209,17 @@ final class ChatsService {
   /// as the server made it. Every window's sidebar lists it.
   Future<ChatForked> fork(ForkChat request) async {
     _refuseWhileAnswering(request.chatId);
+    if (_isLibreChat(request.chatId)) {
+      // LibreChat's fork: the chat up to that message, copied on its
+      // server, as the phone's Branch in New Chat does.
+      final copy = await copyLibreChatConversation(
+        _container,
+        request.chatId,
+        upToMessageId: request.messageId,
+      );
+      _events?.emit(ConduitEventSpecs.chatsChanged, const ChatsChanged());
+      return ChatForked(chatId: copy.id);
+    }
     final conversation = await _load(request.chatId);
     final ({String chatId, bool opened}) outcome;
     try {
@@ -1149,6 +1377,7 @@ final class ChatsService {
         chats,
         folderId: folderId,
         currentUserId: _container.read(currentUserProvider2)?.id,
+        menu: (chat) => chatMenuAbilitiesOf(_container, chat),
       ),
     );
   }
@@ -1421,6 +1650,15 @@ final class ChatsService {
 
   /// The link for [shareId] on the account's server, as the core builds it.
   String? _shareUrl(String shareId) {
+    // A LibreChat chat's link is under its web app, as the core builds it
+    // when sharing.
+    final libreChat = _container.read(libreChatFileBaseUrlProvider);
+    if (libreChat != null) {
+      final base = libreChat.endsWith('/')
+          ? libreChat.substring(0, libreChat.length - 1)
+          : libreChat;
+      return '$base/share/$shareId';
+    }
     final server = _container.read(apiServiceProvider)?.serverConfig.url;
     if (server == null) return null;
     try {
@@ -1525,6 +1763,7 @@ final class ChatsService {
     conversation,
     currentUserId: _container.read(currentUserProvider2)?.id,
     generating: turns?.isRunning(conversation.id) ?? false,
+    menu: chatMenuAbilitiesOf(_container, conversation),
   );
 
   /// [messages] as the windows draw them. [conversation], when given, is the

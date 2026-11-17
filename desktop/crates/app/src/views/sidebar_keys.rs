@@ -33,6 +33,8 @@ pub enum KeyRow {
     ShowAll(Area),
     /// Hermes's Archived toggle.
     HermesArchived,
+    /// Hermes's connection switcher.
+    HermesConnection,
 }
 
 impl KeyRow {
@@ -47,7 +49,9 @@ impl KeyRow {
             SidebarItem::AreaRow(row) => Some(Self::Item(row.item.clone())),
             SidebarItem::ShowAll { area, .. } => Some(Self::ShowAll(*area)),
             SidebarItem::HermesArchived { .. } => Some(Self::HermesArchived),
+            SidebarItem::HermesConnection { .. } => Some(Self::HermesConnection),
             SidebarItem::Header(_)
+            | SidebarItem::HermesGroup { .. }
             | SidebarItem::Hint(_)
             | SidebarItem::AreaHint { .. }
             | SidebarItem::NewFolder { .. } => None,
@@ -82,6 +86,7 @@ impl KeyRow {
             (Self::Item(i), SidebarItem::AreaRow(row)) => *i == row.item,
             (Self::ShowAll(a), SidebarItem::ShowAll { area, .. }) => a == area,
             (Self::HermesArchived, SidebarItem::HermesArchived { .. }) => true,
+            (Self::HermesConnection, SidebarItem::HermesConnection { .. }) => true,
             _ => false,
         }
     }
@@ -661,6 +666,11 @@ mod tests {
                 updated_at_ms: None,
                 unread: 0,
                 pinned: false,
+                session: None,
+                icon: None,
+                dimmed: false,
+                bot: None,
+                room: None,
             })
         };
         vec![

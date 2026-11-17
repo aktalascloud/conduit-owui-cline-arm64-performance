@@ -284,8 +284,13 @@ pub fn is_open(cx: &App) -> bool {
 /// Quits the app, first ending a sheet that is down (AppKit keeps a
 /// window-modal sheet's app from terminating while it hangs there).
 pub fn quit(cx: &mut App) {
+    quit_with(cx, Rc::new(|cx: &mut App| cx.quit()));
+}
+
+/// [`quit`], with `then` for the app's own quit (the tests' stand-in).
+pub(crate) fn quit_with(cx: &mut App, then: Rc<dyn Fn(&mut App)>) {
     if !is_open(cx) {
-        cx.quit();
+        after_saves(cx, then);
         return;
     }
     // Unsaved edits: the sheet comes forward and asks, as Esc does; Quit
@@ -302,7 +307,47 @@ pub fn quit(cx: &mut App) {
         cx.background_executor()
             .timer(std::time::Duration::from_millis(250))
             .await;
-        cx.update(|cx| cx.quit());
+        cx.update(|cx| after_saves(cx, then));
+    })
+    .detach();
+}
+
+/// The longest Quit waits for saves still going (a daemon that does not
+/// answer must not keep the app from quitting).
+const SAVES_BEFORE_QUIT: std::time::Duration = std::time::Duration::from_secs(3);
+
+/// A save Quit waits for: `None` when nothing is waiting to be saved.
+type SaveBeforeQuit = Rc<dyn Fn(&mut App) -> Option<futures::future::LocalBoxFuture<'static, ()>>>;
+
+/// What Quit saves first ([`save_before_quit`]).
+#[derive(Default)]
+struct BeforeQuit(Vec<SaveBeforeQuit>);
+
+impl Global for BeforeQuit {}
+
+/// Quit runs `save` first and waits for it (up to 3 s) before the app
+/// quits and the daemon stops: what a view has not saved yet (a note's
+/// last words, still in the autosave pause) is kept.
+pub fn save_before_quit(
+    cx: &mut App,
+    save: impl Fn(&mut App) -> Option<futures::future::LocalBoxFuture<'static, ()>> + 'static,
+) {
+    cx.default_global::<BeforeQuit>().0.push(Rc::new(save));
+}
+
+/// Runs the saves Quit waits for, then `then` once they have landed (or
+/// after [`SAVES_BEFORE_QUIT`]).
+fn after_saves(cx: &mut App, then: Rc<dyn Fn(&mut App)>) {
+    let saves = cx.default_global::<BeforeQuit>().0.clone();
+    let pending: Vec<_> = saves.iter().filter_map(|save| save(cx)).collect();
+    if pending.is_empty() {
+        then(cx);
+        return;
+    }
+    cx.spawn(async move |cx| {
+        let timer = cx.background_executor().timer(SAVES_BEFORE_QUIT);
+        let _ = futures::future::select(futures::future::join_all(pending), Box::pin(timer)).await;
+        cx.update(|cx| then(cx));
     })
     .detach();
 }
@@ -328,6 +373,38 @@ pub fn close_with_account<V: SheetBody>(
             cx.default_global::<OpenSheet>().after = None;
             dismiss(cx);
         }
+    })
+}
+
+/// Asks `spec` for the account active now, for an action that changes the
+/// server: the question closes (answers no) when another account signs in,
+/// and answers no if one has by the time it is answered, so what it
+/// confirms never runs under the next account.
+pub fn ask_for_account(
+    stores: &crate::stores::Stores,
+    window: &Window,
+    spec: crate::shell::sheet::SheetSpec,
+    cx: &mut App,
+) -> gpui_kit::Task<bool> {
+    // The account in charge: one LibreChat account after another changes
+    // no Open WebUI id.
+    let accounts = stores.accounts.clone();
+    let opened = accounts.read(cx).scope_key();
+    let (asked, closer) = crate::shell::sheet::present_sheet_closable(window, spec, cx);
+    let watch = {
+        let opened = opened.clone();
+        cx.observe(&accounts, move |accounts, cx| {
+            // A list being read again (a reconnect) names nobody: no change.
+            let now = accounts.read(cx).scope_key();
+            if now.is_some() && now != opened {
+                closer.close(cx);
+            }
+        })
+    };
+    cx.spawn(async move |cx| {
+        let yes = asked.await;
+        drop(watch);
+        yes && cx.update(|cx| accounts.read(cx).scope_key() == opened)
     })
 }
 

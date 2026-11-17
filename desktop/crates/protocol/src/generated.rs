@@ -16,10 +16,11 @@ use crate::{EventSpec, MethodSpec};
 ///
 /// Bump this whenever a method, event, or DTO changes shape in a way that an
 /// older peer would misread.
-pub const PROTOCOL_VERSION: &str = "1.59.0";
+pub const PROTOCOL_VERSION: &str = "1.64.0";
 
 /// A resource whose access grants the everyday UI edits. Generic on
-/// purpose: folders now, notes and Workspace items reuse it.
+/// purpose: chats, folders and notes, and the workspace's models,
+/// knowledge bases, prompts, tools and skills.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AccessResourceKind {
     #[serde(rename = "chat")]
@@ -28,6 +29,16 @@ pub enum AccessResourceKind {
     Folder,
     #[serde(rename = "note")]
     Note,
+    #[serde(rename = "model")]
+    Model,
+    #[serde(rename = "knowledge")]
+    Knowledge,
+    #[serde(rename = "prompt")]
+    Prompt,
+    #[serde(rename = "tool")]
+    Tool,
+    #[serde(rename = "skill")]
+    Skill,
     /// A value this build does not know, from a newer daemon. It decodes
     /// only: it encodes as `"unknown"`, which the daemon refuses.
     #[serde(other, rename = "unknown")]
@@ -223,14 +234,56 @@ pub struct AccountSummary {
     pub last_used_ms: Option<i64>,
 }
 
+/// Which kind of account owns the chats: an Open WebUI account, or a
+/// LibreChat one. Hermes and Direct have no accounts and sit beside either.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PrimaryAccount {
+    #[serde(rename = "openWebUi")]
+    OpenWebUi,
+    #[serde(rename = "libreChat")]
+    LibreChat,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// One saved LibreChat account.
+///
+/// Its id (`librechat:…`) never collides with an Open WebUI account's, so
+/// `accounts.switch` and `accounts.remove` take either kind.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatAccountSummary {
+    pub id: String,
+    /// The server's address, as signed in to.
+    pub base_url: String,
+    /// The server's own name, else its host.
+    pub title: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user: Option<AccountUser>,
+    /// The LibreChat account in use: in charge of the chats when
+    /// `AccountList.primary` is `PrimaryAccount.libreChat`.
+    #[serde(default)]
+    pub is_active: bool,
+    /// Whether it has a saved session. One without needs a sign-in, from
+    /// its server's sign-in form ("session ended").
+    #[serde(default)]
+    pub has_session: bool,
+    /// UTC milliseconds of the last switch to it or sign-in on it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_used_ms: Option<i64>,
+}
+
 /// Reply to `accounts.list`, and part of every account change's reply.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AccountList {
     #[serde(default)]
     pub accounts: Vec<AccountSummary>,
     /// Null when no Open WebUI account is in use: a Direct-only or
-    /// Hermes-only setup, or one that has not chosen a backend yet.
+    /// Hermes-only setup, a LibreChat account in charge, or one that has not
+    /// chosen a backend yet.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub active_account_id: Option<String>,
     /// Whether an account is being added: `accounts.add` made a new account
@@ -238,6 +291,63 @@ pub struct AccountList {
     /// sign-in with a Cancel back to the account it was added from.
     #[serde(default)]
     pub adding_account: bool,
+    /// The saved LibreChat accounts.
+    #[serde(default)]
+    pub libre_chat_accounts: Vec<LibreChatAccountSummary>,
+    /// Who owns the chats. With `PrimaryAccount.libreChat` the window
+    /// routes on `libreChatSession`, not on `auth.status`.
+    #[serde(default = "default_account_list_primary")]
+    pub primary: PrimaryAccount,
+    /// The LibreChat account in use, whether or not it owns the chats.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_libre_chat_account_id: Option<String>,
+    /// Where the LibreChat account in use stands.
+    #[serde(default = "default_account_list_libre_chat_session")]
+    pub libre_chat_session: LibreChatSessionPhase,
+}
+
+impl Default for AccountList {
+    fn default() -> Self {
+        Self {
+            accounts: Default::default(),
+            active_account_id: None,
+            adding_account: Default::default(),
+            libre_chat_accounts: Default::default(),
+            primary: default_account_list_primary(),
+            active_libre_chat_account_id: None,
+            libre_chat_session: default_account_list_libre_chat_session(),
+        }
+    }
+}
+
+fn default_account_list_primary() -> PrimaryAccount {
+    PrimaryAccount::OpenWebUi
+}
+
+fn default_account_list_libre_chat_session() -> LibreChatSessionPhase {
+    LibreChatSessionPhase::None
+}
+
+/// Where the session of the LibreChat account in use stands.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum LibreChatSessionPhase {
+    /// No LibreChat account is in use.
+    #[serde(rename = "none")]
+    None,
+    /// Its saved session is being read.
+    #[serde(rename = "loading")]
+    Loading,
+    /// Signed in.
+    #[serde(rename = "signedIn")]
+    SignedIn,
+    /// Its session ended (expired, revoked, or never saved): it needs a
+    /// sign-in. Its chats stay.
+    #[serde(rename = "needsSignIn")]
+    NeedsSignIn,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
 }
 
 /// Params for `accounts.add`.
@@ -256,6 +366,13 @@ pub struct AddAccount {
 }
 
 /// Params for `accounts.switch` and `accounts.remove`.
+///
+/// `askedOver` (`accounts.switch` only): the account in charge when the
+/// window asked the user about the switch -- a "Switch Anyway" that stops
+/// the answer being written there. When another account is in charge by the
+/// time the switch arrives, it is refused with `auth.sessionExpired`,
+/// `reason: account`, and nothing is switched or stopped. Absent, the switch
+/// goes ahead from whichever account is in charge.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AccountRef {
@@ -264,6 +381,8 @@ pub struct AccountRef {
     /// stopping it. See `AccountChangeOutcome.blockedByActiveReply`.
     #[serde(default)]
     pub force: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asked_over: Option<String>,
 }
 
 /// Params for `accounts.signOut`: signs out of the active account.
@@ -450,6 +569,342 @@ pub struct ReviewerMode {
     pub enabled: bool,
 }
 
+/// A scheduled task's schedule, as the editor's controls hold it.
+///
+/// Times are wall clocks with no zone: the server reads them in the
+/// account's Open WebUI time zone.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationScheduleDto {
+    /// `once`, `daily`, `weekly`, or `custom` for a rule the controls do
+    /// not write (kept exactly as stored in `rrule`).
+    pub kind: String,
+    /// A one-time run's day.
+    #[serde(default)]
+    pub year: i64,
+    #[serde(default)]
+    pub month: i64,
+    #[serde(default)]
+    pub day: i64,
+    #[serde(default)]
+    pub hour: i64,
+    #[serde(default)]
+    pub minute: i64,
+    /// A weekly run's days, `MO` to `SU`, Monday first.
+    #[serde(default)]
+    pub days: Vec<String>,
+    /// The rule the server stores.
+    #[serde(default)]
+    pub rrule: String,
+}
+
+/// One scheduled task, as its list row shows it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationSummary {
+    pub id: String,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default = "default_automation_summary_active")]
+    pub active: bool,
+    pub schedule: AutomationScheduleDto,
+    /// The next run of an active task, in milliseconds since the epoch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_run_at: Option<i64>,
+    /// The last run, in milliseconds since the epoch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_run_at: Option<i64>,
+    #[serde(default)]
+    pub last_run_failed: bool,
+}
+
+fn default_automation_summary_active() -> bool {
+    true
+}
+
+/// Reply to `automations.list` and the calls that change the list.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationList {
+    /// The server and account allow scheduled tasks.
+    #[serde(default)]
+    pub available: bool,
+    /// Nothing could be read: `unavailable`, `accountChanged` or `failed`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<String>,
+    /// A change went through but reading the list back failed.
+    #[serde(default)]
+    pub stale: bool,
+    #[serde(default)]
+    pub query: String,
+    /// `all`, `active` or `paused`.
+    #[serde(default = "default_automation_list_status")]
+    pub status: String,
+    #[serde(default)]
+    pub items: Vec<AutomationSummary>,
+    /// Matches across every page.
+    #[serde(default)]
+    pub total: i64,
+    #[serde(default)]
+    pub has_more: bool,
+}
+
+impl Default for AutomationList {
+    fn default() -> Self {
+        Self {
+            available: Default::default(),
+            failure: None,
+            stale: Default::default(),
+            query: Default::default(),
+            status: default_automation_list_status(),
+            items: Default::default(),
+            total: Default::default(),
+            has_more: Default::default(),
+        }
+    }
+}
+
+fn default_automation_list_status() -> String {
+    "all".to_owned()
+}
+
+/// Params for `automations.list`. A changed search or status starts again
+/// from the first page; nothing set answers with the list as it stands.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationQuery {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub query: Option<String>,
+    /// `all`, `active` or `paused`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    #[serde(default)]
+    pub refresh: bool,
+}
+
+/// Params naming one task.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationRef {
+    pub id: String,
+}
+
+/// One entry of a task's history.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationRunDto {
+    pub id: String,
+    #[serde(default)]
+    pub status: String,
+    #[serde(default)]
+    pub succeeded: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// When it finished, in milliseconds since the epoch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result_chat_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result_channel_id: Option<String>,
+}
+
+/// Reply to `automations.get` and `automations.setActive`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationDetail {
+    pub summary: AutomationSummary,
+    #[serde(default)]
+    pub prompt: String,
+    #[serde(default)]
+    pub model_id: String,
+    /// The model's name, when the account's models list it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_name: Option<String>,
+    /// `chat` or `channel`.
+    #[serde(default = "default_automation_detail_target")]
+    pub target: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub channel_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub channel_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folder_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folder_name: Option<String>,
+    /// A terminal is attached; edits keep it.
+    #[serde(default)]
+    pub terminal: bool,
+    /// The server's next runs, in milliseconds since the epoch (empty for a
+    /// paused task).
+    #[serde(default)]
+    pub next_runs: Vec<i64>,
+}
+
+fn default_automation_detail_target() -> String {
+    "chat".to_owned()
+}
+
+/// Params for `automations.runs`: a page of history, newest first.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationRunsQuery {
+    pub id: String,
+    #[serde(default)]
+    pub skip: i64,
+}
+
+/// Reply to `automations.runs`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationRuns {
+    #[serde(default)]
+    pub items: Vec<AutomationRunDto>,
+    #[serde(default)]
+    pub has_more: bool,
+}
+
+/// Params for `automations.setActive`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationToggle {
+    pub id: String,
+    pub active: bool,
+}
+
+/// Where a Run Now stands (`automations.run`, `automations.runState` and the
+/// `automations.runProgress` event).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationRunProgress {
+    pub id: String,
+    /// `idle`, `requesting`, `waiting`, `finished`, `failed` or `timedOut`.
+    #[serde(default = "default_automation_run_progress_phase")]
+    pub phase: String,
+    /// The run it produced, once recorded.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub run: Option<AutomationRunDto>,
+    /// Why the request was refused, when it was: the server's own words,
+    /// or `accountChanged` / `unavailable`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<String>,
+}
+
+fn default_automation_run_progress_phase() -> String {
+    "idle".to_owned()
+}
+
+/// What the task editor holds.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationFields {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub prompt: String,
+    #[serde(default)]
+    pub model_id: String,
+    #[serde(default = "default_automation_fields_active")]
+    pub active: bool,
+    pub schedule: AutomationScheduleDto,
+    /// `chat` or `channel`.
+    #[serde(default = "default_automation_fields_target")]
+    pub target: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub channel_id: Option<String>,
+    /// A chat result's folder, or null for none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folder_id: Option<String>,
+}
+
+fn default_automation_fields_active() -> bool {
+    true
+}
+
+fn default_automation_fields_target() -> String {
+    "chat".to_owned()
+}
+
+/// A model, channel or folder the editor offers.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationOption {
+    pub id: String,
+    #[serde(default)]
+    pub name: String,
+}
+
+/// Params for `automations.editor`: a new task, or the task `id`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationEditorOpen {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+}
+
+/// Reply to `automations.editor`: the draft, held by the daemon for the
+/// account it was opened for under `token`, and what it can pick.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationEditor {
+    pub token: String,
+    #[serde(default = "default_automation_editor_is_new")]
+    pub is_new: bool,
+    pub fields: AutomationFields,
+    /// Null while a list has not loaded: the server decides then.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub models: Option<Vec<AutomationOption>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub channels: Option<Vec<AutomationOption>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folders: Option<Vec<AutomationOption>>,
+    /// A terminal is attached; edits keep it.
+    #[serde(default)]
+    pub terminal: bool,
+}
+
+fn default_automation_editor_is_new() -> bool {
+    true
+}
+
+/// Params for `automations.checkDraft` and `automations.save`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationDraftEdit {
+    pub token: String,
+    pub fields: AutomationFields,
+    /// The schedule's kind was just chosen (`once`, `daily`, `weekly`):
+    /// it starts from the current schedule's time (`checkDraft` only).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub choose_kind: Option<String>,
+}
+
+/// Reply to `automations.checkDraft` and `automations.save`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomationDraftState {
+    /// The fields with the schedule settled: a `custom` rule that the
+    /// controls can write reads back as their kind, and typed controls
+    /// carry their rule.
+    pub fields: AutomationFields,
+    /// What stops it being saved: `nameRequired`, `promptRequired`,
+    /// `modelRequired`, `modelUnavailable`, `channelRequired`,
+    /// `channelUnavailable`, `channelNoWrite`, `folderUnavailable`,
+    /// `scheduleIncomplete`.
+    #[serde(default)]
+    pub issues: Vec<String>,
+    #[serde(default)]
+    pub changed: bool,
+    /// `automations.save` went through; `id` is the task.
+    #[serde(default)]
+    pub saved: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    /// The server refused the save, in its own words when it gave some.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<String>,
+}
+
 /// What a `MessageBlockDto` is.
 ///
 /// An assistant answer is an ordered list of blocks, in the order the
@@ -505,7 +960,8 @@ pub enum MessageBlockKind {
     #[serde(rename = "status")]
     Status,
     /// The error banner under the content: `MessageBlockDto.error` and
-    /// `MessageBlockDto.type`.
+    /// `MessageBlockDto.type`. A Hermes turn that Hermes classified also
+    /// carries `MessageBlockDto.hermesError`, drawn as its error card.
     #[serde(rename = "error")]
     Error,
     /// One code execution, a header that opens to its code and result:
@@ -537,6 +993,11 @@ pub enum MessageBlockKind {
     /// user opens it.
     #[serde(rename = "embeds")]
     Embeds,
+    /// The files a Hermes reply's tools changed, with their added and removed
+    /// lines (`MessageBlockDto.changedFiles`): a card that opens each file's
+    /// coloured diff.
+    #[serde(rename = "changedFiles")]
+    ChangedFiles,
     /// A value this build does not know, from a newer daemon. It decodes
     /// only: it encodes as `"unknown"`, which the daemon refuses.
     #[serde(other, rename = "unknown")]
@@ -690,6 +1151,13 @@ pub struct MessageBlockDto {
     /// `embeds`: what the answer carries, in order.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub embeds: Option<Vec<EmbedDto>>,
+    /// `changedFiles`: each changed file, in the order the tools changed
+    /// them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub changed_files: Option<Vec<ChangedFileDto>>,
+    /// `error`: a Hermes failure as Hermes classified it, for its card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hermes_error: Option<HermesErrorDto>,
 }
 
 /// One tool call in a `toolCalls` block.
@@ -759,6 +1227,765 @@ pub struct MessageStatusDto {
     pub details: Vec<ChatSourceDto>,
 }
 
+/// A calendar day and a wall clock in the Mac's own time zone, to the minute.
+/// A day alone leaves `hour` and `minute` at zero.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarWallTime {
+    pub year: i64,
+    pub month: i64,
+    pub day: i64,
+    #[serde(default)]
+    pub hour: i64,
+    #[serde(default)]
+    pub minute: i64,
+}
+
+/// One of the account's calendars on its Open WebUI server.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarDto {
+    pub id: String,
+    #[serde(default)]
+    pub name: String,
+    /// `#rrggbb` as the server stored it, or null.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    /// The account's own default calendar (a shared calendar's flag is its
+    /// owner's and is not reported here).
+    #[serde(default)]
+    pub is_default: bool,
+    /// The server's read-only calendar of scheduled-task runs.
+    #[serde(default)]
+    pub scheduled: bool,
+    /// The account owns it.
+    #[serde(default)]
+    pub owned: bool,
+    /// Events can be created in it, moved into it and edited in it.
+    #[serde(default)]
+    pub writable: bool,
+    /// It can be made the account's default (one of its own, not already).
+    #[serde(default)]
+    pub can_make_default: bool,
+    /// The agenda shows its events.
+    #[serde(default = "default_calendar_dto_visible")]
+    pub visible: bool,
+}
+
+fn default_calendar_dto_visible() -> bool {
+    true
+}
+
+/// What an agenda row says about its time on its day.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarRowTimeDto {
+    /// `allDay`, `at` (a moment), `range` (start and end on this day),
+    /// `startsAt` (the first day of a longer event) or `endsAt` (its last).
+    pub kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start: Option<CalendarWallTime>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end: Option<CalendarWallTime>,
+}
+
+/// One thing on the agenda: a stored event (or one occurrence of a recurring
+/// one), or a scheduled task's coming run or past run.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarItemDto {
+    /// Unique within one agenda: every `calendar.*` call names an item by
+    /// it.
+    pub key: String,
+    /// `event` or `scheduled`.
+    pub kind: String,
+    /// The stored event's id (a series' id for an occurrence), or the
+    /// server's `auto_…`/`run_…` id for a scheduled entry.
+    pub id: String,
+    #[serde(default)]
+    pub calendar_id: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub location: Option<String>,
+    /// The event's colour, else its calendar's (`#rrggbb`), or null.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    #[serde(default)]
+    pub recurring: bool,
+    #[serde(default)]
+    pub all_day: bool,
+    #[serde(default)]
+    pub cancelled: bool,
+    pub start: CalendarWallTime,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end: Option<CalendarWallTime>,
+    /// The last day the item covers (the start's day for a moment).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_day: Option<CalendarWallTime>,
+    /// What its row says on the day it is listed under.
+    pub time: CalendarRowTimeDto,
+    /// The account is one of the invited people.
+    #[serde(default)]
+    pub invited: bool,
+    /// The account's own answer when `invited`: `accepted`, `tentative`,
+    /// `declined` or `pending`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub answer: Option<String>,
+    /// The account may change or delete the event.
+    #[serde(default)]
+    pub editable: bool,
+    /// A scheduled entry's task, when the server named one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub automation_id: Option<String>,
+    /// A past run's id, chat and channel.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub run_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result_chat_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result_channel_id: Option<String>,
+    /// A scheduled entry's state: `upcoming`, `finished` or `failed`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scheduled_state: Option<String>,
+}
+
+/// One day of the agenda that has something on it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarAgendaDay {
+    pub day: CalendarWallTime,
+    #[serde(default)]
+    pub items: Vec<CalendarItemDto>,
+}
+
+/// Reply to `calendar.agenda` and the calls that change it: the calendars
+/// and the agenda for a bounded stretch of days, in the Mac's time zone.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarAgenda {
+    /// The server and account allow the calendar.
+    #[serde(default)]
+    pub available: bool,
+    /// Nothing could be read: `unavailable`, `accountChanged` or `failed`.
+    /// Null when there is an agenda.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<String>,
+    /// A change went through but reading the agenda back failed: it may
+    /// not show it yet.
+    #[serde(default)]
+    pub stale: bool,
+    /// The first day of the range, and the day after its last.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub first_day: Option<CalendarWallTime>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end_day: Option<CalendarWallTime>,
+    #[serde(default = "default_calendar_agenda_day_count")]
+    pub day_count: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub today: Option<CalendarWallTime>,
+    #[serde(default)]
+    pub calendars: Vec<CalendarDto>,
+    /// More than one calendar: each can be shown or hidden.
+    #[serde(default)]
+    pub filterable: bool,
+    /// The scheduled-task entries are listed (the account may use
+    /// scheduled tasks).
+    #[serde(default)]
+    pub scheduled_tasks: bool,
+    /// Some calendar takes new events.
+    #[serde(default)]
+    pub can_create: bool,
+    #[serde(default)]
+    pub days: Vec<CalendarAgendaDay>,
+}
+
+impl Default for CalendarAgenda {
+    fn default() -> Self {
+        Self {
+            available: Default::default(),
+            failure: None,
+            stale: Default::default(),
+            first_day: None,
+            end_day: None,
+            day_count: default_calendar_agenda_day_count(),
+            today: None,
+            calendars: Default::default(),
+            filterable: Default::default(),
+            scheduled_tasks: Default::default(),
+            can_create: Default::default(),
+            days: Default::default(),
+        }
+    }
+}
+
+fn default_calendar_agenda_day_count() -> i64 {
+    14
+}
+
+/// Params for `calendar.agenda`. With nothing set it answers with the
+/// agenda as it stands (loading it the first time).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarAgendaQuery {
+    /// Moves the range to start on this day.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub first_day: Option<CalendarWallTime>,
+    /// Moves the range by this many pages (−1 earlier, 1 later).
+    #[serde(default)]
+    pub shift: i64,
+    /// Moves the range to start today.
+    #[serde(default)]
+    pub today: bool,
+    /// Reads the server again even when the range stays.
+    #[serde(default)]
+    pub refresh: bool,
+}
+
+/// Params for `calendar.setVisible`. The last shown calendar stays shown.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarVisibility {
+    pub calendar_id: String,
+    pub visible: bool,
+}
+
+/// Params for `calendar.makeDefault`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarRef {
+    pub calendar_id: String,
+}
+
+/// Params for `calendar.createCalendar`: a private calendar of the
+/// account's own.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarCreate {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+}
+
+/// Params for `calendar.event` and `calendar.deleteEvent`: an agenda item.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarItemRef {
+    pub key: String,
+}
+
+/// Reply to `calendar.event` and `calendar.respond`: what the event sheet
+/// shows of an agenda item, read again from the server when the account can
+/// read its calendar.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarEventDetail {
+    pub item: CalendarItemDto,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub calendar_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub calendar_color: Option<String>,
+    /// `none`, `daily`, `weekdays`, `weekly`, `monthly`, `yearly` or
+    /// `custom` (a rule the editor does not write, kept as stored).
+    #[serde(default = "default_calendar_event_detail_repeat")]
+    pub repeat: String,
+    /// The organizer's name, when the agenda carried it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub organizer: Option<String>,
+    #[serde(default)]
+    pub attendee_count: i64,
+    /// The event may be changed or deleted (a recurring event as a whole
+    /// series: the server cannot change one occurrence).
+    #[serde(default)]
+    pub can_edit: bool,
+    /// How reading it again went: `fresh`, `skipped` (its calendar is not
+    /// one the account can read), `denied`, `gone` or `failed`.
+    #[serde(default = "default_calendar_event_detail_status")]
+    pub status: String,
+}
+
+fn default_calendar_event_detail_repeat() -> String {
+    "none".to_owned()
+}
+
+fn default_calendar_event_detail_status() -> String {
+    "skipped".to_owned()
+}
+
+/// Params for `calendar.respond`: the account's own answer to an
+/// invitation (`accepted`, `tentative` or `declined`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarRsvpEdit {
+    pub key: String,
+    pub answer: String,
+}
+
+/// An invited person, as the editor holds one.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarAttendeeDto {
+    pub user_id: String,
+    /// A name to show; the server does not return one with an attendee.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+}
+
+/// What the event editor holds.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarEventFields {
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub location: String,
+    #[serde(default)]
+    pub calendar_id: String,
+    #[serde(default)]
+    pub all_day: bool,
+    /// The start's day and, unless `allDay`, its wall clock.
+    pub start: CalendarWallTime,
+    /// The end's day and wall clock (an all-day event's last day), or null
+    /// for none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end: Option<CalendarWallTime>,
+    /// As `CalendarEventDetail.repeat`.
+    #[serde(default = "default_calendar_event_fields_repeat")]
+    pub repeat: String,
+    #[serde(default)]
+    pub attendees: Vec<CalendarAttendeeDto>,
+}
+
+fn default_calendar_event_fields_repeat() -> String {
+    "none".to_owned()
+}
+
+/// Params for `calendar.editor`: a new event (`key` null, starting on
+/// `day`), or the stored event behind an agenda item.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarEditorOpen {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub day: Option<CalendarWallTime>,
+}
+
+/// Reply to `calendar.editor`: the draft to edit, held by the daemon for
+/// the account it was opened for under `token`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarEditor {
+    pub token: String,
+    #[serde(default = "default_calendar_editor_is_new")]
+    pub is_new: bool,
+    /// A recurring event: Save changes the whole series.
+    #[serde(default)]
+    pub series: bool,
+    /// The stored rule a `custom` repeat keeps.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rule: Option<String>,
+    pub fields: CalendarEventFields,
+    /// The calendars the event can go in.
+    #[serde(default)]
+    pub calendars: Vec<CalendarDto>,
+}
+
+fn default_calendar_editor_is_new() -> bool {
+    true
+}
+
+/// Params for `calendar.checkDraft` and `calendar.save`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarDraftEdit {
+    pub token: String,
+    pub fields: CalendarEventFields,
+    /// The start just moved here: an end that would fall before it moves
+    /// along, keeping the event's length.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub moved_start: Option<CalendarWallTime>,
+}
+
+/// Reply to `calendar.checkDraft` and `calendar.save`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarDraftState {
+    pub fields: CalendarEventFields,
+    /// What stops it being saved, in the order to show it:
+    /// `titleRequired`, `calendarRequired`, `endBeforeStart`.
+    #[serde(default)]
+    pub issues: Vec<String>,
+    /// The user changed something (against the stored event, or the new
+    /// event's first draft).
+    #[serde(default)]
+    pub changed: bool,
+    /// `calendar.save` went through.
+    #[serde(default)]
+    pub saved: bool,
+}
+
+/// Where a voice call is: the phone's `ChatVoiceModePhase`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CallPhase {
+    #[serde(rename = "idle")]
+    Idle,
+    #[serde(rename = "starting")]
+    Starting,
+    #[serde(rename = "listening")]
+    Listening,
+    /// The user's words went to the chat; the answer is on its way.
+    #[serde(rename = "sending")]
+    Sending,
+    #[serde(rename = "speaking")]
+    Speaking,
+    #[serde(rename = "paused")]
+    Paused,
+    #[serde(rename = "muted")]
+    Muted,
+    #[serde(rename = "ending")]
+    Ending,
+    #[serde(rename = "ended")]
+    Ended,
+    #[serde(rename = "error")]
+    Error,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// How a call runs: turn by turn (`standard`: listen, send, speak the
+/// answer), or with a realtime voice that hears and speaks as the call goes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CallMode {
+    #[serde(rename = "standard")]
+    Standard,
+    #[serde(rename = "realtime")]
+    Realtime,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Why a call shows an error: the phone's `ChatVoiceModeError`. Only
+/// `message` carries text meant for the user (`CallState.error`); the window
+/// says the others in its own words.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CallErrorKind {
+    #[serde(rename = "microphoneDenied")]
+    MicrophoneDenied,
+    #[serde(rename = "inputUnavailable")]
+    InputUnavailable,
+    #[serde(rename = "timeout")]
+    Timeout,
+    #[serde(rename = "noSpeech")]
+    NoSpeech,
+    #[serde(rename = "message")]
+    Message,
+    #[serde(rename = "other")]
+    Other,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Something worth telling the user mid-call that does not end it: the
+/// phone's `ChatVoiceModeNotice`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CallNotice {
+    #[serde(rename = "transcriptionFailed")]
+    TranscriptionFailed,
+    #[serde(rename = "replyIncomplete")]
+    ReplyIncomplete,
+    #[serde(rename = "transcriptNotSaved")]
+    TranscriptNotSaved,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Why a call is Standard although Settings › Audio chose Realtime: the
+/// core's `RealtimeCallBlock`, or `noAudio` when the window has no realtime
+/// audio.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CallStandardReason {
+    #[serde(rename = "standardChosen")]
+    StandardChosen,
+    #[serde(rename = "temporaryChat")]
+    TemporaryChat,
+    #[serde(rename = "unsupportedBackend")]
+    UnsupportedBackend,
+    #[serde(rename = "voiceProviderIncomplete")]
+    VoiceProviderIncomplete,
+    #[serde(rename = "serverRealtimeOff")]
+    ServerRealtimeOff,
+    #[serde(rename = "callNotPermitted")]
+    CallNotPermitted,
+    #[serde(rename = "noSessionToken")]
+    NoSessionToken,
+    #[serde(rename = "hermesVoiceLiveOff")]
+    HermesVoiceLiveOff,
+    #[serde(rename = "noAudio")]
+    NoAudio,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// The call now: what `calls.changed` carries and every `calls.*` answers.
+/// There is at most one call at a time, app-wide.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CallState {
+    #[serde(default = "default_call_state_phase")]
+    pub phase: CallPhase,
+    /// Each call's own number; 0 before the first.
+    #[serde(default)]
+    pub call: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mode: Option<CallMode>,
+    /// The call's chat. Null for a call that started a new chat until its
+    /// first turn has given the chat an id.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chat_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_name: Option<String>,
+    /// What the user is saying, or said last.
+    #[serde(default)]
+    pub transcript: String,
+    /// What is being said: the sentence of the chat's answer the Mac says
+    /// now in a Standard call (the answer so far before it speaks), the
+    /// voice's caption in a realtime one.
+    #[serde(default)]
+    pub reply: String,
+    /// The meter, 0 to 1: the microphone while listening, the voice while
+    /// it speaks (realtime).
+    #[serde(default)]
+    pub level: f64,
+    #[serde(default)]
+    pub muted: bool,
+    #[serde(default)]
+    pub can_pause: bool,
+    #[serde(default)]
+    pub can_resume: bool,
+    /// When the call started, in milliseconds since the epoch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub started_at_ms: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error_kind: Option<CallErrorKind>,
+    /// The error's text: for the user when `errorKind` is `message`, else
+    /// only for the log.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// The latest notice; `noticeCount` grows with each, so the same
+    /// notice twice is shown twice.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notice: Option<CallNotice>,
+    #[serde(default)]
+    pub notice_count: i64,
+    /// Why a call that could have been realtime runs Standard.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub standard_reason: Option<CallStandardReason>,
+}
+
+impl Default for CallState {
+    fn default() -> Self {
+        Self {
+            phase: default_call_state_phase(),
+            call: Default::default(),
+            mode: None,
+            chat_id: None,
+            model_id: None,
+            model_name: None,
+            transcript: Default::default(),
+            reply: Default::default(),
+            level: Default::default(),
+            muted: Default::default(),
+            can_pause: Default::default(),
+            can_resume: Default::default(),
+            started_at_ms: None,
+            error_kind: None,
+            error: None,
+            notice: None,
+            notice_count: Default::default(),
+            standard_reason: None,
+        }
+    }
+}
+
+fn default_call_state_phase() -> CallPhase {
+    CallPhase::Idle
+}
+
+/// Params for `calls.start`: a call in chat `chatId`, or in a new chat
+/// (with `model`, in `folderId`, `temporary` as the new chat would be).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CallStart {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chat_id: Option<String>,
+    /// The model a new chat's call talks to; the chat's own otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folder_id: Option<String>,
+    #[serde(default)]
+    pub temporary: bool,
+}
+
+/// What `calls.command` asks the window to do for the call.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CallCommandKind {
+    /// Whether the microphone may be used (asking the user if never asked):
+    /// answered with `CallReport.value`.
+    #[serde(rename = "permission")]
+    Permission,
+    /// Listen as dictation does (Settings › Audio's engine and pause), for
+    /// listen `CallCommand.listen`, reporting words, the meter and the end.
+    /// `CallCommand.continuous`: after each pause, listen again until
+    /// stopped, so the user can talk over the answer (barge-in).
+    #[serde(rename = "listen")]
+    Listen,
+    /// Stop listen `CallCommand.listen` and drop what it heard.
+    #[serde(rename = "stopListen")]
+    StopListen,
+    /// Open the realtime audio: the microphone and the speaker on one
+    /// echo-cancelled engine, over `WS` `CallCommand.path`. Answered once
+    /// the audio runs, or with why it cannot.
+    #[serde(rename = "audioStart")]
+    AudioStart,
+    /// Close the realtime audio.
+    #[serde(rename = "audioStop")]
+    AudioStop,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Payload of `calls.command`. Answered with `calls.report` naming `id`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CallCommand {
+    pub id: i64,
+    pub kind: CallCommandKind,
+    /// The listen this is about: its reports name it, so a stopped one's
+    /// late reports are told apart.
+    #[serde(default)]
+    pub listen: i64,
+    #[serde(default)]
+    pub continuous: bool,
+    /// The model whose backend transcribes (server speech).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_id: Option<String>,
+    /// The realtime audio's WebSocket path on the daemon.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+}
+
+/// What a `CallReport` tells, besides answering a command.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CallReportKind {
+    /// The words so far (`CallReport.text`); `CallReport.done`: the last of
+    /// one utterance.
+    #[serde(rename = "words")]
+    Words,
+    /// The meter, `CallReport.level` 0 to 1.
+    #[serde(rename = "level")]
+    Level,
+    /// The listen ended (nothing more comes for it).
+    #[serde(rename = "ended")]
+    Ended,
+    /// The listen could not go on: `CallReport.failure`.
+    #[serde(rename = "failed")]
+    Failed,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Why a listen failed, as the window's dictation says it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CallListenFailure {
+    #[serde(rename = "microphoneDenied")]
+    MicrophoneDenied,
+    #[serde(rename = "speechDenied")]
+    SpeechDenied,
+    #[serde(rename = "notOnThisMac")]
+    NotOnThisMac,
+    #[serde(rename = "serverUnavailable")]
+    ServerUnavailable,
+    #[serde(rename = "whisperNeedsModel")]
+    WhisperNeedsModel,
+    #[serde(rename = "transcriptionFailed")]
+    TranscriptionFailed,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Params for `calls.report`: a command's answer (`id`) and/or what a
+/// listen did (`kind`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CallReport {
+    /// The command answered, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<i64>,
+    #[serde(default = "default_call_report_ok")]
+    pub ok: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<CallReportKind>,
+    #[serde(default)]
+    pub listen: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    #[serde(default)]
+    pub done: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub level: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<CallListenFailure>,
+}
+
+impl Default for CallReport {
+    fn default() -> Self {
+        Self {
+            id: None,
+            ok: default_call_report_ok(),
+            error: None,
+            value: None,
+            kind: None,
+            listen: Default::default(),
+            text: None,
+            done: Default::default(),
+            level: None,
+            failure: None,
+        }
+    }
+}
+
+fn default_call_report_ok() -> bool {
+    true
+}
+
 /// What the currently connected core can actually do.
 ///
 /// The UI gates navigation and affordances on these flags rather than probing
@@ -791,6 +2018,10 @@ pub struct Capabilities {
     /// Scheduled tasks.
     #[serde(default)]
     pub automations: bool,
+    /// Scheduled tasks are offered as a destination: `automations`, and
+    /// Settings' Advanced is on (as the phone shows them).
+    #[serde(default)]
+    pub scheduled_tasks: bool,
     /// Hermes is the only backend: its sessions take the chats' place, and
     /// Open WebUI's own sections are hidden.
     #[serde(default)]
@@ -843,6 +2074,59 @@ pub struct Capabilities {
     pub tags: bool,
     #[serde(default)]
     pub bulk_selection: bool,
+    /// A LibreChat account owns the chats, and what its role may use there.
+    /// Null otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub libre_chat: Option<LibreChatFeatures>,
+}
+
+/// What the signed-in LibreChat user may use: the server's interface
+/// switches, the role's permissions and the agents endpoint's capabilities
+/// (the core's `LibreChatCapabilities`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatFeatures {
+    #[serde(default)]
+    pub prompts: bool,
+    #[serde(default)]
+    pub memories: bool,
+    #[serde(default)]
+    pub create_memories: bool,
+    #[serde(default)]
+    pub update_memories: bool,
+    #[serde(default)]
+    pub opt_out_memories: bool,
+    #[serde(default)]
+    pub web_search: bool,
+    #[serde(default)]
+    pub code_interpreter: bool,
+    #[serde(default)]
+    pub file_search: bool,
+    #[serde(default)]
+    pub mcp_servers: bool,
+    #[serde(default)]
+    pub agents: bool,
+    #[serde(default)]
+    pub shared_links: bool,
+    #[serde(default)]
+    pub temporary_chat: bool,
+}
+
+/// What sort of channel it is: an Open WebUI channel the server's access
+/// rules open (`standard`), one with its own members (`group`), or a
+/// direct message between people (`dm`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ChannelKind {
+    #[serde(rename = "standard")]
+    Standard,
+    #[serde(rename = "group")]
+    Group,
+    #[serde(rename = "dm")]
+    Dm,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
 }
 
 /// A channel, as the list shows it.
@@ -867,10 +2151,31 @@ pub struct ChannelSummary {
     pub can_post: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub user_count: Option<i64>,
+    #[serde(default = "default_channel_summary_kind")]
+    pub kind: ChannelKind,
+    /// What the list and the pane call it: the name, or for a direct
+    /// message the people in it (the core's `channelDisplayName`). Empty
+    /// when the server gave neither.
+    #[serde(default)]
+    pub title: String,
+    /// Notifies for mentions only: no unread badge, and no alert for a
+    /// message that does not mention the user (Open WebUI's mute).
+    #[serde(default)]
+    pub muted: bool,
+    /// May delete it: its owner, or an admin.
+    #[serde(default)]
+    pub can_delete: bool,
+    /// Has members one can leave (a group or a direct message).
+    #[serde(default)]
+    pub can_leave: bool,
 }
 
 fn default_channel_summary_can_post() -> bool {
     true
+}
+
+fn default_channel_summary_kind() -> ChannelKind {
+    ChannelKind::Standard
 }
 
 /// Reply to `channels.list`.
@@ -882,6 +2187,10 @@ pub struct ChannelList {
     /// Whether the server has channels switched on at all.
     #[serde(default)]
     pub enabled: bool,
+    /// May make a channel (New Channel): an admin, or a user the server's
+    /// permissions let.
+    #[serde(default)]
+    pub can_create: bool,
 }
 
 /// Someone in a channel.
@@ -903,6 +2212,9 @@ pub struct ChannelReaction {
     /// Whether the signed-in user is one of them, so a click removes it.
     #[serde(default)]
     pub mine: bool,
+    /// Who they are, as far as the server names them (a tooltip).
+    #[serde(default)]
+    pub names: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -930,6 +2242,35 @@ pub struct ChannelMessageDto {
     /// Whether the signed-in user wrote it, and so may edit or delete it.
     #[serde(default)]
     pub mine: bool,
+    /// Who is speaking, for grouping a run of messages under one name: a
+    /// user's id, `model:<id>` or `app:<id>` (the core's
+    /// `channelMessageSender`).
+    #[serde(default)]
+    pub sender_key: String,
+    #[serde(default = "default_channel_message_dto_sender_kind")]
+    pub sender_kind: ChannelSenderKind,
+    /// `content` ready to draw: mention markup as `@Name`, and the core's
+    /// plain-markdown normalisation. `content` stays as written, for an
+    /// edit.
+    #[serde(default)]
+    pub display: String,
+    /// Files and images posted with it (`data.files`).
+    #[serde(default)]
+    pub files: Vec<ChannelFileDto>,
+    /// The cards and buttons of an app's message.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub app: Option<ChannelAppContentDto>,
+    /// The message this one replies to, inline (not a thread).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reply_to_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reply_to: Option<ChannelReplyPreview>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub latest_reply_at_ms: Option<i64>,
+}
+
+fn default_channel_message_dto_sender_kind() -> ChannelSenderKind {
+    ChannelSenderKind::User
 }
 
 /// Params for `channels.messages`: a channel's messages, or with
@@ -962,10 +2303,22 @@ pub struct ChannelMessages {
 #[serde(rename_all = "camelCase")]
 pub struct ChannelPost {
     pub channel_id: String,
+    /// May be empty when `files` are posted.
+    #[serde(default)]
     pub content: String,
     /// A reply in the thread of this message.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent_id: Option<String>,
+    /// The mentions in `content`, which the daemon writes as Open WebUI's
+    /// `<@U:id|Name>` and `<@M:id|Name>`.
+    #[serde(default)]
+    pub mentions: Vec<ComposerMentionDto>,
+    /// Files already uploaded (`/upload`), posted with the message.
+    #[serde(default)]
+    pub files: Vec<ChannelFileDto>,
+    /// An inline reply to this message.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reply_to_id: Option<String>,
 }
 
 /// Params naming one message.
@@ -1052,11 +2405,25 @@ pub struct ChannelTypingUsers {
 }
 
 /// Payload of `channels.message`: a channel's messages changed -- a post,
-/// an edit, a reaction, a reply. The window refetches what it shows.
+/// an edit, a reaction, a reply. It carries what changed in the list it
+/// names (`parentId`: a thread's), so the window patches what it shows;
+/// with `full` (or neither list) the window refetches it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChannelMessagesChanged {
     pub channel_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<String>,
+    /// New or changed messages, as the list now holds them.
+    #[serde(default)]
+    pub upserts: Vec<ChannelMessageDto>,
+    #[serde(default)]
+    pub removed: Vec<String>,
+    #[serde(default)]
+    pub full: bool,
+    /// Whether older messages are left to load, as the list now says.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub has_older: Option<bool>,
 }
 
 /// Reply to `channels.members`: who can be mentioned.
@@ -1065,6 +2432,406 @@ pub struct ChannelMessagesChanged {
 pub struct ChannelMembers {
     #[serde(default)]
     pub users: Vec<ChannelUser>,
+}
+
+/// Who wrote a channel message.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ChannelSenderKind {
+    #[serde(rename = "user")]
+    User,
+    #[serde(rename = "model")]
+    Model,
+    #[serde(rename = "app")]
+    App,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// A file or image posted in a channel (`data.files`). `id` is the server
+/// file's: the window loads it through `/files`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelFileDto {
+    pub id: String,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub image: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_type: Option<String>,
+}
+
+/// The message an inline reply answers, as a one-line preview.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelReplyPreview {
+    #[serde(default)]
+    pub name: String,
+    /// Its text (or its cards' text), mentions as `@Name`.
+    #[serde(default)]
+    pub text: String,
+}
+
+/// One name and value of an app card.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelAppFieldDto {
+    pub name: String,
+    /// Markdown.
+    pub value: String,
+    /// May share a row with the other inline fields.
+    #[serde(default)]
+    pub inline: bool,
+}
+
+/// A card an app attaches to a message or a reply (the core's `AppEmbed`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelAppEmbedDto {
+    #[serde(default)]
+    pub title: String,
+    /// Markdown.
+    #[serde(default)]
+    pub description: String,
+    /// What the title opens (http or https).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    /// An accent, as 24-bit RGB.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub footer_text: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thumbnail_url: Option<String>,
+    #[serde(default)]
+    pub fields: Vec<ChannelAppFieldDto>,
+}
+
+/// A button (`actionId`) or a link (`url`) of an app's message.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelAppActionDto {
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub action_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+}
+
+/// The cards and buttons of an app's message.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelAppContentDto {
+    pub app_id: String,
+    #[serde(default)]
+    pub embeds: Vec<ChannelAppEmbedDto>,
+    #[serde(default)]
+    pub actions: Vec<ChannelAppActionDto>,
+}
+
+/// What kind of answer an app gave.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ChannelAppReplyKind {
+    #[serde(rename = "message")]
+    Message,
+    #[serde(rename = "update")]
+    Update,
+    #[serde(rename = "download")]
+    Download,
+    #[serde(rename = "error")]
+    Error,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// An app's answer shown to the signed-in user alone (the core's
+/// `AppChannelReply`): never stored, gone once dismissed or once the
+/// channel closes.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelAppReplyDto {
+    #[serde(default = "default_channel_app_reply_dto_kind")]
+    pub kind: ChannelAppReplyKind,
+    #[serde(default)]
+    pub title: String,
+    /// Markdown; a download's file content.
+    #[serde(default)]
+    pub content: String,
+    /// A download's file name.
+    #[serde(default = "default_channel_app_reply_dto_filename")]
+    pub filename: String,
+    #[serde(default)]
+    pub embeds: Vec<ChannelAppEmbedDto>,
+    #[serde(default)]
+    pub actions: Vec<ChannelAppActionDto>,
+}
+
+impl Default for ChannelAppReplyDto {
+    fn default() -> Self {
+        Self {
+            kind: default_channel_app_reply_dto_kind(),
+            title: Default::default(),
+            content: Default::default(),
+            filename: default_channel_app_reply_dto_filename(),
+            embeds: Default::default(),
+            actions: Default::default(),
+        }
+    }
+}
+
+fn default_channel_app_reply_dto_kind() -> ChannelAppReplyKind {
+    ChannelAppReplyKind::Message
+}
+
+fn default_channel_app_reply_dto_filename() -> String {
+    "report.md".to_owned()
+}
+
+/// A private app answer under message `messageId`: payload of
+/// `channels.appReply` (scoped to `channel:<id>`), and what
+/// `channels.appAction` answers when the answer is for the asker alone.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelAppReplyEvent {
+    pub channel_id: String,
+    pub message_id: String,
+    /// The thread it belongs to; null for the channel itself.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<String>,
+    pub app_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub app_name: Option<String>,
+    pub reply: ChannelAppReplyDto,
+}
+
+/// Params for `channels.appAction`: press a button on an app's message.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelAppAction {
+    pub channel_id: String,
+    pub message_id: String,
+    pub action_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<String>,
+}
+
+/// Reply to `channels.appAction`: the answer shown to the asker alone, if
+/// the app gave one (a reply to everyone arrives as a message).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelAppActionResult {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reply: Option<ChannelAppReplyEvent>,
+}
+
+/// Reply to `channels.open`: the channel as its pane shows it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelDetails {
+    pub channel: ChannelSummary,
+    /// May add and remove members (a group the user manages).
+    #[serde(default)]
+    pub can_manage_members: bool,
+    /// An admin: may delete anyone's message, not only their own.
+    #[serde(default)]
+    pub moderator: bool,
+}
+
+/// Params for `channels.focus`: the channel in front of the user now (its
+/// pane shown in the key window), or none.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelFocus {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+}
+
+/// Params for `channels.setMuted`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelMute {
+    pub id: String,
+    pub muted: bool,
+}
+
+/// Params for `channels.mentions`: the channel's members whose name
+/// matches `query`, for `@`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelMentionQuery {
+    pub channel_id: String,
+    #[serde(default)]
+    pub query: String,
+}
+
+/// One member, as the members sheet lists them.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelMemberDto {
+    pub id: String,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    /// `admin`, `user` or `pending`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    /// Online now.
+    #[serde(default)]
+    pub active: bool,
+    /// The signed-in user.
+    #[serde(default)]
+    pub me: bool,
+}
+
+/// Params for `channels.memberPage`: the first page of `query`, or with
+/// `more` the next one.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelMemberQuery {
+    pub channel_id: String,
+    #[serde(default)]
+    pub query: String,
+    #[serde(default)]
+    pub more: bool,
+}
+
+/// How the members list stands.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ChannelMemberListPhase {
+    #[serde(rename = "loading")]
+    Loading,
+    #[serde(rename = "ready")]
+    Ready,
+    #[serde(rename = "failed")]
+    Failed,
+    #[serde(rename = "ownerChanged")]
+    OwnerChanged,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Reply to `channels.memberPage`: the members loaded so far for the
+/// query, by name, and what the user may change.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelMemberPage {
+    pub channel_id: String,
+    #[serde(default)]
+    pub query: String,
+    #[serde(default = "default_channel_member_page_phase")]
+    pub phase: ChannelMemberListPhase,
+    #[serde(default)]
+    pub members: Vec<ChannelMemberDto>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total: Option<i64>,
+    #[serde(default)]
+    pub has_more: bool,
+    #[serde(default)]
+    pub load_more_failed: bool,
+    /// May add and remove members, and whom one may add.
+    #[serde(default)]
+    pub can_manage: bool,
+    #[serde(default)]
+    pub allow_users: bool,
+    #[serde(default)]
+    pub allow_groups: bool,
+}
+
+fn default_channel_member_page_phase() -> ChannelMemberListPhase {
+    ChannelMemberListPhase::Ready
+}
+
+/// Params for `channels.addMembers`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelMembersAdd {
+    pub channel_id: String,
+    #[serde(default)]
+    pub user_ids: Vec<String>,
+    #[serde(default)]
+    pub group_ids: Vec<String>,
+}
+
+/// Params for `channels.removeMember`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelMemberRemove {
+    pub channel_id: String,
+    pub user_id: String,
+}
+
+/// What became of an add or a remove (the core's
+/// `ChannelMemberMutationResult`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ChannelMemberChangeResult {
+    #[serde(rename = "done")]
+    Done,
+    #[serde(rename = "ownerChanged")]
+    OwnerChanged,
+    #[serde(rename = "notPermitted")]
+    NotPermitted,
+    #[serde(rename = "denied")]
+    Denied,
+    #[serde(rename = "failed")]
+    Failed,
+    #[serde(rename = "busy")]
+    Busy,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Reply to `channels.addMembers` and `channels.removeMember`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelMemberChange {
+    pub result: ChannelMemberChangeResult,
+    pub page: ChannelMemberPage,
+}
+
+/// Payload of `channels.posted` (unscoped): someone else posted in a
+/// channel that is not in front of the user. Its unread count went up;
+/// `alert` says whether it notifies (Open WebUI's rule: always, or for a
+/// channel set to mentions only, when it mentions the user). Never the
+/// message's text.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelPosted {
+    pub channel_id: String,
+    pub message_id: String,
+    #[serde(default)]
+    pub author: String,
+    /// The channel's name (`ChannelSummary.title`); empty for a direct
+    /// message, which the author names.
+    #[serde(default)]
+    pub channel_title: String,
+    #[serde(default = "default_channel_posted_kind")]
+    pub kind: ChannelKind,
+    #[serde(default = "default_channel_posted_alert")]
+    pub alert: bool,
+    /// The message mentions the user.
+    #[serde(default)]
+    pub mention: bool,
+}
+
+fn default_channel_posted_kind() -> ChannelKind {
+    ChannelKind::Standard
+}
+
+fn default_channel_posted_alert() -> bool {
+    true
 }
 
 /// What an Open WebUI prompt asks for.
@@ -1484,6 +3251,38 @@ pub struct ChatSummary {
     /// is answering; a window draws no dot on the chat it shows.
     #[serde(default)]
     pub unread: bool,
+    /// What its menus offer (the sidebar's context menu, the Chat menu), by
+    /// the core's rule for the chat's backend: an Open WebUI chat, a
+    /// LibreChat one, an on-device Direct one.
+    #[serde(default)]
+    pub menu: ChatMenuAbilities,
+}
+
+/// What a listed chat's menus offer, from the core's `chatMenuAvailability`
+/// (the phone's conversation menu rules), as loaded when it was listed: a
+/// permission still loading reads as not allowed, and the list is sent
+/// again once it loads. A window leaves out what is false.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatMenuAbilities {
+    /// Share Chat… (a LibreChat chat where its server allows links).
+    #[serde(default)]
+    pub share: bool,
+    /// Duplicate Chat (a LibreChat chat, while online).
+    #[serde(default)]
+    pub duplicate: bool,
+    /// Move To a folder (an Open WebUI chat, folders on).
+    #[serde(default)]
+    pub r#move: bool,
+    /// Mark as Unread or Read (an Open WebUI chat).
+    #[serde(default)]
+    pub mark_unread: bool,
+    /// Generate Title (a chat the server holds).
+    #[serde(default)]
+    pub generate_title: bool,
+    /// Export as a JSON backup or a Markdown transcript.
+    #[serde(default)]
+    pub export: bool,
 }
 
 /// A folder as the sidebar shows it.
@@ -1822,6 +3621,10 @@ pub struct ChatDetail {
     /// has none. A running turn sends newer ones with `turn.blocks`.
     #[serde(default)]
     pub tasks: Vec<ChatTaskDto>,
+    /// A Hermes session's chat (`local:hermes_<session>`): its session, and
+    /// whether this app may continue it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hermes: Option<HermesChatDto>,
 }
 
 /// What one open chat offers right now, from the core's own rules (the
@@ -1864,6 +3667,22 @@ pub struct ChatAbilities {
     /// on, a stored Open WebUI chat).
     #[serde(default)]
     pub compare: bool,
+    /// Branch from Here on a reply of a Hermes chat this app may continue:
+    /// a new session with the chat up to that reply (`hermes.history.branch`).
+    #[serde(default)]
+    pub branch_from_here: bool,
+    /// Undo Last Turn on a Hermes chat's last reply: a Desktop Gateway
+    /// session, whose transcript the gateway keeps (`hermes.history.undo`).
+    #[serde(default)]
+    pub undo_last_turn: bool,
+    /// A Hermes agent works in this chat: its subagents, processes and plan
+    /// can be watched (`hermes.work.watch`).
+    #[serde(default)]
+    pub hermes_work: bool,
+    /// Context & Usage: the chat is a Hermes session whose context window
+    /// and usage can be read (`hermes.context.get`).
+    #[serde(default)]
+    pub hermes_context: bool,
 }
 
 /// What a queued answer is waiting for.
@@ -2606,6 +4425,14 @@ pub struct ComposerOptions {
     /// draws them); none outside Open WebUI.
     #[serde(default)]
     pub quick_pills: Vec<QuickPillOption>,
+    /// A voice call can start with the selected model: the core's
+    /// `voiceCallEligibilityProvider`, the phone's admission. A model is
+    /// chosen, and it is Hermes while its connection is usable (a Hermes
+    /// chat's call is a Standard one on the desktop), an on-device Direct
+    /// model while its connection is there, or else a signed-in Open WebUI
+    /// account's. The composer's call button and Start Voice Call follow it.
+    #[serde(default)]
+    pub voice_call: bool,
 }
 
 /// A knowledge base, as the `#` menu lists it.
@@ -2884,6 +4711,163 @@ fn default_composer_mention_dto_kind() -> MentionKind {
     MentionKind::Entity
 }
 
+/// What a chat's terminal shows in the Computer viewer: its desktop, or
+/// the browser it drives.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ComputerSurfaceKind {
+    #[serde(rename = "desktop")]
+    Desktop,
+    #[serde(rename = "browser")]
+    Browser,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Where a view stands when it opens.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ComputerViewState {
+    /// Something to watch: the viewer page connects to `ComputerView.streamUrl`.
+    #[serde(rename = "live")]
+    Live,
+    /// A browser with no tab: the user may open one.
+    #[serde(rename = "empty")]
+    Empty,
+    /// A browser tab the terminal shows through its proxy, which must be
+    /// taken over (opened again with its `ComputerView.tabId`) to be watched.
+    #[serde(rename = "inactive")]
+    Inactive,
+    /// The terminal's browser cannot run Chrome, which watching needs.
+    #[serde(rename = "browserUnavailable")]
+    BrowserUnavailable,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Params naming the chat whose terminal is meant: `computer.status`,
+/// `computer.tabs`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ComputerScope {
+    pub chat_id: String,
+}
+
+/// Reply to `computer.status`: whether the chat's header offers Computer.
+/// Only a saved chat with a terminal selected can, and only with the
+/// Computer setting on; the terminal says which surfaces it has.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ComputerStatus {
+    /// The Computer setting (Settings › Chats) is on.
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub desktop: bool,
+    #[serde(default)]
+    pub browser: bool,
+}
+
+/// Params for `computer.open`. Opening never makes anything on its own: a
+/// browser tab is selected only with `tabId`, and made only with `newTab`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ComputerOpen {
+    pub chat_id: String,
+    pub surface: ComputerSurfaceKind,
+    /// A browser tab to select and watch (which takes it over).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tab_id: Option<String>,
+    /// Opens a new browser tab and watches it.
+    #[serde(default)]
+    pub new_tab: bool,
+}
+
+/// Reply to `computer.open`: a view of the surface. When `state` is
+/// `live`, `streamUrl` is a socket on this computer that relays the
+/// surface; the daemon holds every credential, and the viewer's own auth
+/// message is sent on with the account's token put in. `handle` names the
+/// view until `computer.close`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ComputerView {
+    pub surface: ComputerSurfaceKind,
+    #[serde(default = "default_computer_view_state")]
+    pub state: ComputerViewState,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handle: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stream_url: Option<String>,
+    /// How the surface streams: `frames` or `vnc`.
+    #[serde(default = "default_computer_view_transport")]
+    pub transport: String,
+    /// The desktop has sound to play.
+    #[serde(default)]
+    pub audio: bool,
+    /// The browser tab shown, or the one waiting to be taken over.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tab_id: Option<String>,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub url: String,
+}
+
+fn default_computer_view_state() -> ComputerViewState {
+    ComputerViewState::Live
+}
+
+fn default_computer_view_transport() -> String {
+    "frames".to_owned()
+}
+
+/// One of a terminal browser's tabs.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ComputerTab {
+    pub id: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub url: String,
+    #[serde(default)]
+    pub selected: bool,
+}
+
+/// Reply to `computer.tabs`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ComputerTabs {
+    #[serde(default)]
+    pub tabs: Vec<ComputerTab>,
+}
+
+/// Params for `computer.closeTab`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ComputerTabRef {
+    pub chat_id: String,
+    pub tab_id: String,
+}
+
+/// Params for `computer.shortcut`: a key combination for the surface a
+/// view shows, such as `ctrl+c`, `alt+Tab` or `Return`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ComputerShortcut {
+    pub handle: String,
+    pub key: String,
+}
+
+/// Params naming a view: `computer.close`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ComputerHandleRef {
+    pub handle: String,
+}
+
 /// Reply to `data.summary`: what Chat Data Controls' server-wide actions
 /// would reach, as core's `ServerChatBulkScope` counts it, for the signed-in
 /// Open WebUI account.
@@ -3034,6 +5018,75 @@ fn default_connection_health_allow_websocket() -> bool {
     true
 }
 
+/// Params for `dictation.status`: what dictation is for. The model names
+/// the backend that transcribes on the server: an Open WebUI server for its
+/// models, the Voice Provider for Direct and Apple models, a Hermes
+/// gateway for Hermes, a LibreChat server for its own.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct DictationTarget {
+    /// The chat's model, or null for the account's default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_id: Option<String>,
+}
+
+/// Reply to `dictation.status`: which engine dictation uses now, and what
+/// each one can do. The window records; the daemon only transcribes.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DictationStatus {
+    /// `device` (this computer's own speech recognition), `server`, or
+    /// `local` (whisper on this computer): Settings › Audio's choice.
+    #[serde(default = "default_dictation_status_engine")]
+    pub engine: String,
+    /// Whether the target's backend transcribes speech.
+    #[serde(default)]
+    pub server_available: bool,
+    /// Which backend that is: `openWebUi`, `hermes`, `direct` or
+    /// `libreChat`; null when there is none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub server_source: Option<String>,
+    /// Whether this build can run whisper (it has the library).
+    #[serde(default)]
+    pub local_available: bool,
+    /// Whether whisper can transcribe now: the library, and the chosen
+    /// model downloaded.
+    #[serde(default)]
+    pub local_ready: bool,
+    /// The whisper model chosen, by id (`base.en`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_model: Option<String>,
+    /// The transcription language (`de`, `pt-BR`), or null for automatic.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
+    /// How long a pause ends dictation, in milliseconds.
+    #[serde(default = "default_dictation_status_silence_ms")]
+    pub silence_ms: i64,
+}
+
+impl Default for DictationStatus {
+    fn default() -> Self {
+        Self {
+            engine: default_dictation_status_engine(),
+            server_available: Default::default(),
+            server_source: None,
+            local_available: Default::default(),
+            local_ready: Default::default(),
+            local_model: None,
+            language: None,
+            silence_ms: default_dictation_status_silence_ms(),
+        }
+    }
+}
+
+fn default_dictation_status_engine() -> String {
+    "device".to_owned()
+}
+
+fn default_dictation_status_silence_ms() -> i64 {
+    2000
+}
+
 /// Which kind of server a direct connection talks to.
 ///
 /// OpenRouter, Azure and LM Studio are OpenAI-compatible servers, not kinds
@@ -3158,6 +5211,11 @@ pub struct DirectConnectionList {
     /// app can be used with no server at all.
     #[serde(default)]
     pub usable: bool,
+    /// The connections kept in the Open WebUI account could not be read
+    /// this time (`direct.reload` tries again). The ones listed, if any,
+    /// are the last that were.
+    #[serde(default)]
+    pub open_web_ui_load_failed: bool,
 }
 
 /// Params for `direct.save` and `direct.test`.
@@ -3275,6 +5333,9 @@ pub struct OllamaModelStatus {
     /// leaves it to the model.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thinking: Option<String>,
+    /// Its maker's bundled models.dev logo, as `ModelSummary.logo`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub logo: Option<String>,
 }
 
 /// Reply to `direct.ollamaModels` and to each Ollama action.
@@ -3307,6 +5368,77 @@ pub struct OllamaModelAction {
 #[serde(rename_all = "camelCase")]
 pub struct DirectPreferred {
     pub preferred: bool,
+}
+
+/// One model that reports no context window, with the limit the app
+/// compacts its chats at.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DirectContextModel {
+    /// The picker's id.
+    pub id: String,
+    pub name: String,
+    /// The connection that offers it, by name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+    /// Tokens: the user's choice, or the default.
+    pub limit: i64,
+    /// A model on the user's own Ollama server, where the limit is also
+    /// the context window it is loaded with (`num_ctx`).
+    #[serde(default)]
+    pub ollama: bool,
+    /// Its maker's bundled models.dev logo, as `ModelSummary.logo`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub logo: Option<String>,
+}
+
+/// Reply to `direct.options` and its setters: what applies to every
+/// connection's models.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DirectOptions {
+    /// How many of a chat's newest images one request carries.
+    #[serde(default = "default_direct_options_images_per_request")]
+    pub images_per_request: i64,
+    #[serde(default)]
+    pub images_per_request_choices: Vec<i64>,
+    /// Models with no reported context window; empty when every model
+    /// reports one.
+    #[serde(default)]
+    pub context_models: Vec<DirectContextModel>,
+    /// The limits a model may be given, in tokens.
+    #[serde(default)]
+    pub context_limit_choices: Vec<i64>,
+}
+
+impl Default for DirectOptions {
+    fn default() -> Self {
+        Self {
+            images_per_request: default_direct_options_images_per_request(),
+            images_per_request_choices: Default::default(),
+            context_models: Default::default(),
+            context_limit_choices: Default::default(),
+        }
+    }
+}
+
+fn default_direct_options_images_per_request() -> i64 {
+    10
+}
+
+/// Params for `direct.setImagesPerRequest`: one of the choices.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DirectImagesPerRequest {
+    pub count: i64,
+}
+
+/// Params for `direct.setContextLimit`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DirectContextLimit {
+    pub model_id: String,
+    pub tokens: i64,
 }
 
 /// Wrapper around every notification payload.
@@ -3580,6 +5712,11 @@ pub struct HermesSettingsEdit {
     pub desktop_profile: String,
     #[serde(default = "default_hermes_settings_edit_desktop_auth_kind")]
     pub desktop_auth_kind: String,
+    /// A Desktop Gateway's legacy session token (`desktopAuthKind`
+    /// `legacyToken`, and what a loopback gateway asks for whatever the
+    /// kind). As the other secrets: null keeps it, empty clears it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub legacy_token: Option<String>,
     #[serde(default)]
     pub allow_self_signed_certificates: bool,
     /// Saved by onboarding's Hermes choice: Hermes becomes the backend the
@@ -3653,6 +5790,10 @@ pub struct HermesStatus {
     /// resources.
     #[serde(default = "default_hermes_status_details")]
     pub details: serde_json::Value,
+    /// The Hermes connection this answer is for: a new value whenever the
+    /// connection changes (see `HermesChanged.connection`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
 }
 
 impl Default for HermesStatus {
@@ -3662,12 +5803,27 @@ impl Default for HermesStatus {
             reachable: Default::default(),
             capabilities: Default::default(),
             details: default_hermes_status_details(),
+            connection: None,
         }
     }
 }
 
 fn default_hermes_status_details() -> serde_json::Value {
     serde_json::Value::Object(serde_json::Map::new())
+}
+
+/// `hermes.changed`: the connection, its settings or what it lists changed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesChanged {
+    /// The Hermes connection in use now, as the daemon names it: an opaque
+    /// value, new whenever the connection changes, never the same across two
+    /// daemon runs. A request sent with another value (`connection` on the
+    /// Hermes requests that take it) is refused with `sessionExpired`, and
+    /// an answer or event carrying another value belongs to the last
+    /// connection.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
 }
 
 /// A Hermes session, as the sidebar lists it. Opened as a chat with
@@ -3689,6 +5845,16 @@ pub struct HermesSessionDto {
     /// Set aside in the list's Archived row.
     #[serde(default)]
     pub archived: bool,
+    /// Hidden from every list: only Hidden Chats reaches it.
+    #[serde(default)]
+    pub hidden: bool,
+    /// The Hermes app that started it, as Hermes names it (`api_server`,
+    /// `cli`, `telegram`, ...), when Hermes says.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    /// A reply is being written in it now.
+    #[serde(default)]
+    pub running: bool,
 }
 
 /// Reply to `hermes.sessions`.
@@ -3701,6 +5867,10 @@ pub struct HermesSessions {
     /// The archived sessions, newest first.
     #[serde(default)]
     pub archived: Vec<HermesSessionDto>,
+    /// The archived sessions could not be read: the Archived row says so,
+    /// with Try Again. The conversations are listed all the same.
+    #[serde(default)]
+    pub archived_failed: bool,
 }
 
 /// Params naming a Hermes session, job, or anything else by id.
@@ -3710,12 +5880,85 @@ pub struct HermesRef {
     pub id: String,
 }
 
+/// Params naming a scheduled job by id, for an action on the connection
+/// in use (`hermes.runJob`, `hermes.deleteJob`, `hermes.jobs.stop`,
+/// `hermes.jobs.runs`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesJobRef {
+    pub id: String,
+    /// The Hermes connection the request was made under
+    /// (`HermesChanged.connection`): refused once another is in use. Null
+    /// from an older window, not checked.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
 /// Params for `hermes.renameSession`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HermesRename {
     pub id: String,
     pub title: String,
+}
+
+/// Params for `hermes.sessions.update`: the flags to change on session
+/// `id`; a null one stays as it is. Archiving or hiding a pinned session
+/// unpins it, as on a phone.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesSessionUpdate {
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pinned: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub archived: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hidden: Option<bool>,
+}
+
+/// Params for `hermes.sessions.continue`: a read-only session's chat
+/// `chatId`, continued in a session this app owns.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesContinue {
+    pub chat_id: String,
+    /// Continue in a Copy: a new session with the chat's messages, which
+    /// leaves the other app's chat alone. Otherwise Continue Here: Hermes's
+    /// fork, after which the other app starts a new chat on its next
+    /// message.
+    #[serde(default)]
+    pub copy: bool,
+}
+
+/// Params for `hermes.history.branch`: a new session with Hermes chat
+/// `chatId` up to the end of reply `messageId`'s turn.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesBranch {
+    pub chat_id: String,
+    pub message_id: String,
+}
+
+/// What a Hermes session's chat is, beside its messages
+/// (`ChatDetail.hermes`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesChatDto {
+    pub session_id: String,
+    /// Another Hermes app owns the session and Hermes refuses this app's
+    /// turns in it: it is read here, and continued in a session of this
+    /// app's (`hermes.sessions.continue`).
+    #[serde(default)]
+    pub read_only: bool,
+    /// The app that owns it, by name ("Hermes CLI", "Telegram"), or empty
+    /// when Hermes did not say.
+    #[serde(default)]
+    pub owner: String,
+    /// The bot whose Bot Chat it is: the chat is titled with the bot, and
+    /// its replies carry the bot's name and face.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bot: Option<HermesBotDto>,
 }
 
 /// A scheduled agent.
@@ -3743,18 +5986,93 @@ pub struct HermesJobDto {
     pub last_run_at_ms: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub next_run_at_ms: Option<i64>,
+    /// Hermes's own word for where the job is (`scheduled`, `paused`,
+    /// `completed`), when it says.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<String>,
+    /// Where each run goes, in the stored order (a Desktop Gateway's; an
+    /// API server's runs are saved in Hermes).
+    #[serde(default)]
+    pub deliver: Vec<HermesDeliveryTargetDto>,
+    /// Why the last run's delivery failed, when it did.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_delivery_error: Option<String>,
+    /// Runs missed while Hermes was not running: `default` (Hermes's
+    /// policy), `runOnce` or `skip`.
+    #[serde(default = "default_hermes_job_dto_catch_up")]
+    pub catch_up: String,
+    /// A run is in flight, or a Run Now is waiting for its run.
+    #[serde(default)]
+    pub running: bool,
+    /// A Stop was sent and the run has not ended yet.
+    #[serde(default)]
+    pub stopping: bool,
+    /// The last run was stopped: why (empty when Hermes gave no reason).
+    /// Null when it was not stopped.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_cancel_reason: Option<String>,
+    /// Where runs go could be read: false when the stored routes could not
+    /// be (then `deliver` is empty and no edit may replace them).
+    #[serde(default = "default_hermes_job_dto_delivery_known")]
+    pub delivery_known: bool,
 }
 
 fn default_hermes_job_dto_enabled() -> bool {
     true
 }
 
+fn default_hermes_job_dto_catch_up() -> String {
+    "default".to_owned()
+}
+
+fn default_hermes_job_dto_delivery_known() -> bool {
+    true
+}
+
 /// Reply to `hermes.jobs`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HermesJobs {
     #[serde(default)]
     pub jobs: Vec<HermesJobDto>,
+    /// The server lets jobs be created and changed (its `jobs_admin`):
+    /// otherwise the list is read-only.
+    #[serde(default = "default_hermes_jobs_writable")]
+    pub writable: bool,
+    /// A Desktop Gateway: jobs have delivery targets, a missed-run policy,
+    /// a run history, and a running one can be stopped.
+    #[serde(default)]
+    pub scheduling: bool,
+    /// What happened since the last read that the window says once: a
+    /// Stop that settled, a Run Now that failed.
+    #[serde(default)]
+    pub notices: Vec<HermesJobNotice>,
+    /// The job a save wrote (`hermes.saveJob`): a new job's id, which the
+    /// editor saves to from then on.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub saved_id: Option<String>,
+    /// The change this answers was made, but the jobs could not be read
+    /// again after it: `jobs` is not the list (keep the one shown and read
+    /// it again). `savedId` still names what the change wrote.
+    #[serde(default)]
+    pub list_failed: bool,
+}
+
+impl Default for HermesJobs {
+    fn default() -> Self {
+        Self {
+            jobs: Default::default(),
+            writable: default_hermes_jobs_writable(),
+            scheduling: Default::default(),
+            notices: Default::default(),
+            saved_id: None,
+            list_failed: Default::default(),
+        }
+    }
+}
+
+fn default_hermes_jobs_writable() -> bool {
+    true
 }
 
 /// Params for `hermes.saveJob`: a new job when `id` is null.
@@ -3767,6 +6085,19 @@ pub struct HermesJobEdit {
     pub name: Option<String>,
     pub prompt: String,
     pub schedule: String,
+    /// The delivery targets, comma-separated as Hermes stores them (a
+    /// Desktop Gateway's); null leaves an edited job's as they are.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deliver: Option<String>,
+    /// `default`, `runOnce` or `skip` (a Desktop Gateway's); null leaves
+    /// an edited job's as it is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub catch_up: Option<String>,
+    /// The Hermes connection the request was made under
+    /// (`HermesChanged.connection`): refused once another is in use. Null
+    /// from an older window, not checked.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
 }
 
 /// Params for `hermes.setJobEnabled`.
@@ -3775,6 +6106,11 @@ pub struct HermesJobEdit {
 pub struct HermesJobToggle {
     pub id: String,
     pub enabled: bool,
+    /// The Hermes connection the request was made under
+    /// (`HermesChanged.connection`): refused once another is in use. Null
+    /// from an older window, not checked.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3803,8 +6139,8 @@ fn default_hermes_toolset_dto_enabled() -> bool {
     true
 }
 
-/// Reply to `hermes.catalog`: the agent's skills (its `/` commands) and
-/// toolsets.
+/// Reply to `hermes.catalog`: the agent's skills and toolsets, and the
+/// `/` commands a Hermes chat's composer offers.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct HermesCatalog {
@@ -3812,6 +6148,1962 @@ pub struct HermesCatalog {
     pub skills: Vec<HermesSkillDto>,
     #[serde(default)]
     pub toolsets: Vec<HermesToolsetDto>,
+    /// What `/` lists in a Hermes chat, as on a phone: each sent as
+    /// `/<name> ` (a Desktop Gateway's command catalog, an API server's
+    /// skills). Empty when the server offers none.
+    #[serde(default)]
+    pub commands: Vec<HermesSkillDto>,
+}
+
+/// One place a scheduled agent's runs can go.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesDeliveryTargetDto {
+    /// The token Hermes stores (`local`, `telegram`, `bot-chat:<profile>`,
+    /// `room:<id>@<profile>`).
+    pub target: String,
+    /// `local` (saved in Hermes), `platform` (a messaging app's home
+    /// channel), `botChat`, `room` (a group chat) or `other` (shown as
+    /// stored).
+    #[serde(default = "default_hermes_delivery_target_dto_kind")]
+    pub kind: String,
+    /// Its name without the kind: a platform's, bot's or room's; the
+    /// token itself for `other`; empty for `local`.
+    #[serde(default)]
+    pub name: String,
+    /// False for a messaging app without a home channel: Hermes has
+    /// nowhere to send.
+    #[serde(default = "default_hermes_delivery_target_dto_available")]
+    pub available: bool,
+}
+
+fn default_hermes_delivery_target_dto_kind() -> String {
+    "other".to_owned()
+}
+
+fn default_hermes_delivery_target_dto_available() -> bool {
+    true
+}
+
+/// Reply to `hermes.jobs.delivery`: where the connection's jobs can
+/// deliver, in display order (saved in Hermes, messaging apps, bot chats,
+/// group chats).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesDeliveryOptions {
+    /// False on an API server, which lists no targets: its runs are saved
+    /// in Hermes.
+    #[serde(default)]
+    pub available: bool,
+    #[serde(default)]
+    pub options: Vec<HermesDeliveryTargetDto>,
+}
+
+/// Something about a job the window says once (`HermesJobs.notices`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesJobNotice {
+    pub job_id: String,
+    /// `stopped` (the run a Stop was sent to ended stopped),
+    /// `finishedBeforeStop`, `nothingToStop`, `stopUnsupported` (the
+    /// server predates Stop), `stopFailed`, or `runFailed` (a Run Now
+    /// Hermes refused or that failed on its way).
+    pub kind: String,
+}
+
+/// A saved Hermes connection. Its secrets never leave the daemon: only
+/// whether they are set.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesConnectionDto {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub base_url: String,
+    /// `responses` (the API server) or `desktop` (the Desktop Gateway).
+    #[serde(default = "default_hermes_connection_dto_mode")]
+    pub mode: String,
+    /// `legacyToken`, `nativePkce` or `dashboardCookie`.
+    #[serde(default = "default_hermes_connection_dto_desktop_auth_kind")]
+    pub desktop_auth_kind: String,
+    #[serde(default = "default_hermes_connection_dto_desktop_profile")]
+    pub desktop_profile: String,
+    #[serde(default)]
+    pub allow_self_signed_certificates: bool,
+    /// The one Hermes is used through now.
+    #[serde(default)]
+    pub active: bool,
+    /// Its credentials travel unencrypted (plain HTTP to a server off this
+    /// Mac).
+    #[serde(default)]
+    pub plain_http: bool,
+    #[serde(default)]
+    pub has_api_key: bool,
+    #[serde(default)]
+    pub has_legacy_token: bool,
+    /// Signed in natively (a Desktop Gateway with `nativePkce`).
+    #[serde(default)]
+    pub desktop_signed_in: bool,
+}
+
+fn default_hermes_connection_dto_mode() -> String {
+    "responses".to_owned()
+}
+
+fn default_hermes_connection_dto_desktop_auth_kind() -> String {
+    "legacyToken".to_owned()
+}
+
+fn default_hermes_connection_dto_desktop_profile() -> String {
+    "default".to_owned()
+}
+
+/// Reply to `hermes.connections.*`: Hermes's switch and its saved
+/// connections, in the order they were added.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesConnections {
+    /// Hermes is turned on (whether or not a connection is usable).
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_id: Option<String>,
+    #[serde(default)]
+    pub connections: Vec<HermesConnectionDto>,
+    /// Another connection can be saved (there is a limit).
+    #[serde(default = "default_hermes_connections_can_add")]
+    pub can_add: bool,
+    /// The connection a save wrote (`hermes.connections.save`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub saved_id: Option<String>,
+    /// The connection in use now, as `HermesChanged.connection` names it:
+    /// what the window sends with a request bound to it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+impl Default for HermesConnections {
+    fn default() -> Self {
+        Self {
+            enabled: Default::default(),
+            active_id: None,
+            connections: Default::default(),
+            can_add: default_hermes_connections_can_add(),
+            saved_id: None,
+            connection: None,
+        }
+    }
+}
+
+fn default_hermes_connections_can_add() -> bool {
+    true
+}
+
+/// Params for `hermes.connections.save` and `hermes.connections.test`: a
+/// connection's form. A null secret keeps the one saved for the same
+/// server; an empty one clears it. Secrets never follow a connection to
+/// another server.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesConnectionEdit {
+    /// The connection edited; null saves a new one (the first is made the
+    /// active one, the others are saved beside it).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    /// Null keeps the saved name; empty names it after the server.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    pub base_url: String,
+    #[serde(default = "default_hermes_connection_edit_mode")]
+    pub mode: String,
+    #[serde(default = "default_hermes_connection_edit_desktop_auth_kind")]
+    pub desktop_auth_kind: String,
+    #[serde(default = "default_hermes_connection_edit_desktop_profile")]
+    pub desktop_profile: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub api_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub legacy_token: Option<String>,
+    #[serde(default)]
+    pub allow_self_signed_certificates: bool,
+    /// The user agreed to send this connection's credentials unencrypted
+    /// (asked when the daemon refuses with `hermes.plainHttpConsent`).
+    #[serde(default)]
+    pub allow_plain_http: bool,
+}
+
+fn default_hermes_connection_edit_mode() -> String {
+    "responses".to_owned()
+}
+
+fn default_hermes_connection_edit_desktop_auth_kind() -> String {
+    "legacyToken".to_owned()
+}
+
+fn default_hermes_connection_edit_desktop_profile() -> String {
+    "default".to_owned()
+}
+
+/// Reply to `hermes.connections.test`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesConnectionTestResult {
+    #[serde(default)]
+    pub ok: bool,
+    /// A code the window words: `unreachable`, `unauthorized`, `invalid`,
+    /// `keyRequired`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    /// The name the server suggests for the connection (its model or
+    /// profile), when it reached it and offers one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub suggested_name: Option<String>,
+}
+
+/// Params for `hermes.connections.setEnabled`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesToggle {
+    pub enabled: bool,
+}
+
+/// An MCP server Hermes connects its agent to.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesMcpServerDto {
+    pub name: String,
+    /// Where it is: an HTTP address, or the command Hermes runs.
+    #[serde(default)]
+    pub description: String,
+    /// Its tools are offered to the agent.
+    #[serde(default = "default_hermes_mcp_server_dto_enabled")]
+    pub enabled: bool,
+    /// How it signs in, as Hermes says (`oauth`, `bearer`), when it does.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auth: Option<String>,
+    /// Its tools, when Hermes lists them (or a test found them).
+    #[serde(default)]
+    pub tools: Vec<String>,
+    /// Which tools Hermes registers, in words, when it filters them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_filter: Option<String>,
+}
+
+fn default_hermes_mcp_server_dto_enabled() -> bool {
+    true
+}
+
+/// Reply to `hermes.mcp.*`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesMcpServers {
+    /// The connection manages MCP servers (a Desktop Gateway).
+    #[serde(default)]
+    pub available: bool,
+    #[serde(default)]
+    pub servers: Vec<HermesMcpServerDto>,
+    /// An API key can be set on a server (Hermes 0.23 and later).
+    #[serde(default)]
+    pub can_set_api_key: bool,
+    /// The change this answers was made, but the servers could not be read
+    /// again after it: `servers` is not the list (keep the one shown and
+    /// read it again).
+    #[serde(default)]
+    pub list_failed: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesMcpCatalogEntryDto {
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+}
+
+/// Reply to `hermes.mcp.catalog`: the servers Hermes offers ready-made,
+/// those already added left out.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesMcpCatalog {
+    #[serde(default)]
+    pub entries: Vec<HermesMcpCatalogEntryDto>,
+}
+
+/// Params for `hermes.mcp.add`: a server of the user's own, at an HTTP
+/// address or run as a command.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesMcpAdd {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(default)]
+    pub args: Vec<String>,
+    /// Sent as its bearer token; never kept by the daemon.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub api_key: Option<String>,
+    /// The Hermes connection the request was made under
+    /// (`HermesChanged.connection`): refused once another is in use. Null
+    /// from an older window, not checked.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Params naming an MCP server (or a catalog entry) by name.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesMcpRef {
+    pub name: String,
+    /// The Hermes connection the request was made under
+    /// (`HermesChanged.connection`): refused once another is in use. Null
+    /// from an older window, not checked.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Params for `hermes.mcp.setApiKey`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesMcpApiKey {
+    pub name: String,
+    pub api_key: String,
+    /// The Hermes connection the request was made under
+    /// (`HermesChanged.connection`): refused once another is in use. Null
+    /// from an older window, not checked.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Params for `hermes.mcp.setEnabled`: offer a server's tools or not.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesMcpToggle {
+    pub name: String,
+    pub enabled: bool,
+    /// The Hermes connection the request was made under
+    /// (`HermesChanged.connection`): refused once another is in use. Null
+    /// from an older window, not checked.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Reply to `hermes.mcp.test`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesMcpTestResultDto {
+    #[serde(default)]
+    pub ok: bool,
+    #[serde(default)]
+    pub tools: i64,
+    #[serde(default)]
+    pub resources: i64,
+    #[serde(default)]
+    pub prompts: i64,
+    /// What went wrong, as Hermes says it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    #[serde(default)]
+    pub tool_names: Vec<String>,
+}
+
+/// A Bot Mode bot: a Hermes profile the gateway marks as a bot, with its
+/// face. Opened with `hermes.bots.open`, as its permanent Bot Chat.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesBotDto {
+    /// The profile's name: what the bot is addressed by.
+    pub name: String,
+    /// What the roster calls it (its profile name when it has no title).
+    pub title: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// The newest message in its Bot Chat.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preview: Option<String>,
+    /// Its Bot Chat's Hermes session, when known: the chat
+    /// `local:hermes_<sessionId>` is this bot's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    /// It has a picture (`hermes.bots.avatar`); without one its face is a
+    /// shape in a colour.
+    #[serde(default)]
+    pub has_avatar: bool,
+    /// The face's shape: `circle`, `squircle`, `pill`, `triangle`,
+    /// `hexagon`, `cloud` or `drop`.
+    #[serde(default = "default_hermes_bot_dto_shape")]
+    pub shape: String,
+    /// The face's colour, `#rrggbb`.
+    #[serde(default = "default_hermes_bot_dto_color")]
+    pub color: String,
+    /// When its Bot Chat was last active, in milliseconds since the epoch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_active_ms: Option<i64>,
+}
+
+fn default_hermes_bot_dto_shape() -> String {
+    "squircle".to_owned()
+}
+
+fn default_hermes_bot_dto_color() -> String {
+    "#8b5cf6".to_owned()
+}
+
+/// Reply to `hermes.bots.list`: the roster, most recently active first.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesBots {
+    /// The gateway has Bot Mode (a Desktop Gateway that lists bots); the
+    /// sidebar's Bots group shows only then.
+    #[serde(default)]
+    pub available: bool,
+    #[serde(default)]
+    pub bots: Vec<HermesBotDto>,
+    /// The Hermes connection this answer is for (`HermesChanged.connection`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Params naming a bot, by its profile name.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesBotRef {
+    pub name: String,
+    /// The Hermes connection this was asked under (`HermesChanged.connection`):
+    /// refused (`sessionExpired`) once another connection is in use.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Reply to `hermes.bots.avatar`: the bot's picture as a `data:image/...`
+/// URL, or none.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesBotAvatar {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub image: Option<String>,
+}
+
+/// One bot seated in a room.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomMemberDto {
+    pub member_id: String,
+    /// The profile it runs as (a roster bot's `HermesBotDto.name`).
+    pub profile: String,
+    /// What an @mention calls it.
+    pub handle: String,
+    /// What the room calls it.
+    pub name: String,
+}
+
+/// A Group Chat, as the sidebar lists it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomDto {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub members: Vec<HermesRoomMemberDto>,
+    /// Its last activity, in milliseconds since the epoch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updated_at_ms: Option<i64>,
+    /// Something was said since this device last showed it.
+    #[serde(default)]
+    pub unread: bool,
+    /// Its bots were at work when it was last read.
+    #[serde(default)]
+    pub working: bool,
+    /// One of its bots waits for an answer (an approval).
+    #[serde(default)]
+    pub needs_you: bool,
+}
+
+/// Reply to `hermes.rooms.list`, and payload of `hermes.rooms.listChanged`:
+/// the gateway's live Group Chats, most recently active first.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRooms {
+    /// The gateway hosts Group Chats: the sidebar's Rooms group shows.
+    #[serde(default)]
+    pub available: bool,
+    /// A new room can be made: the gateway runs rooms and two bots can sit
+    /// in one.
+    #[serde(default)]
+    pub can_create: bool,
+    /// The bots a new room may seat, by profile name.
+    #[serde(default)]
+    pub seatable: Vec<String>,
+    #[serde(default)]
+    pub rooms: Vec<HermesRoomDto>,
+    /// The list could not be read (one read before stays).
+    #[serde(default)]
+    pub failed: bool,
+    /// The Hermes connection this answer is for (`HermesChanged.connection`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Params naming a room.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomRef {
+    pub room_id: String,
+    /// The Hermes connection this was asked under (`HermesChanged.connection`):
+    /// refused (`sessionExpired`) once another connection is in use.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Params for `hermes.rooms.create`: a name and two to six bots.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomCreate {
+    pub name: String,
+    /// The bots to seat, by profile name, in the order picked.
+    pub bots: Vec<String>,
+    /// The Hermes connection this was asked under (`HermesChanged.connection`):
+    /// refused (`sessionExpired`) once another connection is in use.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Params for `hermes.rooms.rename`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomRename {
+    pub room_id: String,
+    pub name: String,
+    /// The Hermes connection this was asked under (`HermesChanged.connection`):
+    /// refused (`sessionExpired`) once another connection is in use.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Who answers a message that names nobody.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum HermesRoomRouting {
+    /// Every bot takes a turn.
+    #[serde(rename = "everyone")]
+    Everyone,
+    /// The lead bot hands the message on.
+    #[serde(rename = "lead")]
+    Lead,
+    /// A quick model call picks who answers.
+    #[serde(rename = "auto")]
+    Auto,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// A room's purpose, shared notes and who answers.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomContextDto {
+    #[serde(default)]
+    pub purpose: String,
+    #[serde(default)]
+    pub notes: String,
+    /// None on a Hermes that cannot choose (everyone answers).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub routing: Option<HermesRoomRouting>,
+    /// The lead bot, when `routing` is `HermesRoomRouting.lead`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lead_member_id: Option<String>,
+}
+
+/// Params for `hermes.rooms.saveContext`; replies with what Hermes saved.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomContextEdit {
+    pub room_id: String,
+    pub context: HermesRoomContextDto,
+    /// The Hermes connection this was asked under (`HermesChanged.connection`):
+    /// refused (`sessionExpired`) once another connection is in use.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Params for `hermes.rooms.send`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomMessage {
+    pub room_id: String,
+    pub text: String,
+    /// The Hermes connection this was asked under (`HermesChanged.connection`):
+    /// refused (`sessionExpired`) once another connection is in use.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Reply to `hermes.rooms.send`.
+///
+/// Sent: Hermes has the words (the field clears). Otherwise the words stay
+/// in the field: refused before Hermes posted anything (with Hermes's
+/// `detail` when it gave one), or unclear -- Hermes may have them, and
+/// sending again posts them at most once (the room's view keeps
+/// `HermesRoomView.unsentText` until its log settles it).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomSendResult {
+    #[serde(default)]
+    pub sent: bool,
+    #[serde(default)]
+    pub refused: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+}
+
+/// Reply to `hermes.rooms.stop`: how many tasks stopped.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomStopped {
+    #[serde(default)]
+    pub stopped: i64,
+}
+
+/// Params for `hermes.rooms.continue`: one more budget for a paused
+/// discussion.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomContinue {
+    pub room_id: String,
+    pub discussion_event_id: String,
+    /// The Hermes connection this was asked under (`HermesChanged.connection`):
+    /// refused (`sessionExpired`) once another connection is in use.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Params for `hermes.rooms.answer`: an approval answered (`once` or
+/// `deny`), or uncertain work retried (no `choice`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomAnswer {
+    pub room_id: String,
+    pub task_id: String,
+    pub execution_generation: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub choice: Option<String>,
+    /// The Hermes connection this was asked under (`HermesChanged.connection`):
+    /// refused (`sessionExpired`) once another connection is in use.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// What a row of a room's timeline is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum HermesRoomItemKind {
+    /// A message: the user's (`HermesRoomItemDto.own`), a scheduled post's
+    /// or a bot's.
+    #[serde(rename = "message")]
+    Message,
+    /// A quiet line about the room's work (`HermesRoomItemDto.notice`).
+    #[serde(rename = "notice")]
+    Notice,
+    /// Who a message went to (`HermesRoomItemDto.route`).
+    #[serde(rename = "route")]
+    Route,
+    /// A discussion paused at its limit, with Continue while
+    /// `HermesRoomItemDto.actionable`.
+    #[serde(rename = "pause")]
+    Pause,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// What a notice line says.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum HermesRoomNoticeKind {
+    #[serde(rename = "turnFailed")]
+    TurnFailed,
+    #[serde(rename = "turnCancelled")]
+    TurnCancelled,
+    #[serde(rename = "turnDeferred")]
+    TurnDeferred,
+    #[serde(rename = "memberUnavailable")]
+    MemberUnavailable,
+    #[serde(rename = "stopped")]
+    Stopped,
+    #[serde(rename = "disbanded")]
+    Disbanded,
+    #[serde(rename = "authorityLost")]
+    AuthorityLost,
+    #[serde(rename = "workLimit")]
+    WorkLimit,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// What a routing line says.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum HermesRoomRouteKind {
+    /// Hermes picked who answers (`HermesRoomItemDto.names`).
+    #[serde(rename = "routedTo")]
+    RoutedTo,
+    #[serde(rename = "routedEveryone")]
+    RoutedEveryone,
+    /// Hermes could not pick, so everyone answers.
+    #[serde(rename = "routedFallback")]
+    RoutedFallback,
+    /// The lead gave the message to `HermesRoomItemDto.names`.
+    #[serde(rename = "assigned")]
+    Assigned,
+    /// The lead takes the message itself.
+    #[serde(rename = "leadTaking")]
+    LeadTaking,
+    /// The user continued a paused discussion.
+    #[serde(rename = "continued")]
+    Continued,
+    /// A bot asked another in its reply.
+    #[serde(rename = "handoff")]
+    Handoff,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// One row of a room's timeline: one flat record for every
+/// `HermesRoomItemKind`, whose `kind` says which fields it uses.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomItemDto {
+    pub kind: HermesRoomItemKind,
+    /// Stays with the row across reads.
+    pub key: String,
+    /// The log event the row belongs to.
+    pub seq: i64,
+    /// `message`: the user's own.
+    #[serde(default)]
+    pub own: bool,
+    /// `message`: a scheduled job's post.
+    #[serde(default)]
+    pub scheduled: bool,
+    /// `message`: who wrote it (empty for the user's own).
+    #[serde(default)]
+    pub author: String,
+    /// `message`: the bot that wrote it; `notice`: the bot it is about.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub member_id: Option<String>,
+    /// `message`: its markdown.
+    #[serde(default)]
+    pub text: String,
+    /// `message`: the same author wrote the row before (no name or face).
+    #[serde(default)]
+    pub continued: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_at_ms: Option<i64>,
+    /// `notice`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notice: Option<HermesRoomNoticeKind>,
+    /// `notice`: the bot it is about, by name; and Hermes's reason.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub member_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+    /// `route`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub route: Option<HermesRoomRouteKind>,
+    #[serde(default)]
+    pub names: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lead: Option<String>,
+    /// `pause`: the discussion Continue continues, how many bot messages
+    /// it had, and whether Continue and Stop still apply.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub discussion_event_id: Option<String>,
+    #[serde(default)]
+    pub message_count: i64,
+    #[serde(default)]
+    pub actionable: bool,
+}
+
+/// A bot's state in the room right now.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum HermesRoomMemberState {
+    #[serde(rename = "idle")]
+    Idle,
+    #[serde(rename = "queued")]
+    Queued,
+    #[serde(rename = "working")]
+    Working,
+    /// Working, but silent for two minutes.
+    #[serde(rename = "stalled")]
+    Stalled,
+    #[serde(rename = "replied")]
+    Replied,
+    #[serde(rename = "passed")]
+    Passed,
+    #[serde(rename = "failed")]
+    Failed,
+    #[serde(rename = "cancelled")]
+    Cancelled,
+    #[serde(rename = "unavailable")]
+    Unavailable,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// One bot's state, for the header and the Info sheet.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomMemberStatusDto {
+    pub member_id: String,
+    pub state: HermesRoomMemberState,
+    /// How long its turn has run, when it works; the window counts on.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub elapsed_ms: Option<i64>,
+    /// The tool it is in.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool: Option<String>,
+    /// Why its last turn failed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
+/// A decision the room waits on, drawn as a card under the timeline.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomActionDto {
+    /// `approval` or `retry`.
+    pub kind: String,
+    pub member_id: String,
+    pub task_id: String,
+    pub execution_generation: i64,
+    /// What the approval would run (a command, or the operation it stands
+    /// for).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    /// The answers this app may give (`once`, `deny`); none: the card says
+    /// what waits, without buttons.
+    #[serde(default)]
+    pub choices: Vec<String>,
+}
+
+/// An open room, as its pane shows it. Reply to `hermes.rooms.watch`, and
+/// payload of `hermes.rooms.changed` (scoped to `hermes-room:<roomId>`)
+/// while a window watches it: the daemon reads the room every 2 s.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesRoomView {
+    pub room_id: String,
+    /// Read once.
+    #[serde(default)]
+    pub loaded: bool,
+    /// None until read, or when the read failed with nothing read before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub room: Option<HermesRoomDto>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context: Option<HermesRoomContextDto>,
+    /// The room left the gateway (disbanded, or not this user's).
+    #[serde(default)]
+    pub gone: bool,
+    /// The last read failed (the last good read stays shown).
+    #[serde(default)]
+    pub read_failed: bool,
+    /// Its driver runs: messages can be sent.
+    #[serde(default)]
+    pub running: bool,
+    /// Its bots are at work: Stop applies.
+    #[serde(default)]
+    pub working: bool,
+    #[serde(default)]
+    pub sending: bool,
+    /// Words Hermes may or may not have; sending them again posts them at
+    /// most once.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unsent_text: Option<String>,
+    /// Who-answers modes Hermes offers (none: Hermes cannot choose).
+    #[serde(default)]
+    pub routing_modes: Vec<HermesRoomRouting>,
+    #[serde(default)]
+    pub items: Vec<HermesRoomItemDto>,
+    #[serde(default)]
+    pub members: Vec<HermesRoomMemberStatusDto>,
+    #[serde(default)]
+    pub actions: Vec<HermesRoomActionDto>,
+    /// The Hermes connection this view was read on (`HermesChanged.connection`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Params for `hermes.work.watch`: the window shows `chatId` and wants its
+/// agent's work, live, as `hermes.work.changed` events scoped to the chat.
+///
+/// Watching again with another `subagentId` changes whose output comes
+/// with the work; without one, none does. `hermes.work.unwatch` (or the
+/// window's connection closing) stops it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesWorkWatch {
+    pub chat_id: String,
+    /// The subagent whose output the window shows, read every 2 s while it
+    /// runs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subagent_id: Option<String>,
+}
+
+/// A chat's agent at work: its subagents, its background processes and its
+/// plan. Reply to `hermes.work.watch` and payload of `hermes.work.changed`.
+///
+/// Only a Hermes Desktop Gateway reports subagents, processes and a plan;
+/// any other chat has none of them.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesWork {
+    pub chat_id: String,
+    /// False until the first list arrives (and for a chat with no Hermes
+    /// session to list).
+    #[serde(default)]
+    pub loaded: bool,
+    #[serde(default)]
+    pub subagents: Vec<HermesSubagentDto>,
+    /// Every process Hermes lists, finished ones too; a chip counts the
+    /// running ones.
+    #[serde(default)]
+    pub processes: Vec<HermesProcessDto>,
+    /// The agent's task list, when it keeps one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan: Option<HermesPlanDto>,
+    /// The output of the subagent the watch named.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output: Option<HermesSubagentOutputDto>,
+    /// The directory the chat runs its tools in, when Hermes said: changed
+    /// files inside it are listed by their path from there.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub working_directory: Option<String>,
+}
+
+/// A child agent the chat's agent delegated a task to.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesSubagentDto {
+    pub id: String,
+    /// What it was asked to do; empty when Hermes did not say.
+    #[serde(default)]
+    pub goal: String,
+    /// The subagent that started this one, when it is nested.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<String>,
+    /// How deep it is nested (0 at the top).
+    #[serde(default)]
+    pub depth: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    /// When it started, in milliseconds since the epoch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub started_at_ms: Option<i64>,
+    /// Hermes' word for where it is: `queued`, `running`, `completed`…
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    /// Queued or running.
+    #[serde(default = "default_hermes_subagent_dto_running")]
+    pub running: bool,
+    #[serde(default)]
+    pub tool_count: i64,
+    /// The tool it used last, by its id.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_tool: Option<String>,
+    /// Whether Hermes still passes new instructions on to it.
+    #[serde(default = "default_hermes_subagent_dto_accepting_steer")]
+    pub accepting_steer: bool,
+}
+
+fn default_hermes_subagent_dto_running() -> bool {
+    true
+}
+
+fn default_hermes_subagent_dto_accepting_steer() -> bool {
+    true
+}
+
+/// A command the agent left running: a dev server, a watcher, a build.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesProcessDto {
+    pub id: String,
+    /// Its first line, shortened.
+    pub command: String,
+    #[serde(default = "default_hermes_process_dto_running")]
+    pub running: bool,
+    /// When it started, in milliseconds since the epoch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub started_at_ms: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i64>,
+    /// The end of what it printed, when Hermes sent it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output: Option<String>,
+}
+
+fn default_hermes_process_dto_running() -> bool {
+    true
+}
+
+/// The agent's task list, as Hermes last reported it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesPlanDto {
+    #[serde(default)]
+    pub items: Vec<HermesPlanItemDto>,
+    /// How many are completed.
+    #[serde(default)]
+    pub done: i64,
+    /// Whether anything is still to do or under way.
+    #[serde(default)]
+    pub active: bool,
+    /// The item under way, else the next to do.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current_id: Option<String>,
+    /// Only grows; a later empty list is a cleared plan.
+    #[serde(default)]
+    pub revision: i64,
+}
+
+/// One item of the agent's task list.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesPlanItemDto {
+    pub id: String,
+    pub content: String,
+    /// `pending`, `in_progress`, `completed` or `cancelled`.
+    #[serde(default = "default_hermes_plan_item_dto_status")]
+    pub status: String,
+    /// How deep it is nested under other items (0 at the top, at most 3).
+    #[serde(default)]
+    pub depth: i64,
+}
+
+fn default_hermes_plan_item_dto_status() -> String {
+    "pending".to_owned()
+}
+
+/// The end of a subagent's live output.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesSubagentOutputDto {
+    pub subagent_id: String,
+    /// False until the first read answers.
+    #[serde(default)]
+    pub loaded: bool,
+    /// Reading it failed, with nothing to show.
+    #[serde(default)]
+    pub failed: bool,
+    /// False while the subagent has no output yet, or once it is gone.
+    #[serde(default)]
+    pub available: bool,
+    #[serde(default)]
+    pub text: String,
+    /// Earlier output was cut off.
+    #[serde(default)]
+    pub truncated: bool,
+}
+
+/// Params for `hermes.work.unwatch`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesWorkChat {
+    pub chat_id: String,
+}
+
+/// Params for `hermes.work.steer`: new instructions for a running
+/// subagent.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesSteerSubagent {
+    pub chat_id: String,
+    pub subagent_id: String,
+    pub text: String,
+}
+
+/// Params for `hermes.work.stop`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesSubagentRef {
+    pub chat_id: String,
+    pub subagent_id: String,
+}
+
+/// Params for `hermes.work.kill`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesProcessRef {
+    pub chat_id: String,
+    pub process_id: String,
+}
+
+/// What `hermes.work.kill` did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum HermesProcessKillStatus {
+    #[serde(rename = "killed")]
+    Killed,
+    #[serde(rename = "alreadyExited")]
+    AlreadyExited,
+    #[serde(rename = "notFound")]
+    NotFound,
+    #[serde(rename = "failed")]
+    Failed,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Reply to `hermes.work.kill`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesProcessKill {
+    pub status: HermesProcessKillStatus,
+    /// The end of what the process printed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output: Option<String>,
+    /// Hermes' own words for a failure.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+/// Params for `hermes.context.get`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesContextRef {
+    pub chat_id: String,
+}
+
+/// Reply to `hermes.context.get`: a Hermes chat's context window, token
+/// totals and plan allowances. A Desktop Gateway reports all of it; an API
+/// server only the session's totals.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesContextReportDto {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    /// Tokens in the context window now, and its size.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_used: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_max: Option<i64>,
+    /// The fill is Hermes' estimate, not a measured count.
+    #[serde(default)]
+    pub context_estimated: bool,
+    /// Hermes' estimate of the next request's size.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub estimated_total: Option<i64>,
+    /// What fills the window, as Hermes lists it.
+    #[serde(default)]
+    pub categories: Vec<HermesContextCategoryDto>,
+    #[serde(default)]
+    pub totals: HermesTokenTotalsDto,
+    /// The plan's allowances (day, week, month…).
+    #[serde(default)]
+    pub plan_gauges: Vec<HermesPlanGaugeDto>,
+    /// Hermes' own lines about credits, shown as written.
+    #[serde(default)]
+    pub credits_lines: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage_bars: Option<HermesUsageBarsDto>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_plan: Option<HermesProviderPlanDto>,
+    /// Compact Now is offered.
+    #[serde(default)]
+    pub can_compact: bool,
+    /// A compaction is still running on the server.
+    #[serde(default)]
+    pub compacting: bool,
+}
+
+/// One part of what fills the context window.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesContextCategoryDto {
+    /// `system_prompt`, `tool_definitions`, `subagent_definitions`,
+    /// `conversation`, or another server id.
+    pub id: String,
+    /// Hermes' name for it, for an id the window has no words for.
+    #[serde(default)]
+    pub label: String,
+    pub tokens: i64,
+}
+
+/// A chat's token counters so far.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesTokenTotalsDto {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reasoning: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cache_read: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cache_write: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cache_hit_percent: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub calls: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub compressions: Option<i64>,
+    /// In US dollars.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_usd: Option<f64>,
+    #[serde(default)]
+    pub cost_estimated: bool,
+}
+
+/// One plan allowance.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesPlanGaugeDto {
+    /// `day`, `week`, `month`, `top_tier`, or another server id.
+    pub id: String,
+    /// Hermes' words, for an id the window has none for.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// 0 (untouched) to 1 (used up).
+    pub used_fraction: f64,
+    /// In milliseconds since the epoch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resets_at_ms: Option<i64>,
+}
+
+/// One of Hermes' dollar bars: a plan or a top-up balance.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesUsageBarDto {
+    /// `plan` or `topup`.
+    pub kind: String,
+    /// 0 to 1.
+    pub fill: f64,
+    /// Amounts Hermes formats itself (`$4.20`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remaining: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spent: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub used_percent: Option<i64>,
+}
+
+/// The account's subscription and top-up balance.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesUsageBarsDto {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_name: Option<String>,
+    /// When the plan renews, in Hermes' words.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub renews: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan: Option<HermesUsageBarDto>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub topup: Option<HermesUsageBarDto>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_spendable: Option<String>,
+}
+
+/// What the chat's provider says about its plan and limits.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesProviderPlanDto {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_name: Option<String>,
+    #[serde(default)]
+    pub gauges: Vec<HermesPlanGaugeDto>,
+    #[serde(default)]
+    pub rate_limited: bool,
+    /// In milliseconds since the epoch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rate_limited_until_ms: Option<i64>,
+    /// How much the chat's model draws on the plan: `free`, `low`,
+    /// `medium` or `top_tier`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage_level: Option<String>,
+}
+
+/// Params for `hermes.context.compact`: summarize the chat's older
+/// messages on the server.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesCompact {
+    pub chat_id: String,
+    /// What the summary should keep in view.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus: Option<String>,
+}
+
+/// How a compaction ended.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum HermesCompactOutcome {
+    /// Older messages were summarized.
+    #[serde(rename = "compacted")]
+    Compacted,
+    /// Nothing could be removed (a short chat).
+    #[serde(rename = "unchanged")]
+    Unchanged,
+    /// A summary would have been longer than what it replaces.
+    #[serde(rename = "refused")]
+    Refused,
+    /// The summary failed; no messages were removed.
+    #[serde(rename = "aborted")]
+    Aborted,
+    /// Still running on the server.
+    #[serde(rename = "pending")]
+    Pending,
+    /// Another compaction holds the chat.
+    #[serde(rename = "busy")]
+    Busy,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Reply to `hermes.context.compact`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesCompactResultDto {
+    pub outcome: HermesCompactOutcome,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub before_tokens: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after_tokens: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub before_messages: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after_messages: Option<i64>,
+}
+
+/// Params for `hermes.decisions.answer`: the answer to a `ui.request` of
+/// kind `hermesClarify`, `hermesSudo` or `hermesSecret` (or a
+/// `hermesDecision` set-up card).
+///
+/// Unlike `ui.respond`, it waits for Hermes to take the answer: the card
+/// stays up (and says so) when it did not arrive. A password or secret in
+/// `value` is passed on and never logged or kept.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesDecisionAnswer {
+    pub request_id: String,
+    /// A form's answers, one per question still open.
+    #[serde(default)]
+    pub answers: Vec<HermesClarifyAnswer>,
+    /// Any other question's answer: the password, the secret, the reply,
+    /// or a set-up card's `approve` or `decline`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<String>,
+}
+
+/// One question's answer in a clarify form.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesClarifyAnswer {
+    pub question_id: String,
+    /// The choice picked or the words typed; a multi-select question's
+    /// several answers as a JSON array string. Null skips the question.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub answer: Option<String>,
+}
+
+/// How answering a Hermes question went.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum HermesDecisionStatus {
+    /// Hermes took it; the card closes (`ui.settled` follows).
+    #[serde(rename = "answered")]
+    Answered,
+    /// Hermes had already settled it (answered elsewhere, or it expired);
+    /// the card closes and the answer was not sent.
+    #[serde(rename = "settled")]
+    Settled,
+    /// It did not arrive: the card stays, to be answered again.
+    #[serde(rename = "failed")]
+    Failed,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Reply to `hermes.decisions.answer`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesDecisionResult {
+    pub status: HermesDecisionStatus,
+}
+
+/// One file a Hermes reply's tools changed, with its lines.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangedFileDto {
+    /// Its path as Hermes sent it (`a/` and `b/` taken off); empty when
+    /// Hermes did not name it. A window lists a file inside the chat's
+    /// working directory (`HermesWork.workingDirectory`) by its path from
+    /// there.
+    #[serde(default)]
+    pub path: String,
+    #[serde(default)]
+    pub added: i64,
+    #[serde(default)]
+    pub removed: i64,
+    #[serde(default)]
+    pub lines: Vec<DiffLineDto>,
+}
+
+/// What one line of a diff is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum DiffLineKind {
+    #[serde(rename = "context")]
+    Context,
+    #[serde(rename = "added")]
+    Added,
+    #[serde(rename = "removed")]
+    Removed,
+    /// A hunk header (`@@ -1,3 +1,4 @@`).
+    #[serde(rename = "hunk")]
+    Hunk,
+    /// Hermes' own remark (how many lines it left out).
+    #[serde(rename = "note")]
+    Note,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// One line of a changed file's diff.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiffLineDto {
+    pub kind: DiffLineKind,
+    #[serde(default)]
+    pub text: String,
+    /// Line numbers from the hunk header, when Hermes sent one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub old_number: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub new_number: Option<i64>,
+}
+
+/// A failed Hermes turn, as Hermes classified it: what broke, whether the
+/// chat is stuck, when a limit resets, and what helps. On an `error` block
+/// (`MessageBlockDto.hermesError`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesErrorDto {
+    /// `provider`, `endpoint`, `connection`, `auth`, `billing`,
+    /// `usageLimit`, `freeTier`, `rateLimit`, `contextOverflow`, `model`,
+    /// `policy`, `truncated`, `badReply`, `workspace`, `session`, `busy`,
+    /// `gateway`, `disk` or `unknown`.
+    pub kind: String,
+    /// The chat is stuck until the cause is fixed (else it can go on).
+    #[serde(default)]
+    pub blocking: bool,
+    /// Hermes' sentence about it, when it wrote one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    /// The provider and model it happened on.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    /// When the limit resets, in milliseconds since the epoch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resets_at_ms: Option<i64>,
+    /// What the reply wrote before it failed is kept.
+    #[serde(default)]
+    pub partial: bool,
+    /// The fixes this chat can perform, best first: `retry`,
+    /// `continueReply`, `compact`, `switchModel`, `openProviderSettings`,
+    /// `openBilling`, `newChat`. A card offers the first.
+    #[serde(default)]
+    pub actions: Vec<String>,
+    /// For `switchModel`: the model to switch to.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub switch_to: Option<HermesModelChoiceDto>,
+    /// For `openBilling` and `openProviderSettings`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub billing_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_settings_url: Option<String>,
+}
+
+/// A model an error card offers to switch to.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesModelChoiceDto {
+    /// The model's id in `models.list` (a Hermes model).
+    pub model_id: String,
+    pub label: String,
+}
+
+/// Params for `intents.ask`: Shortcuts' Ask Conduit, a question whose answer
+/// goes back to the shortcut as text.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IntentAsk {
+    pub text: String,
+    /// Null lets the daemon choose, as `turns.send` does: the account's
+    /// default model.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    /// How long to wait for the answer before giving the shortcut the chat
+    /// instead. The answer keeps going in the chat either way.
+    #[serde(default = "default_intent_ask_timeout_ms")]
+    pub timeout_ms: i64,
+}
+
+fn default_intent_ask_timeout_ms() -> i64 {
+    120000
+}
+
+/// Reply to `intents.ask`.
+///
+/// A question that started always names its chat, whatever happened next,
+/// so the shortcut can say where the answer will be and open it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IntentAnswer {
+    pub chat_id: String,
+    pub message_id: String,
+    /// One of `IntentAskOutcome`.
+    pub outcome: String,
+    /// The answer as the Copy action copies it: Markdown, without the
+    /// reasoning and tool-call blocks. Whatever had arrived when it failed
+    /// or timed out.
+    #[serde(default)]
+    pub text: String,
+    /// The server's own words for a failure.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+    /// The chat's title as it is now (a new chat's title may not be in yet).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+}
+
+/// Params for `intents.chats`: the chats Shortcuts offers for Open Chat.
+///
+/// With `ids`, those chats (a saved shortcut checking that its chat is still
+/// there); else with `query`, the chats that match it; else the recent ones.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IntentChatsQuery {
+    #[serde(default)]
+    pub ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub query: Option<String>,
+    #[serde(default = "default_intent_chats_query_limit")]
+    pub limit: i64,
+}
+
+impl Default for IntentChatsQuery {
+    fn default() -> Self {
+        Self {
+            ids: Default::default(),
+            query: None,
+            limit: default_intent_chats_query_limit(),
+        }
+    }
+}
+
+fn default_intent_chats_query_limit() -> i64 {
+    20
+}
+
+/// One chat as Shortcuts shows it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IntentChat {
+    pub id: String,
+    pub title: String,
+    #[serde(default)]
+    pub updated_at_ms: i64,
+    #[serde(default)]
+    pub pinned: bool,
+}
+
+/// Reply to `intents.chats`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct IntentChats {
+    #[serde(default)]
+    pub chats: Vec<IntentChat>,
+}
+
+/// What checking an address for a LibreChat server found.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum LibreChatProbeOutcome {
+    /// A LibreChat server answered: `LibreChatProbeResult.server` says how to
+    /// sign in to it.
+    #[serde(rename = "found")]
+    Found,
+    /// Something answered, but not LibreChat.
+    #[serde(rename = "notLibreChat")]
+    NotLibreChat,
+    /// An Open WebUI server answered: add it as an Open WebUI account instead.
+    #[serde(rename = "openWebUi")]
+    OpenWebUi,
+    /// Nothing answered, or the server was too busy to say what it is.
+    #[serde(rename = "unreachable")]
+    Unreachable,
+    /// The address is not one a server can be reached at.
+    #[serde(rename = "invalidAddress")]
+    InvalidAddress,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// A single sign-on button the server's sign-in page offers.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatSsoProviderDto {
+    /// `openid`, `github`, `google`, `facebook`, `discord`, `saml` or
+    /// `apple`: the path segment of `/oauth/{kind}`.
+    pub kind: String,
+    /// The admin's own name for it (OpenID and SAML only); the window names
+    /// the others itself.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+}
+
+/// A LibreChat server, as its public startup config describes signing in.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatServerDto {
+    /// The address, normalized: what accounts on it are saved under.
+    pub base_url: String,
+    /// The server's own name (`appTitle`).
+    pub title: String,
+    /// Whether the form takes an email (or LDAP username) and password.
+    #[serde(default = "default_libre_chat_server_dto_password_sign_in")]
+    pub password_sign_in: bool,
+    /// LDAP checks the password; `ldapUsesUsername` asks for a username
+    /// rather than an email.
+    #[serde(default)]
+    pub ldap: bool,
+    #[serde(default)]
+    pub ldap_uses_username: bool,
+    /// The single sign-on buttons, in the server's order.
+    #[serde(default)]
+    pub sso_providers: Vec<LibreChatSsoProviderDto>,
+}
+
+fn default_libre_chat_server_dto_password_sign_in() -> bool {
+    true
+}
+
+/// Params for `librechat.probe`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatProbe {
+    pub url: String,
+}
+
+/// Reply to `librechat.probe`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatProbeResult {
+    pub outcome: LibreChatProbeOutcome,
+    /// Set when `outcome` is `LibreChatProbeOutcome.found`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub server: Option<LibreChatServerDto>,
+}
+
+/// Params for `librechat.signIn`: an email (or LDAP username) and password.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatSignIn {
+    /// The server, as `librechat.probe` normalized it.
+    pub url: String,
+    pub email: String,
+    pub password: String,
+    /// Put the account in charge even while an answer is being written in
+    /// the account it replaces, stopping it.
+    #[serde(default)]
+    pub force: bool,
+}
+
+/// Params for `librechat.verify`: the second step of a sign-in.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatVerify {
+    /// From the `twoFactorRequired` reply. The server's own token stays in
+    /// the daemon.
+    pub flow_id: String,
+    pub code: String,
+    /// `code` is a backup code rather than the authenticator app's.
+    #[serde(default)]
+    pub backup_code: bool,
+    #[serde(default)]
+    pub force: bool,
+}
+
+/// Params for `librechat.ssoStart`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatSsoStart {
+    pub url: String,
+    /// A `LibreChatSsoProviderDto.kind`.
+    pub provider: String,
+}
+
+/// Reply to `librechat.ssoStart`: where the sign-in window starts, and how
+/// it tells the server's pages from the provider's.
+///
+/// LibreChat signs in through `/oauth/{provider}`, the provider, and back
+/// to `/oauth/{provider}/callback`, which sets the session's cookies and
+/// sends the browser on to its web app. The window stops at that last hop
+/// (the web app would renew the session and rotate its cookie) and hands the
+/// cookies of `cookieUrl` to `librechat.completeSso`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatSsoPlan {
+    pub start_url: String,
+    pub cookie_url: String,
+    /// The server's origins (`scheme://host[:port]`): the address typed and
+    /// the one it names as its own.
+    #[serde(default)]
+    pub server_origins: Vec<String>,
+    /// The server's path below its origin (`/chat`), or empty.
+    #[serde(default)]
+    pub base_path: String,
+    /// This start's id. `librechat.completeSso` names it: only the single
+    /// sign-on started last completes, so cookies an older sign-in window
+    /// left put no account in charge.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_id: Option<String>,
+}
+
+/// Params for `librechat.completeSso`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatSsoCompletion {
+    pub url: String,
+    /// The cookies the sign-in left for `LibreChatSsoPlan.cookieUrl`, by
+    /// name. Only `refreshToken` and `token_provider` are kept.
+    #[serde(default)]
+    pub cookies: BTreeMap<String, String>,
+    #[serde(default)]
+    pub force: bool,
+    /// `LibreChatSsoPlan.startId` of the start these cookies came from. A
+    /// completion naming another start, or none, is refused with
+    /// `LibreChatSignInOutcome.expired`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_id: Option<String>,
+}
+
+/// How a sign-in step went.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum LibreChatSignInOutcome {
+    /// Signed in, saved, and in charge of the chats.
+    #[serde(rename = "signedIn")]
+    SignedIn,
+    /// The account uses two-step verification: `librechat.verify` with
+    /// `LibreChatSignInResult.flowId` and a code.
+    #[serde(rename = "twoFactorRequired")]
+    TwoFactorRequired,
+    /// The server refused the email or password (its words in
+    /// `LibreChatSignInResult.serverMessage`).
+    #[serde(rename = "rejected")]
+    Rejected,
+    /// The code was not accepted; try another.
+    #[serde(rename = "invalidCode")]
+    InvalidCode,
+    /// The two-step sign-in ran out of time or was never started: start over.
+    #[serde(rename = "expired")]
+    Expired,
+    /// The server could not be reached.
+    #[serde(rename = "unreachable")]
+    Unreachable,
+    /// Signed in and saved, but an answer is still being written in the
+    /// account it would replace: ask, then `accounts.switch` with `force`.
+    #[serde(rename = "blockedByActiveReply")]
+    BlockedByActiveReply,
+    /// The single sign-on left no session.
+    #[serde(rename = "ssoUnfinished")]
+    SsoUnfinished,
+    /// Something else failed, such as saving the session.
+    #[serde(rename = "failed")]
+    Failed,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Reply to the sign-in steps.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatSignInResult {
+    pub outcome: LibreChatSignInOutcome,
+    /// For `LibreChatSignInOutcome.twoFactorRequired`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flow_id: Option<String>,
+    /// The account signed in to, once saved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub account_id: Option<String>,
+    /// What the server said, in its own words, when it refused. Shown as it
+    /// is, as the phone shows it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub server_message: Option<String>,
+    /// The accounts after the step.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub accounts: Option<AccountList>,
+}
+
+/// Params for `librechat.composer`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatComposerTarget {
+    /// The model the composer sends with; the account's selection when
+    /// absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_id: Option<String>,
+}
+
+/// One of the user's MCP servers the composer offers.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatMcpServerDto {
+    pub name: String,
+    /// What a turn sends in `turns.send`'s `toolIds` to use it.
+    pub tool_id: String,
+    #[serde(default)]
+    pub tool_count: i64,
+    /// It needs signing in to, which only LibreChat's web app can do:
+    /// "Connect in LibreChat" opens `LibreChatComposer.webUrl`.
+    #[serde(default)]
+    pub needs_connection: bool,
+}
+
+/// Reply to `librechat.composer`: the tools a LibreChat turn may ask for.
+///
+/// Each is chosen by putting its tool id in `turns.send`'s `toolIds`, as
+/// Open WebUI's tools are. A saved agent or a model spec brings its own
+/// tools, so none is offered for one.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatComposer {
+    /// The model is a LibreChat one.
+    #[serde(default)]
+    pub libre_chat: bool,
+    /// The tool ids of the switches, null where the server or role does
+    /// not allow it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub web_search_tool_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub code_interpreter_tool_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_search_tool_id: Option<String>,
+    #[serde(default)]
+    pub mcp_servers: Vec<LibreChatMcpServerDto>,
+    /// The prompt library is offered for `/`.
+    #[serde(default)]
+    pub prompts: bool,
+    /// The server's web app, where an MCP server is connected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub web_url: Option<String>,
+}
+
+/// One saved memory.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatMemoryDto {
+    pub key: String,
+    pub value: String,
+    #[serde(default)]
+    pub token_count: i64,
+    /// UTC milliseconds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updated_ms: Option<i64>,
+}
+
+/// Reply to the `librechat.memories.*` methods.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatMemories {
+    /// The user's own switch: whether the assistant uses and updates them.
+    #[serde(default = "default_libre_chat_memories_enabled")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub memories: Vec<LibreChatMemoryDto>,
+    #[serde(default)]
+    pub total_tokens: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_limit: Option<i64>,
+    /// 0 to 100, when the server says.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage_percent: Option<i64>,
+    /// What the role allows.
+    #[serde(default)]
+    pub can_create: bool,
+    #[serde(default)]
+    pub can_update: bool,
+    #[serde(default)]
+    pub can_opt_out: bool,
+}
+
+impl Default for LibreChatMemories {
+    fn default() -> Self {
+        Self {
+            enabled: default_libre_chat_memories_enabled(),
+            memories: Default::default(),
+            total_tokens: Default::default(),
+            token_limit: None,
+            usage_percent: None,
+            can_create: Default::default(),
+            can_update: Default::default(),
+            can_opt_out: Default::default(),
+        }
+    }
+}
+
+fn default_libre_chat_memories_enabled() -> bool {
+    true
+}
+
+/// Params for `librechat.memories.save`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatMemoryEdit {
+    /// The memory being edited, which may be renamed to `key`; null adds a
+    /// new one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub original_key: Option<String>,
+    /// Lowercase letters and underscores, as LibreChat requires.
+    pub key: String,
+    pub value: String,
+}
+
+/// Params for `librechat.memories.delete`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatMemoryRef {
+    pub key: String,
+}
+
+/// Params for `librechat.memories.setEnabled`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibreChatMemoryToggle {
+    pub enabled: bool,
 }
 
 /// How the app signs in to an MCP server.
@@ -3861,6 +8153,12 @@ pub struct McpServerSummary {
     /// Whether an OAuth sign-in has been completed and is still held.
     #[serde(default)]
     pub oauth_connected: bool,
+    /// For a held OAuth sign-in: the authorization server's host, and the
+    /// scopes it granted (empty when it reported none).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub oauth_issuer_host: Option<String>,
+    #[serde(default)]
+    pub oauth_scopes: Vec<String>,
     /// The user agreed to send credentials over plain HTTP to this
     /// endpoint.
     #[serde(default)]
@@ -4357,6 +8655,11 @@ pub struct ModelSummary {
     /// and the server may too.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub connection: Option<String>,
+    /// A direct model's maker (or provider): the id of a logo in the
+    /// app's bundled models.dev catalog (`openai`, `ollama-cloud`). Null
+    /// draws the model's initial.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub logo: Option<String>,
 }
 
 /// Reply to `models.list`.
@@ -4508,6 +8811,26 @@ pub struct SetFastTier {
     pub on: bool,
 }
 
+/// Where a note falls in the notes list's time groups, by when it last
+/// changed: the core's own calendar days, as the phone groups them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum NoteSection {
+    #[serde(rename = "today")]
+    Today,
+    #[serde(rename = "yesterday")]
+    Yesterday,
+    #[serde(rename = "previous7Days")]
+    Previous7Days,
+    #[serde(rename = "previous30Days")]
+    Previous30Days,
+    #[serde(rename = "older")]
+    Older,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
 /// A note, as the list shows it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -4524,6 +8847,32 @@ pub struct NoteSummary {
     /// computer's version, while another device's won the original.
     #[serde(default)]
     pub conflict_copy: bool,
+    /// Its time group in the notes list (pinned notes have one too).
+    #[serde(default = "default_note_summary_section")]
+    pub section: NoteSection,
+    /// The account may change it: its own note, or one shared with write
+    /// access. Any other note opens read-only and offers no Delete.
+    #[serde(default = "default_note_summary_can_edit")]
+    pub can_edit: bool,
+    /// Not editable only because the server has not said yet whether the
+    /// account may edit this shared note (offline): reconnecting tells.
+    #[serde(default)]
+    pub access_unverified: bool,
+    /// Share Access… is offered: a note on the server the account may
+    /// edit, on a server that lets it share notes.
+    #[serde(default)]
+    pub can_share: bool,
+    /// Who shared it, when it is someone else's note.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner: Option<String>,
+}
+
+fn default_note_summary_section() -> NoteSection {
+    NoteSection::Older
+}
+
+fn default_note_summary_can_edit() -> bool {
+    true
 }
 
 /// Reply to `notes.list`: pinned first, then most recently changed.
@@ -4551,11 +8900,126 @@ pub struct NoteQuery {
 #[serde(rename_all = "camelCase")]
 pub struct NoteDetail {
     pub summary: NoteSummary,
+    /// The body of page `pageId`, as Quill ops.
     #[serde(default)]
     pub ops: Vec<serde_json::Value>,
     /// Files attached to the note: recordings, documents.
     #[serde(default)]
     pub files: Vec<NoteFile>,
+    /// An Open WebUI 0.12.5 note's pages, parents before their subpages;
+    /// empty for a note with one page.
+    #[serde(default)]
+    pub pages: Vec<NotePageDto>,
+    /// The page `ops` are: the main page (`main`) unless asked for another.
+    #[serde(default = "default_note_detail_page_id")]
+    pub page_id: String,
+    /// Page `pageId`'s stored markdown (Copy copies it, as the phone's
+    /// Copy does).
+    #[serde(default)]
+    pub markdown: String,
+    /// Set by `notes.save` when the note had been deleted elsewhere: the
+    /// text was kept as this new note, and this is the deleted one's id.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recovered_from: Option<String>,
+}
+
+fn default_note_detail_page_id() -> String {
+    "main".to_owned()
+}
+
+/// A page of a note with several (Open WebUI 0.12.5 and later). Adding,
+/// renaming and moving pages is done on the web.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NotePageDto {
+    pub id: String,
+    pub title: String,
+    /// The titles down to it (`Plans / Spring`), as VoiceOver reads it.
+    #[serde(default)]
+    pub path: String,
+    /// How deep it is nested: 0 for a top-level page.
+    #[serde(default)]
+    pub depth: i64,
+}
+
+/// Params for `notes.get`: the note, and the page to read (by default the
+/// main page).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NoteOpen {
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page_id: Option<String>,
+}
+
+/// The state of a recording made in a note, while it waits to be attached.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum NoteRecordingState {
+    /// Saved on this Mac; it uploads when the server can be reached.
+    #[serde(rename = "waiting")]
+    Waiting,
+    /// Uploading, or being attached to the note.
+    #[serde(rename = "uploading")]
+    Uploading,
+    /// The upload failed; it is kept for another try.
+    #[serde(rename = "failed")]
+    Failed,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// A recording made in a note and not attached yet. It is kept on this Mac
+/// until the server has it, through a lost connection or a relaunch.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NoteRecordingDto {
+    pub id: String,
+    pub name: String,
+    #[serde(default = "default_note_recording_dto_state")]
+    pub state: NoteRecordingState,
+    #[serde(default)]
+    pub size: i64,
+    #[serde(default)]
+    pub created_at_ms: i64,
+    /// The page it was made on, which it is attached to.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page_id: Option<String>,
+}
+
+fn default_note_recording_dto_state() -> NoteRecordingState {
+    NoteRecordingState::Waiting
+}
+
+/// Reply to `notes.recordings` and the calls that change them: a note's
+/// recordings not attached yet, oldest first.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NoteRecordings {
+    pub note_id: String,
+    #[serde(default)]
+    pub recordings: Vec<NoteRecordingDto>,
+}
+
+/// Params for `notes.addRecording`: an audio file the window recorded, which
+/// the daemon moves into the account's storage before anything else, then
+/// uploads and attaches to page `pageId` (by default the main page).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NoteRecordingAdd {
+    pub note_id: String,
+    pub path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page_id: Option<String>,
+}
+
+/// Params naming one of a note's waiting recordings.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NoteRecordingRef {
+    pub note_id: String,
+    pub id: String,
 }
 
 /// A file attached to a note, stored as an Open WebUI file.
@@ -4571,25 +9035,49 @@ pub struct NoteFile {
     pub content_type: Option<String>,
 }
 
-/// Params for `notes.attach`: a file already uploaded through `/upload`.
+/// Params for `notes.attach`: a file already uploaded through `/upload`,
+/// linked from page `pageId` (by default the main page) on a server with
+/// pages.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteAttach {
     pub note_id: String,
     pub file: NoteFile,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page_id: Option<String>,
 }
 
-/// Params for `notes.detach`.
+/// Params for `notes.detach`: the file comes out of the file list and out
+/// of page `pageId`'s links (by default the main page's).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteDetach {
     pub note_id: String,
     pub file_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page_id: Option<String>,
 }
 
 /// Params for `notes.save`: a new note when `id` is null.
 ///
-/// `ops` null leaves the body alone (a rename); otherwise it replaces it.
+/// `ops` null leaves the body alone (a rename); otherwise it replaces the
+/// body of page `pageId` (by default the main page).
+///
+/// `baseOps` is that page as the editor last loaded or saved it. A file
+/// the stored page gained since (a recording attached meanwhile) is kept,
+/// and a file link the user took out stays out, as the phone merges them.
+///
+/// Refusals, as errors: `resource.conflict` with `reason: readOnly` when
+/// the account may no longer edit the note (the text stays in the
+/// editor); `resource.notFound` with `reason: page` when the page was
+/// removed elsewhere. A note deleted elsewhere is not refused: the text
+/// is kept as a new note (`NoteDetail.recoveredFrom`).
+///
+/// `accountId`: the account the editor opened the note under (an account's
+/// id, as `AccountRef.accountId`). When another account is active, the save
+/// -- a new note too -- is refused with `auth.sessionExpired`, `reason:
+/// account`, and nothing is written: the text stays with the editor for
+/// that account.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteSave {
@@ -4598,6 +9086,12 @@ pub struct NoteSave {
     pub title: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ops: Option<Vec<serde_json::Value>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_ops: Option<Vec<serde_json::Value>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub account_id: Option<String>,
 }
 
 /// Params naming one note.
@@ -5015,6 +9509,145 @@ pub struct QueueSendNowResult {
     /// `blockedByUpload`, `stopFailed`, `changed` or `admissionFailed`.
     pub outcome: String,
     pub queue: QueueState,
+}
+
+/// Names the draft whose recordings these are: a stored chat's, or a new
+/// chat's (in a folder, or none), as `drafts.*` does. Params for
+/// `recordings.list` and `recordings.begin`.
+///
+/// A recording is the audio of a dictation, kept in the account's database
+/// with the unsent draft (never in chat history or a sync payload) until
+/// the draft is sent or the recording discarded. A temporary or read-only
+/// chat keeps none.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingTarget {
+    /// Null for a chat not started yet.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chat_id: Option<String>,
+    /// A new chat's folder; ignored with a `chatId`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folder_id: Option<String>,
+}
+
+/// One saved recording: 16 kHz mono 16-bit PCM.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingDto {
+    pub id: String,
+    /// When it started, in milliseconds since the epoch.
+    #[serde(default)]
+    pub created_at: i64,
+    #[serde(default)]
+    pub byte_count: i64,
+    /// How long it is, from `byteCount`.
+    #[serde(default)]
+    pub duration_ms: i64,
+}
+
+/// Reply to `recordings.list` and `recordings.discard`: the draft's
+/// recordings, oldest first.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingList {
+    /// False when the draft keeps none (a temporary or read-only chat).
+    #[serde(default = "default_recording_list_stored")]
+    pub stored: bool,
+    #[serde(default)]
+    pub recordings: Vec<RecordingDto>,
+}
+
+impl Default for RecordingList {
+    fn default() -> Self {
+        Self {
+            stored: default_recording_list_stored(),
+            recordings: Default::default(),
+        }
+    }
+}
+
+fn default_recording_list_stored() -> bool {
+    true
+}
+
+/// Reply to `recordings.begin`: the new recording, or none when the draft
+/// keeps no recordings (the window then holds the audio itself).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingStarted {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(default = "default_recording_started_stored")]
+    pub stored: bool,
+}
+
+impl Default for RecordingStarted {
+    fn default() -> Self {
+        Self {
+            id: None,
+            stored: default_recording_started_stored(),
+        }
+    }
+}
+
+fn default_recording_started_stored() -> bool {
+    true
+}
+
+/// Params for `recordings.append`: the next audio of an open recording.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingChunk {
+    pub id: String,
+    /// 16 kHz mono 16-bit little-endian PCM, base64.
+    pub pcm: String,
+}
+
+/// Reply to `recordings.append` and `recordings.close`: how much of the
+/// recording is safely stored.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingSaved {
+    pub id: String,
+    #[serde(default)]
+    pub saved_bytes: i64,
+    /// Closed with nothing in it, so not kept.
+    #[serde(default)]
+    pub discarded: bool,
+}
+
+/// Params for `recordings.close` and `recordings.discard`, and for
+/// `GET /recordings/{id}` (as its query): a recording of a draft.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingRef {
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chat_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folder_id: Option<String>,
+}
+
+/// Params for `recordings.transcribe`: a saved recording, as text.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingTranscribe {
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chat_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folder_id: Option<String>,
+    /// `server` (the model's backend) or `local` (whisper on this
+    /// computer).
+    #[serde(default = "default_recording_transcribe_engine")]
+    pub engine: String,
+    /// The chat's model, whose backend transcribes on the server.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_id: Option<String>,
+}
+
+fn default_recording_transcribe_engine() -> String {
+    "server".to_owned()
 }
 
 /// One version's release note, as core's catalog reads it.
@@ -5683,6 +10316,370 @@ pub struct AboutInfo {
     pub github_sponsors_url: String,
 }
 
+/// Where a reading is: the phone's `TtsPlaybackStatus`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SpeechStatus {
+    #[serde(rename = "idle")]
+    Idle,
+    #[serde(rename = "initializing")]
+    Initializing,
+    #[serde(rename = "loading")]
+    Loading,
+    #[serde(rename = "speaking")]
+    Speaking,
+    #[serde(rename = "paused")]
+    Paused,
+    #[serde(rename = "error")]
+    Error,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// What reads aloud: the Mac's own voices (`device`) or the chat's server
+/// (`server`: Open WebUI, the Direct voice provider, Hermes or LibreChat).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SpeechEngine {
+    #[serde(rename = "device")]
+    Device,
+    #[serde(rename = "server")]
+    Server,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// A reading's progress: what `speech.changed` carries. Its sentences come
+/// with `SpeechState`, fetched once per `reading`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeechProgress {
+    #[serde(default = "default_speech_progress_status")]
+    pub status: SpeechStatus,
+    /// Each reading's own number: when it changes, the sentences did too.
+    #[serde(default)]
+    pub reading: i64,
+    /// The chat the message is in. None for Settings' preview.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chat_id: Option<String>,
+    /// The message read: an answer's id (a version's while one is shown),
+    /// or `tts_preview` for Settings' preview.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub engine: Option<SpeechEngine>,
+    /// The sentence being said, or -1.
+    #[serde(default = "default_speech_progress_sentence")]
+    pub sentence: i64,
+    /// The word being said, as UTF-16 offsets in the sentence: reported by
+    /// the Mac's voices, estimated from the position for server speech.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub word_start: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub word_end: Option<i64>,
+    /// Whether the engine reports each word as it says it.
+    #[serde(default)]
+    pub words_reported: bool,
+    #[serde(default)]
+    pub elapsed_ms: i64,
+    /// The whole reading's length, once known (server speech); 0 otherwise.
+    #[serde(default)]
+    pub duration_ms: i64,
+    /// Whether the reading can move to a time (`durationMs` known).
+    #[serde(default)]
+    pub can_seek: bool,
+    /// Whether it can move from sentence to sentence.
+    #[serde(default)]
+    pub can_seek_sentences: bool,
+    #[serde(default)]
+    pub seeking: bool,
+    /// What went wrong, for the log; the window says it in its own words.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+impl Default for SpeechProgress {
+    fn default() -> Self {
+        Self {
+            status: default_speech_progress_status(),
+            reading: Default::default(),
+            chat_id: None,
+            message_id: None,
+            engine: None,
+            sentence: default_speech_progress_sentence(),
+            word_start: None,
+            word_end: None,
+            words_reported: Default::default(),
+            elapsed_ms: Default::default(),
+            duration_ms: Default::default(),
+            can_seek: Default::default(),
+            can_seek_sentences: Default::default(),
+            seeking: Default::default(),
+            error: None,
+        }
+    }
+}
+
+fn default_speech_progress_status() -> SpeechStatus {
+    SpeechStatus::Idle
+}
+
+fn default_speech_progress_sentence() -> i64 {
+    -1
+}
+
+/// The reading now, with its sentences: what every `speech.*` call answers.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeechState {
+    pub progress: SpeechProgress,
+    /// The text read, as the engine says it, sentence by sentence.
+    #[serde(default)]
+    pub sentences: Vec<String>,
+}
+
+/// Params for `speech.toggle`: reads an answer aloud, or stops (pauses
+/// resume) the reading of it, as the phone's Read Aloud button does.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeechToggle {
+    pub chat_id: String,
+    /// The answer's id (a version's while one is shown).
+    pub message_id: String,
+}
+
+/// Params for `speech.seek`: moves the reading to the start of a sentence,
+/// or by some sentences (`by`), or to a time (`ms`); exactly one is given.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeechSeek {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sentence: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub by: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ms: Option<i64>,
+}
+
+/// Params for `speech.preview`: Settings › Audio's sample, in the chosen
+/// engine, voice and speed. Pressing it again stops it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeechPreview {
+    pub text: String,
+}
+
+/// What `speech.command` asks the window's speech engine to do.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SpeechCommandKind {
+    /// Whether the Mac's voices can speak: answered with `SpeechReport.value`.
+    #[serde(rename = "deviceAvailable")]
+    DeviceAvailable,
+    /// The installed voices: answered with `SpeechReport.voices`.
+    #[serde(rename = "deviceVoices")]
+    DeviceVoices,
+    /// Say `SpeechCommand.text` as utterance `SpeechCommand.utterance`,
+    /// replacing whatever is being said without reporting a cancel for it.
+    #[serde(rename = "deviceSpeak")]
+    DeviceSpeak,
+    #[serde(rename = "devicePause")]
+    DevicePause,
+    #[serde(rename = "deviceResume")]
+    DeviceResume,
+    /// Stop speaking; the utterance reports `cancel`.
+    #[serde(rename = "deviceStop")]
+    DeviceStop,
+    /// Replace the queue with `SpeechCommand.clips`, at
+    /// `SpeechCommand.index` and `SpeechCommand.positionMs`.
+    #[serde(rename = "playerSet")]
+    PlayerSet,
+    /// Append `SpeechCommand.clips` without interrupting.
+    #[serde(rename = "playerAdd")]
+    PlayerAdd,
+    #[serde(rename = "playerClear")]
+    PlayerClear,
+    #[serde(rename = "playerPlay")]
+    PlayerPlay,
+    #[serde(rename = "playerPause")]
+    PlayerPause,
+    #[serde(rename = "playerStop")]
+    PlayerStop,
+    /// Move to `SpeechCommand.positionMs` in clip `SpeechCommand.index` (the
+    /// current one when null).
+    #[serde(rename = "playerSeek")]
+    PlayerSeek,
+    /// Play at `SpeechCommand.speed` (1 is normal).
+    #[serde(rename = "playerSpeed")]
+    PlayerSpeed,
+    /// The length of clip `SpeechCommand.clips`' first, without playing it:
+    /// answered with `SpeechReport.durationMs`.
+    #[serde(rename = "playerDuration")]
+    PlayerDuration,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Payload of `speech.command`: the daemon runs the reading, the window
+/// speaks and plays it. Answered with `speech.report` naming `id`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeechCommand {
+    pub id: i64,
+    pub kind: SpeechCommandKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    /// An installed voice's identifier, or null for the system's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voice: Option<String>,
+    /// AVSpeech's rate (0.5 is the voice's own pace), pitch and volume.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rate: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pitch: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub volume: Option<f64>,
+    /// The utterance `text` is: events report it, so a replaced one's
+    /// late events are told apart.
+    #[serde(default)]
+    pub utterance: i64,
+    /// Clips, as paths the window fetches from the daemon (`/tts/{job}`).
+    #[serde(default)]
+    pub clips: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position_ms: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub speed: Option<f64>,
+}
+
+/// What a `SpeechReport` tells, besides answering a command.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SpeechReportKind {
+    /// The Mac's voice: started, said a word (`SpeechReport.start` to
+    /// `SpeechReport.end`), finished, was cancelled, paused, continued, or
+    /// failed.
+    #[serde(rename = "start")]
+    Start,
+    #[serde(rename = "progress")]
+    Progress,
+    #[serde(rename = "complete")]
+    Complete,
+    #[serde(rename = "cancel")]
+    Cancel,
+    #[serde(rename = "pause")]
+    Pause,
+    #[serde(rename = "resume")]
+    Resume,
+    #[serde(rename = "failed")]
+    Failed,
+    /// The player: playing or not, how ready, which clip and where.
+    #[serde(rename = "player")]
+    Player,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// How ready the window's player is: core's `AudioProcessingState`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SpeechPlayerState {
+    #[serde(rename = "idle")]
+    Idle,
+    #[serde(rename = "loading")]
+    Loading,
+    #[serde(rename = "buffering")]
+    Buffering,
+    #[serde(rename = "ready")]
+    Ready,
+    #[serde(rename = "completed")]
+    Completed,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// An installed voice, for `deviceVoices`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeechVoice {
+    pub id: String,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub language: String,
+}
+
+/// Params for `speech.report`: a command's answer (`id`) and/or what the
+/// engine did (`kind`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeechReport {
+    /// The command answered, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<i64>,
+    /// Whether the command was carried out; `error` says why not.
+    #[serde(default = "default_speech_report_ok")]
+    pub ok: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// A yes/no answer (`deviceAvailable`, `deviceSpeak`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<i64>,
+    #[serde(default)]
+    pub voices: Vec<SpeechVoice>,
+    /// What happened, when it reports an event.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<SpeechReportKind>,
+    #[serde(default)]
+    pub utterance: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end: Option<i64>,
+    #[serde(default)]
+    pub playing: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<SpeechPlayerState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position_ms: Option<i64>,
+}
+
+impl Default for SpeechReport {
+    fn default() -> Self {
+        Self {
+            id: None,
+            ok: default_speech_report_ok(),
+            error: None,
+            value: None,
+            duration_ms: None,
+            voices: Default::default(),
+            kind: None,
+            utterance: Default::default(),
+            start: None,
+            end: None,
+            playing: Default::default(),
+            state: None,
+            index: None,
+            position_ms: None,
+        }
+    }
+}
+
+fn default_speech_report_ok() -> bool {
+    true
+}
+
 /// Reply to `system.ping`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -5732,7 +10729,14 @@ pub enum UiRequestKind {
     /// An MCP server is requesting authorization for a capability.
     #[serde(rename = "mcpApproval")]
     McpApproval,
-    /// A Hermes run needs a decision before it continues.
+    /// A Hermes run needs a decision before it continues. `messageCode`
+    /// says which: `hermes.approval` (run a command or write a file:
+    /// `messageArgs.summary`, `detail.choices` from `once`, `session`,
+    /// `always` and `deny`, and a paid tool's `detail.cost` `{price,
+    /// approximate, note, spent, limit, server, overLimit}`), answered with
+    /// `ui.respond`; or `hermes.mcpSetup` (set up an MCP server:
+    /// `messageArgs.server`, `messageArgs.action`), answered with
+    /// `hermes.decisions.answer` (`approve` or `decline`).
     #[serde(rename = "hermesDecision")]
     HermesDecision,
     /// A plain confirm/cancel.
@@ -5748,6 +10752,36 @@ pub enum UiRequestKind {
     /// `allow` opens it in the browser (the window does, on `openUrl`).
     #[serde(rename = "mcpAppOpenLink")]
     McpAppOpenLink,
+    /// A Hermes agent asks one or more questions as a form: `detail.chatId`,
+    /// `detail.questions` (each `{id, text, choices: [{value, label,
+    /// recommended}], multiSelect, locked, lockedAnswer}`; up to five) and
+    /// `messageArgs.prompt`. Answered with `hermes.decisions.answer`
+    /// (`answers`, one per open question, null to skip); `deny` only closes
+    /// the card here.
+    #[serde(rename = "hermesClarify")]
+    HermesClarify,
+    /// A Hermes agent needs the sudo password to run a command:
+    /// `messageArgs.prompt`, `detail.chatId`. Answered with
+    /// `hermes.decisions.answer` (`value`), which is never logged or kept.
+    #[serde(rename = "hermesSudo")]
+    HermesSudo,
+    /// A Hermes agent needs a secret (an API key, a token):
+    /// `messageArgs.prompt`, `detail.chatId`. Answered with
+    /// `hermes.decisions.answer` (`value`), which is never logged or kept.
+    #[serde(rename = "hermesSecret")]
+    HermesSecret,
+    /// A LibreChat agent paused its run to ask the user something.
+    /// `detail` has `question`, an optional `description`, `options` (a list
+    /// of `{label, description?}`) and `multiSelect`; `messageArgs.chatId`
+    /// names the chat. The answer goes back as `UiResponse.text` (an
+    /// option's label, several joined with ", ", or the user's own words)
+    /// with choice `answer` (or `allow`, as the window's question card says
+    /// it); `cancel` stops the reply.
+    ///
+    /// A LibreChat tool call waiting for approval is a `toolApproval` with
+    /// `detail.backend` `libreChat`.
+    #[serde(rename = "libreChatQuestion")]
+    LibreChatQuestion,
     /// A value this build does not know, from a newer daemon. It decodes
     /// only: it encodes as `"unknown"`, which the daemon refuses.
     #[serde(other, rename = "unknown")]
@@ -6097,12 +11131,18 @@ pub struct TerminalPortRef {
 }
 
 /// Reply to `terminal.previewPort`: an address on this computer that
-/// shows the port, for the system browser. It carries a one-time key;
-/// the daemon adds the credential on the way through.
+/// shows the port, for a web view or the system browser. It carries a key
+/// the first visit swaps for a cookie, and a `to` query (a path on the
+/// port, `/` by default) says where that visit lands; the daemon adds the
+/// credential, and a sign-in proxy's cookies, on the way through.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TerminalPreview {
     pub url: String,
+    /// Scripts a web view showing the preview runs at the start of each
+    /// page (the core's `terminalPreviewNavigationScript`).
+    #[serde(default)]
+    pub scripts: Vec<String>,
 }
 
 /// Payload of `terminal.displayFile`: a model's tool asks to show a file
@@ -6112,6 +11152,43 @@ pub struct TerminalPreview {
 pub struct TerminalDisplayFile {
     pub chat_id: String,
     pub path: String,
+    /// For a PDF, the 1-based page to open at; null for the first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page: Option<i64>,
+}
+
+/// Params for `terminal.watch`: keep `path`'s listing and the listening
+/// ports live, through the terminal's events socket (Open Terminal's
+/// `/events`, relayed by Open WebUI 0.13). Calling it again moves the
+/// watch to another directory.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalWatch {
+    pub handle: String,
+    pub path: String,
+}
+
+/// Reply to `terminal.watch`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalWatching {
+    /// Whether the server reports changes at all. When false the window
+    /// refreshes on demand, as before.
+    #[serde(default)]
+    pub live: bool,
+}
+
+/// Payload of `terminal.changed`: what changed on a watched handle's
+/// machine. `files` when the watched directory changed (list it again);
+/// `ports` when the listening ports changed, with the new list.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalChanged {
+    pub handle: String,
+    #[serde(default)]
+    pub files: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ports: Option<Vec<TerminalPort>>,
 }
 
 /// Params for `turns.send`.
@@ -6315,6 +11392,12 @@ pub struct TurnFinished {
     /// Why it failed (a `ConduitErrorCodes` value); absent when `ok`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub code: Option<String>,
+    /// The answer did not go out: its request waits in the outbox (sent
+    /// while offline) and the chat's stored copy shows it queued. Nothing
+    /// is ready yet, so no "answer ready"; when it goes out, its own
+    /// `turn.*` events follow. `ok` stays true: nothing failed.
+    #[serde(default)]
+    pub queued: bool,
 }
 
 /// Payload of `turn.completed`.
@@ -6776,6 +11859,11 @@ pub struct VoiceSpeak {
     pub text: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub voice: Option<String>,
+    /// The chat whose backend speaks it (its model's: Open WebUI, the
+    /// Direct voice provider, Hermes or LibreChat); the active server's
+    /// when null.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chat_id: Option<String>,
 }
 
 /// Reply to `voice.speak`: the job whose audio `GET /tts/{jobId}` plays.
@@ -6831,6 +11919,94 @@ pub struct VoiceModels {
 #[serde(rename_all = "camelCase")]
 pub struct VoiceModelRef {
     pub id: String,
+}
+
+/// A search engine on-device web search can use.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebSearchEngineDto {
+    /// What is stored: `auto` (try each in turn), `duckduckgo`, `brave`,
+    /// `bing` or `mojeek`.
+    pub id: String,
+    /// The engine's own name; empty for `auto`, which the window names.
+    #[serde(default)]
+    pub name: String,
+}
+
+/// A region on-device searches can ask for results from.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebSearchRegionDto {
+    /// A `country-language` code (`de-de`); `wt-wt` is worldwide.
+    pub code: String,
+    /// The region's own name for itself, so it needs no translating;
+    /// empty for worldwide, which the window names.
+    #[serde(default)]
+    pub name: String,
+}
+
+/// Reply to `webSearch.get` and `webSearch.set`: how the web search the
+/// app runs itself (for direct models with no search of their own) is
+/// set up.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebSearchSettings {
+    /// An `WebSearchEngineDto.id`.
+    #[serde(default = "default_web_search_settings_engine")]
+    pub engine: String,
+    #[serde(default)]
+    pub engines: Vec<WebSearchEngineDto>,
+    /// `strict`, `moderate` or `off`.
+    #[serde(default = "default_web_search_settings_safe_search")]
+    pub safe_search: String,
+    /// The region chosen; null follows this Mac's language and region.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub region: Option<String>,
+    /// The region searches use now: `region`, or the one this Mac's
+    /// settings give (`wt-wt` when none matches).
+    #[serde(default = "default_web_search_settings_effective_region")]
+    pub effective_region: String,
+    /// Worldwide first, then every region by name.
+    #[serde(default)]
+    pub regions: Vec<WebSearchRegionDto>,
+}
+
+impl Default for WebSearchSettings {
+    fn default() -> Self {
+        Self {
+            engine: default_web_search_settings_engine(),
+            engines: Default::default(),
+            safe_search: default_web_search_settings_safe_search(),
+            region: None,
+            effective_region: default_web_search_settings_effective_region(),
+            regions: Default::default(),
+        }
+    }
+}
+
+fn default_web_search_settings_engine() -> String {
+    "auto".to_owned()
+}
+
+fn default_web_search_settings_safe_search() -> String {
+    "moderate".to_owned()
+}
+
+fn default_web_search_settings_effective_region() -> String {
+    "wt-wt".to_owned()
+}
+
+/// Params for `webSearch.set`: what changes; null leaves a setting as it
+/// is. `region` `auto` goes back to following this Mac.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct WebSearchSettingsPatch {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub engine: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub safe_search: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub region: Option<String>,
 }
 
 /// The five sections of the workspace.
@@ -6930,6 +12106,15 @@ pub struct WorkspaceItem {
     pub updated_at_ms: Option<i64>,
     #[serde(default)]
     pub tags: Vec<String>,
+    /// A knowledge base backed by a connected source: read-only here.
+    #[serde(default)]
+    pub external: bool,
+    /// A model hidden from the model picker.
+    #[serde(default)]
+    pub hidden: bool,
+    /// How many functions a tool declares.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub function_count: Option<i64>,
 }
 
 /// Params for `workspace.list`. `more` loads the next page onto what this
@@ -7088,6 +12273,16 @@ pub struct WorkspaceKnowledgeDto {
     pub description: String,
     #[serde(default)]
     pub file_count: i64,
+    /// Backed by a connected source: its files are read-only here.
+    #[serde(default)]
+    pub external: bool,
+    /// The most files it may hold, set by its owner; null for the
+    /// server's limit only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_file_count: Option<i64>,
+    /// The largest file it takes, in MB; null for the server's limit only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_file_size: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -7161,6 +12356,9 @@ pub struct WorkspaceToolDto {
     pub has_valves: bool,
     #[serde(default)]
     pub has_user_valves: bool,
+    /// Whether the tool is switched on; null when the server does not say.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active: Option<bool>,
     /// The Open WebUI version the tool says it needs, when newer than the
     /// server's; saving is refused until the server catches up.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -7443,6 +12641,14 @@ pub struct WorkspaceValves {
     pub schema: serde_json::Value,
     #[serde(default = "default_workspace_valves_values")]
     pub values: serde_json::Value,
+    /// One row per valve, as the form draws it (the core reads the
+    /// schema's types and defaults); set in replies.
+    #[serde(default)]
+    pub fields: Vec<ValveField>,
+    /// For `workspace.saveValves`: the form's rows as text, which the
+    /// daemon types by the schema. When given, `values` is ignored.
+    #[serde(default)]
+    pub edits: Vec<ValveEdit>,
 }
 
 fn default_workspace_valves_schema() -> serde_json::Value {
@@ -7536,6 +12742,50 @@ pub struct WorkspaceFilesAttach {
     pub directory_id: String,
     #[serde(default)]
     pub file_ids: Vec<String>,
+    /// The files were just uploaded for this: the daemon waits until the
+    /// server has read them in, checks the base's limits, and deletes the
+    /// ones that could not go in rather than leave them among the user's
+    /// files.
+    #[serde(default)]
+    pub uploaded: bool,
+}
+
+/// Params for `workspace.addText`: a text file made from `content` and
+/// put into a folder of a knowledge base (`.txt` is added to the name
+/// when missing).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceTextFile {
+    pub knowledge_id: String,
+    #[serde(default)]
+    pub directory_id: String,
+    pub filename: String,
+    #[serde(default)]
+    pub content: String,
+}
+
+/// Params for `workspace.duplicate`: makes a copy of an item on the
+/// server, without its access grants, named with `suffix` ("(copy)") and
+/// a free id or command, as the phone's Duplicate does. Knowledge is not
+/// duplicated.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceDuplicate {
+    pub kind: WorkspaceKind,
+    pub id: String,
+    #[serde(default = "default_workspace_duplicate_suffix")]
+    pub suffix: String,
+}
+
+fn default_workspace_duplicate_suffix() -> String {
+    "(copy)".to_owned()
+}
+
+/// Params for `workspace.skillFromMarkdown`: a Markdown file's text.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceMarkdown {
+    pub text: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -9407,6 +14657,56 @@ pub mod methods {
         type Result = super::OllamaModelList;
     }
 
+    /// Reads the Open WebUI account's connections again; answers with the
+    /// list.
+    ///
+    /// `direct.reload`: no params -> DirectConnectionList.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct DirectReload;
+
+    impl RpcMethod for DirectReload {
+        const NAME: &'static str = "direct.reload";
+        type Params = NoParams;
+        type Result = super::DirectConnectionList;
+    }
+
+    /// What applies to every connection's models: images per request and the
+    /// context limits of models that report none.
+    ///
+    /// `direct.options`: no params -> DirectOptions.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct DirectOptions;
+
+    impl RpcMethod for DirectOptions {
+        const NAME: &'static str = "direct.options";
+        type Params = NoParams;
+        type Result = super::DirectOptions;
+    }
+
+    /// Sets how many of a chat's newest images one request carries.
+    ///
+    /// `direct.setImagesPerRequest`: DirectImagesPerRequest -> DirectOptions.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct DirectSetImagesPerRequest;
+
+    impl RpcMethod for DirectSetImagesPerRequest {
+        const NAME: &'static str = "direct.setImagesPerRequest";
+        type Params = super::DirectImagesPerRequest;
+        type Result = super::DirectOptions;
+    }
+
+    /// Sets the context limit chats with a model are compacted at.
+    ///
+    /// `direct.setContextLimit`: DirectContextLimit -> DirectOptions.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct DirectSetContextLimit;
+
+    impl RpcMethod for DirectSetContextLimit {
+        const NAME: &'static str = "direct.setContextLimit";
+        type Params = super::DirectContextLimit;
+        type Result = super::DirectOptions;
+    }
+
     /// Every MCP server, secrets reported only as present.
     ///
     /// `mcp.list`: no params -> McpServerList.
@@ -9552,6 +14852,30 @@ pub mod methods {
         const NAME: &'static str = "mcp.readResource";
         type Params = super::McpReadResource;
         type Result = super::McpContentPreview;
+    }
+
+    /// The engine, safe search and region on-device searches use.
+    ///
+    /// `webSearch.get`: no params -> WebSearchSettings.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct WebSearchGet;
+
+    impl RpcMethod for WebSearchGet {
+        const NAME: &'static str = "webSearch.get";
+        type Params = NoParams;
+        type Result = super::WebSearchSettings;
+    }
+
+    /// Changes them; answers with all of them.
+    ///
+    /// `webSearch.set`: WebSearchSettingsPatch -> WebSearchSettings.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct WebSearchSet;
+
+    impl RpcMethod for WebSearchSet {
+        const NAME: &'static str = "webSearch.set";
+        type Params = super::WebSearchSettingsPatch;
+        type Result = super::WebSearchSettings;
     }
 
     /// Sends a message and starts generation.
@@ -9777,6 +15101,456 @@ pub mod methods {
         type Result = super::OkResult;
     }
 
+    /// The reading now, with its sentences.
+    ///
+    /// `speech.get`: no params -> SpeechState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct SpeechGet;
+
+    impl RpcMethod for SpeechGet {
+        const NAME: &'static str = "speech.get";
+        type Params = NoParams;
+        type Result = super::SpeechState;
+    }
+
+    /// Reads an answer aloud, or stops the reading of it (resumes it when
+    /// paused): the Read Aloud action.
+    ///
+    /// `speech.toggle`: SpeechToggle -> SpeechState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct SpeechToggle;
+
+    impl RpcMethod for SpeechToggle {
+        const NAME: &'static str = "speech.toggle";
+        type Params = super::SpeechToggle;
+        type Result = super::SpeechState;
+    }
+
+    /// `speech.pause`: no params -> SpeechState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct SpeechPause;
+
+    impl RpcMethod for SpeechPause {
+        const NAME: &'static str = "speech.pause";
+        type Params = NoParams;
+        type Result = super::SpeechState;
+    }
+
+    /// `speech.resume`: no params -> SpeechState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct SpeechResume;
+
+    impl RpcMethod for SpeechResume {
+        const NAME: &'static str = "speech.resume";
+        type Params = NoParams;
+        type Result = super::SpeechState;
+    }
+
+    /// `speech.stop`: no params -> SpeechState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct SpeechStop;
+
+    impl RpcMethod for SpeechStop {
+        const NAME: &'static str = "speech.stop";
+        type Params = NoParams;
+        type Result = super::SpeechState;
+    }
+
+    /// Reads the failed reading again.
+    ///
+    /// `speech.retry`: no params -> SpeechState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct SpeechRetry;
+
+    impl RpcMethod for SpeechRetry {
+        const NAME: &'static str = "speech.retry";
+        type Params = NoParams;
+        type Result = super::SpeechState;
+    }
+
+    /// Moves the reading to a sentence, by some sentences, or to a time.
+    ///
+    /// `speech.seek`: SpeechSeek -> SpeechState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct SpeechSeek;
+
+    impl RpcMethod for SpeechSeek {
+        const NAME: &'static str = "speech.seek";
+        type Params = super::SpeechSeek;
+        type Result = super::SpeechState;
+    }
+
+    /// Settings › Audio's sample, or stops it.
+    ///
+    /// `speech.preview`: SpeechPreview -> SpeechState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct SpeechPreview;
+
+    impl RpcMethod for SpeechPreview {
+        const NAME: &'static str = "speech.preview";
+        type Params = super::SpeechPreview;
+        type Result = super::SpeechState;
+    }
+
+    /// The window's speech engine answers a `speech.command`, or says what
+    /// it did.
+    ///
+    /// `speech.report`: SpeechReport -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct SpeechReport;
+
+    impl RpcMethod for SpeechReport {
+        const NAME: &'static str = "speech.report";
+        type Params = super::SpeechReport;
+        type Result = super::OkResult;
+    }
+
+    /// The call now.
+    ///
+    /// `calls.get`: no params -> CallState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CallsGet;
+
+    impl RpcMethod for CallsGet {
+        const NAME: &'static str = "calls.get";
+        type Params = NoParams;
+        type Result = super::CallState;
+    }
+
+    /// Starts a call in a chat, or in a new one.
+    ///
+    /// `calls.start`: CallStart -> CallState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CallsStart;
+
+    impl RpcMethod for CallsStart {
+        const NAME: &'static str = "calls.start";
+        type Params = super::CallStart;
+        type Result = super::CallState;
+    }
+
+    /// Ends the call.
+    ///
+    /// `calls.end`: no params -> CallState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CallsEnd;
+
+    impl RpcMethod for CallsEnd {
+        const NAME: &'static str = "calls.end";
+        type Params = NoParams;
+        type Result = super::CallState;
+    }
+
+    /// Stops listening and speaking until resumed.
+    ///
+    /// `calls.pause`: no params -> CallState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CallsPause;
+
+    impl RpcMethod for CallsPause {
+        const NAME: &'static str = "calls.pause";
+        type Params = NoParams;
+        type Result = super::CallState;
+    }
+
+    /// `calls.resume`: no params -> CallState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CallsResume;
+
+    impl RpcMethod for CallsResume {
+        const NAME: &'static str = "calls.resume";
+        type Params = NoParams;
+        type Result = super::CallState;
+    }
+
+    /// Mutes the microphone, or unmutes it.
+    ///
+    /// `calls.mute`: no params -> CallState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CallsMute;
+
+    impl RpcMethod for CallsMute {
+        const NAME: &'static str = "calls.mute";
+        type Params = NoParams;
+        type Result = super::CallState;
+    }
+
+    /// Stops the answer being said and listens again.
+    ///
+    /// `calls.skip`: no params -> CallState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CallsSkip;
+
+    impl RpcMethod for CallsSkip {
+        const NAME: &'static str = "calls.skip";
+        type Params = NoParams;
+        type Result = super::CallState;
+    }
+
+    /// The window answers a `calls.command`, or says what a listen did.
+    ///
+    /// `calls.report`: CallReport -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CallsReport;
+
+    impl RpcMethod for CallsReport {
+        const NAME: &'static str = "calls.report";
+        type Params = super::CallReport;
+        type Result = super::OkResult;
+    }
+
+    /// The calendars and the agenda for the range, moving or reloading it.
+    ///
+    /// `calendar.agenda`: CalendarAgendaQuery -> CalendarAgenda.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CalendarAgenda;
+
+    impl RpcMethod for CalendarAgenda {
+        const NAME: &'static str = "calendar.agenda";
+        type Params = super::CalendarAgendaQuery;
+        type Result = super::CalendarAgenda;
+    }
+
+    /// Shows or hides a calendar's events; the last shown one stays.
+    ///
+    /// `calendar.setVisible`: CalendarVisibility -> CalendarAgenda.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CalendarSetVisible;
+
+    impl RpcMethod for CalendarSetVisible {
+        const NAME: &'static str = "calendar.setVisible";
+        type Params = super::CalendarVisibility;
+        type Result = super::CalendarAgenda;
+    }
+
+    /// Makes one of the account's own calendars its default.
+    ///
+    /// `calendar.makeDefault`: CalendarRef -> CalendarAgenda.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CalendarMakeDefault;
+
+    impl RpcMethod for CalendarMakeDefault {
+        const NAME: &'static str = "calendar.makeDefault";
+        type Params = super::CalendarRef;
+        type Result = super::CalendarAgenda;
+    }
+
+    /// Creates a private calendar of the account's own.
+    ///
+    /// `calendar.createCalendar`: CalendarCreate -> CalendarDto.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CalendarCreateCalendar;
+
+    impl RpcMethod for CalendarCreateCalendar {
+        const NAME: &'static str = "calendar.createCalendar";
+        type Params = super::CalendarCreate;
+        type Result = super::CalendarDto;
+    }
+
+    /// What the event sheet shows of an agenda item.
+    ///
+    /// `calendar.event`: CalendarItemRef -> CalendarEventDetail.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CalendarEvent;
+
+    impl RpcMethod for CalendarEvent {
+        const NAME: &'static str = "calendar.event";
+        type Params = super::CalendarItemRef;
+        type Result = super::CalendarEventDetail;
+    }
+
+    /// Deletes an event (a recurring event's whole series).
+    ///
+    /// `calendar.deleteEvent`: CalendarItemRef -> CalendarAgenda.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CalendarDeleteEvent;
+
+    impl RpcMethod for CalendarDeleteEvent {
+        const NAME: &'static str = "calendar.deleteEvent";
+        type Params = super::CalendarItemRef;
+        type Result = super::CalendarAgenda;
+    }
+
+    /// The account's own answer to an invitation.
+    ///
+    /// `calendar.respond`: CalendarRsvpEdit -> CalendarEventDetail.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CalendarRespond;
+
+    impl RpcMethod for CalendarRespond {
+        const NAME: &'static str = "calendar.respond";
+        type Params = super::CalendarRsvpEdit;
+        type Result = super::CalendarEventDetail;
+    }
+
+    /// Opens the event editor's draft: a new event, or an item's stored event.
+    ///
+    /// `calendar.editor`: CalendarEditorOpen -> CalendarEditor.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CalendarEditor;
+
+    impl RpcMethod for CalendarEditor {
+        const NAME: &'static str = "calendar.editor";
+        type Params = super::CalendarEditorOpen;
+        type Result = super::CalendarEditor;
+    }
+
+    /// Settles an edited draft (an end moved along with the start) and says
+    /// what stops it being saved.
+    ///
+    /// `calendar.checkDraft`: CalendarDraftEdit -> CalendarDraftState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CalendarCheckDraft;
+
+    impl RpcMethod for CalendarCheckDraft {
+        const NAME: &'static str = "calendar.checkDraft";
+        type Params = super::CalendarDraftEdit;
+        type Result = super::CalendarDraftState;
+    }
+
+    /// Creates the draft's event, or sends what changed.
+    ///
+    /// `calendar.save`: CalendarDraftEdit -> CalendarDraftState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct CalendarSave;
+
+    impl RpcMethod for CalendarSave {
+        const NAME: &'static str = "calendar.save";
+        type Params = super::CalendarDraftEdit;
+        type Result = super::CalendarDraftState;
+    }
+
+    /// The tasks, newest first, for a search and a status.
+    ///
+    /// `automations.list`: AutomationQuery -> AutomationList.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AutomationsList;
+
+    impl RpcMethod for AutomationsList {
+        const NAME: &'static str = "automations.list";
+        type Params = super::AutomationQuery;
+        type Result = super::AutomationList;
+    }
+
+    /// The next page of the list.
+    ///
+    /// `automations.loadMore`: no params -> AutomationList.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AutomationsLoadMore;
+
+    impl RpcMethod for AutomationsLoadMore {
+        const NAME: &'static str = "automations.loadMore";
+        type Params = NoParams;
+        type Result = super::AutomationList;
+    }
+
+    /// One task, read from the server.
+    ///
+    /// `automations.get`: AutomationRef -> AutomationDetail.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AutomationsGet;
+
+    impl RpcMethod for AutomationsGet {
+        const NAME: &'static str = "automations.get";
+        type Params = super::AutomationRef;
+        type Result = super::AutomationDetail;
+    }
+
+    /// A page of a task's history.
+    ///
+    /// `automations.runs`: AutomationRunsQuery -> AutomationRuns.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AutomationsRuns;
+
+    impl RpcMethod for AutomationsRuns {
+        const NAME: &'static str = "automations.runs";
+        type Params = super::AutomationRunsQuery;
+        type Result = super::AutomationRuns;
+    }
+
+    /// Makes a task active or paused.
+    ///
+    /// `automations.setActive`: AutomationToggle -> AutomationDetail.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AutomationsSetActive;
+
+    impl RpcMethod for AutomationsSetActive {
+        const NAME: &'static str = "automations.setActive";
+        type Params = super::AutomationToggle;
+        type Result = super::AutomationDetail;
+    }
+
+    /// Asks the server to run a task now, then watches its history for the
+    /// run (`automations.runProgress`).
+    ///
+    /// `automations.run`: AutomationRef -> AutomationRunProgress.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AutomationsRun;
+
+    impl RpcMethod for AutomationsRun {
+        const NAME: &'static str = "automations.run";
+        type Params = super::AutomationRef;
+        type Result = super::AutomationRunProgress;
+    }
+
+    /// Where a task's Run Now stands.
+    ///
+    /// `automations.runState`: AutomationRef -> AutomationRunProgress.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AutomationsRunState;
+
+    impl RpcMethod for AutomationsRunState {
+        const NAME: &'static str = "automations.runState";
+        type Params = super::AutomationRef;
+        type Result = super::AutomationRunProgress;
+    }
+
+    /// `automations.delete`: AutomationRef -> AutomationList.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AutomationsDelete;
+
+    impl RpcMethod for AutomationsDelete {
+        const NAME: &'static str = "automations.delete";
+        type Params = super::AutomationRef;
+        type Result = super::AutomationList;
+    }
+
+    /// Opens the task editor's draft and what it can pick.
+    ///
+    /// `automations.editor`: AutomationEditorOpen -> AutomationEditor.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AutomationsEditor;
+
+    impl RpcMethod for AutomationsEditor {
+        const NAME: &'static str = "automations.editor";
+        type Params = super::AutomationEditorOpen;
+        type Result = super::AutomationEditor;
+    }
+
+    /// Settles an edited draft's schedule and says what stops it being saved.
+    ///
+    /// `automations.checkDraft`: AutomationDraftEdit -> AutomationDraftState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AutomationsCheckDraft;
+
+    impl RpcMethod for AutomationsCheckDraft {
+        const NAME: &'static str = "automations.checkDraft";
+        type Params = super::AutomationDraftEdit;
+        type Result = super::AutomationDraftState;
+    }
+
+    /// Creates the draft's task, or replaces the task with it.
+    ///
+    /// `automations.save`: AutomationDraftEdit -> AutomationDraftState.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AutomationsSave;
+
+    impl RpcMethod for AutomationsSave {
+        const NAME: &'static str = "automations.save";
+        type Params = super::AutomationDraftEdit;
+        type Result = super::AutomationDraftState;
+    }
+
     /// Every note, or those matching a query; pinned first.
     ///
     /// `notes.list`: NoteQuery -> NoteList.
@@ -9791,13 +15565,13 @@ pub mod methods {
 
     /// One note, its body as Quill ops.
     ///
-    /// `notes.get`: NoteRef -> NoteResult.
+    /// `notes.get`: NoteOpen -> NoteResult.
     #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
     pub struct NotesGet;
 
     impl RpcMethod for NotesGet {
         const NAME: &'static str = "notes.get";
-        type Params = super::NoteRef;
+        type Params = super::NoteOpen;
         type Result = super::NoteResult;
     }
 
@@ -9883,6 +15657,56 @@ pub mod methods {
         const NAME: &'static str = "notes.detach";
         type Params = super::NoteDetach;
         type Result = super::NoteDetail;
+    }
+
+    /// A note's recordings that are not attached yet; starts uploading the
+    /// ones waiting when the server can be reached.
+    ///
+    /// `notes.recordings`: NoteRef -> NoteRecordings.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct NotesRecordings;
+
+    impl RpcMethod for NotesRecordings {
+        const NAME: &'static str = "notes.recordings";
+        type Params = super::NoteRef;
+        type Result = super::NoteRecordings;
+    }
+
+    /// Keeps a recording the window made, then uploads it and attaches it to
+    /// the note, surviving a lost connection and a relaunch.
+    ///
+    /// `notes.addRecording`: NoteRecordingAdd -> NoteRecordings.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct NotesAddRecording;
+
+    impl RpcMethod for NotesAddRecording {
+        const NAME: &'static str = "notes.addRecording";
+        type Params = super::NoteRecordingAdd;
+        type Result = super::NoteRecordings;
+    }
+
+    /// Tries a waiting recording's upload again.
+    ///
+    /// `notes.retryRecording`: NoteRecordingRef -> NoteRecordings.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct NotesRetryRecording;
+
+    impl RpcMethod for NotesRetryRecording {
+        const NAME: &'static str = "notes.retryRecording";
+        type Params = super::NoteRecordingRef;
+        type Result = super::NoteRecordings;
+    }
+
+    /// Deletes a recording that is not attached yet.
+    ///
+    /// `notes.removeRecording`: NoteRecordingRef -> NoteRecordings.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct NotesRemoveRecording;
+
+    impl RpcMethod for NotesRemoveRecording {
+        const NAME: &'static str = "notes.removeRecording";
+        type Params = super::NoteRecordingRef;
+        type Result = super::NoteRecordings;
     }
 
     /// Every channel the user can see, with unread counts.
@@ -10029,6 +15853,100 @@ pub mod methods {
         const NAME: &'static str = "channels.members";
         type Params = super::ChannelRef;
         type Result = super::ChannelMembers;
+    }
+
+    /// Opens a channel's pane: the channel as it shows there, and what the
+    /// user may do to its members. Marks it read and starts listening to it.
+    ///
+    /// `channels.open`: ChannelRef -> ChannelDetails.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct ChannelsOpen;
+
+    impl RpcMethod for ChannelsOpen {
+        const NAME: &'static str = "channels.open";
+        type Params = super::ChannelRef;
+        type Result = super::ChannelDetails;
+    }
+
+    /// The channel in front of the user now, or none: its new messages are
+    /// read as they come, and it neither counts as unread nor notifies.
+    ///
+    /// `channels.focus`: ChannelFocus -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct ChannelsFocus;
+
+    impl RpcMethod for ChannelsFocus {
+        const NAME: &'static str = "channels.focus";
+        type Params = super::ChannelFocus;
+        type Result = super::OkResult;
+    }
+
+    /// Notifies for every message, or (muted) for mentions only.
+    ///
+    /// `channels.setMuted`: ChannelMute -> ChannelList.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct ChannelsSetMuted;
+
+    impl RpcMethod for ChannelsSetMuted {
+        const NAME: &'static str = "channels.setMuted";
+        type Params = super::ChannelMute;
+        type Result = super::ChannelList;
+    }
+
+    /// The channel's members matching what follows an `@`.
+    ///
+    /// `channels.mentions`: ChannelMentionQuery -> MentionList.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct ChannelsMentions;
+
+    impl RpcMethod for ChannelsMentions {
+        const NAME: &'static str = "channels.mentions";
+        type Params = super::ChannelMentionQuery;
+        type Result = super::MentionList;
+    }
+
+    /// The members sheet: a page of members, by name, for a search.
+    ///
+    /// `channels.memberPage`: ChannelMemberQuery -> ChannelMemberPage.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct ChannelsMemberPage;
+
+    impl RpcMethod for ChannelsMemberPage {
+        const NAME: &'static str = "channels.memberPage";
+        type Params = super::ChannelMemberQuery;
+        type Result = super::ChannelMemberPage;
+    }
+
+    /// `channels.addMembers`: ChannelMembersAdd -> ChannelMemberChange.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct ChannelsAddMembers;
+
+    impl RpcMethod for ChannelsAddMembers {
+        const NAME: &'static str = "channels.addMembers";
+        type Params = super::ChannelMembersAdd;
+        type Result = super::ChannelMemberChange;
+    }
+
+    /// `channels.removeMember`: ChannelMemberRemove -> ChannelMemberChange.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct ChannelsRemoveMember;
+
+    impl RpcMethod for ChannelsRemoveMember {
+        const NAME: &'static str = "channels.removeMember";
+        type Params = super::ChannelMemberRemove;
+        type Result = super::ChannelMemberChange;
+    }
+
+    /// Presses a button on an app's message.
+    ///
+    /// `channels.appAction`: ChannelAppAction -> ChannelAppActionResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct ChannelsAppAction;
+
+    impl RpcMethod for ChannelsAppAction {
+        const NAME: &'static str = "channels.appAction";
+        type Params = super::ChannelAppAction;
+        type Result = super::ChannelAppActionResult;
     }
 
     /// Which sections the user may manage, and what each allows.
@@ -10310,6 +16228,43 @@ pub mod methods {
         type Result = super::WorkspaceFiles;
     }
 
+    /// Makes a copy of an item on the server and answers with it.
+    ///
+    /// `workspace.duplicate`: WorkspaceDuplicate -> WorkspaceDetail.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct WorkspaceDuplicate;
+
+    impl RpcMethod for WorkspaceDuplicate {
+        const NAME: &'static str = "workspace.duplicate";
+        type Params = super::WorkspaceDuplicate;
+        type Result = super::WorkspaceDetail;
+    }
+
+    /// Puts a text file made from typed text into a knowledge base.
+    ///
+    /// `workspace.addText`: WorkspaceTextFile -> WorkspaceFiles.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct WorkspaceAddText;
+
+    impl RpcMethod for WorkspaceAddText {
+        const NAME: &'static str = "workspace.addText";
+        type Params = super::WorkspaceTextFile;
+        type Result = super::WorkspaceFiles;
+    }
+
+    /// Reads a skill from a Markdown file (front-matter name, id and
+    /// description, the file as instructions), not saved.
+    ///
+    /// `workspace.skillFromMarkdown`: WorkspaceMarkdown -> WorkspaceSkillDto.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct WorkspaceSkillFromMarkdown;
+
+    impl RpcMethod for WorkspaceSkillFromMarkdown {
+        const NAME: &'static str = "workspace.skillFromMarkdown";
+        type Params = super::WorkspaceMarkdown;
+        type Result = super::WorkspaceSkillDto;
+    }
+
     /// `hermes.settings`: no params -> HermesSettings.
     #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
     pub struct HermesSettings;
@@ -10418,6 +16373,70 @@ pub mod methods {
         type Result = super::HermesSessionDto;
     }
 
+    /// Pins, archives or hides a session, or undoes it; answers with the
+    /// sessions.
+    ///
+    /// `hermes.sessions.update`: HermesSessionUpdate -> HermesSessions.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesSessionsUpdate;
+
+    impl RpcMethod for HermesSessionsUpdate {
+        const NAME: &'static str = "hermes.sessions.update";
+        type Params = super::HermesSessionUpdate;
+        type Result = super::HermesSessions;
+    }
+
+    /// Continues a read-only session's chat in a session this app owns:
+    /// Hermes's fork (Continue Here) or a copy; answers with the session to
+    /// open.
+    ///
+    /// `hermes.sessions.continue`: HermesContinue -> HermesSessionDto.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesSessionsContinue;
+
+    impl RpcMethod for HermesSessionsContinue {
+        const NAME: &'static str = "hermes.sessions.continue";
+        type Params = super::HermesContinue;
+        type Result = super::HermesSessionDto;
+    }
+
+    /// The sessions hidden from every list (Hidden Chats).
+    ///
+    /// `hermes.hidden.list`: no params -> HermesSessions.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesHiddenList;
+
+    impl RpcMethod for HermesHiddenList {
+        const NAME: &'static str = "hermes.hidden.list";
+        type Params = NoParams;
+        type Result = super::HermesSessions;
+    }
+
+    /// Branch from Here: a new session with a Hermes chat up to a reply;
+    /// answers with the session to open.
+    ///
+    /// `hermes.history.branch`: HermesBranch -> HermesSessionDto.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesHistoryBranch;
+
+    impl RpcMethod for HermesHistoryBranch {
+        const NAME: &'static str = "hermes.history.branch";
+        type Params = super::HermesBranch;
+        type Result = super::HermesSessionDto;
+    }
+
+    /// Undo Last Turn of a Desktop Gateway chat, there and in the chat.
+    ///
+    /// `hermes.history.undo`: ChatRef -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesHistoryUndo;
+
+    impl RpcMethod for HermesHistoryUndo {
+        const NAME: &'static str = "hermes.history.undo";
+        type Params = super::ChatRef;
+        type Result = super::OkResult;
+    }
+
     /// `hermes.jobs`: no params -> HermesJobs.
     #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
     pub struct HermesJobs;
@@ -10452,27 +16471,27 @@ pub mod methods {
 
     /// Runs a job now, whatever its schedule.
     ///
-    /// `hermes.runJob`: HermesRef -> HermesJobs.
+    /// `hermes.runJob`: HermesJobRef -> HermesJobs.
     #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
     pub struct HermesRunJob;
 
     impl RpcMethod for HermesRunJob {
         const NAME: &'static str = "hermes.runJob";
-        type Params = super::HermesRef;
+        type Params = super::HermesJobRef;
         type Result = super::HermesJobs;
     }
 
-    /// `hermes.deleteJob`: HermesRef -> HermesJobs.
+    /// `hermes.deleteJob`: HermesJobRef -> HermesJobs.
     #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
     pub struct HermesDeleteJob;
 
     impl RpcMethod for HermesDeleteJob {
         const NAME: &'static str = "hermes.deleteJob";
-        type Params = super::HermesRef;
+        type Params = super::HermesJobRef;
         type Result = super::HermesJobs;
     }
 
-    /// The agent's skills and toolsets.
+    /// The agent's skills and toolsets, and a Hermes chat's `/` commands.
     ///
     /// `hermes.catalog`: no params -> HermesCatalog.
     #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
@@ -10482,6 +16501,479 @@ pub mod methods {
         const NAME: &'static str = "hermes.catalog";
         type Params = NoParams;
         type Result = super::HermesCatalog;
+    }
+
+    /// The sessions a scheduled agent's runs wrote, newest first (a Desktop
+    /// Gateway's).
+    ///
+    /// `hermes.jobs.runs`: HermesJobRef -> HermesSessions.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesJobsRuns;
+
+    impl RpcMethod for HermesJobsRuns {
+        const NAME: &'static str = "hermes.jobs.runs";
+        type Params = super::HermesJobRef;
+        type Result = super::HermesSessions;
+    }
+
+    /// Stops a scheduled agent's running run (its schedule stays); answers
+    /// with the jobs, and how the Stop settles comes in their notices.
+    ///
+    /// `hermes.jobs.stop`: HermesJobRef -> HermesJobs.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesJobsStop;
+
+    impl RpcMethod for HermesJobsStop {
+        const NAME: &'static str = "hermes.jobs.stop";
+        type Params = super::HermesJobRef;
+        type Result = super::HermesJobs;
+    }
+
+    /// Where the connection's scheduled agents can deliver.
+    ///
+    /// `hermes.jobs.delivery`: no params -> HermesDeliveryOptions.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesJobsDelivery;
+
+    impl RpcMethod for HermesJobsDelivery {
+        const NAME: &'static str = "hermes.jobs.delivery";
+        type Params = NoParams;
+        type Result = super::HermesDeliveryOptions;
+    }
+
+    /// `hermes.connections.list`: no params -> HermesConnections.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesConnectionsList;
+
+    impl RpcMethod for HermesConnectionsList {
+        const NAME: &'static str = "hermes.connections.list";
+        type Params = NoParams;
+        type Result = super::HermesConnections;
+    }
+
+    /// Saves a connection, new or edited; the first one saved is put in use.
+    ///
+    /// `hermes.connections.save`: HermesConnectionEdit -> HermesConnections.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesConnectionsSave;
+
+    impl RpcMethod for HermesConnectionsSave {
+        const NAME: &'static str = "hermes.connections.save";
+        type Params = super::HermesConnectionEdit;
+        type Result = super::HermesConnections;
+    }
+
+    /// Tries a connection's form without saving it.
+    ///
+    /// `hermes.connections.test`: HermesConnectionEdit -> HermesConnectionTestResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesConnectionsTest;
+
+    impl RpcMethod for HermesConnectionsTest {
+        const NAME: &'static str = "hermes.connections.test";
+        type Params = super::HermesConnectionEdit;
+        type Result = super::HermesConnectionTestResult;
+    }
+
+    /// Puts a saved connection in use: Hermes's sessions, jobs and servers
+    /// follow it.
+    ///
+    /// `hermes.connections.activate`: HermesRef -> HermesConnections.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesConnectionsActivate;
+
+    impl RpcMethod for HermesConnectionsActivate {
+        const NAME: &'static str = "hermes.connections.activate";
+        type Params = super::HermesRef;
+        type Result = super::HermesConnections;
+    }
+
+    /// Deletes a saved connection and its credentials; deleting the one in
+    /// use puts the most recently used other one in use.
+    ///
+    /// `hermes.connections.delete`: HermesRef -> HermesConnections.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesConnectionsDelete;
+
+    impl RpcMethod for HermesConnectionsDelete {
+        const NAME: &'static str = "hermes.connections.delete";
+        type Params = super::HermesRef;
+        type Result = super::HermesConnections;
+    }
+
+    /// Turns Hermes on or off, its connections kept.
+    ///
+    /// `hermes.connections.setEnabled`: HermesToggle -> HermesConnections.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesConnectionsSetEnabled;
+
+    impl RpcMethod for HermesConnectionsSetEnabled {
+        const NAME: &'static str = "hermes.connections.setEnabled";
+        type Params = super::HermesToggle;
+        type Result = super::HermesConnections;
+    }
+
+    /// `hermes.mcp.list`: no params -> HermesMcpServers.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesMcpList;
+
+    impl RpcMethod for HermesMcpList {
+        const NAME: &'static str = "hermes.mcp.list";
+        type Params = NoParams;
+        type Result = super::HermesMcpServers;
+    }
+
+    /// The ready-made servers Hermes offers.
+    ///
+    /// `hermes.mcp.catalog`: no params -> HermesMcpCatalog.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesMcpCatalog;
+
+    impl RpcMethod for HermesMcpCatalog {
+        const NAME: &'static str = "hermes.mcp.catalog";
+        type Params = NoParams;
+        type Result = super::HermesMcpCatalog;
+    }
+
+    /// Adds a server of the user's own (an HTTP address or a command).
+    ///
+    /// `hermes.mcp.add`: HermesMcpAdd -> HermesMcpServers.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesMcpAdd;
+
+    impl RpcMethod for HermesMcpAdd {
+        const NAME: &'static str = "hermes.mcp.add";
+        type Params = super::HermesMcpAdd;
+        type Result = super::HermesMcpServers;
+    }
+
+    /// Adds a server from Hermes's catalog, by its name there.
+    ///
+    /// `hermes.mcp.addFromCatalog`: HermesMcpRef -> HermesMcpServers.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesMcpAddFromCatalog;
+
+    impl RpcMethod for HermesMcpAddFromCatalog {
+        const NAME: &'static str = "hermes.mcp.addFromCatalog";
+        type Params = super::HermesMcpRef;
+        type Result = super::HermesMcpServers;
+    }
+
+    /// `hermes.mcp.setApiKey`: HermesMcpApiKey -> HermesMcpServers.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesMcpSetApiKey;
+
+    impl RpcMethod for HermesMcpSetApiKey {
+        const NAME: &'static str = "hermes.mcp.setApiKey";
+        type Params = super::HermesMcpApiKey;
+        type Result = super::HermesMcpServers;
+    }
+
+    /// `hermes.mcp.remove`: HermesMcpRef -> HermesMcpServers.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesMcpRemove;
+
+    impl RpcMethod for HermesMcpRemove {
+        const NAME: &'static str = "hermes.mcp.remove";
+        type Params = super::HermesMcpRef;
+        type Result = super::HermesMcpServers;
+    }
+
+    /// Connects to a server once and lists what it offers.
+    ///
+    /// `hermes.mcp.test`: HermesMcpRef -> HermesMcpTestResultDto.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesMcpTest;
+
+    impl RpcMethod for HermesMcpTest {
+        const NAME: &'static str = "hermes.mcp.test";
+        type Params = super::HermesMcpRef;
+        type Result = super::HermesMcpTestResultDto;
+    }
+
+    /// Offers a server's tools to the agent, or stops offering them.
+    ///
+    /// `hermes.mcp.setEnabled`: HermesMcpToggle -> HermesMcpServers.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesMcpSetEnabled;
+
+    impl RpcMethod for HermesMcpSetEnabled {
+        const NAME: &'static str = "hermes.mcp.setEnabled";
+        type Params = super::HermesMcpToggle;
+        type Result = super::HermesMcpServers;
+    }
+
+    /// Signs in to a server with OAuth in the browser; answers once it is
+    /// done (or after two minutes).
+    ///
+    /// `hermes.mcp.authenticate`: HermesMcpRef -> HermesMcpServers.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesMcpAuthenticate;
+
+    impl RpcMethod for HermesMcpAuthenticate {
+        const NAME: &'static str = "hermes.mcp.authenticate";
+        type Params = super::HermesMcpRef;
+        type Result = super::HermesMcpServers;
+    }
+
+    /// Follows a chat's agent work (subagents, processes, plan) while the
+    /// window shows it; changes come as `hermes.work.changed`.
+    ///
+    /// `hermes.work.watch`: HermesWorkWatch -> HermesWork.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesWorkWatch;
+
+    impl RpcMethod for HermesWorkWatch {
+        const NAME: &'static str = "hermes.work.watch";
+        type Params = super::HermesWorkWatch;
+        type Result = super::HermesWork;
+    }
+
+    /// `hermes.work.unwatch`: HermesWorkChat -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesWorkUnwatch;
+
+    impl RpcMethod for HermesWorkUnwatch {
+        const NAME: &'static str = "hermes.work.unwatch";
+        type Params = super::HermesWorkChat;
+        type Result = super::OkResult;
+    }
+
+    /// New instructions for a running subagent.
+    ///
+    /// `hermes.work.steer`: HermesSteerSubagent -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesWorkSteer;
+
+    impl RpcMethod for HermesWorkSteer {
+        const NAME: &'static str = "hermes.work.steer";
+        type Params = super::HermesSteerSubagent;
+        type Result = super::OkResult;
+    }
+
+    /// Stops a subagent.
+    ///
+    /// `hermes.work.stop`: HermesSubagentRef -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesWorkStop;
+
+    impl RpcMethod for HermesWorkStop {
+        const NAME: &'static str = "hermes.work.stop";
+        type Params = super::HermesSubagentRef;
+        type Result = super::OkResult;
+    }
+
+    /// Kills a background process.
+    ///
+    /// `hermes.work.kill`: HermesProcessRef -> HermesProcessKill.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesWorkKill;
+
+    impl RpcMethod for HermesWorkKill {
+        const NAME: &'static str = "hermes.work.kill";
+        type Params = super::HermesProcessRef;
+        type Result = super::HermesProcessKill;
+    }
+
+    /// A Hermes chat's context window, token totals and plan usage.
+    ///
+    /// `hermes.context.get`: HermesContextRef -> HermesContextReportDto.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesContextGet;
+
+    impl RpcMethod for HermesContextGet {
+        const NAME: &'static str = "hermes.context.get";
+        type Params = super::HermesContextRef;
+        type Result = super::HermesContextReportDto;
+    }
+
+    /// Summarizes a Hermes chat's older messages on the server.
+    ///
+    /// `hermes.context.compact`: HermesCompact -> HermesCompactResultDto.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesContextCompact;
+
+    impl RpcMethod for HermesContextCompact {
+        const NAME: &'static str = "hermes.context.compact";
+        type Params = super::HermesCompact;
+        type Result = super::HermesCompactResultDto;
+    }
+
+    /// Answers a clarify form, a sudo password, a secret or a set-up card,
+    /// and waits for Hermes to take it.
+    ///
+    /// `hermes.decisions.answer`: HermesDecisionAnswer -> HermesDecisionResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesDecisionsAnswer;
+
+    impl RpcMethod for HermesDecisionsAnswer {
+        const NAME: &'static str = "hermes.decisions.answer";
+        type Params = super::HermesDecisionAnswer;
+        type Result = super::HermesDecisionResult;
+    }
+
+    /// The gateway's bots, most recently active first.
+    ///
+    /// `hermes.bots.list`: no params -> HermesBots.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesBotsList;
+
+    impl RpcMethod for HermesBotsList {
+        const NAME: &'static str = "hermes.bots.list";
+        type Params = NoParams;
+        type Result = super::HermesBots;
+    }
+
+    /// A bot's picture, as a `data:image/...` URL.
+    ///
+    /// `hermes.bots.avatar`: HermesBotRef -> HermesBotAvatar.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesBotsAvatar;
+
+    impl RpcMethod for HermesBotsAvatar {
+        const NAME: &'static str = "hermes.bots.avatar";
+        type Params = super::HermesBotRef;
+        type Result = super::HermesBotAvatar;
+    }
+
+    /// Opens a bot's Bot Chat (made when it has none); answers with its
+    /// session, opened as a chat.
+    ///
+    /// `hermes.bots.open`: HermesBotRef -> HermesSessionDto.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesBotsOpen;
+
+    impl RpcMethod for HermesBotsOpen {
+        const NAME: &'static str = "hermes.bots.open";
+        type Params = super::HermesBotRef;
+        type Result = super::HermesSessionDto;
+    }
+
+    /// The gateway's Group Chats, and whether a new one can be made.
+    ///
+    /// `hermes.rooms.list`: no params -> HermesRooms.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesRoomsList;
+
+    impl RpcMethod for HermesRoomsList {
+        const NAME: &'static str = "hermes.rooms.list";
+        type Params = NoParams;
+        type Result = super::HermesRooms;
+    }
+
+    /// `hermes.rooms.create`: HermesRoomCreate -> HermesRoomDto.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesRoomsCreate;
+
+    impl RpcMethod for HermesRoomsCreate {
+        const NAME: &'static str = "hermes.rooms.create";
+        type Params = super::HermesRoomCreate;
+        type Result = super::HermesRoomDto;
+    }
+
+    /// Follows an open room, read every 2 s while a window watches it;
+    /// changes come as `hermes.rooms.changed`.
+    ///
+    /// `hermes.rooms.watch`: HermesRoomRef -> HermesRoomView.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesRoomsWatch;
+
+    impl RpcMethod for HermesRoomsWatch {
+        const NAME: &'static str = "hermes.rooms.watch";
+        type Params = super::HermesRoomRef;
+        type Result = super::HermesRoomView;
+    }
+
+    /// `hermes.rooms.unwatch`: HermesRoomRef -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesRoomsUnwatch;
+
+    impl RpcMethod for HermesRoomsUnwatch {
+        const NAME: &'static str = "hermes.rooms.unwatch";
+        type Params = super::HermesRoomRef;
+        type Result = super::OkResult;
+    }
+
+    /// Posts a message in a room.
+    ///
+    /// `hermes.rooms.send`: HermesRoomMessage -> HermesRoomSendResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesRoomsSend;
+
+    impl RpcMethod for HermesRoomsSend {
+        const NAME: &'static str = "hermes.rooms.send";
+        type Params = super::HermesRoomMessage;
+        type Result = super::HermesRoomSendResult;
+    }
+
+    /// Stops the room's work.
+    ///
+    /// `hermes.rooms.stop`: HermesRoomRef -> HermesRoomStopped.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesRoomsStop;
+
+    impl RpcMethod for HermesRoomsStop {
+        const NAME: &'static str = "hermes.rooms.stop";
+        type Params = super::HermesRoomRef;
+        type Result = super::HermesRoomStopped;
+    }
+
+    /// Continues a discussion that paused at its limit.
+    ///
+    /// `hermes.rooms.continue`: HermesRoomContinue -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesRoomsContinue;
+
+    impl RpcMethod for HermesRoomsContinue {
+        const NAME: &'static str = "hermes.rooms.continue";
+        type Params = super::HermesRoomContinue;
+        type Result = super::OkResult;
+    }
+
+    /// Answers an approval in a room, or retries uncertain work.
+    ///
+    /// `hermes.rooms.answer`: HermesRoomAnswer -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesRoomsAnswer;
+
+    impl RpcMethod for HermesRoomsAnswer {
+        const NAME: &'static str = "hermes.rooms.answer";
+        type Params = super::HermesRoomAnswer;
+        type Result = super::OkResult;
+    }
+
+    /// `hermes.rooms.rename`: HermesRoomRename -> HermesRoomDto.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesRoomsRename;
+
+    impl RpcMethod for HermesRoomsRename {
+        const NAME: &'static str = "hermes.rooms.rename";
+        type Params = super::HermesRoomRename;
+        type Result = super::HermesRoomDto;
+    }
+
+    /// Saves a room's purpose, notes and who answers.
+    ///
+    /// `hermes.rooms.saveContext`: HermesRoomContextEdit -> HermesRoomContextDto.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesRoomsSaveContext;
+
+    impl RpcMethod for HermesRoomsSaveContext {
+        const NAME: &'static str = "hermes.rooms.saveContext";
+        type Params = super::HermesRoomContextEdit;
+        type Result = super::HermesRoomContextDto;
+    }
+
+    /// Ends a room for good.
+    ///
+    /// `hermes.rooms.disband`: HermesRoomRef -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesRoomsDisband;
+
+    impl RpcMethod for HermesRoomsDisband {
+        const NAME: &'static str = "hermes.rooms.disband";
+        type Params = super::HermesRoomRef;
+        type Result = super::OkResult;
     }
 
     /// The terminal servers usable in a scope, and the selected one.
@@ -10590,6 +17082,100 @@ pub mod methods {
         type Result = super::TerminalPreview;
     }
 
+    /// Keeps a directory's listing and the ports live (`terminal.changed`).
+    ///
+    /// `terminal.watch`: TerminalWatch -> TerminalWatching.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct TerminalWatch;
+
+    impl RpcMethod for TerminalWatch {
+        const NAME: &'static str = "terminal.watch";
+        type Params = super::TerminalWatch;
+        type Result = super::TerminalWatching;
+    }
+
+    /// Lets a handle go: its watch, its port previews.
+    ///
+    /// `terminal.detach`: TerminalHandleRef -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct TerminalDetach;
+
+    impl RpcMethod for TerminalDetach {
+        const NAME: &'static str = "terminal.detach";
+        type Params = super::TerminalHandleRef;
+        type Result = super::OkResult;
+    }
+
+    /// Whether a chat's header offers Computer, and which surfaces.
+    ///
+    /// `computer.status`: ComputerScope -> ComputerStatus.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct ComputerStatus;
+
+    impl RpcMethod for ComputerStatus {
+        const NAME: &'static str = "computer.status";
+        type Params = super::ComputerScope;
+        type Result = super::ComputerStatus;
+    }
+
+    /// A view of a chat terminal's desktop or browser.
+    ///
+    /// `computer.open`: ComputerOpen -> ComputerView.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct ComputerOpen;
+
+    impl RpcMethod for ComputerOpen {
+        const NAME: &'static str = "computer.open";
+        type Params = super::ComputerOpen;
+        type Result = super::ComputerView;
+    }
+
+    /// The terminal browser's tabs.
+    ///
+    /// `computer.tabs`: ComputerScope -> ComputerTabs.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct ComputerTabs;
+
+    impl RpcMethod for ComputerTabs {
+        const NAME: &'static str = "computer.tabs";
+        type Params = super::ComputerScope;
+        type Result = super::ComputerTabs;
+    }
+
+    /// `computer.closeTab`: ComputerTabRef -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct ComputerCloseTab;
+
+    impl RpcMethod for ComputerCloseTab {
+        const NAME: &'static str = "computer.closeTab";
+        type Params = super::ComputerTabRef;
+        type Result = super::OkResult;
+    }
+
+    /// A key combination for the surface a view shows.
+    ///
+    /// `computer.shortcut`: ComputerShortcut -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct ComputerShortcut;
+
+    impl RpcMethod for ComputerShortcut {
+        const NAME: &'static str = "computer.shortcut";
+        type Params = super::ComputerShortcut;
+        type Result = super::OkResult;
+    }
+
+    /// Ends a view: its relay closes.
+    ///
+    /// `computer.close`: ComputerHandleRef -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct ComputerClose;
+
+    impl RpcMethod for ComputerClose {
+        const NAME: &'static str = "computer.close";
+        type Params = super::ComputerHandleRef;
+        type Result = super::OkResult;
+    }
+
     /// `voice.settings`: no params -> VoiceSettings.
     #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
     pub struct VoiceSettings;
@@ -10668,6 +17254,245 @@ pub mod methods {
         const NAME: &'static str = "voice.deleteModel";
         type Params = super::VoiceModelRef;
         type Result = super::VoiceModels;
+    }
+
+    /// Which engine dictates now, and what the target's backend can do.
+    ///
+    /// `dictation.status`: DictationTarget -> DictationStatus.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct DictationStatus;
+
+    impl RpcMethod for DictationStatus {
+        const NAME: &'static str = "dictation.status";
+        type Params = super::DictationTarget;
+        type Result = super::DictationStatus;
+    }
+
+    /// A draft's saved recordings.
+    ///
+    /// `recordings.list`: RecordingTarget -> RecordingList.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct RecordingsList;
+
+    impl RpcMethod for RecordingsList {
+        const NAME: &'static str = "recordings.list";
+        type Params = super::RecordingTarget;
+        type Result = super::RecordingList;
+    }
+
+    /// Starts a recording for a draft.
+    ///
+    /// `recordings.begin`: RecordingTarget -> RecordingStarted.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct RecordingsBegin;
+
+    impl RpcMethod for RecordingsBegin {
+        const NAME: &'static str = "recordings.begin";
+        type Params = super::RecordingTarget;
+        type Result = super::RecordingStarted;
+    }
+
+    /// Stores the next audio of an open recording.
+    ///
+    /// `recordings.append`: RecordingChunk -> RecordingSaved.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct RecordingsAppend;
+
+    impl RpcMethod for RecordingsAppend {
+        const NAME: &'static str = "recordings.append";
+        type Params = super::RecordingChunk;
+        type Result = super::RecordingSaved;
+    }
+
+    /// Ends an open recording; one with no audio is not kept.
+    ///
+    /// `recordings.close`: RecordingRef -> RecordingSaved.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct RecordingsClose;
+
+    impl RpcMethod for RecordingsClose {
+        const NAME: &'static str = "recordings.close";
+        type Params = super::RecordingRef;
+        type Result = super::RecordingSaved;
+    }
+
+    /// Deletes a saved recording.
+    ///
+    /// `recordings.discard`: RecordingRef -> RecordingList.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct RecordingsDiscard;
+
+    impl RpcMethod for RecordingsDiscard {
+        const NAME: &'static str = "recordings.discard";
+        type Params = super::RecordingRef;
+        type Result = super::RecordingList;
+    }
+
+    /// A saved recording, as text: by the model's backend or by whisper.
+    ///
+    /// `recordings.transcribe`: RecordingTranscribe -> VoiceTranscript.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct RecordingsTranscribe;
+
+    impl RpcMethod for RecordingsTranscribe {
+        const NAME: &'static str = "recordings.transcribe";
+        type Params = super::RecordingTranscribe;
+        type Result = super::VoiceTranscript;
+    }
+
+    /// Checks an address for a LibreChat server and how to sign in there.
+    ///
+    /// `librechat.probe`: LibreChatProbe -> LibreChatProbeResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct LibrechatProbe;
+
+    impl RpcMethod for LibrechatProbe {
+        const NAME: &'static str = "librechat.probe";
+        type Params = super::LibreChatProbe;
+        type Result = super::LibreChatProbeResult;
+    }
+
+    /// Signs in with an email (or LDAP username) and password.
+    ///
+    /// `librechat.signIn`: LibreChatSignIn -> LibreChatSignInResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct LibrechatSignIn;
+
+    impl RpcMethod for LibrechatSignIn {
+        const NAME: &'static str = "librechat.signIn";
+        type Params = super::LibreChatSignIn;
+        type Result = super::LibreChatSignInResult;
+    }
+
+    /// The second step: an authenticator code or a backup code.
+    ///
+    /// `librechat.verify`: LibreChatVerify -> LibreChatSignInResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct LibrechatVerify;
+
+    impl RpcMethod for LibrechatVerify {
+        const NAME: &'static str = "librechat.verify";
+        type Params = super::LibreChatVerify;
+        type Result = super::LibreChatSignInResult;
+    }
+
+    /// Where single sign-on starts, for the window's sign-in browser.
+    ///
+    /// `librechat.ssoStart`: LibreChatSsoStart -> LibreChatSsoPlan.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct LibrechatSsoStart;
+
+    impl RpcMethod for LibrechatSsoStart {
+        const NAME: &'static str = "librechat.ssoStart";
+        type Params = super::LibreChatSsoStart;
+        type Result = super::LibreChatSsoPlan;
+    }
+
+    /// Finishes single sign-on with the cookies the window captured.
+    ///
+    /// `librechat.completeSso`: LibreChatSsoCompletion -> LibreChatSignInResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct LibrechatCompleteSso;
+
+    impl RpcMethod for LibrechatCompleteSso {
+        const NAME: &'static str = "librechat.completeSso";
+        type Params = super::LibreChatSsoCompletion;
+        type Result = super::LibreChatSignInResult;
+    }
+
+    /// The tools the composer may offer a LibreChat turn.
+    ///
+    /// `librechat.composer`: LibreChatComposerTarget -> LibreChatComposer.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct LibrechatComposer;
+
+    impl RpcMethod for LibrechatComposer {
+        const NAME: &'static str = "librechat.composer";
+        type Params = super::LibreChatComposerTarget;
+        type Result = super::LibreChatComposer;
+    }
+
+    /// The user's memories and whether the assistant uses them.
+    ///
+    /// `librechat.memories.list`: no params -> LibreChatMemories.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct LibrechatMemoriesList;
+
+    impl RpcMethod for LibrechatMemoriesList {
+        const NAME: &'static str = "librechat.memories.list";
+        type Params = NoParams;
+        type Result = super::LibreChatMemories;
+    }
+
+    /// Adds a memory, or changes one (and its key).
+    ///
+    /// `librechat.memories.save`: LibreChatMemoryEdit -> LibreChatMemories.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct LibrechatMemoriesSave;
+
+    impl RpcMethod for LibrechatMemoriesSave {
+        const NAME: &'static str = "librechat.memories.save";
+        type Params = super::LibreChatMemoryEdit;
+        type Result = super::LibreChatMemories;
+    }
+
+    /// `librechat.memories.delete`: LibreChatMemoryRef -> LibreChatMemories.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct LibrechatMemoriesDelete;
+
+    impl RpcMethod for LibrechatMemoriesDelete {
+        const NAME: &'static str = "librechat.memories.delete";
+        type Params = super::LibreChatMemoryRef;
+        type Result = super::LibreChatMemories;
+    }
+
+    /// Turns the assistant's use of memories on or off.
+    ///
+    /// `librechat.memories.setEnabled`: LibreChatMemoryToggle -> LibreChatMemories.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct LibrechatMemoriesSetEnabled;
+
+    impl RpcMethod for LibrechatMemoriesSetEnabled {
+        const NAME: &'static str = "librechat.memories.setEnabled";
+        type Params = super::LibreChatMemoryToggle;
+        type Result = super::LibreChatMemories;
+    }
+
+    /// Copies a LibreChat chat whole into a new chat on its server.
+    ///
+    /// `librechat.duplicate`: ChatRef -> ChatForked.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct LibrechatDuplicate;
+
+    impl RpcMethod for LibrechatDuplicate {
+        const NAME: &'static str = "librechat.duplicate";
+        type Params = super::ChatRef;
+        type Result = super::ChatForked;
+    }
+
+    /// A question whose answer comes back in the reply (Ask Conduit): sends
+    /// it as a new chat and waits for the answer, up to a timeout.
+    ///
+    /// `intents.ask`: IntentAsk -> IntentAnswer.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct IntentsAsk;
+
+    impl RpcMethod for IntentsAsk {
+        const NAME: &'static str = "intents.ask";
+        type Params = super::IntentAsk;
+        type Result = super::IntentAnswer;
+    }
+
+    /// The chats Shortcuts offers (Open Chat): by id, by search, or recent.
+    ///
+    /// `intents.chats`: IntentChatsQuery -> IntentChats.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct IntentsChats;
+
+    impl RpcMethod for IntentsChats {
+        const NAME: &'static str = "intents.chats";
+        type Params = super::IntentChatsQuery;
+        type Result = super::IntentChats;
     }
 }
 
@@ -11359,6 +18184,26 @@ pub const METHODS: &[MethodSpec] = &[
         result: Some("OllamaModelList"),
     },
     MethodSpec {
+        name: "direct.reload",
+        params: None,
+        result: Some("DirectConnectionList"),
+    },
+    MethodSpec {
+        name: "direct.options",
+        params: None,
+        result: Some("DirectOptions"),
+    },
+    MethodSpec {
+        name: "direct.setImagesPerRequest",
+        params: Some("DirectImagesPerRequest"),
+        result: Some("DirectOptions"),
+    },
+    MethodSpec {
+        name: "direct.setContextLimit",
+        params: Some("DirectContextLimit"),
+        result: Some("DirectOptions"),
+    },
+    MethodSpec {
         name: "mcp.list",
         params: None,
         result: Some("McpServerList"),
@@ -11417,6 +18262,16 @@ pub const METHODS: &[MethodSpec] = &[
         name: "mcp.readResource",
         params: Some("McpReadResource"),
         result: Some("McpContentPreview"),
+    },
+    MethodSpec {
+        name: "webSearch.get",
+        params: None,
+        result: Some("WebSearchSettings"),
+    },
+    MethodSpec {
+        name: "webSearch.set",
+        params: Some("WebSearchSettingsPatch"),
+        result: Some("WebSearchSettings"),
     },
     MethodSpec {
         name: "turns.send",
@@ -11504,13 +18359,203 @@ pub const METHODS: &[MethodSpec] = &[
         result: Some("OkResult"),
     },
     MethodSpec {
+        name: "speech.get",
+        params: None,
+        result: Some("SpeechState"),
+    },
+    MethodSpec {
+        name: "speech.toggle",
+        params: Some("SpeechToggle"),
+        result: Some("SpeechState"),
+    },
+    MethodSpec {
+        name: "speech.pause",
+        params: None,
+        result: Some("SpeechState"),
+    },
+    MethodSpec {
+        name: "speech.resume",
+        params: None,
+        result: Some("SpeechState"),
+    },
+    MethodSpec {
+        name: "speech.stop",
+        params: None,
+        result: Some("SpeechState"),
+    },
+    MethodSpec {
+        name: "speech.retry",
+        params: None,
+        result: Some("SpeechState"),
+    },
+    MethodSpec {
+        name: "speech.seek",
+        params: Some("SpeechSeek"),
+        result: Some("SpeechState"),
+    },
+    MethodSpec {
+        name: "speech.preview",
+        params: Some("SpeechPreview"),
+        result: Some("SpeechState"),
+    },
+    MethodSpec {
+        name: "speech.report",
+        params: Some("SpeechReport"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
+        name: "calls.get",
+        params: None,
+        result: Some("CallState"),
+    },
+    MethodSpec {
+        name: "calls.start",
+        params: Some("CallStart"),
+        result: Some("CallState"),
+    },
+    MethodSpec {
+        name: "calls.end",
+        params: None,
+        result: Some("CallState"),
+    },
+    MethodSpec {
+        name: "calls.pause",
+        params: None,
+        result: Some("CallState"),
+    },
+    MethodSpec {
+        name: "calls.resume",
+        params: None,
+        result: Some("CallState"),
+    },
+    MethodSpec {
+        name: "calls.mute",
+        params: None,
+        result: Some("CallState"),
+    },
+    MethodSpec {
+        name: "calls.skip",
+        params: None,
+        result: Some("CallState"),
+    },
+    MethodSpec {
+        name: "calls.report",
+        params: Some("CallReport"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
+        name: "calendar.agenda",
+        params: Some("CalendarAgendaQuery"),
+        result: Some("CalendarAgenda"),
+    },
+    MethodSpec {
+        name: "calendar.setVisible",
+        params: Some("CalendarVisibility"),
+        result: Some("CalendarAgenda"),
+    },
+    MethodSpec {
+        name: "calendar.makeDefault",
+        params: Some("CalendarRef"),
+        result: Some("CalendarAgenda"),
+    },
+    MethodSpec {
+        name: "calendar.createCalendar",
+        params: Some("CalendarCreate"),
+        result: Some("CalendarDto"),
+    },
+    MethodSpec {
+        name: "calendar.event",
+        params: Some("CalendarItemRef"),
+        result: Some("CalendarEventDetail"),
+    },
+    MethodSpec {
+        name: "calendar.deleteEvent",
+        params: Some("CalendarItemRef"),
+        result: Some("CalendarAgenda"),
+    },
+    MethodSpec {
+        name: "calendar.respond",
+        params: Some("CalendarRsvpEdit"),
+        result: Some("CalendarEventDetail"),
+    },
+    MethodSpec {
+        name: "calendar.editor",
+        params: Some("CalendarEditorOpen"),
+        result: Some("CalendarEditor"),
+    },
+    MethodSpec {
+        name: "calendar.checkDraft",
+        params: Some("CalendarDraftEdit"),
+        result: Some("CalendarDraftState"),
+    },
+    MethodSpec {
+        name: "calendar.save",
+        params: Some("CalendarDraftEdit"),
+        result: Some("CalendarDraftState"),
+    },
+    MethodSpec {
+        name: "automations.list",
+        params: Some("AutomationQuery"),
+        result: Some("AutomationList"),
+    },
+    MethodSpec {
+        name: "automations.loadMore",
+        params: None,
+        result: Some("AutomationList"),
+    },
+    MethodSpec {
+        name: "automations.get",
+        params: Some("AutomationRef"),
+        result: Some("AutomationDetail"),
+    },
+    MethodSpec {
+        name: "automations.runs",
+        params: Some("AutomationRunsQuery"),
+        result: Some("AutomationRuns"),
+    },
+    MethodSpec {
+        name: "automations.setActive",
+        params: Some("AutomationToggle"),
+        result: Some("AutomationDetail"),
+    },
+    MethodSpec {
+        name: "automations.run",
+        params: Some("AutomationRef"),
+        result: Some("AutomationRunProgress"),
+    },
+    MethodSpec {
+        name: "automations.runState",
+        params: Some("AutomationRef"),
+        result: Some("AutomationRunProgress"),
+    },
+    MethodSpec {
+        name: "automations.delete",
+        params: Some("AutomationRef"),
+        result: Some("AutomationList"),
+    },
+    MethodSpec {
+        name: "automations.editor",
+        params: Some("AutomationEditorOpen"),
+        result: Some("AutomationEditor"),
+    },
+    MethodSpec {
+        name: "automations.checkDraft",
+        params: Some("AutomationDraftEdit"),
+        result: Some("AutomationDraftState"),
+    },
+    MethodSpec {
+        name: "automations.save",
+        params: Some("AutomationDraftEdit"),
+        result: Some("AutomationDraftState"),
+    },
+    MethodSpec {
         name: "notes.list",
         params: Some("NoteQuery"),
         result: Some("NoteList"),
     },
     MethodSpec {
         name: "notes.get",
-        params: Some("NoteRef"),
+        params: Some("NoteOpen"),
         result: Some("NoteResult"),
     },
     MethodSpec {
@@ -11547,6 +18592,26 @@ pub const METHODS: &[MethodSpec] = &[
         name: "notes.detach",
         params: Some("NoteDetach"),
         result: Some("NoteDetail"),
+    },
+    MethodSpec {
+        name: "notes.recordings",
+        params: Some("NoteRef"),
+        result: Some("NoteRecordings"),
+    },
+    MethodSpec {
+        name: "notes.addRecording",
+        params: Some("NoteRecordingAdd"),
+        result: Some("NoteRecordings"),
+    },
+    MethodSpec {
+        name: "notes.retryRecording",
+        params: Some("NoteRecordingRef"),
+        result: Some("NoteRecordings"),
+    },
+    MethodSpec {
+        name: "notes.removeRecording",
+        params: Some("NoteRecordingRef"),
+        result: Some("NoteRecordings"),
     },
     MethodSpec {
         name: "channels.list",
@@ -11612,6 +18677,46 @@ pub const METHODS: &[MethodSpec] = &[
         name: "channels.members",
         params: Some("ChannelRef"),
         result: Some("ChannelMembers"),
+    },
+    MethodSpec {
+        name: "channels.open",
+        params: Some("ChannelRef"),
+        result: Some("ChannelDetails"),
+    },
+    MethodSpec {
+        name: "channels.focus",
+        params: Some("ChannelFocus"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
+        name: "channels.setMuted",
+        params: Some("ChannelMute"),
+        result: Some("ChannelList"),
+    },
+    MethodSpec {
+        name: "channels.mentions",
+        params: Some("ChannelMentionQuery"),
+        result: Some("MentionList"),
+    },
+    MethodSpec {
+        name: "channels.memberPage",
+        params: Some("ChannelMemberQuery"),
+        result: Some("ChannelMemberPage"),
+    },
+    MethodSpec {
+        name: "channels.addMembers",
+        params: Some("ChannelMembersAdd"),
+        result: Some("ChannelMemberChange"),
+    },
+    MethodSpec {
+        name: "channels.removeMember",
+        params: Some("ChannelMemberRemove"),
+        result: Some("ChannelMemberChange"),
+    },
+    MethodSpec {
+        name: "channels.appAction",
+        params: Some("ChannelAppAction"),
+        result: Some("ChannelAppActionResult"),
     },
     MethodSpec {
         name: "workspace.capabilities",
@@ -11734,6 +18839,21 @@ pub const METHODS: &[MethodSpec] = &[
         result: Some("WorkspaceFiles"),
     },
     MethodSpec {
+        name: "workspace.duplicate",
+        params: Some("WorkspaceDuplicate"),
+        result: Some("WorkspaceDetail"),
+    },
+    MethodSpec {
+        name: "workspace.addText",
+        params: Some("WorkspaceTextFile"),
+        result: Some("WorkspaceFiles"),
+    },
+    MethodSpec {
+        name: "workspace.skillFromMarkdown",
+        params: Some("WorkspaceMarkdown"),
+        result: Some("WorkspaceSkillDto"),
+    },
+    MethodSpec {
         name: "hermes.settings",
         params: None,
         result: Some("HermesSettings"),
@@ -11784,6 +18904,31 @@ pub const METHODS: &[MethodSpec] = &[
         result: Some("HermesSessionDto"),
     },
     MethodSpec {
+        name: "hermes.sessions.update",
+        params: Some("HermesSessionUpdate"),
+        result: Some("HermesSessions"),
+    },
+    MethodSpec {
+        name: "hermes.sessions.continue",
+        params: Some("HermesContinue"),
+        result: Some("HermesSessionDto"),
+    },
+    MethodSpec {
+        name: "hermes.hidden.list",
+        params: None,
+        result: Some("HermesSessions"),
+    },
+    MethodSpec {
+        name: "hermes.history.branch",
+        params: Some("HermesBranch"),
+        result: Some("HermesSessionDto"),
+    },
+    MethodSpec {
+        name: "hermes.history.undo",
+        params: Some("ChatRef"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
         name: "hermes.jobs",
         params: None,
         result: Some("HermesJobs"),
@@ -11800,18 +18945,218 @@ pub const METHODS: &[MethodSpec] = &[
     },
     MethodSpec {
         name: "hermes.runJob",
-        params: Some("HermesRef"),
+        params: Some("HermesJobRef"),
         result: Some("HermesJobs"),
     },
     MethodSpec {
         name: "hermes.deleteJob",
-        params: Some("HermesRef"),
+        params: Some("HermesJobRef"),
         result: Some("HermesJobs"),
     },
     MethodSpec {
         name: "hermes.catalog",
         params: None,
         result: Some("HermesCatalog"),
+    },
+    MethodSpec {
+        name: "hermes.jobs.runs",
+        params: Some("HermesJobRef"),
+        result: Some("HermesSessions"),
+    },
+    MethodSpec {
+        name: "hermes.jobs.stop",
+        params: Some("HermesJobRef"),
+        result: Some("HermesJobs"),
+    },
+    MethodSpec {
+        name: "hermes.jobs.delivery",
+        params: None,
+        result: Some("HermesDeliveryOptions"),
+    },
+    MethodSpec {
+        name: "hermes.connections.list",
+        params: None,
+        result: Some("HermesConnections"),
+    },
+    MethodSpec {
+        name: "hermes.connections.save",
+        params: Some("HermesConnectionEdit"),
+        result: Some("HermesConnections"),
+    },
+    MethodSpec {
+        name: "hermes.connections.test",
+        params: Some("HermesConnectionEdit"),
+        result: Some("HermesConnectionTestResult"),
+    },
+    MethodSpec {
+        name: "hermes.connections.activate",
+        params: Some("HermesRef"),
+        result: Some("HermesConnections"),
+    },
+    MethodSpec {
+        name: "hermes.connections.delete",
+        params: Some("HermesRef"),
+        result: Some("HermesConnections"),
+    },
+    MethodSpec {
+        name: "hermes.connections.setEnabled",
+        params: Some("HermesToggle"),
+        result: Some("HermesConnections"),
+    },
+    MethodSpec {
+        name: "hermes.mcp.list",
+        params: None,
+        result: Some("HermesMcpServers"),
+    },
+    MethodSpec {
+        name: "hermes.mcp.catalog",
+        params: None,
+        result: Some("HermesMcpCatalog"),
+    },
+    MethodSpec {
+        name: "hermes.mcp.add",
+        params: Some("HermesMcpAdd"),
+        result: Some("HermesMcpServers"),
+    },
+    MethodSpec {
+        name: "hermes.mcp.addFromCatalog",
+        params: Some("HermesMcpRef"),
+        result: Some("HermesMcpServers"),
+    },
+    MethodSpec {
+        name: "hermes.mcp.setApiKey",
+        params: Some("HermesMcpApiKey"),
+        result: Some("HermesMcpServers"),
+    },
+    MethodSpec {
+        name: "hermes.mcp.remove",
+        params: Some("HermesMcpRef"),
+        result: Some("HermesMcpServers"),
+    },
+    MethodSpec {
+        name: "hermes.mcp.test",
+        params: Some("HermesMcpRef"),
+        result: Some("HermesMcpTestResultDto"),
+    },
+    MethodSpec {
+        name: "hermes.mcp.setEnabled",
+        params: Some("HermesMcpToggle"),
+        result: Some("HermesMcpServers"),
+    },
+    MethodSpec {
+        name: "hermes.mcp.authenticate",
+        params: Some("HermesMcpRef"),
+        result: Some("HermesMcpServers"),
+    },
+    MethodSpec {
+        name: "hermes.work.watch",
+        params: Some("HermesWorkWatch"),
+        result: Some("HermesWork"),
+    },
+    MethodSpec {
+        name: "hermes.work.unwatch",
+        params: Some("HermesWorkChat"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
+        name: "hermes.work.steer",
+        params: Some("HermesSteerSubagent"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
+        name: "hermes.work.stop",
+        params: Some("HermesSubagentRef"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
+        name: "hermes.work.kill",
+        params: Some("HermesProcessRef"),
+        result: Some("HermesProcessKill"),
+    },
+    MethodSpec {
+        name: "hermes.context.get",
+        params: Some("HermesContextRef"),
+        result: Some("HermesContextReportDto"),
+    },
+    MethodSpec {
+        name: "hermes.context.compact",
+        params: Some("HermesCompact"),
+        result: Some("HermesCompactResultDto"),
+    },
+    MethodSpec {
+        name: "hermes.decisions.answer",
+        params: Some("HermesDecisionAnswer"),
+        result: Some("HermesDecisionResult"),
+    },
+    MethodSpec {
+        name: "hermes.bots.list",
+        params: None,
+        result: Some("HermesBots"),
+    },
+    MethodSpec {
+        name: "hermes.bots.avatar",
+        params: Some("HermesBotRef"),
+        result: Some("HermesBotAvatar"),
+    },
+    MethodSpec {
+        name: "hermes.bots.open",
+        params: Some("HermesBotRef"),
+        result: Some("HermesSessionDto"),
+    },
+    MethodSpec {
+        name: "hermes.rooms.list",
+        params: None,
+        result: Some("HermesRooms"),
+    },
+    MethodSpec {
+        name: "hermes.rooms.create",
+        params: Some("HermesRoomCreate"),
+        result: Some("HermesRoomDto"),
+    },
+    MethodSpec {
+        name: "hermes.rooms.watch",
+        params: Some("HermesRoomRef"),
+        result: Some("HermesRoomView"),
+    },
+    MethodSpec {
+        name: "hermes.rooms.unwatch",
+        params: Some("HermesRoomRef"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
+        name: "hermes.rooms.send",
+        params: Some("HermesRoomMessage"),
+        result: Some("HermesRoomSendResult"),
+    },
+    MethodSpec {
+        name: "hermes.rooms.stop",
+        params: Some("HermesRoomRef"),
+        result: Some("HermesRoomStopped"),
+    },
+    MethodSpec {
+        name: "hermes.rooms.continue",
+        params: Some("HermesRoomContinue"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
+        name: "hermes.rooms.answer",
+        params: Some("HermesRoomAnswer"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
+        name: "hermes.rooms.rename",
+        params: Some("HermesRoomRename"),
+        result: Some("HermesRoomDto"),
+    },
+    MethodSpec {
+        name: "hermes.rooms.saveContext",
+        params: Some("HermesRoomContextEdit"),
+        result: Some("HermesRoomContextDto"),
+    },
+    MethodSpec {
+        name: "hermes.rooms.disband",
+        params: Some("HermesRoomRef"),
+        result: Some("OkResult"),
     },
     MethodSpec {
         name: "terminal.servers",
@@ -11859,6 +19204,46 @@ pub const METHODS: &[MethodSpec] = &[
         result: Some("TerminalPreview"),
     },
     MethodSpec {
+        name: "terminal.watch",
+        params: Some("TerminalWatch"),
+        result: Some("TerminalWatching"),
+    },
+    MethodSpec {
+        name: "terminal.detach",
+        params: Some("TerminalHandleRef"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
+        name: "computer.status",
+        params: Some("ComputerScope"),
+        result: Some("ComputerStatus"),
+    },
+    MethodSpec {
+        name: "computer.open",
+        params: Some("ComputerOpen"),
+        result: Some("ComputerView"),
+    },
+    MethodSpec {
+        name: "computer.tabs",
+        params: Some("ComputerScope"),
+        result: Some("ComputerTabs"),
+    },
+    MethodSpec {
+        name: "computer.closeTab",
+        params: Some("ComputerTabRef"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
+        name: "computer.shortcut",
+        params: Some("ComputerShortcut"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
+        name: "computer.close",
+        params: Some("ComputerHandleRef"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
         name: "voice.settings",
         params: None,
         result: Some("VoiceSettings"),
@@ -11893,6 +19278,106 @@ pub const METHODS: &[MethodSpec] = &[
         params: Some("VoiceModelRef"),
         result: Some("VoiceModels"),
     },
+    MethodSpec {
+        name: "dictation.status",
+        params: Some("DictationTarget"),
+        result: Some("DictationStatus"),
+    },
+    MethodSpec {
+        name: "recordings.list",
+        params: Some("RecordingTarget"),
+        result: Some("RecordingList"),
+    },
+    MethodSpec {
+        name: "recordings.begin",
+        params: Some("RecordingTarget"),
+        result: Some("RecordingStarted"),
+    },
+    MethodSpec {
+        name: "recordings.append",
+        params: Some("RecordingChunk"),
+        result: Some("RecordingSaved"),
+    },
+    MethodSpec {
+        name: "recordings.close",
+        params: Some("RecordingRef"),
+        result: Some("RecordingSaved"),
+    },
+    MethodSpec {
+        name: "recordings.discard",
+        params: Some("RecordingRef"),
+        result: Some("RecordingList"),
+    },
+    MethodSpec {
+        name: "recordings.transcribe",
+        params: Some("RecordingTranscribe"),
+        result: Some("VoiceTranscript"),
+    },
+    MethodSpec {
+        name: "librechat.probe",
+        params: Some("LibreChatProbe"),
+        result: Some("LibreChatProbeResult"),
+    },
+    MethodSpec {
+        name: "librechat.signIn",
+        params: Some("LibreChatSignIn"),
+        result: Some("LibreChatSignInResult"),
+    },
+    MethodSpec {
+        name: "librechat.verify",
+        params: Some("LibreChatVerify"),
+        result: Some("LibreChatSignInResult"),
+    },
+    MethodSpec {
+        name: "librechat.ssoStart",
+        params: Some("LibreChatSsoStart"),
+        result: Some("LibreChatSsoPlan"),
+    },
+    MethodSpec {
+        name: "librechat.completeSso",
+        params: Some("LibreChatSsoCompletion"),
+        result: Some("LibreChatSignInResult"),
+    },
+    MethodSpec {
+        name: "librechat.composer",
+        params: Some("LibreChatComposerTarget"),
+        result: Some("LibreChatComposer"),
+    },
+    MethodSpec {
+        name: "librechat.memories.list",
+        params: None,
+        result: Some("LibreChatMemories"),
+    },
+    MethodSpec {
+        name: "librechat.memories.save",
+        params: Some("LibreChatMemoryEdit"),
+        result: Some("LibreChatMemories"),
+    },
+    MethodSpec {
+        name: "librechat.memories.delete",
+        params: Some("LibreChatMemoryRef"),
+        result: Some("LibreChatMemories"),
+    },
+    MethodSpec {
+        name: "librechat.memories.setEnabled",
+        params: Some("LibreChatMemoryToggle"),
+        result: Some("LibreChatMemories"),
+    },
+    MethodSpec {
+        name: "librechat.duplicate",
+        params: Some("ChatRef"),
+        result: Some("ChatForked"),
+    },
+    MethodSpec {
+        name: "intents.ask",
+        params: Some("IntentAsk"),
+        result: Some("IntentAnswer"),
+    },
+    MethodSpec {
+        name: "intents.chats",
+        params: Some("IntentChatsQuery"),
+        result: Some("IntentChats"),
+    },
 ];
 
 /// The event names, for `events.subscribe`.
@@ -11921,6 +19406,12 @@ pub mod events {
     /// The channel list changed: a channel added, removed, renamed, or a new
     /// unread count. No payload.
     pub const CHANNELS_CHANGED: &str = "channels.changed";
+    /// An app answered the user alone, under one of a channel's messages.
+    /// Payload `ChannelAppReplyEvent`, scoped to `channel:<id>`.
+    pub const CHANNELS_APP_REPLY: &str = "channels.appReply";
+    /// Someone else posted in a channel that is not in front of the user.
+    /// Payload `ChannelPosted`, unscoped (for notifications).
+    pub const CHANNELS_POSTED: &str = "channels.posted";
     pub const SYNC_STATUS: &str = "sync.status";
     /// The realtime socket's health changed (connected, transport, latency,
     /// reconnects). No payload; `data.connection` says what it is now.
@@ -11966,6 +19457,9 @@ pub mod events {
     /// A model's tool asked to show a file from the chat's terminal. Payload
     /// `TerminalDisplayFile`, scoped to the chat.
     pub const TERMINAL_DISPLAY_FILE: &str = "terminal.displayFile";
+    /// A watched terminal's directory or ports changed (`terminal.watch`).
+    /// Payload `TerminalChanged`; unscoped, named by its handle.
+    pub const TERMINAL_CHANGED: &str = "terminal.changed";
     /// Core's `AppSettings` changed, from any window or the daemon itself.
     /// No payload; `settings.get` says what they are now.
     pub const SETTINGS_CHANGED: &str = "settings.changed";
@@ -11988,6 +19482,36 @@ pub mod events {
     /// page, a new height, a start or an end. Payload `McpAppEvent`, scoped
     /// to the app's chat.
     pub const MCP_APPS_EVENT: &str = "mcpApps.event";
+    /// The reading moved on: a word, a sentence, a pause, an end. Payload
+    /// `SpeechProgress`; a new `reading` means new sentences (`speech.get`).
+    pub const SPEECH_CHANGED: &str = "speech.changed";
+    /// The daemon asks the window's speech engine to speak or play. Payload
+    /// `SpeechCommand`; answered with `speech.report`.
+    pub const SPEECH_COMMAND: &str = "speech.command";
+    /// A watched Hermes chat's agent work changed: its subagents, processes,
+    /// plan or the output a window reads. Payload `HermesWork`, scoped to the
+    /// chat.
+    pub const HERMES_WORK_CHANGED: &str = "hermes.work.changed";
+    /// The voice call changed: its phase, words, meter or error. Payload
+    /// `CallState`.
+    pub const CALLS_CHANGED: &str = "calls.changed";
+    /// The daemon asks the window to listen, or to open the realtime audio,
+    /// for the call. Payload `CallCommand`; answered with `calls.report`.
+    pub const CALLS_COMMAND: &str = "calls.command";
+    /// The calendars or the agenda changed: `calendar.agenda` again. No
+    /// payload.
+    pub const CALENDAR_CHANGED: &str = "calendar.changed";
+    /// The scheduled tasks changed: `automations.list` again (and the open
+    /// task). No payload.
+    pub const AUTOMATIONS_CHANGED: &str = "automations.changed";
+    /// A Run Now moved on. Payload `AutomationRunProgress`.
+    pub const AUTOMATIONS_RUN_PROGRESS: &str = "automations.runProgress";
+    /// A watched Group Chat changed: its log, its bots' state, what it waits
+    /// on. Payload `HermesRoomView`, scoped to `hermes-room:<roomId>`.
+    pub const HERMES_ROOMS_CHANGED: &str = "hermes.rooms.changed";
+    /// The Group Chats listed changed: one was made, renamed or disbanded,
+    /// or one had news. Payload `HermesRooms`.
+    pub const HERMES_ROOMS_LIST_CHANGED: &str = "hermes.rooms.listChanged";
 }
 
 /// Every event, with its payload DTO by name and whether it is scoped.
@@ -12053,6 +19577,16 @@ pub const EVENTS: &[EventSpec] = &[
         scoped: false,
     },
     EventSpec {
+        name: "channels.appReply",
+        payload: Some("ChannelAppReplyEvent"),
+        scoped: true,
+    },
+    EventSpec {
+        name: "channels.posted",
+        payload: Some("ChannelPosted"),
+        scoped: false,
+    },
+    EventSpec {
         name: "sync.status",
         payload: Some("SyncState"),
         scoped: false,
@@ -12104,7 +19638,7 @@ pub const EVENTS: &[EventSpec] = &[
     },
     EventSpec {
         name: "hermes.changed",
-        payload: None,
+        payload: Some("HermesChanged"),
         scoped: false,
     },
     EventSpec {
@@ -12116,6 +19650,11 @@ pub const EVENTS: &[EventSpec] = &[
         name: "terminal.displayFile",
         payload: Some("TerminalDisplayFile"),
         scoped: true,
+    },
+    EventSpec {
+        name: "terminal.changed",
+        payload: Some("TerminalChanged"),
+        scoped: false,
     },
     EventSpec {
         name: "settings.changed",
@@ -12151,6 +19690,56 @@ pub const EVENTS: &[EventSpec] = &[
         name: "mcpApps.event",
         payload: Some("McpAppEvent"),
         scoped: true,
+    },
+    EventSpec {
+        name: "speech.changed",
+        payload: Some("SpeechProgress"),
+        scoped: false,
+    },
+    EventSpec {
+        name: "speech.command",
+        payload: Some("SpeechCommand"),
+        scoped: false,
+    },
+    EventSpec {
+        name: "hermes.work.changed",
+        payload: Some("HermesWork"),
+        scoped: true,
+    },
+    EventSpec {
+        name: "calls.changed",
+        payload: Some("CallState"),
+        scoped: false,
+    },
+    EventSpec {
+        name: "calls.command",
+        payload: Some("CallCommand"),
+        scoped: false,
+    },
+    EventSpec {
+        name: "calendar.changed",
+        payload: None,
+        scoped: false,
+    },
+    EventSpec {
+        name: "automations.changed",
+        payload: None,
+        scoped: false,
+    },
+    EventSpec {
+        name: "automations.runProgress",
+        payload: Some("AutomationRunProgress"),
+        scoped: false,
+    },
+    EventSpec {
+        name: "hermes.rooms.changed",
+        payload: Some("HermesRoomView"),
+        scoped: true,
+    },
+    EventSpec {
+        name: "hermes.rooms.listChanged",
+        payload: Some("HermesRooms"),
+        scoped: false,
     },
 ];
 
@@ -12201,6 +19790,16 @@ pub enum Event {
     ///
     /// `channels.changed`.
     ChannelsChanged,
+    /// An app answered the user alone, under one of a channel's messages.
+    /// Payload `ChannelAppReplyEvent`, scoped to `channel:<id>`.
+    ///
+    /// `channels.appReply`, scoped.
+    ChannelsAppReply(ChannelAppReplyEvent),
+    /// Someone else posted in a channel that is not in front of the user.
+    /// Payload `ChannelPosted`, unscoped (for notifications).
+    ///
+    /// `channels.posted`.
+    ChannelsPosted(ChannelPosted),
     /// `sync.status`.
     SyncStatus(SyncState),
     /// The realtime socket's health changed (connected, transport, latency,
@@ -12260,7 +19859,7 @@ pub enum Event {
     /// Hermes's settings, sessions or jobs changed. No payload.
     ///
     /// `hermes.changed`.
-    HermesChanged,
+    HermesChanged(HermesChanged),
     /// The whisper models changed: a download moved, finished or failed, or
     /// one was deleted. Payload `VoiceModels`.
     ///
@@ -12271,6 +19870,11 @@ pub enum Event {
     ///
     /// `terminal.displayFile`, scoped.
     TerminalDisplayFile(TerminalDisplayFile),
+    /// A watched terminal's directory or ports changed (`terminal.watch`).
+    /// Payload `TerminalChanged`; unscoped, named by its handle.
+    ///
+    /// `terminal.changed`.
+    TerminalChanged(TerminalChanged),
     /// Core's `AppSettings` changed, from any window or the daemon itself.
     /// No payload; `settings.get` says what they are now.
     ///
@@ -12307,6 +19911,56 @@ pub enum Event {
     ///
     /// `mcpApps.event`, scoped.
     McpAppsEvent(McpAppEvent),
+    /// The reading moved on: a word, a sentence, a pause, an end. Payload
+    /// `SpeechProgress`; a new `reading` means new sentences (`speech.get`).
+    ///
+    /// `speech.changed`.
+    SpeechChanged(SpeechProgress),
+    /// The daemon asks the window's speech engine to speak or play. Payload
+    /// `SpeechCommand`; answered with `speech.report`.
+    ///
+    /// `speech.command`.
+    SpeechCommand(SpeechCommand),
+    /// A watched Hermes chat's agent work changed: its subagents, processes,
+    /// plan or the output a window reads. Payload `HermesWork`, scoped to the
+    /// chat.
+    ///
+    /// `hermes.work.changed`, scoped.
+    HermesWorkChanged(HermesWork),
+    /// The voice call changed: its phase, words, meter or error. Payload
+    /// `CallState`.
+    ///
+    /// `calls.changed`.
+    CallsChanged(CallState),
+    /// The daemon asks the window to listen, or to open the realtime audio,
+    /// for the call. Payload `CallCommand`; answered with `calls.report`.
+    ///
+    /// `calls.command`.
+    CallsCommand(CallCommand),
+    /// The calendars or the agenda changed: `calendar.agenda` again. No
+    /// payload.
+    ///
+    /// `calendar.changed`.
+    CalendarChanged,
+    /// The scheduled tasks changed: `automations.list` again (and the open
+    /// task). No payload.
+    ///
+    /// `automations.changed`.
+    AutomationsChanged,
+    /// A Run Now moved on. Payload `AutomationRunProgress`.
+    ///
+    /// `automations.runProgress`.
+    AutomationsRunProgress(AutomationRunProgress),
+    /// A watched Group Chat changed: its log, its bots' state, what it waits
+    /// on. Payload `HermesRoomView`, scoped to `hermes-room:<roomId>`.
+    ///
+    /// `hermes.rooms.changed`, scoped.
+    HermesRoomsChanged(HermesRoomView),
+    /// The Group Chats listed changed: one was made, renamed or disbanded,
+    /// or one had news. Payload `HermesRooms`.
+    ///
+    /// `hermes.rooms.listChanged`.
+    HermesRoomsListChanged(HermesRooms),
     /// An event this build does not know, from a newer daemon, kept as it came.
     Unknown {
         name: String,
@@ -12334,6 +19988,8 @@ impl Event {
             events::CHANNELS_MESSAGE => Self::ChannelsMessage(serde_json::from_value(payload)?),
             events::CHANNELS_TYPING => Self::ChannelsTyping(serde_json::from_value(payload)?),
             events::CHANNELS_CHANGED => Self::ChannelsChanged,
+            events::CHANNELS_APP_REPLY => Self::ChannelsAppReply(serde_json::from_value(payload)?),
+            events::CHANNELS_POSTED => Self::ChannelsPosted(serde_json::from_value(payload)?),
             events::SYNC_STATUS => Self::SyncStatus(serde_json::from_value(payload)?),
             events::SOCKET_HEALTH => Self::SocketHealth,
             events::NOTIFY_SHOW => Self::NotifyShow(serde_json::from_value(payload)?),
@@ -12344,11 +20000,12 @@ impl Event {
             events::MODELS_CHANGED => Self::ModelsChanged,
             events::OPEN_URL => Self::OpenUrl(serde_json::from_value(payload)?),
             events::WORKSPACE_CHANGED => Self::WorkspaceChanged(serde_json::from_value(payload)?),
-            events::HERMES_CHANGED => Self::HermesChanged,
+            events::HERMES_CHANGED => Self::HermesChanged(serde_json::from_value(payload)?),
             events::VOICE_CHANGED => Self::VoiceChanged(serde_json::from_value(payload)?),
             events::TERMINAL_DISPLAY_FILE => {
                 Self::TerminalDisplayFile(serde_json::from_value(payload)?)
             }
+            events::TERMINAL_CHANGED => Self::TerminalChanged(serde_json::from_value(payload)?),
             events::SETTINGS_CHANGED => Self::SettingsChanged,
             events::QUEUE_CHANGED => Self::QueueChanged(serde_json::from_value(payload)?),
             events::MESSAGES_MERGE => Self::MessagesMerge(serde_json::from_value(payload)?),
@@ -12358,6 +20015,24 @@ impl Event {
                 Self::ChatPromptsChanged(serde_json::from_value(payload)?)
             }
             events::MCP_APPS_EVENT => Self::McpAppsEvent(serde_json::from_value(payload)?),
+            events::SPEECH_CHANGED => Self::SpeechChanged(serde_json::from_value(payload)?),
+            events::SPEECH_COMMAND => Self::SpeechCommand(serde_json::from_value(payload)?),
+            events::HERMES_WORK_CHANGED => {
+                Self::HermesWorkChanged(serde_json::from_value(payload)?)
+            }
+            events::CALLS_CHANGED => Self::CallsChanged(serde_json::from_value(payload)?),
+            events::CALLS_COMMAND => Self::CallsCommand(serde_json::from_value(payload)?),
+            events::CALENDAR_CHANGED => Self::CalendarChanged,
+            events::AUTOMATIONS_CHANGED => Self::AutomationsChanged,
+            events::AUTOMATIONS_RUN_PROGRESS => {
+                Self::AutomationsRunProgress(serde_json::from_value(payload)?)
+            }
+            events::HERMES_ROOMS_CHANGED => {
+                Self::HermesRoomsChanged(serde_json::from_value(payload)?)
+            }
+            events::HERMES_ROOMS_LIST_CHANGED => {
+                Self::HermesRoomsListChanged(serde_json::from_value(payload)?)
+            }
             _ => Self::Unknown {
                 name: name.to_owned(),
                 payload,
@@ -12380,6 +20055,8 @@ impl Event {
             Self::ChannelsMessage(_) => events::CHANNELS_MESSAGE,
             Self::ChannelsTyping(_) => events::CHANNELS_TYPING,
             Self::ChannelsChanged => events::CHANNELS_CHANGED,
+            Self::ChannelsAppReply(_) => events::CHANNELS_APP_REPLY,
+            Self::ChannelsPosted(_) => events::CHANNELS_POSTED,
             Self::SyncStatus(_) => events::SYNC_STATUS,
             Self::SocketHealth => events::SOCKET_HEALTH,
             Self::NotifyShow(_) => events::NOTIFY_SHOW,
@@ -12390,9 +20067,10 @@ impl Event {
             Self::ModelsChanged => events::MODELS_CHANGED,
             Self::OpenUrl(_) => events::OPEN_URL,
             Self::WorkspaceChanged(_) => events::WORKSPACE_CHANGED,
-            Self::HermesChanged => events::HERMES_CHANGED,
+            Self::HermesChanged(_) => events::HERMES_CHANGED,
             Self::VoiceChanged(_) => events::VOICE_CHANGED,
             Self::TerminalDisplayFile(_) => events::TERMINAL_DISPLAY_FILE,
+            Self::TerminalChanged(_) => events::TERMINAL_CHANGED,
             Self::SettingsChanged => events::SETTINGS_CHANGED,
             Self::QueueChanged(_) => events::QUEUE_CHANGED,
             Self::MessagesMerge(_) => events::MESSAGES_MERGE,
@@ -12400,6 +20078,16 @@ impl Event {
             Self::HandoffSettled(_) => events::HANDOFF_SETTLED,
             Self::ChatPromptsChanged(_) => events::CHAT_PROMPTS_CHANGED,
             Self::McpAppsEvent(_) => events::MCP_APPS_EVENT,
+            Self::SpeechChanged(_) => events::SPEECH_CHANGED,
+            Self::SpeechCommand(_) => events::SPEECH_COMMAND,
+            Self::HermesWorkChanged(_) => events::HERMES_WORK_CHANGED,
+            Self::CallsChanged(_) => events::CALLS_CHANGED,
+            Self::CallsCommand(_) => events::CALLS_COMMAND,
+            Self::CalendarChanged => events::CALENDAR_CHANGED,
+            Self::AutomationsChanged => events::AUTOMATIONS_CHANGED,
+            Self::AutomationsRunProgress(_) => events::AUTOMATIONS_RUN_PROGRESS,
+            Self::HermesRoomsChanged(_) => events::HERMES_ROOMS_CHANGED,
+            Self::HermesRoomsListChanged(_) => events::HERMES_ROOMS_LIST_CHANGED,
             Self::Unknown { name, .. } => name,
         }
     }
@@ -12418,6 +20106,8 @@ impl Event {
             Self::NotesChanged(payload) => serde_json::to_value(payload),
             Self::ChannelsMessage(payload) => serde_json::to_value(payload),
             Self::ChannelsTyping(payload) => serde_json::to_value(payload),
+            Self::ChannelsAppReply(payload) => serde_json::to_value(payload),
+            Self::ChannelsPosted(payload) => serde_json::to_value(payload),
             Self::SyncStatus(payload) => serde_json::to_value(payload),
             Self::NotifyShow(payload) => serde_json::to_value(payload),
             Self::RouteRemap(payload) => serde_json::to_value(payload),
@@ -12425,20 +20115,31 @@ impl Event {
             Self::UiSettled(payload) => serde_json::to_value(payload),
             Self::OpenUrl(payload) => serde_json::to_value(payload),
             Self::WorkspaceChanged(payload) => serde_json::to_value(payload),
+            Self::HermesChanged(payload) => serde_json::to_value(payload),
             Self::VoiceChanged(payload) => serde_json::to_value(payload),
             Self::TerminalDisplayFile(payload) => serde_json::to_value(payload),
+            Self::TerminalChanged(payload) => serde_json::to_value(payload),
             Self::QueueChanged(payload) => serde_json::to_value(payload),
             Self::MessagesMerge(payload) => serde_json::to_value(payload),
             Self::HandoffRequested(payload) => serde_json::to_value(payload),
             Self::HandoffSettled(payload) => serde_json::to_value(payload),
             Self::ChatPromptsChanged(payload) => serde_json::to_value(payload),
             Self::McpAppsEvent(payload) => serde_json::to_value(payload),
+            Self::SpeechChanged(payload) => serde_json::to_value(payload),
+            Self::SpeechCommand(payload) => serde_json::to_value(payload),
+            Self::HermesWorkChanged(payload) => serde_json::to_value(payload),
+            Self::CallsChanged(payload) => serde_json::to_value(payload),
+            Self::CallsCommand(payload) => serde_json::to_value(payload),
+            Self::AutomationsRunProgress(payload) => serde_json::to_value(payload),
+            Self::HermesRoomsChanged(payload) => serde_json::to_value(payload),
+            Self::HermesRoomsListChanged(payload) => serde_json::to_value(payload),
             Self::ChannelsChanged
             | Self::SocketHealth
             | Self::CapabilitiesChanged
             | Self::ModelsChanged
-            | Self::HermesChanged
-            | Self::SettingsChanged => Ok(serde_json::Value::Object(serde_json::Map::new())),
+            | Self::SettingsChanged
+            | Self::CalendarChanged
+            | Self::AutomationsChanged => Ok(serde_json::Value::Object(serde_json::Map::new())),
             Self::Unknown { payload, .. } => Ok(payload.clone()),
         }
     }
@@ -12483,24 +20184,86 @@ pub mod conformance {
         "AttachmentAvailability",
         "AuthSnapshot",
         "AuthUser",
+        "AutomationDetail",
+        "AutomationDraftEdit",
+        "AutomationDraftState",
+        "AutomationEditor",
+        "AutomationEditorOpen",
+        "AutomationFields",
+        "AutomationList",
+        "AutomationOption",
+        "AutomationQuery",
+        "AutomationRef",
+        "AutomationRunDto",
+        "AutomationRunProgress",
+        "AutomationRuns",
+        "AutomationRunsQuery",
+        "AutomationScheduleDto",
+        "AutomationSummary",
+        "AutomationToggle",
         "BulkChats",
         "BulkChatsResult",
+        "CalendarAgenda",
+        "CalendarAgendaDay",
+        "CalendarAgendaQuery",
+        "CalendarAttendeeDto",
+        "CalendarCreate",
+        "CalendarDraftEdit",
+        "CalendarDraftState",
+        "CalendarDto",
+        "CalendarEditor",
+        "CalendarEditorOpen",
+        "CalendarEventDetail",
+        "CalendarEventFields",
+        "CalendarItemDto",
+        "CalendarItemRef",
+        "CalendarRef",
+        "CalendarRowTimeDto",
+        "CalendarRsvpEdit",
+        "CalendarVisibility",
+        "CalendarWallTime",
+        "CallCommand",
+        "CallReport",
+        "CallStart",
+        "CallState",
         "CancelledResult",
         "Capabilities",
+        "ChangedFileDto",
+        "ChannelAppAction",
+        "ChannelAppActionDto",
+        "ChannelAppActionResult",
+        "ChannelAppContentDto",
+        "ChannelAppEmbedDto",
+        "ChannelAppFieldDto",
+        "ChannelAppReplyDto",
+        "ChannelAppReplyEvent",
+        "ChannelDetails",
         "ChannelEdit",
+        "ChannelFileDto",
+        "ChannelFocus",
         "ChannelList",
+        "ChannelMemberChange",
+        "ChannelMemberDto",
+        "ChannelMemberPage",
+        "ChannelMemberQuery",
+        "ChannelMemberRemove",
         "ChannelMembers",
+        "ChannelMembersAdd",
+        "ChannelMentionQuery",
         "ChannelMessageDto",
         "ChannelMessageEdit",
         "ChannelMessageRef",
         "ChannelMessages",
         "ChannelMessagesChanged",
         "ChannelMessagesQuery",
+        "ChannelMute",
         "ChannelPin",
         "ChannelPost",
+        "ChannelPosted",
         "ChannelReact",
         "ChannelReaction",
         "ChannelRef",
+        "ChannelReplyPreview",
         "ChannelSummary",
         "ChannelTyping",
         "ChannelTypingUsers",
@@ -12513,6 +20276,7 @@ pub mod conformance {
         "ChatFileDto",
         "ChatForked",
         "ChatList",
+        "ChatMenuAbilities",
         "ChatMessageDto",
         "ChatMessageVersionDto",
         "ChatPromptAnswer",
@@ -12548,6 +20312,15 @@ pub mod conformance {
         "ComposerMentionDto",
         "ComposerOptions",
         "ComposerSearch",
+        "ComputerHandleRef",
+        "ComputerOpen",
+        "ComputerScope",
+        "ComputerShortcut",
+        "ComputerStatus",
+        "ComputerTab",
+        "ComputerTabRef",
+        "ComputerTabs",
+        "ComputerView",
         "ConnectionHealth",
         "ContextAttachmentDto",
         "ContextSuggestion",
@@ -12561,11 +20334,18 @@ pub mod conformance {
         "DeleteMessages",
         "DeletedResult",
         "DiagnosticsExport",
+        "DictationStatus",
+        "DictationTarget",
+        "DiffLineDto",
         "DirectConnectionEdit",
         "DirectConnectionList",
         "DirectConnectionSummary",
+        "DirectContextLimit",
+        "DirectContextModel",
         "DirectEnable",
         "DirectHistory",
+        "DirectImagesPerRequest",
+        "DirectOptions",
         "DirectPreferred",
         "DirectRef",
         "DirectTestResult",
@@ -12599,25 +20379,121 @@ pub mod conformance {
         "HandoffSettled",
         "HandshakeRequest",
         "HandshakeResponse",
+        "HermesBotAvatar",
+        "HermesBotDto",
+        "HermesBotRef",
+        "HermesBots",
+        "HermesBranch",
         "HermesCapabilitiesDto",
         "HermesCatalog",
+        "HermesChanged",
+        "HermesChatDto",
+        "HermesClarifyAnswer",
+        "HermesCompact",
+        "HermesCompactResultDto",
+        "HermesConnectionDto",
+        "HermesConnectionEdit",
+        "HermesConnectionTestResult",
+        "HermesConnections",
+        "HermesContextCategoryDto",
+        "HermesContextRef",
+        "HermesContextReportDto",
+        "HermesContinue",
+        "HermesDecisionAnswer",
+        "HermesDecisionResult",
+        "HermesDeliveryOptions",
+        "HermesDeliveryTargetDto",
+        "HermesErrorDto",
         "HermesJobDto",
         "HermesJobEdit",
+        "HermesJobNotice",
+        "HermesJobRef",
         "HermesJobToggle",
         "HermesJobs",
+        "HermesMcpAdd",
+        "HermesMcpApiKey",
+        "HermesMcpCatalog",
+        "HermesMcpCatalogEntryDto",
+        "HermesMcpRef",
+        "HermesMcpServerDto",
+        "HermesMcpServers",
+        "HermesMcpTestResultDto",
+        "HermesMcpToggle",
+        "HermesModelChoiceDto",
+        "HermesPlanDto",
+        "HermesPlanGaugeDto",
+        "HermesPlanItemDto",
+        "HermesProcessDto",
+        "HermesProcessKill",
+        "HermesProcessRef",
+        "HermesProviderPlanDto",
         "HermesRef",
         "HermesRename",
+        "HermesRoomActionDto",
+        "HermesRoomAnswer",
+        "HermesRoomContextDto",
+        "HermesRoomContextEdit",
+        "HermesRoomContinue",
+        "HermesRoomCreate",
+        "HermesRoomDto",
+        "HermesRoomItemDto",
+        "HermesRoomMemberDto",
+        "HermesRoomMemberStatusDto",
+        "HermesRoomMessage",
+        "HermesRoomRef",
+        "HermesRoomRename",
+        "HermesRoomSendResult",
+        "HermesRoomStopped",
+        "HermesRoomView",
+        "HermesRooms",
         "HermesSessionDto",
+        "HermesSessionUpdate",
         "HermesSessions",
         "HermesSettings",
         "HermesSettingsEdit",
         "HermesSkillDto",
         "HermesStatus",
+        "HermesSteerSubagent",
+        "HermesSubagentDto",
+        "HermesSubagentOutputDto",
+        "HermesSubagentRef",
         "HermesTestResult",
+        "HermesToggle",
+        "HermesTokenTotalsDto",
         "HermesToolsetDto",
+        "HermesUsageBarDto",
+        "HermesUsageBarsDto",
+        "HermesWork",
+        "HermesWorkChat",
+        "HermesWorkWatch",
+        "IntentAnswer",
+        "IntentAsk",
+        "IntentChat",
+        "IntentChats",
+        "IntentChatsQuery",
         "KnowledgeList",
         "KnowledgeQuery",
         "KnowledgeSummary",
+        "LibreChatAccountSummary",
+        "LibreChatComposer",
+        "LibreChatComposerTarget",
+        "LibreChatFeatures",
+        "LibreChatMcpServerDto",
+        "LibreChatMemories",
+        "LibreChatMemoryDto",
+        "LibreChatMemoryEdit",
+        "LibreChatMemoryRef",
+        "LibreChatMemoryToggle",
+        "LibreChatProbe",
+        "LibreChatProbeResult",
+        "LibreChatServerDto",
+        "LibreChatSignIn",
+        "LibreChatSignInResult",
+        "LibreChatSsoCompletion",
+        "LibreChatSsoPlan",
+        "LibreChatSsoProviderDto",
+        "LibreChatSsoStart",
+        "LibreChatVerify",
         "MarkUnread",
         "McpAppContext",
         "McpAppDto",
@@ -12672,8 +20548,14 @@ pub mod conformance {
         "NoteDetail",
         "NoteFile",
         "NoteList",
+        "NoteOpen",
+        "NotePageDto",
         "NotePin",
         "NoteQuery",
+        "NoteRecordingAdd",
+        "NoteRecordingDto",
+        "NoteRecordingRef",
+        "NoteRecordings",
         "NoteRef",
         "NoteResult",
         "NoteSave",
@@ -12709,6 +20591,14 @@ pub mod conformance {
         "RateTurn",
         "RatedResult",
         "ReasoningOptions",
+        "RecordingChunk",
+        "RecordingDto",
+        "RecordingList",
+        "RecordingRef",
+        "RecordingSaved",
+        "RecordingStarted",
+        "RecordingTarget",
+        "RecordingTranscribe",
         "RegenerateTurn",
         "ReleaseNoteBullet",
         "ReleaseNoteDto",
@@ -12739,6 +20629,14 @@ pub mod conformance {
         "SignOutAll",
         "SkillList",
         "SkillSummary",
+        "SpeechCommand",
+        "SpeechPreview",
+        "SpeechProgress",
+        "SpeechReport",
+        "SpeechSeek",
+        "SpeechState",
+        "SpeechToggle",
+        "SpeechVoice",
         "SteerResult",
         "SteerTurn",
         "StopTurn",
@@ -12748,6 +20646,7 @@ pub mod conformance {
         "TagList",
         "TerminalAttach",
         "TerminalAttached",
+        "TerminalChanged",
         "TerminalDisplayFile",
         "TerminalEntry",
         "TerminalFileAction",
@@ -12763,6 +20662,8 @@ pub mod conformance {
         "TerminalSelect",
         "TerminalServerDto",
         "TerminalServers",
+        "TerminalWatch",
+        "TerminalWatching",
         "ToolCallDto",
         "ToolSummary",
         "TurnBlocks",
@@ -12796,12 +20697,17 @@ pub mod conformance {
         "VoiceSpeech",
         "VoiceTranscript",
         "VoiceVoices",
+        "WebSearchEngineDto",
+        "WebSearchRegionDto",
+        "WebSearchSettings",
+        "WebSearchSettingsPatch",
         "WorkspaceAccess",
         "WorkspaceAccessEdit",
         "WorkspaceChanged",
         "WorkspaceDetail",
         "WorkspaceDirectory",
         "WorkspaceDirectoryAction",
+        "WorkspaceDuplicate",
         "WorkspaceExportFile",
         "WorkspaceExportQuery",
         "WorkspaceFile",
@@ -12815,6 +20721,7 @@ pub mod conformance {
         "WorkspaceImportResult",
         "WorkspaceItem",
         "WorkspaceKnowledgeDto",
+        "WorkspaceMarkdown",
         "WorkspaceModelDto",
         "WorkspaceModelOptions",
         "WorkspacePage",
@@ -12833,6 +20740,7 @@ pub mod conformance {
         "WorkspaceSave",
         "WorkspaceSectionAccess",
         "WorkspaceSkillDto",
+        "WorkspaceTextFile",
         "WorkspaceToolDto",
         "WorkspaceUrl",
         "WorkspaceValves",
@@ -12881,24 +20789,86 @@ pub mod conformance {
             "AttachmentAvailability" => roundtrip::<super::AttachmentAvailability>(json),
             "AuthSnapshot" => roundtrip::<super::AuthSnapshot>(json),
             "AuthUser" => roundtrip::<super::AuthUser>(json),
+            "AutomationDetail" => roundtrip::<super::AutomationDetail>(json),
+            "AutomationDraftEdit" => roundtrip::<super::AutomationDraftEdit>(json),
+            "AutomationDraftState" => roundtrip::<super::AutomationDraftState>(json),
+            "AutomationEditor" => roundtrip::<super::AutomationEditor>(json),
+            "AutomationEditorOpen" => roundtrip::<super::AutomationEditorOpen>(json),
+            "AutomationFields" => roundtrip::<super::AutomationFields>(json),
+            "AutomationList" => roundtrip::<super::AutomationList>(json),
+            "AutomationOption" => roundtrip::<super::AutomationOption>(json),
+            "AutomationQuery" => roundtrip::<super::AutomationQuery>(json),
+            "AutomationRef" => roundtrip::<super::AutomationRef>(json),
+            "AutomationRunDto" => roundtrip::<super::AutomationRunDto>(json),
+            "AutomationRunProgress" => roundtrip::<super::AutomationRunProgress>(json),
+            "AutomationRuns" => roundtrip::<super::AutomationRuns>(json),
+            "AutomationRunsQuery" => roundtrip::<super::AutomationRunsQuery>(json),
+            "AutomationScheduleDto" => roundtrip::<super::AutomationScheduleDto>(json),
+            "AutomationSummary" => roundtrip::<super::AutomationSummary>(json),
+            "AutomationToggle" => roundtrip::<super::AutomationToggle>(json),
             "BulkChats" => roundtrip::<super::BulkChats>(json),
             "BulkChatsResult" => roundtrip::<super::BulkChatsResult>(json),
+            "CalendarAgenda" => roundtrip::<super::CalendarAgenda>(json),
+            "CalendarAgendaDay" => roundtrip::<super::CalendarAgendaDay>(json),
+            "CalendarAgendaQuery" => roundtrip::<super::CalendarAgendaQuery>(json),
+            "CalendarAttendeeDto" => roundtrip::<super::CalendarAttendeeDto>(json),
+            "CalendarCreate" => roundtrip::<super::CalendarCreate>(json),
+            "CalendarDraftEdit" => roundtrip::<super::CalendarDraftEdit>(json),
+            "CalendarDraftState" => roundtrip::<super::CalendarDraftState>(json),
+            "CalendarDto" => roundtrip::<super::CalendarDto>(json),
+            "CalendarEditor" => roundtrip::<super::CalendarEditor>(json),
+            "CalendarEditorOpen" => roundtrip::<super::CalendarEditorOpen>(json),
+            "CalendarEventDetail" => roundtrip::<super::CalendarEventDetail>(json),
+            "CalendarEventFields" => roundtrip::<super::CalendarEventFields>(json),
+            "CalendarItemDto" => roundtrip::<super::CalendarItemDto>(json),
+            "CalendarItemRef" => roundtrip::<super::CalendarItemRef>(json),
+            "CalendarRef" => roundtrip::<super::CalendarRef>(json),
+            "CalendarRowTimeDto" => roundtrip::<super::CalendarRowTimeDto>(json),
+            "CalendarRsvpEdit" => roundtrip::<super::CalendarRsvpEdit>(json),
+            "CalendarVisibility" => roundtrip::<super::CalendarVisibility>(json),
+            "CalendarWallTime" => roundtrip::<super::CalendarWallTime>(json),
+            "CallCommand" => roundtrip::<super::CallCommand>(json),
+            "CallReport" => roundtrip::<super::CallReport>(json),
+            "CallStart" => roundtrip::<super::CallStart>(json),
+            "CallState" => roundtrip::<super::CallState>(json),
             "CancelledResult" => roundtrip::<super::CancelledResult>(json),
             "Capabilities" => roundtrip::<super::Capabilities>(json),
+            "ChangedFileDto" => roundtrip::<super::ChangedFileDto>(json),
+            "ChannelAppAction" => roundtrip::<super::ChannelAppAction>(json),
+            "ChannelAppActionDto" => roundtrip::<super::ChannelAppActionDto>(json),
+            "ChannelAppActionResult" => roundtrip::<super::ChannelAppActionResult>(json),
+            "ChannelAppContentDto" => roundtrip::<super::ChannelAppContentDto>(json),
+            "ChannelAppEmbedDto" => roundtrip::<super::ChannelAppEmbedDto>(json),
+            "ChannelAppFieldDto" => roundtrip::<super::ChannelAppFieldDto>(json),
+            "ChannelAppReplyDto" => roundtrip::<super::ChannelAppReplyDto>(json),
+            "ChannelAppReplyEvent" => roundtrip::<super::ChannelAppReplyEvent>(json),
+            "ChannelDetails" => roundtrip::<super::ChannelDetails>(json),
             "ChannelEdit" => roundtrip::<super::ChannelEdit>(json),
+            "ChannelFileDto" => roundtrip::<super::ChannelFileDto>(json),
+            "ChannelFocus" => roundtrip::<super::ChannelFocus>(json),
             "ChannelList" => roundtrip::<super::ChannelList>(json),
+            "ChannelMemberChange" => roundtrip::<super::ChannelMemberChange>(json),
+            "ChannelMemberDto" => roundtrip::<super::ChannelMemberDto>(json),
+            "ChannelMemberPage" => roundtrip::<super::ChannelMemberPage>(json),
+            "ChannelMemberQuery" => roundtrip::<super::ChannelMemberQuery>(json),
+            "ChannelMemberRemove" => roundtrip::<super::ChannelMemberRemove>(json),
             "ChannelMembers" => roundtrip::<super::ChannelMembers>(json),
+            "ChannelMembersAdd" => roundtrip::<super::ChannelMembersAdd>(json),
+            "ChannelMentionQuery" => roundtrip::<super::ChannelMentionQuery>(json),
             "ChannelMessageDto" => roundtrip::<super::ChannelMessageDto>(json),
             "ChannelMessageEdit" => roundtrip::<super::ChannelMessageEdit>(json),
             "ChannelMessageRef" => roundtrip::<super::ChannelMessageRef>(json),
             "ChannelMessages" => roundtrip::<super::ChannelMessages>(json),
             "ChannelMessagesChanged" => roundtrip::<super::ChannelMessagesChanged>(json),
             "ChannelMessagesQuery" => roundtrip::<super::ChannelMessagesQuery>(json),
+            "ChannelMute" => roundtrip::<super::ChannelMute>(json),
             "ChannelPin" => roundtrip::<super::ChannelPin>(json),
             "ChannelPost" => roundtrip::<super::ChannelPost>(json),
+            "ChannelPosted" => roundtrip::<super::ChannelPosted>(json),
             "ChannelReact" => roundtrip::<super::ChannelReact>(json),
             "ChannelReaction" => roundtrip::<super::ChannelReaction>(json),
             "ChannelRef" => roundtrip::<super::ChannelRef>(json),
+            "ChannelReplyPreview" => roundtrip::<super::ChannelReplyPreview>(json),
             "ChannelSummary" => roundtrip::<super::ChannelSummary>(json),
             "ChannelTyping" => roundtrip::<super::ChannelTyping>(json),
             "ChannelTypingUsers" => roundtrip::<super::ChannelTypingUsers>(json),
@@ -12911,6 +20881,7 @@ pub mod conformance {
             "ChatFileDto" => roundtrip::<super::ChatFileDto>(json),
             "ChatForked" => roundtrip::<super::ChatForked>(json),
             "ChatList" => roundtrip::<super::ChatList>(json),
+            "ChatMenuAbilities" => roundtrip::<super::ChatMenuAbilities>(json),
             "ChatMessageDto" => roundtrip::<super::ChatMessageDto>(json),
             "ChatMessageVersionDto" => roundtrip::<super::ChatMessageVersionDto>(json),
             "ChatPromptAnswer" => roundtrip::<super::ChatPromptAnswer>(json),
@@ -12946,6 +20917,15 @@ pub mod conformance {
             "ComposerMentionDto" => roundtrip::<super::ComposerMentionDto>(json),
             "ComposerOptions" => roundtrip::<super::ComposerOptions>(json),
             "ComposerSearch" => roundtrip::<super::ComposerSearch>(json),
+            "ComputerHandleRef" => roundtrip::<super::ComputerHandleRef>(json),
+            "ComputerOpen" => roundtrip::<super::ComputerOpen>(json),
+            "ComputerScope" => roundtrip::<super::ComputerScope>(json),
+            "ComputerShortcut" => roundtrip::<super::ComputerShortcut>(json),
+            "ComputerStatus" => roundtrip::<super::ComputerStatus>(json),
+            "ComputerTab" => roundtrip::<super::ComputerTab>(json),
+            "ComputerTabRef" => roundtrip::<super::ComputerTabRef>(json),
+            "ComputerTabs" => roundtrip::<super::ComputerTabs>(json),
+            "ComputerView" => roundtrip::<super::ComputerView>(json),
             "ConnectionHealth" => roundtrip::<super::ConnectionHealth>(json),
             "ContextAttachmentDto" => roundtrip::<super::ContextAttachmentDto>(json),
             "ContextSuggestion" => roundtrip::<super::ContextSuggestion>(json),
@@ -12959,11 +20939,18 @@ pub mod conformance {
             "DeleteMessages" => roundtrip::<super::DeleteMessages>(json),
             "DeletedResult" => roundtrip::<super::DeletedResult>(json),
             "DiagnosticsExport" => roundtrip::<super::DiagnosticsExport>(json),
+            "DictationStatus" => roundtrip::<super::DictationStatus>(json),
+            "DictationTarget" => roundtrip::<super::DictationTarget>(json),
+            "DiffLineDto" => roundtrip::<super::DiffLineDto>(json),
             "DirectConnectionEdit" => roundtrip::<super::DirectConnectionEdit>(json),
             "DirectConnectionList" => roundtrip::<super::DirectConnectionList>(json),
             "DirectConnectionSummary" => roundtrip::<super::DirectConnectionSummary>(json),
+            "DirectContextLimit" => roundtrip::<super::DirectContextLimit>(json),
+            "DirectContextModel" => roundtrip::<super::DirectContextModel>(json),
             "DirectEnable" => roundtrip::<super::DirectEnable>(json),
             "DirectHistory" => roundtrip::<super::DirectHistory>(json),
+            "DirectImagesPerRequest" => roundtrip::<super::DirectImagesPerRequest>(json),
+            "DirectOptions" => roundtrip::<super::DirectOptions>(json),
             "DirectPreferred" => roundtrip::<super::DirectPreferred>(json),
             "DirectRef" => roundtrip::<super::DirectRef>(json),
             "DirectTestResult" => roundtrip::<super::DirectTestResult>(json),
@@ -12997,25 +20984,121 @@ pub mod conformance {
             "HandoffSettled" => roundtrip::<super::HandoffSettled>(json),
             "HandshakeRequest" => roundtrip::<super::HandshakeRequest>(json),
             "HandshakeResponse" => roundtrip::<super::HandshakeResponse>(json),
+            "HermesBotAvatar" => roundtrip::<super::HermesBotAvatar>(json),
+            "HermesBotDto" => roundtrip::<super::HermesBotDto>(json),
+            "HermesBotRef" => roundtrip::<super::HermesBotRef>(json),
+            "HermesBots" => roundtrip::<super::HermesBots>(json),
+            "HermesBranch" => roundtrip::<super::HermesBranch>(json),
             "HermesCapabilitiesDto" => roundtrip::<super::HermesCapabilitiesDto>(json),
             "HermesCatalog" => roundtrip::<super::HermesCatalog>(json),
+            "HermesChanged" => roundtrip::<super::HermesChanged>(json),
+            "HermesChatDto" => roundtrip::<super::HermesChatDto>(json),
+            "HermesClarifyAnswer" => roundtrip::<super::HermesClarifyAnswer>(json),
+            "HermesCompact" => roundtrip::<super::HermesCompact>(json),
+            "HermesCompactResultDto" => roundtrip::<super::HermesCompactResultDto>(json),
+            "HermesConnectionDto" => roundtrip::<super::HermesConnectionDto>(json),
+            "HermesConnectionEdit" => roundtrip::<super::HermesConnectionEdit>(json),
+            "HermesConnectionTestResult" => roundtrip::<super::HermesConnectionTestResult>(json),
+            "HermesConnections" => roundtrip::<super::HermesConnections>(json),
+            "HermesContextCategoryDto" => roundtrip::<super::HermesContextCategoryDto>(json),
+            "HermesContextRef" => roundtrip::<super::HermesContextRef>(json),
+            "HermesContextReportDto" => roundtrip::<super::HermesContextReportDto>(json),
+            "HermesContinue" => roundtrip::<super::HermesContinue>(json),
+            "HermesDecisionAnswer" => roundtrip::<super::HermesDecisionAnswer>(json),
+            "HermesDecisionResult" => roundtrip::<super::HermesDecisionResult>(json),
+            "HermesDeliveryOptions" => roundtrip::<super::HermesDeliveryOptions>(json),
+            "HermesDeliveryTargetDto" => roundtrip::<super::HermesDeliveryTargetDto>(json),
+            "HermesErrorDto" => roundtrip::<super::HermesErrorDto>(json),
             "HermesJobDto" => roundtrip::<super::HermesJobDto>(json),
             "HermesJobEdit" => roundtrip::<super::HermesJobEdit>(json),
+            "HermesJobNotice" => roundtrip::<super::HermesJobNotice>(json),
+            "HermesJobRef" => roundtrip::<super::HermesJobRef>(json),
             "HermesJobToggle" => roundtrip::<super::HermesJobToggle>(json),
             "HermesJobs" => roundtrip::<super::HermesJobs>(json),
+            "HermesMcpAdd" => roundtrip::<super::HermesMcpAdd>(json),
+            "HermesMcpApiKey" => roundtrip::<super::HermesMcpApiKey>(json),
+            "HermesMcpCatalog" => roundtrip::<super::HermesMcpCatalog>(json),
+            "HermesMcpCatalogEntryDto" => roundtrip::<super::HermesMcpCatalogEntryDto>(json),
+            "HermesMcpRef" => roundtrip::<super::HermesMcpRef>(json),
+            "HermesMcpServerDto" => roundtrip::<super::HermesMcpServerDto>(json),
+            "HermesMcpServers" => roundtrip::<super::HermesMcpServers>(json),
+            "HermesMcpTestResultDto" => roundtrip::<super::HermesMcpTestResultDto>(json),
+            "HermesMcpToggle" => roundtrip::<super::HermesMcpToggle>(json),
+            "HermesModelChoiceDto" => roundtrip::<super::HermesModelChoiceDto>(json),
+            "HermesPlanDto" => roundtrip::<super::HermesPlanDto>(json),
+            "HermesPlanGaugeDto" => roundtrip::<super::HermesPlanGaugeDto>(json),
+            "HermesPlanItemDto" => roundtrip::<super::HermesPlanItemDto>(json),
+            "HermesProcessDto" => roundtrip::<super::HermesProcessDto>(json),
+            "HermesProcessKill" => roundtrip::<super::HermesProcessKill>(json),
+            "HermesProcessRef" => roundtrip::<super::HermesProcessRef>(json),
+            "HermesProviderPlanDto" => roundtrip::<super::HermesProviderPlanDto>(json),
             "HermesRef" => roundtrip::<super::HermesRef>(json),
             "HermesRename" => roundtrip::<super::HermesRename>(json),
+            "HermesRoomActionDto" => roundtrip::<super::HermesRoomActionDto>(json),
+            "HermesRoomAnswer" => roundtrip::<super::HermesRoomAnswer>(json),
+            "HermesRoomContextDto" => roundtrip::<super::HermesRoomContextDto>(json),
+            "HermesRoomContextEdit" => roundtrip::<super::HermesRoomContextEdit>(json),
+            "HermesRoomContinue" => roundtrip::<super::HermesRoomContinue>(json),
+            "HermesRoomCreate" => roundtrip::<super::HermesRoomCreate>(json),
+            "HermesRoomDto" => roundtrip::<super::HermesRoomDto>(json),
+            "HermesRoomItemDto" => roundtrip::<super::HermesRoomItemDto>(json),
+            "HermesRoomMemberDto" => roundtrip::<super::HermesRoomMemberDto>(json),
+            "HermesRoomMemberStatusDto" => roundtrip::<super::HermesRoomMemberStatusDto>(json),
+            "HermesRoomMessage" => roundtrip::<super::HermesRoomMessage>(json),
+            "HermesRoomRef" => roundtrip::<super::HermesRoomRef>(json),
+            "HermesRoomRename" => roundtrip::<super::HermesRoomRename>(json),
+            "HermesRoomSendResult" => roundtrip::<super::HermesRoomSendResult>(json),
+            "HermesRoomStopped" => roundtrip::<super::HermesRoomStopped>(json),
+            "HermesRoomView" => roundtrip::<super::HermesRoomView>(json),
+            "HermesRooms" => roundtrip::<super::HermesRooms>(json),
             "HermesSessionDto" => roundtrip::<super::HermesSessionDto>(json),
+            "HermesSessionUpdate" => roundtrip::<super::HermesSessionUpdate>(json),
             "HermesSessions" => roundtrip::<super::HermesSessions>(json),
             "HermesSettings" => roundtrip::<super::HermesSettings>(json),
             "HermesSettingsEdit" => roundtrip::<super::HermesSettingsEdit>(json),
             "HermesSkillDto" => roundtrip::<super::HermesSkillDto>(json),
             "HermesStatus" => roundtrip::<super::HermesStatus>(json),
+            "HermesSteerSubagent" => roundtrip::<super::HermesSteerSubagent>(json),
+            "HermesSubagentDto" => roundtrip::<super::HermesSubagentDto>(json),
+            "HermesSubagentOutputDto" => roundtrip::<super::HermesSubagentOutputDto>(json),
+            "HermesSubagentRef" => roundtrip::<super::HermesSubagentRef>(json),
             "HermesTestResult" => roundtrip::<super::HermesTestResult>(json),
+            "HermesToggle" => roundtrip::<super::HermesToggle>(json),
+            "HermesTokenTotalsDto" => roundtrip::<super::HermesTokenTotalsDto>(json),
             "HermesToolsetDto" => roundtrip::<super::HermesToolsetDto>(json),
+            "HermesUsageBarDto" => roundtrip::<super::HermesUsageBarDto>(json),
+            "HermesUsageBarsDto" => roundtrip::<super::HermesUsageBarsDto>(json),
+            "HermesWork" => roundtrip::<super::HermesWork>(json),
+            "HermesWorkChat" => roundtrip::<super::HermesWorkChat>(json),
+            "HermesWorkWatch" => roundtrip::<super::HermesWorkWatch>(json),
+            "IntentAnswer" => roundtrip::<super::IntentAnswer>(json),
+            "IntentAsk" => roundtrip::<super::IntentAsk>(json),
+            "IntentChat" => roundtrip::<super::IntentChat>(json),
+            "IntentChats" => roundtrip::<super::IntentChats>(json),
+            "IntentChatsQuery" => roundtrip::<super::IntentChatsQuery>(json),
             "KnowledgeList" => roundtrip::<super::KnowledgeList>(json),
             "KnowledgeQuery" => roundtrip::<super::KnowledgeQuery>(json),
             "KnowledgeSummary" => roundtrip::<super::KnowledgeSummary>(json),
+            "LibreChatAccountSummary" => roundtrip::<super::LibreChatAccountSummary>(json),
+            "LibreChatComposer" => roundtrip::<super::LibreChatComposer>(json),
+            "LibreChatComposerTarget" => roundtrip::<super::LibreChatComposerTarget>(json),
+            "LibreChatFeatures" => roundtrip::<super::LibreChatFeatures>(json),
+            "LibreChatMcpServerDto" => roundtrip::<super::LibreChatMcpServerDto>(json),
+            "LibreChatMemories" => roundtrip::<super::LibreChatMemories>(json),
+            "LibreChatMemoryDto" => roundtrip::<super::LibreChatMemoryDto>(json),
+            "LibreChatMemoryEdit" => roundtrip::<super::LibreChatMemoryEdit>(json),
+            "LibreChatMemoryRef" => roundtrip::<super::LibreChatMemoryRef>(json),
+            "LibreChatMemoryToggle" => roundtrip::<super::LibreChatMemoryToggle>(json),
+            "LibreChatProbe" => roundtrip::<super::LibreChatProbe>(json),
+            "LibreChatProbeResult" => roundtrip::<super::LibreChatProbeResult>(json),
+            "LibreChatServerDto" => roundtrip::<super::LibreChatServerDto>(json),
+            "LibreChatSignIn" => roundtrip::<super::LibreChatSignIn>(json),
+            "LibreChatSignInResult" => roundtrip::<super::LibreChatSignInResult>(json),
+            "LibreChatSsoCompletion" => roundtrip::<super::LibreChatSsoCompletion>(json),
+            "LibreChatSsoPlan" => roundtrip::<super::LibreChatSsoPlan>(json),
+            "LibreChatSsoProviderDto" => roundtrip::<super::LibreChatSsoProviderDto>(json),
+            "LibreChatSsoStart" => roundtrip::<super::LibreChatSsoStart>(json),
+            "LibreChatVerify" => roundtrip::<super::LibreChatVerify>(json),
             "MarkUnread" => roundtrip::<super::MarkUnread>(json),
             "McpAppContext" => roundtrip::<super::McpAppContext>(json),
             "McpAppDto" => roundtrip::<super::McpAppDto>(json),
@@ -13070,8 +21153,14 @@ pub mod conformance {
             "NoteDetail" => roundtrip::<super::NoteDetail>(json),
             "NoteFile" => roundtrip::<super::NoteFile>(json),
             "NoteList" => roundtrip::<super::NoteList>(json),
+            "NoteOpen" => roundtrip::<super::NoteOpen>(json),
+            "NotePageDto" => roundtrip::<super::NotePageDto>(json),
             "NotePin" => roundtrip::<super::NotePin>(json),
             "NoteQuery" => roundtrip::<super::NoteQuery>(json),
+            "NoteRecordingAdd" => roundtrip::<super::NoteRecordingAdd>(json),
+            "NoteRecordingDto" => roundtrip::<super::NoteRecordingDto>(json),
+            "NoteRecordingRef" => roundtrip::<super::NoteRecordingRef>(json),
+            "NoteRecordings" => roundtrip::<super::NoteRecordings>(json),
             "NoteRef" => roundtrip::<super::NoteRef>(json),
             "NoteResult" => roundtrip::<super::NoteResult>(json),
             "NoteSave" => roundtrip::<super::NoteSave>(json),
@@ -13107,6 +21196,14 @@ pub mod conformance {
             "RateTurn" => roundtrip::<super::RateTurn>(json),
             "RatedResult" => roundtrip::<super::RatedResult>(json),
             "ReasoningOptions" => roundtrip::<super::ReasoningOptions>(json),
+            "RecordingChunk" => roundtrip::<super::RecordingChunk>(json),
+            "RecordingDto" => roundtrip::<super::RecordingDto>(json),
+            "RecordingList" => roundtrip::<super::RecordingList>(json),
+            "RecordingRef" => roundtrip::<super::RecordingRef>(json),
+            "RecordingSaved" => roundtrip::<super::RecordingSaved>(json),
+            "RecordingStarted" => roundtrip::<super::RecordingStarted>(json),
+            "RecordingTarget" => roundtrip::<super::RecordingTarget>(json),
+            "RecordingTranscribe" => roundtrip::<super::RecordingTranscribe>(json),
             "RegenerateTurn" => roundtrip::<super::RegenerateTurn>(json),
             "ReleaseNoteBullet" => roundtrip::<super::ReleaseNoteBullet>(json),
             "ReleaseNoteDto" => roundtrip::<super::ReleaseNoteDto>(json),
@@ -13137,6 +21234,14 @@ pub mod conformance {
             "SignOutAll" => roundtrip::<super::SignOutAll>(json),
             "SkillList" => roundtrip::<super::SkillList>(json),
             "SkillSummary" => roundtrip::<super::SkillSummary>(json),
+            "SpeechCommand" => roundtrip::<super::SpeechCommand>(json),
+            "SpeechPreview" => roundtrip::<super::SpeechPreview>(json),
+            "SpeechProgress" => roundtrip::<super::SpeechProgress>(json),
+            "SpeechReport" => roundtrip::<super::SpeechReport>(json),
+            "SpeechSeek" => roundtrip::<super::SpeechSeek>(json),
+            "SpeechState" => roundtrip::<super::SpeechState>(json),
+            "SpeechToggle" => roundtrip::<super::SpeechToggle>(json),
+            "SpeechVoice" => roundtrip::<super::SpeechVoice>(json),
             "SteerResult" => roundtrip::<super::SteerResult>(json),
             "SteerTurn" => roundtrip::<super::SteerTurn>(json),
             "StopTurn" => roundtrip::<super::StopTurn>(json),
@@ -13146,6 +21251,7 @@ pub mod conformance {
             "TagList" => roundtrip::<super::TagList>(json),
             "TerminalAttach" => roundtrip::<super::TerminalAttach>(json),
             "TerminalAttached" => roundtrip::<super::TerminalAttached>(json),
+            "TerminalChanged" => roundtrip::<super::TerminalChanged>(json),
             "TerminalDisplayFile" => roundtrip::<super::TerminalDisplayFile>(json),
             "TerminalEntry" => roundtrip::<super::TerminalEntry>(json),
             "TerminalFileAction" => roundtrip::<super::TerminalFileAction>(json),
@@ -13161,6 +21267,8 @@ pub mod conformance {
             "TerminalSelect" => roundtrip::<super::TerminalSelect>(json),
             "TerminalServerDto" => roundtrip::<super::TerminalServerDto>(json),
             "TerminalServers" => roundtrip::<super::TerminalServers>(json),
+            "TerminalWatch" => roundtrip::<super::TerminalWatch>(json),
+            "TerminalWatching" => roundtrip::<super::TerminalWatching>(json),
             "ToolCallDto" => roundtrip::<super::ToolCallDto>(json),
             "ToolSummary" => roundtrip::<super::ToolSummary>(json),
             "TurnBlocks" => roundtrip::<super::TurnBlocks>(json),
@@ -13194,12 +21302,17 @@ pub mod conformance {
             "VoiceSpeech" => roundtrip::<super::VoiceSpeech>(json),
             "VoiceTranscript" => roundtrip::<super::VoiceTranscript>(json),
             "VoiceVoices" => roundtrip::<super::VoiceVoices>(json),
+            "WebSearchEngineDto" => roundtrip::<super::WebSearchEngineDto>(json),
+            "WebSearchRegionDto" => roundtrip::<super::WebSearchRegionDto>(json),
+            "WebSearchSettings" => roundtrip::<super::WebSearchSettings>(json),
+            "WebSearchSettingsPatch" => roundtrip::<super::WebSearchSettingsPatch>(json),
             "WorkspaceAccess" => roundtrip::<super::WorkspaceAccess>(json),
             "WorkspaceAccessEdit" => roundtrip::<super::WorkspaceAccessEdit>(json),
             "WorkspaceChanged" => roundtrip::<super::WorkspaceChanged>(json),
             "WorkspaceDetail" => roundtrip::<super::WorkspaceDetail>(json),
             "WorkspaceDirectory" => roundtrip::<super::WorkspaceDirectory>(json),
             "WorkspaceDirectoryAction" => roundtrip::<super::WorkspaceDirectoryAction>(json),
+            "WorkspaceDuplicate" => roundtrip::<super::WorkspaceDuplicate>(json),
             "WorkspaceExportFile" => roundtrip::<super::WorkspaceExportFile>(json),
             "WorkspaceExportQuery" => roundtrip::<super::WorkspaceExportQuery>(json),
             "WorkspaceFile" => roundtrip::<super::WorkspaceFile>(json),
@@ -13213,6 +21326,7 @@ pub mod conformance {
             "WorkspaceImportResult" => roundtrip::<super::WorkspaceImportResult>(json),
             "WorkspaceItem" => roundtrip::<super::WorkspaceItem>(json),
             "WorkspaceKnowledgeDto" => roundtrip::<super::WorkspaceKnowledgeDto>(json),
+            "WorkspaceMarkdown" => roundtrip::<super::WorkspaceMarkdown>(json),
             "WorkspaceModelDto" => roundtrip::<super::WorkspaceModelDto>(json),
             "WorkspaceModelOptions" => roundtrip::<super::WorkspaceModelOptions>(json),
             "WorkspacePage" => roundtrip::<super::WorkspacePage>(json),
@@ -13231,6 +21345,7 @@ pub mod conformance {
             "WorkspaceSave" => roundtrip::<super::WorkspaceSave>(json),
             "WorkspaceSectionAccess" => roundtrip::<super::WorkspaceSectionAccess>(json),
             "WorkspaceSkillDto" => roundtrip::<super::WorkspaceSkillDto>(json),
+            "WorkspaceTextFile" => roundtrip::<super::WorkspaceTextFile>(json),
             "WorkspaceToolDto" => roundtrip::<super::WorkspaceToolDto>(json),
             "WorkspaceUrl" => roundtrip::<super::WorkspaceUrl>(json),
             "WorkspaceValves" => roundtrip::<super::WorkspaceValves>(json),

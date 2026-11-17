@@ -45,16 +45,28 @@ import 'capabilities_service.dart';
 import 'system_service.dart';
 import 'turns_service.dart';
 import 'valves_service.dart';
+import 'web_search_service.dart';
 import 'workspace_service.dart';
 import 'terminals_service.dart';
+import 'computer_rpc_service.dart';
 import 'handoff_service.dart';
+import 'automations_service.dart';
+import 'calendar_service.dart';
+import 'hermes_admin_service.dart';
+import 'hermes_cards_service.dart';
+import 'hermes_rooms_service.dart';
 import 'hermes_service.dart';
+import 'calls_service.dart';
+import 'speech_service.dart';
 import 'voice_service.dart';
+import 'dictation_service.dart';
+import 'recordings_service.dart';
 import 'core_settings_service.dart';
 import 'data_service.dart';
 import 'access_service.dart';
 import 'chat_settings_service.dart';
 import 'folder_settings_service.dart';
+import 'librechat_service.dart';
 import 'memories_service.dart';
 import 'profile_service.dart';
 import 'release_notes_rpc_service.dart';
@@ -105,6 +117,8 @@ class DaemonServer {
   SettingsService? _settings;
   ChatsService? _chats;
   HandoffService? _handoff;
+  CalendarService? _calendar;
+  AutomationsService? _automations;
   TurnsService? _turns;
   ModelsService? _models;
   FilesService? _files;
@@ -112,25 +126,35 @@ class DaemonServer {
   ChatPromptsService? _chatPrompts;
   QueuedCompletionsService? _queuedCompletions;
   McpAppsService? _mcpApps;
+  HermesCardsService? _hermesCards;
+  HermesRoomsService? _hermesRooms;
   ComposerService? _composer;
   DraftsService? _drafts;
   PromptsService? _prompts;
   DirectService? _direct;
   McpService? _mcp;
+  WebSearchService? _webSearch;
   NotesService? _notes;
   ChannelsService? _channels;
   WorkspaceService? _workspace;
   TerminalsService? _terminals;
+  ComputerRpcService? _computer;
   HermesService? _hermes;
+  HermesAdminService? _hermesAdmin;
   VoiceService? _voice;
+  DictationService? _dictation;
+  RecordingsService? _recordings;
   CapabilitiesService? _capabilities;
   CoreSettingsService? _coreSettings;
   ProfileService? _profile;
   MemoriesService? _memories;
+  LibreChatService? _libreChat;
   ChatSettingsService? _chatSettings;
   ValvesService? _valves;
   AccessService? _access;
   FolderSettingsService? _folderSettings;
+  SpeechService? _readAloud;
+  CallsService? _calls;
   ReleaseNotesRpcService? _releaseNotes;
   DataService? _data;
 
@@ -190,6 +214,18 @@ class DaemonServer {
     final temporary = TemporaryChats();
     _queuedCompletions = QueuedCompletionsService(core.container, events);
     _hermes = HermesService(core.container, events: events);
+    // Bot Mode and Group Chats; a bot's Bot Chat opens as its session.
+    _hermesRooms = HermesRoomsService(
+      core.container,
+      events,
+      connection: _hermes!.connection,
+    );
+    _hermes!.botChats = _hermesRooms;
+    _hermesAdmin = HermesAdminService(
+      core.container,
+      events: events,
+      hermes: _hermes,
+    );
     _chats = ChatsService(
       core.container,
       events: events,
@@ -215,6 +251,15 @@ class DaemonServer {
     );
     // The list's unread dots and a chat's abilities read the turns.
     _chats!.turns = _turns;
+    // A Hermes chat's agent cards: its work, its context, its questions.
+    _hermesCards = HermesCardsService(
+      core.container,
+      events,
+      hold: (chatId) => _turns!.holdScope(chatId),
+      release: (chatId) => _turns?.releaseScope(chatId),
+      uiRequests: _uiRequests,
+    );
+    _turns!.hermesCards = _hermesCards;
     // A server's `chat:handoff` for a chat the user is in: one answering
     // here, or one a window shows.
     _handoff = HandoffService(
@@ -224,21 +269,23 @@ class DaemonServer {
     );
     core.handoff.attach(_handoff!);
     _drafts = DraftsService(core.container, temporary: temporary);
-    _mcpApps = McpAppsService(
-      core.container,
-      events,
-      uiRequests: _uiRequests,
-    );
+    _mcpApps = McpAppsService(core.container, events, uiRequests: _uiRequests);
     _accounts = AccountsService(core.container, events: events, turns: _turns);
     _models = ModelsService(core.container, events: events);
     _composer = ComposerService(core.container);
     _prompts = PromptsService(core.container);
     _direct = DirectService(core.container);
     _mcp = McpService(core.container);
-    _notes = NotesService(core.container, events: events);
+    _webSearch = WebSearchService(core.container);
+    _notes = NotesService(
+      core.container,
+      events: events,
+      paths: core.directories,
+    );
     _channels = ChannelsService(core.container, events: events);
     _workspace = WorkspaceService(core.container, events: events);
-    _terminals = TerminalsService(core.container, log: _log);
+    _terminals = TerminalsService(core.container, log: _log, events: events);
+    _computer = ComputerRpcService(core.container, log: _log);
     _voice = VoiceService(
       core.container,
       events: events,
@@ -246,9 +293,18 @@ class DaemonServer {
         p.join(core.directories.paths.userData, 'whisper'),
       ),
     );
+    _dictation = DictationService(core.container, voice: _voice!);
+    _recordings = RecordingsService(drafts: _drafts!, dictation: _dictation!);
     _coreSettings = CoreSettingsService(core.container, events: events);
     _profile = ProfileService(core.container, accounts: _accounts);
     _memories = MemoriesService(core.container);
+    _libreChat = LibreChatService(
+      core.container,
+      events: events,
+      accounts: _accounts!,
+    );
+    _calendar = CalendarService(core.container, events: events);
+    _automations = AutomationsService(core.container, events: events);
     _releaseNotes = ReleaseNotesRpcService(core.container);
     _data = DataService(core.container, events: events);
     _chatSettings = ChatSettingsService(
@@ -257,8 +313,28 @@ class DaemonServer {
     );
     _chats?.chatSettings = _chatSettings;
     _valves = ValvesService(core.container);
-    _access = AccessService(core.container);
+    _access = AccessService(core.container, workspace: _workspace);
     _folderSettings = FolderSettingsService(core.container, events: events);
+    final chats = _chats;
+    _readAloud = SpeechService(
+      core.container,
+      events: events,
+      voice: _voice!,
+      answerFor: chats?.answerFor,
+    );
+    _calls = CallsService(
+      core.container,
+      events: events,
+      turns: _turns!,
+      ports: core.calls,
+      speech: _readAloud,
+    );
+    if (chats != null) {
+      _voice!.speechOfChat = (chatId) async => SpeechService.speechForModel(
+        core.container,
+        await chats.modelOf(chatId),
+      );
+    }
     // Every session reads this, including one that connected before now.
     _coreServices = CoreServices(
       accounts: _accounts,
@@ -271,19 +347,26 @@ class DaemonServer {
       uiRequests: _uiRequests,
       chatPrompts: _chatPrompts,
       mcpApps: _mcpApps,
+      hermesCards: _hermesCards,
       composer: _composer,
       prompts: _prompts,
       direct: _direct,
       mcp: _mcp,
+      webSearch: _webSearch,
       notes: _notes,
       channels: _channels,
       workspace: _workspace,
       terminals: _terminals,
+      computer: _computer,
       hermes: _hermes,
+      hermesAdmin: _hermesAdmin,
       voice: _voice,
+      dictation: _dictation,
+      recordings: _recordings,
       coreSettings: _coreSettings,
       profile: _profile,
       memories: _memories,
+      libreChat: _libreChat,
       releaseNotes: _releaseNotes,
       data: _data,
       drafts: _drafts,
@@ -291,7 +374,12 @@ class DaemonServer {
       valves: _valves,
       access: _access,
       folderSettings: _folderSettings,
+      speech: _readAloud,
+      calls: _calls,
       handoff: _handoff,
+      calendar: _calendar,
+      automations: _automations,
+      hermesRooms: _hermesRooms,
     );
     // What the active account can use: answered by `system.capabilities`
     // and the handshake, announced on change.
@@ -345,7 +433,9 @@ class DaemonServer {
     return (shelf.Request request) async {
       final path = '/${request.url.path}';
       final isWebSocketRoute =
-          path == ConduitHttpRoutes.rpc || path.startsWith('/terminal/');
+          path == ConduitHttpRoutes.rpc ||
+          path.startsWith('/terminal/') ||
+          path.startsWith('/calls/');
 
       if (isWebSocketRoute) {
         if (!isAllowedOrigin(request.headers['origin'])) {
@@ -423,8 +513,10 @@ class DaemonServer {
       return _terminalUpload(request);
     }
     if (path.startsWith('/terminal/')) return _terminalTunnel(request, path);
+    if (path.startsWith('/calls/')) return _callAudio(request, path);
     if (path.startsWith('/files/')) return _file(request);
     if (path == ConduitHttpRoutes.transcribe) return _transcribe(request);
+    if (path.startsWith('/recordings/')) return _recording(request, path);
     if (path.startsWith('/tts/')) return _speech(request, path);
     if (path == '/health') {
       // Authenticated liveness probe for a supervisor; it does not
@@ -457,6 +549,23 @@ class DaemonServer {
     return webSocketHandler(
       (WebSocketChannel socket, String? _) =>
           unawaited(terminals.tunnel(handle, socket)),
+      protocols: const <String>{negotiatedSubprotocol},
+      pingInterval: const Duration(seconds: 25),
+    )(request);
+  }
+
+  /// `WS /calls/{handle}` -- a realtime call's audio, with the window. The
+  /// auth gate has checked the origin and the session token already; a
+  /// handle that is not the call's now is refused before the upgrade.
+  Future<shelf.Response> _callAudio(shelf.Request request, String path) async {
+    final calls = _calls;
+    final handle = path.substring('/calls/'.length);
+    if (calls == null || !calls.knowsAudio(handle)) {
+      return shelf.Response.notFound('no such call');
+    }
+    return webSocketHandler(
+      (WebSocketChannel socket, String? _) =>
+          unawaited(calls.tunnel(handle, socket)),
       protocols: const <String>{negotiatedSubprotocol},
       pingInterval: const Duration(seconds: 25),
     )(request);
@@ -575,12 +684,19 @@ class DaemonServer {
     // Which try this is, for the core's retry rules (1 for the first).
     final attempt =
         int.tryParse(request.headers['x-conduit-attempt'] ?? '') ?? 1;
+    // The account the request began under: a body still arriving when
+    // another signs in never goes to the next account's server.
+    final session = files.session();
     try {
       final bytes = await _collect(request.read());
       final uploaded = await files.upload(
         name: name,
         bytes: bytes,
+        session: session,
         contentType: request.headers['content-type'],
+        // A channel's attachment: filed under the channel so its members
+        // may read it.
+        channelId: request.headers['x-conduit-channel'],
       );
       return shelf.Response.ok(
         jsonEncode(uploaded.toJson()),
@@ -661,10 +777,12 @@ class DaemonServer {
   }
 
   /// `POST /transcribe` -- a recording, as text. The body is the
-  /// recording and nothing else; its type is the content type.
+  /// recording and nothing else; its type is the content type. The query
+  /// may name the engine (`engine=server|local`) and the chat's model
+  /// (`model=`), whose backend transcribes on the server.
   Future<shelf.Response> _transcribe(shelf.Request request) async {
-    final voice = _voice;
-    if (voice == null) {
+    final dictation = _dictation;
+    if (dictation == null) {
       return _problem(
         503,
         ConduitErrorCodes.daemonUnavailable,
@@ -674,10 +792,17 @@ class DaemonServer {
     if (request.method != 'POST') {
       return shelf.Response(405, body: 'POST only');
     }
+    final query = request.url.queryParameters;
+    // The account the request began under: audio still arriving when
+    // another signs in never goes to the next account's backend.
+    final session = dictation.session();
     try {
-      final transcript = await voice.transcribe(
+      final transcript = await dictation.transcribe(
         await _collect(request.read()),
         contentType: request.headers['content-type'],
+        engine: _nonEmpty(query['engine']),
+        modelId: _nonEmpty(query['model']),
+        session: session,
       );
       return shelf.Response.ok(
         jsonEncode(transcript.toJson()),
@@ -691,6 +816,51 @@ class DaemonServer {
     } on Object catch (error, stack) {
       _log.error('transcription failed', error, stack);
       return _problem(502, ConduitErrorCodes.serverError, 'transcribe failed');
+    }
+  }
+
+  static String? _nonEmpty(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  /// `GET /recordings/{id}?chatId=&folderId=` -- a saved recording of a
+  /// draft as 16 kHz mono WAV. It needs the token, as `/files/` does.
+  Future<shelf.Response> _recording(shelf.Request request, String path) async {
+    final recordings = _recordings;
+    if (recordings == null) {
+      return _problem(
+        503,
+        ConduitErrorCodes.daemonUnavailable,
+        'core starting',
+      );
+    }
+    if (request.method != 'GET') {
+      return shelf.Response(405, body: 'GET only');
+    }
+    final query = request.url.queryParameters;
+    try {
+      final wav = await recordings.wav(
+        RecordingRef(
+          id: Uri.decodeComponent(path.substring('/recordings/'.length)),
+          chatId: _nonEmpty(query['chatId']),
+          folderId: _nonEmpty(query['folderId']),
+        ),
+      );
+      return shelf.Response.ok(
+        wav,
+        headers: <String, String>{
+          'content-type': 'audio/wav',
+          'x-content-type-options': 'nosniff',
+          'cache-control': 'no-store',
+          ..._corsHeaders,
+        },
+      );
+    } on RpcError catch (error) {
+      return _problem(_statusFor(error), error.code, error.debugMessage);
+    } on Object catch (error, stack) {
+      _log.error('recording read failed', error, stack);
+      return _problem(500, ConduitErrorCodes.serverError, 'recording failed');
     }
   }
 
@@ -928,9 +1098,13 @@ class DaemonServer {
       await session.close();
     }
     _sessions.clear();
+    await _calls?.dispose();
+    await _readAloud?.dispose();
     await _terminals?.dispose();
+    await _computer?.dispose();
     await _data?.dispose();
     _terminals = null;
+    _computer = null;
     await _server?.close(force: true);
     _server = null;
     // The services that hold chats and watches go while the core they read
@@ -941,13 +1115,23 @@ class DaemonServer {
     await _turns?.dispose();
     _queuedCompletions?.dispose();
     _mcpApps?.dispose();
+    _hermesCards?.dispose();
+    _hermesRooms?.dispose();
+    _hermesRooms = null;
+    _hermesAdmin?.dispose();
+    _hermesAdmin = null;
     _turns = null;
     _chats?.dispose();
     _chats = null;
     _core?.handoff.detach();
     _handoff = null;
+    _calendar?.dispose();
+    _calendar = null;
+    _automations?.dispose();
+    _automations = null;
     _capabilities?.dispose();
     _capabilities = null;
+    _notes?.dispose();
     // After the sockets and those, so nothing can arrive mid-teardown and
     // read a half-disposed container; before completing, so a caller
     // awaiting `onStopped` knows the database is closed and the process can

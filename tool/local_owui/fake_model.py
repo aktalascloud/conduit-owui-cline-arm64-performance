@@ -17,6 +17,9 @@ offers three models:
     tool permissions ask for any call that does not say);
   - "tool" (direct mode): a call to `web_fetch` for a URL not in the
     message, which the app must refuse;
+  - "display" with a terminal selected: a call to the terminal's
+    `display_file` for `/home/demo/notes.txt` (which Open WebUI turns into
+    a `terminal:display_file` event), then a short answer;
   - "ask me": a call to Open WebUI's `ask_user` with two questions, then,
     answered, "You chose X and Y.";
   - "plan the tasks": a call to `create_tasks` with three tasks, then a
@@ -40,11 +43,26 @@ offers three models:
 
 Open WebUI's background tasks (title, tags, follow-ups) get JSON answers,
 and a note sent as `<notes>...</notes>` comes back as a markdown list.
-`/audio/transcriptions` answers with a fixed sentence and `/audio/speech`
-with a tenth of a second of silence (WAV), for the server's speech
-features. `/mcp` is a small MCP server (streamable HTTP, JSON answers)
+`/realtime` (a WebSocket, OpenAI's Realtime API shape) is a scripted
+realtime voice, for Open WebUI's call bridge and the Direct voice provider:
+it hears speech by loudness in the 24 kHz PCM it is sent, transcribes the
+first utterance of a session as "What is the weather like by the harbour"
+(answered by the voice itself) and later ones as "Ask the chat for a short
+greeting" (handed to the chat's model as a `generate_chat_completion` call,
+whose result it then says), and speaks as a quiet synthetic tone with a
+word-by-word caption. The log gets each event type it receives and sends.
+`/audio/transcriptions` answers with a fixed sentence (or, when a test wrote
+`<log>.transcripts`, its next line; the log gets the
+upload's size, its WAV's length and its language; six seconds or more of
+audio take 4 s to answer) and `/audio/speech` with silence (WAV) about as
+long as the text would take to say, for the server's speech features;
+"read aloud" in a prompt gets four long sentences to read. `/mcp` is a
+small MCP server (streamable HTTP, JSON answers)
 with one MCP App, `show_tides`, whose page shows the tool's result, for
-Open WebUI's MCP Apps. Every answer is invented. The log gets each request's roles, tool names,
+Open WebUI's MCP Apps. `fake_direct.py` adds what the desktop's Direct
+pass needs: a local Ollama API under `/ollama`, the Responses API, and an
+OAuth-protected MCP server (`/oauth-mcp`) with its authorization server; a
+"ferry" prompt offered that server's tool calls it. Every answer is invented. The log gets each request's roles, tool names,
 whether it streamed, its system text, its last user text and its generation
 params (temperature, seed, reasoning effort, ...): what a test needs to check
 that a chat's or a folder's settings reached the model. The text is the seed's
@@ -52,12 +70,23 @@ or a test's own, all synthetic.
 """
 
 import argparse
+import base64
+import hashlib
 import io
 import json
+import math
+import os
 import re
+import struct
+import sys
+import threading
 import time
 import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+# Run with -I, which leaves this directory off the path.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import fake_direct  # noqa: E402
 
 MODEL = 'fake-model'
 # Request keys the log keeps: what a chat's settings may send.
@@ -83,6 +112,56 @@ NOTES = re.compile(r'<notes>(.*?)</notes>', re.DOTALL)
 
 
 TRANSCRIPT = 'A synthetic transcript from the fake model.'
+
+
+def upload_summary(raw, content_type):
+    """A multipart transcription upload's file size, its audio's length in
+    seconds (WAV), and the language field, for the request log."""
+    boundary = re.search(r'boundary="?([^";]+)', content_type or '')
+    summary = {'bytes': len(raw), 'seconds': None, 'language': None}
+    if not boundary:
+        return summary
+    for part in raw.split(b'--' + boundary.group(1).encode()):
+        head, _, body = part.partition(b'\r\n\r\n')
+        body = body[:-2] if body.endswith(b'\r\n') else body
+        if b'name="language"' in head:
+            summary['language'] = body.decode('utf-8', 'replace').strip()
+        elif b'name="file"' in head:
+            summary['bytes'] = len(body)
+            try:
+                with wave.open(io.BytesIO(body)) as w:
+                    summary['seconds'] = round(w.getnframes() / float(w.getframerate()), 2)
+            except (wave.Error, EOFError):
+                # Open WebUI sends 16-bit PCM on as MP3.
+                summary['seconds'] = mp3_seconds(body)
+    return summary
+
+
+def mp3_seconds(data):
+    """An MP3's length in seconds, by counting its MPEG audio Layer III
+    frames (None when it holds none)."""
+    i = 0
+    if data[:3] == b'ID3' and len(data) >= 10:
+        i = 10 + ((data[6] & 0x7f) << 21 | (data[7] & 0x7f) << 14
+                  | (data[8] & 0x7f) << 7 | (data[9] & 0x7f))
+    v1 = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320]
+    v2 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160]
+    rates = {3: [44100, 48000, 32000], 2: [22050, 24000, 16000], 0: [11025, 12000, 8000]}
+    samples, rate = 0, None
+    while i + 4 <= len(data):
+        b1, b2 = data[i + 1], data[i + 2]
+        version, layer = (b1 >> 3) & 3, (b1 >> 1) & 3
+        bitrate, index, pad = b2 >> 4, (b2 >> 2) & 3, (b2 >> 1) & 1
+        if (data[i] != 0xFF or (b1 & 0xE0) != 0xE0 or version == 1 or layer != 1
+                or bitrate in (0, 15) or index == 3):
+            i += 1
+            continue
+        rate = rates[version][index]
+        per_frame = 1152 if version == 3 else 576
+        kbps = (v1 if version == 3 else v2)[bitrate]
+        samples += per_frame
+        i += per_frame // 8 * kbps * 1000 // rate + pad
+    return round(samples / rate, 2) if rate else None
 
 ASK_USER = {
     'questions': [
@@ -209,14 +288,25 @@ PAGE = (
 )
 
 
-def silence_wav():
+def silence_wav(seconds=0.1):
     out = io.BytesIO()
     with wave.open(out, 'wb') as w:
         w.setnchannels(1)
         w.setsampwidth(2)
         w.setframerate(16000)
-        w.writeframes(b'\0\0' * 1600)
+        w.writeframes(b'\0\0' * int(16000 * seconds))
     return out.getvalue()
+
+
+def speech_seconds(raw):
+    """How long the synthetic speech for a `/audio/speech` body lasts: about
+    as long as a voice would take (60 ms a character), between a tenth of a
+    second and six seconds, so a reading's sentences take time to play."""
+    try:
+        text = json.loads(raw or b'{}').get('input') or ''
+    except ValueError:
+        text = ''
+    return min(6.0, max(0.1, len(text) * 0.06))
 
 
 def text_of(message):
@@ -266,9 +356,28 @@ def answer_for(text):
         body = ''.join(parts)
     elif 'slow' in t:
         body = ' '.join(f'word{i}' for i in range(300))
+    elif 'read aloud' in t:
+        # Four sentences of 50+ characters, so Open WebUI's split keeps
+        # each its own (read aloud's tests count them), one in bold.
+        body = (
+            'The harbour lights come on one by one as the evening settles in. '
+            'A small wooden boat drifts slowly past the **green buoy** near the pier.'
+            '\n\n'
+            'Gulls settle on the old stone wall and wait quietly for the tide. '
+            'By morning the fishing crews are loading their nets before sunrise.'
+        )
     else:
         body = 'Hello from the fake model. Ask for code, math, reasoning or a long answer.'
     return reasoning, body
+
+
+def direct_answer(text):
+    """The reasoning (or None) and answer for a direct request's user text,
+    as the chat completions route answers a plain prompt."""
+    word = WORD.search(text)
+    if word:
+        return None, word.group(1)
+    return answer_for(text)
 
 
 def task_answer(text):
@@ -325,6 +434,276 @@ def called(messages, name):
     )
 
 
+# ── The realtime voice ─────────────────────────────────────────────────
+
+WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
+REALTIME_HEARD = (
+    'What is the weather like by the harbour',
+    'Ask the chat for a short greeting',
+)
+REALTIME_SAYS = 'Calm water and a light breeze by the harbour this morning.'
+REALTIME_RELAYS = 'Here is what the chat said: {answer}'
+REALTIME_STATUS = 'One moment, the chat is working on it.'
+# Loudness (RMS of 16-bit samples) above which the input is speech, and the
+# quiet that ends an utterance.
+SPEECH_RMS = 500
+SPEECH_END_MS = 500
+
+
+class WebSocket:
+    """The server side of RFC 6455 on a handler's socket: text and binary
+    frames, ping, close. Enough for the realtime voice."""
+
+    def __init__(self, rfile, wfile):
+        self.rfile = rfile
+        self.wfile = wfile
+        self.lock = threading.Lock()
+        self.closed = False
+
+    def _read(self, n):
+        data = b''
+        while len(data) < n:
+            part = self.rfile.read(n - len(data))
+            if not part:
+                raise ConnectionError('closed')
+            data += part
+        return data
+
+    def recv(self):
+        """The next message as (is_text, payload), or None once closed."""
+        message = b''
+        opcode = None
+        while True:
+            head = self._read(2)
+            fin = head[0] & 0x80
+            op = head[0] & 0x0F
+            masked = head[1] & 0x80
+            length = head[1] & 0x7F
+            if length == 126:
+                length = struct.unpack('>H', self._read(2))[0]
+            elif length == 127:
+                length = struct.unpack('>Q', self._read(8))[0]
+            mask = self._read(4) if masked else b'\0\0\0\0'
+            payload = bytearray(self._read(length))
+            for i in range(length):
+                payload[i] ^= mask[i % 4]
+            if op == 0x8:
+                self.close()
+                return None
+            if op == 0x9:
+                self._send(0xA, bytes(payload))
+                continue
+            if op == 0xA:
+                continue
+            if op != 0x0:
+                opcode = op
+            message += payload
+            if fin:
+                return (opcode == 0x1, bytes(message))
+
+    def _send(self, op, data):
+        head = bytes([0x80 | op])
+        n = len(data)
+        if n < 126:
+            head += bytes([n])
+        elif n < 65536:
+            head += bytes([126]) + struct.pack('>H', n)
+        else:
+            head += bytes([127]) + struct.pack('>Q', n)
+        with self.lock:
+            if self.closed:
+                return
+            self.wfile.write(head + data)
+            self.wfile.flush()
+
+    def send_json(self, obj):
+        self._send(0x1, json.dumps(obj).encode())
+
+    def close(self):
+        try:
+            self._send(0x8, b'')
+        except OSError:
+            pass
+        self.closed = True
+
+
+def tone_pcm(seconds, frequency=440.0, amplitude=1200, rate=24000):
+    """Quiet synthetic speech: a tone, as 16-bit mono PCM."""
+    count = int(seconds * rate)
+    return b''.join(
+        struct.pack('<h', int(amplitude * math.sin(2 * math.pi * frequency * i / rate)))
+        for i in range(count)
+    )
+
+
+def rms(pcm):
+    count = len(pcm) // 2
+    if count == 0:
+        return 0
+    samples = struct.unpack('<%dh' % count, pcm[:count * 2])
+    return math.sqrt(sum(s * s for s in samples) / count)
+
+
+class RealtimeSession:
+    """One call's voice: hears utterances by loudness, answers or hands a
+    request to the chat, and speaks as a tone with a caption."""
+
+    def __init__(self, ws, log):
+        self.ws = ws
+        self.log = log
+        self.speaking = None
+        self.quiet_ms = 0
+        self.heard_ms = 0
+        self.utterances = 0
+        self.items = 0
+        self.transcripts = {}
+        self.results = {}
+        self.cancelled = set()
+
+    def send(self, event):
+        self.log({'realtime_sent': event.get('type')})
+        self.ws.send_json(event)
+
+    def next_id(self, prefix):
+        self.items += 1
+        return '%s_%d' % (prefix, self.items)
+
+    def hear(self, pcm):
+        ms = len(pcm) / 2 / 24000 * 1000
+        loud = rms(pcm) > SPEECH_RMS
+        if loud:
+            self.quiet_ms = 0
+            if self.speaking is None:
+                self.speaking = self.next_id('item_in')
+                self.heard_ms = 0
+                self.send({'type': 'input_audio_buffer.speech_started',
+                           'item_id': self.speaking, 'audio_start_ms': 0})
+            self.heard_ms += ms
+            return
+        if self.speaking is None:
+            return
+        self.quiet_ms += ms
+        if self.quiet_ms < SPEECH_END_MS:
+            return
+        item = self.speaking
+        self.speaking = None
+        self.send({'type': 'input_audio_buffer.speech_stopped', 'item_id': item,
+                   'audio_end_ms': int(self.heard_ms)})
+        text = REALTIME_HEARD[min(self.utterances, len(REALTIME_HEARD) - 1)]
+        self.utterances += 1
+        self.transcripts[item] = text
+        self.send({'type': 'conversation.item.input_audio_transcription.completed',
+                   'item_id': item, 'content_index': 0, 'transcript': text})
+
+    def respond(self, response):
+        metadata = response.get('metadata') or {}
+        response_id = self.next_id('resp')
+        self.send({'type': 'response.created',
+                   'response': {'id': response_id, 'status': 'in_progress',
+                                'metadata': metadata}})
+        threading.Thread(target=self._respond, daemon=True,
+                         args=(response_id, response, metadata)).start()
+
+    def _respond(self, response_id, response, metadata):
+        try:
+            heard = self.transcripts.get(metadata.get('input_item_id'), '')
+            if response.get('conversation') == 'none':
+                self.speak(response_id, metadata, REALTIME_STATUS)
+            elif 'call_id' in metadata:
+                answer = self.results.get(metadata['call_id'], 'nothing')
+                self.speak(response_id, metadata,
+                           REALTIME_RELAYS.format(answer=answer.strip()[:200]))
+            elif 'ask the chat' in heard.lower():
+                item = self.next_id('item_call')
+                call_id = self.next_id('call')
+                arguments = json.dumps({'request': heard})
+                self.send({'type': 'response.output_item.added', 'response_id': response_id,
+                           'output_index': 0,
+                           'item': {'id': item, 'type': 'function_call', 'status': 'in_progress',
+                                    'name': 'generate_chat_completion', 'call_id': call_id}})
+                self.send({'type': 'response.output_item.done', 'response_id': response_id,
+                           'output_index': 0,
+                           'item': {'id': item, 'type': 'function_call', 'status': 'completed',
+                                    'name': 'generate_chat_completion', 'call_id': call_id,
+                                    'arguments': arguments}})
+                self.send({'type': 'response.done',
+                           'response': {'id': response_id, 'status': 'completed',
+                                        'metadata': metadata}})
+            else:
+                self.speak(response_id, metadata, REALTIME_SAYS)
+        except (OSError, ConnectionError):
+            pass
+
+    def speak(self, response_id, metadata, text):
+        item = self.next_id('item_out')
+        self.send({'type': 'response.output_item.added', 'response_id': response_id,
+                   'output_index': 0,
+                   'item': {'id': item, 'type': 'message', 'status': 'in_progress',
+                            'role': 'assistant'}})
+        words = text.split(' ')
+        audio = tone_pcm(0.08 * len(words) + 0.4)
+        step = len(audio) // len(words) // 2 * 2
+        caption = ''
+        status = 'completed'
+        for index, word in enumerate(words):
+            if response_id in self.cancelled:
+                status = 'cancelled'
+                break
+            chunk = audio[index * step:(index + 1) * step]
+            self.send({'type': 'response.output_audio.delta', 'response_id': response_id,
+                       'item_id': item, 'output_index': 0, 'content_index': 0,
+                       'delta': base64.b64encode(chunk).decode()})
+            delta = word if index == 0 else ' ' + word
+            caption += delta
+            self.send({'type': 'response.output_audio_transcript.delta',
+                       'response_id': response_id, 'item_id': item, 'output_index': 0,
+                       'content_index': 0, 'delta': delta})
+            time.sleep(0.04)
+        if status == 'completed':
+            self.send({'type': 'response.output_audio_transcript.done',
+                       'response_id': response_id, 'item_id': item, 'output_index': 0,
+                       'content_index': 0, 'transcript': caption})
+        self.send({'type': 'response.output_item.done', 'response_id': response_id,
+                   'output_index': 0,
+                   'item': {'id': item, 'type': 'message', 'status': status,
+                            'role': 'assistant'}})
+        self.send({'type': 'response.done',
+                   'response': {'id': response_id, 'status': status, 'metadata': metadata}})
+
+    def run(self):
+        self.send({'type': 'session.created', 'session': {'id': 'sess_fake'}})
+        while True:
+            message = self.ws.recv()
+            if message is None:
+                return
+            is_text, payload = message
+            if not is_text:
+                continue
+            event = json.loads(payload)
+            kind = event.get('type')
+            if kind != 'input_audio_buffer.append':
+                self.log({'realtime': kind})
+            if kind == 'session.update':
+                # A real voice takes a moment to set up (the call shows
+                # Connecting… meanwhile, long enough to be shot).
+                time.sleep(4)
+                self.send({'type': 'session.updated', 'session': event.get('session') or {}})
+            elif kind == 'input_audio_buffer.append':
+                self.hear(base64.b64decode(event.get('audio') or ''))
+            elif kind == 'response.create':
+                self.respond(event.get('response') or {})
+            elif kind == 'response.cancel':
+                self.cancelled.add(event.get('response_id'))
+            elif kind == 'conversation.item.create':
+                item = event.get('item') or {}
+                if item.get('type') == 'function_call_output':
+                    try:
+                        output = json.loads(item.get('output') or '{}')
+                    except ValueError:
+                        output = {}
+                    self.results[item.get('call_id')] = output.get('answer', '')
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
     log_path = None
@@ -348,7 +727,21 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Length', '0')
         self.end_headers()
 
+    def do_HEAD(self):
+        # As a real server answers HEAD on a POST-only route: the route is
+        # there (the app's connection test with manual model ids asks).
+        self.send_response(405)
+        self.send_header('Allow', 'POST')
+        self.send_header('Content-Length', '0')
+        self.end_headers()
+
     def do_GET(self):
+        if (self.path.split('?')[0].rstrip('/').endswith('/realtime')
+                and self.headers.get('Upgrade', '').lower() == 'websocket'):
+            self._realtime()
+            return
+        if fake_direct.handle_get(self):
+            return
         if self.path.split('?')[0].rstrip('/').endswith('/mcp'):
             # No server-to-client stream.
             self.send_response(405)
@@ -373,6 +766,47 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._json(404, {'error': 'not found'})
 
+    def _scripted_transcript(self):
+        """The next line of `<log>.transcripts`, which a test writes to say
+        what the next transcriptions hear (a voice call's turns); None when
+        there is none."""
+        if not self.log_path:
+            return None
+        path = self.log_path + '.transcripts'
+        try:
+            with open(path) as f:
+                lines = f.read().splitlines()
+        except OSError:
+            return None
+        if not lines:
+            return None
+        with open(path, 'w') as f:
+            f.write('\n'.join(lines[1:]) + ('\n' if len(lines) > 1 else ''))
+        return lines[0].strip() or None
+
+    def _realtime(self):
+        key = self.headers.get('Sec-WebSocket-Key', '')
+        accept = base64.b64encode(hashlib.sha1((key + WS_GUID).encode()).digest()).decode()
+        self.send_response(101, 'Switching Protocols')
+        self.send_header('Upgrade', 'websocket')
+        self.send_header('Connection', 'Upgrade')
+        self.send_header('Sec-WebSocket-Accept', accept)
+        self.end_headers()
+        self.wfile.flush()
+        log_path = self.log_path
+
+        def log(entry):
+            if log_path:
+                with open(log_path, 'a') as out:
+                    out.write(json.dumps(entry) + '\n')
+
+        log({'realtime': 'connect', 'path': self.path})
+        try:
+            RealtimeSession(WebSocket(self.rfile, self.wfile), log).run()
+        except (OSError, ConnectionError, ValueError):
+            pass
+        self.close_connection = True
+
     def _body(self):
         # Open WebUI streams an audio upload with chunked encoding and no
         # Content-Length. Left unread, the chunks would be parsed as the
@@ -394,11 +828,23 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         raw = self._body()
         path = self.path.split('?')[0].rstrip('/')
+        if fake_direct.handle_post(self, raw, direct_answer):
+            return
         if path.endswith('/audio/transcriptions'):
-            self._json(200, {'text': TRANSCRIPT})
+            summary = upload_summary(raw, self.headers.get('Content-Type', ''))
+            if self.log_path:
+                # What reached the server, so a dictation test can check
+                # the whole recording and its language went out.
+                with open(self.log_path, 'a') as log:
+                    log.write(json.dumps({'transcription': summary}) + '\n')
+            # A long recording takes a moment, as a real engine's does (the
+            # desktop's Transcribing state is seen, and shot).
+            if (summary.get('seconds') or 0) >= 6:
+                time.sleep(4)
+            self._json(200, {'text': self._scripted_transcript() or TRANSCRIPT})
             return
         if path.endswith('/audio/speech'):
-            data = silence_wav()
+            data = silence_wav(speech_seconds(raw))
             self.send_response(200)
             self.send_header('Content-Type', 'audio/wav')
             self.send_header('Content-Length', str(len(data)))
@@ -455,10 +901,13 @@ class Handler(BaseHTTPRequestHandler):
             system = [text_of(m) for m in messages if m.get('role') == 'system']
             users = [text_of(m) for m in messages if m.get('role') == 'user']
             params = {k: body[k] for k in LOGGED_PARAMS if k in body}
+            entry = {'model': body.get('model'), 'roles': [m.get('role') for m in messages],
+                     'tools': tool_names, 'stream': stream, 'system': system,
+                     'user': users[-1] if users else '', 'params': params}
+            # How it was sent: custom headers, the key's header, api-version.
+            entry.update(fake_direct.request_facts(self))
             with open(self.log_path, 'a') as log:
-                log.write(json.dumps({'model': body.get('model'), 'roles': [m.get('role') for m in messages],
-                                      'tools': tool_names, 'stream': stream, 'system': system,
-                                      'user': users[-1] if users else '', 'params': params}) + '\n')
+                log.write(json.dumps(entry) + '\n')
 
         model = str(body.get('model') or MODEL)
         if model.endswith(REFUSED_MODEL):
@@ -474,6 +923,9 @@ class Handler(BaseHTTPRequestHandler):
         fetch_answered = called(after_user, 'web_fetch')
         asked = tool_result(after_user, 'ask_user')
         planned = called(after_user, 'create_tasks')
+        ferry = fake_direct.ferry_tool(tool_names)
+        ferried = tool_result(after_user, ferry) if ferry else None
+        displayed = called(after_user, 'display_file')
 
         reasoning = None
         call = None
@@ -501,8 +953,12 @@ class Handler(BaseHTTPRequestHandler):
             ]
             chosen = [c for c in chosen if c]
             text = f"You chose {' and '.join(chosen)}." if chosen else 'You did not answer.'
+        elif ferried is not None:
+            text = f'The ferry tool says: {ferried}'
         elif planned:
             text = 'The plan is ready: one task done, one under way.'
+        elif displayed:
+            text = 'The notes are open beside the chat.'
         elif fetch_answered:
             text = 'The page was not fetched, as expected: it was not in your message.'
         elif clock_answered:
@@ -513,11 +969,18 @@ class Handler(BaseHTTPRequestHandler):
             facts = [COLOUR_FACT.search(text_of(m)) for m in users[:-1]]
             facts = [f.group(1) for f in facts if f]
             text = facts[-1] if facts else 'You have not told me.'
+        elif 'ferry' in lower and ferry:
+            call = tool_call(ferry, {'harbour': 'North'})
+            text = ''
         elif 'ask me' in lower and 'ask_user' in tool_names:
             call = tool_call('ask_user', ASK_USER)
             text = ''
         elif 'plan the tasks' in lower and 'create_tasks' in tool_names:
             call = tool_call('create_tasks', server_fields(tools, 'create_tasks', {'tasks': TASKS}))
+            text = ''
+        elif 'display' in lower and 'display_file' in tool_names:
+            call = tool_call('display_file', server_fields(
+                tools, 'display_file', {'path': '/home/demo/notes.txt'}))
             text = ''
         elif 'alerts' in lower:
             text = ALERTS

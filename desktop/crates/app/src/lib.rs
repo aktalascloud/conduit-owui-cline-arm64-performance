@@ -19,8 +19,11 @@
 
 pub mod actions;
 #[cfg(all(target_os = "macos", feature = "harness"))]
+pub mod calendar_fixture;
+#[cfg(all(target_os = "macos", feature = "harness"))]
 pub mod capture;
 #[cfg(all(target_os = "macos", feature = "harness"))]
+pub mod channel_fixture;
 #[cfg(feature = "harness")]
 pub mod chat_fixture;
 pub mod desktop;
@@ -29,21 +32,28 @@ pub mod desktop;
 pub mod e2e;
 #[cfg(all(target_os = "macos", feature = "harness"))]
 pub mod fixture;
+pub mod intents;
 pub mod keymap;
 pub mod l10n;
 pub mod menus;
 pub mod prefs;
+#[cfg(all(target_os = "macos", feature = "harness"))]
+pub mod rooms_fixture;
 pub mod shell;
 #[cfg(target_os = "macos")]
 pub mod smoke;
 pub mod stores;
+#[cfg(all(target_os = "macos", feature = "harness"))]
+pub mod terminal_fixture;
 pub mod updates;
 pub mod views;
+pub mod voice;
 pub mod windows;
+#[cfg(all(target_os = "macos", feature = "harness"))]
+pub mod workspace_fixture;
 
 use std::path::PathBuf;
 
-use conduit_components::assets::ConduitAssets;
 use conduit_components::window as cw;
 use conduit_daemon::paths::{self, AppPaths, Flavor};
 use gpui_kit::{
@@ -216,6 +226,18 @@ pub fn run() {
         fixture::run(mode);
         return;
     }
+    // The workspace's list over 2,000 canned prompts (perf).
+    #[cfg(all(target_os = "macos", feature = "harness"))]
+    if workspace_fixture::requested(&args) {
+        workspace_fixture::run();
+        return;
+    }
+    // The agenda and the task list over canned data (perf).
+    #[cfg(all(target_os = "macos", feature = "harness"))]
+    if let Some(which) = calendar_fixture::requested(&args) {
+        calendar_fixture::run(which);
+        return;
+    }
     let flavor = Flavor::detect();
     let mut app_paths = AppPaths::for_flavor(flavor);
     // A scripted run gets its own profile, logs and Keychain item.
@@ -253,6 +275,12 @@ pub fn run() {
     let smoke_options = smoke::SmokeOptions::from_args(&args);
     #[cfg(all(target_os = "macos", feature = "harness"))]
     let chat_fixture = chat_fixture::requested(&args);
+    #[cfg(all(target_os = "macos", feature = "harness"))]
+    let channel_fixture = channel_fixture::requested(&args);
+    #[cfg(all(target_os = "macos", feature = "harness"))]
+    let terminal_fixture = terminal_fixture::requested(&args);
+    #[cfg(all(target_os = "macos", feature = "harness"))]
+    let rooms_fixture = rooms_fixture::requested(&args);
     // `--capture <dir>`: screenshots and motion strips of every screen,
     // for design review (capture/).
     #[cfg(all(target_os = "macos", feature = "harness"))]
@@ -262,7 +290,7 @@ pub fn run() {
     #[cfg(not(all(target_os = "macos", feature = "harness")))]
     let scripted = shots.is_some();
 
-    let app = gpui_kit::application().with_assets(ConduitAssets);
+    let app = gpui_kit::application().with_assets(crate::views::model_logo::AppAssets);
     // `conduit://` links and "Open with" files, cold launch included: they
     // can come before the app state exists, so they wait in a channel.
     let (urls_tx, urls_rx) = desktop::url_channel();
@@ -283,6 +311,10 @@ pub fn run() {
         let hidden = hidden_arg || shell::login_item::launched_as_login_item();
         #[cfg(not(target_os = "macos"))]
         let hidden = hidden_arg;
+        // The Services menu's provider, before anything else: a launch made
+        // for "Ask Conduit" delivers its request right after this.
+        #[cfg(target_os = "macos")]
+        let services = shell::services::install();
         gpui_kit::init(cx);
         menus::KitBindings::capture(cx);
         conduit_components::views::markdown::preload_grammars(&["python", "rust", "bash"]);
@@ -304,6 +336,24 @@ pub fn run() {
         #[cfg(all(target_os = "macos", feature = "harness"))]
         if let Some((mode, shots)) = chat_fixture.clone() {
             chat_fixture::run(mode, shots, cx);
+            return;
+        }
+        // A channel's timeline over a fixture daemon (perf).
+        #[cfg(all(target_os = "macos", feature = "harness"))]
+        if let Some((mode, shots)) = channel_fixture.clone() {
+            channel_fixture::run(mode, shots, cx);
+            return;
+        }
+        // The console under a flood of output (perf).
+        #[cfg(all(target_os = "macos", feature = "harness"))]
+        if terminal_fixture {
+            terminal_fixture::run(cx);
+            return;
+        }
+        // A Group Chat's pane over a fixture daemon (perf).
+        #[cfg(all(target_os = "macos", feature = "harness"))]
+        if rooms_fixture {
+            rooms_fixture::run(cx);
             return;
         }
         let layout = cx.new(|_| LayoutStore::load(app_paths.window_state_file()));
@@ -405,6 +455,11 @@ pub fn run() {
         install_menu_observers(cx);
         register_actions(cx);
         desktop::install(urls_rx, hidden, cx);
+        #[cfg(target_os = "macos")]
+        desktop::install_services(services, cx);
+        // Shortcuts, Siri and Spotlight: requests that came with the launch
+        // and those that follow.
+        intents::install(cx);
         updates::install(cx);
         // The setup window and the main window follow the session.
         windows::install(cx);
@@ -493,13 +548,14 @@ fn install_menu_observers(cx: &mut App) {
     let Some(state) = cx.try_global::<AppState>() else {
         return;
     };
-    let (layout, navigation, chat_list, settings, accounts, session) = (
+    let (layout, navigation, chat_list, settings, accounts, session, speech) = (
         state.layout.clone(),
         state.stores.navigation.clone(),
         state.stores.chat_list.clone(),
         state.settings.clone(),
         state.stores.accounts.clone(),
         state.stores.session.clone(),
+        state.stores.speech.clone(),
     );
     cx.observe(&settings, |_, cx| menus::refresh_menus(cx))
         .detach();
@@ -514,6 +570,16 @@ fn install_menu_observers(cx: &mut App) {
     // The Go menu's sections follow the account's capabilities and route.
     cx.observe(&session, |_, cx| menus::refresh_menus(cx))
         .detach();
+    // Chat › Stop Speaking follows whether anything is read: not every word.
+    let mut reading = false;
+    cx.observe(&speech, move |speech, cx| {
+        let now = speech.read(cx).is_active();
+        if now != reading {
+            reading = now;
+            menus::refresh_menus(cx);
+        }
+    })
+    .detach();
 }
 
 fn register_actions(cx: &mut App) {
@@ -605,6 +671,41 @@ fn register_actions(cx: &mut App) {
         with_main_view(cx, |view, window, cx| {
             view.sidebar
                 .update(cx, |s, cx| s.run(&id, command, window, cx))
+        });
+    });
+    cx.on_action(|a: &views::hermes_sessions::HermesMenu, cx| {
+        let (id, command) = (a.session_id.clone(), a.command);
+        with_main_view(cx, |view, window, cx| {
+            view.run_hermes(&id, command, window, cx)
+        });
+    });
+    // Notes: a note's menu, New Note, and the note pane's toolbar
+    // menus, wherever the focus is.
+    cx.on_action(|a: &views::notes::NoteMenu, cx| {
+        let (id, command) = (a.note_id.clone(), a.command);
+        with_main_view(cx, |view, window, cx| {
+            let stores = view.stores.clone();
+            views::notes::run(&stores, &id, command, window, cx)
+        });
+    });
+    cx.on_action(|_: &views::notes::NewNote, cx| {
+        let Some(stores) = cx.try_global::<AppState>().map(|s| s.stores.clone()) else {
+            return;
+        };
+        // Only where the account has notes.
+        if stores.session.read(cx).capabilities().notes {
+            views::notes::new_note(&stores, cx);
+        }
+    });
+    cx.on_action(|a: &views::notes::pane::PaneCommand, cx| {
+        let (id, command) = (a.note_id.clone(), a.command.clone());
+        with_main_view(cx, |view, window, cx| {
+            let pane = view.area_pane.read(cx).notes.read(cx).note_pane().cloned();
+            if let Some(pane) = pane
+                && pane.read(cx).shows(&id)
+            {
+                pane.update(cx, |p, cx| p.run(command, window, cx));
+            }
         });
     });
     cx.on_action(|a: &views::sidebar::FolderMenu, cx| {

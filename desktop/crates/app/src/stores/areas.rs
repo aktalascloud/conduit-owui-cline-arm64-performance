@@ -46,7 +46,8 @@ pub fn visible_areas(capabilities: &Capabilities) -> Vec<Area> {
             Area::Channels => capabilities.channels,
             Area::Workspace => capabilities.workspace,
             Area::Calendar => capabilities.calendar,
-            Area::Automations => capabilities.automations,
+            // As the phone offers them: with Settings' Advanced on.
+            Area::Automations => capabilities.scheduled_tasks,
         })
         .collect()
 }
@@ -82,11 +83,21 @@ pub struct AreasStore {
     /// `None` until listed (for this account).
     pub notes: Option<Vec<NoteSummary>>,
     pub channels: Option<Vec<ChannelSummary>>,
+    /// The account may make a channel (New Channel…).
+    pub channels_can_create: bool,
     pub hermes: Option<HermesSessions>,
+    /// Hermes's Hidden Chats, read when its pane opens: `None` until read,
+    /// `Err` when the read failed.
+    pub hermes_hidden: Option<Result<Vec<HermesSessionDto>, String>>,
+    /// The Hidden Chats last listed, kept through a refresh that fails: an
+    /// open hidden session is still found (its title, its More menu).
+    hermes_hidden_known: Vec<HermesSessionDto>,
     pub terminals: Option<Vec<TerminalServerDto>>,
     /// The areas whose list could not be read (and none is held): the
     /// sidebar offers Try Again instead of a loading line.
     pub failed: BTreeSet<Area>,
+    /// The server chats send as `terminal_id` (`terminal.select`).
+    pub terminal_selected: Option<String>,
     /// The areas shown, whose lists are kept.
     wanted: BTreeSet<Area>,
     /// Bumped whenever a list changes (the sidebar's rows cache).
@@ -94,6 +105,7 @@ pub struct AreasStore {
     /// Bumped per account: answers for the previous one are dropped.
     generation: u64,
     fetches: HashMap<Area, Task<()>>,
+    hidden_fetch: Option<Task<()>>,
 }
 
 impl AreasStore {
@@ -117,12 +129,57 @@ impl AreasStore {
         self.channels.iter().flatten().find(|c| c.id == id)
     }
 
-    /// A Hermes session, listed or archived.
+    /// A Hermes session, listed, archived or hidden.
     pub fn hermes_session(&self, id: &str) -> Option<&HermesSessionDto> {
         self.hermes
             .iter()
             .flat_map(|h| h.sessions.iter().chain(h.archived.iter()))
+            .chain(self.hermes_hidden_known.iter())
             .find(|s| s.id == id)
+    }
+
+    /// Session `id` is gone (deleted): not found through the Hidden Chats
+    /// last listed either.
+    pub fn forget_hermes_hidden(&mut self, id: &str) {
+        self.hermes_hidden_known.retain(|s| s.id != id);
+    }
+
+    /// The Hermes list as an action on a session answered it.
+    pub fn adopt_hermes(&mut self, sessions: HermesSessions, cx: &mut Context<Self>) {
+        self.hermes = Some(sessions);
+        self.failed.remove(&Area::Hermes);
+        self.changed(cx);
+    }
+
+    /// Reads Hermes's Hidden Chats again (`hermes.hidden.list`).
+    pub fn refresh_hermes_hidden(&mut self, cx: &mut Context<Self>) {
+        let Some(rpc) = self.rpc.clone() else {
+            return;
+        };
+        let generation = self.generation;
+        let call = rpc.call::<methods::HermesHiddenList>(&NoParams);
+        self.hidden_fetch = Some(cx.spawn(
+            async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
+                let result = call.await;
+                this.update(cx, |s, cx| {
+                    if s.generation != generation {
+                        return;
+                    }
+                    s.hermes_hidden = Some(match result {
+                        Ok(list) => {
+                            s.hermes_hidden_known = list.sessions.clone();
+                            Ok(list.sessions)
+                        }
+                        Err(e) => {
+                            log::warn!("hermes.hidden.list: {e}");
+                            Err(e.to_string())
+                        }
+                    });
+                    s.changed(cx);
+                })
+                .ok();
+            },
+        ));
     }
 
     pub fn terminal(&self, id: &str) -> Option<&TerminalServerDto> {
@@ -153,9 +210,22 @@ impl AreasStore {
         self.failed.remove(&area);
         match area {
             Area::Notes => self.notes = None,
-            Area::Channels => self.channels = None,
-            Area::Hermes => self.hermes = None,
-            Area::Terminal => self.terminals = None,
+            Area::Channels => {
+                self.channels = None;
+                // One account's right: the next one's list says whether it
+                // has it.
+                self.channels_can_create = false;
+            }
+            Area::Hermes => {
+                self.hermes = None;
+                self.hermes_hidden = None;
+                self.hermes_hidden_known.clear();
+            }
+            Area::Terminal => {
+                self.terminals = None;
+                // The account's pick: the next account's list says its own.
+                self.terminal_selected = None;
+            }
             _ => {}
         }
     }
@@ -217,7 +287,10 @@ impl AreasStore {
                     this.update(cx, |s, cx| {
                         if s.generation == generation {
                             match result {
-                                Ok(list) => s.channels = Some(list.channels),
+                                Ok(list) => {
+                                    s.channels_can_create = list.can_create;
+                                    s.channels = Some(list.channels);
+                                }
                                 Err(e) => {
                                     log::warn!("channels.list: {e}");
                                     s.failed.insert(Area::Channels);
@@ -230,6 +303,10 @@ impl AreasStore {
                 })
             }
             Area::Hermes => {
+                // Hidden Chats, while its pane has been read, follows too.
+                if self.hermes_hidden.is_some() {
+                    self.refresh_hermes_hidden(cx);
+                }
                 let call = rpc.call::<methods::HermesSessions>(&NoParams);
                 cx.spawn(async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
                     let result = call.await;
@@ -255,7 +332,10 @@ impl AreasStore {
                     this.update(cx, |s, cx| {
                         if s.generation == generation {
                             match result {
-                                Ok(list) => s.terminals = Some(list.servers),
+                                Ok(list) => {
+                                    s.terminals = Some(list.servers);
+                                    s.terminal_selected = list.selected_id;
+                                }
                                 Err(e) => {
                                     log::warn!("terminal.servers: {e}");
                                     s.failed.insert(Area::Terminal);
@@ -271,6 +351,21 @@ impl AreasStore {
             Area::Chats | Area::Workspace | Area::Calendar | Area::Automations => return,
         };
         self.fetches.insert(area, task);
+    }
+
+    /// The terminal servers and the selection, as `terminal.select`
+    /// answered them.
+    pub fn set_terminals(
+        &mut self,
+        servers: conduit_protocol::TerminalServers,
+        cx: &mut Context<Self>,
+    ) {
+        // A list read asked before this answer is older: it must not put
+        // the last pick back.
+        self.fetches.remove(&Area::Terminal);
+        self.terminals = Some(servers.servers);
+        self.terminal_selected = servers.selected_id;
+        self.changed(cx);
     }
 
     fn changed(&mut self, cx: &mut Context<Self>) {
@@ -305,7 +400,7 @@ pub fn wire(stores: &Stores, cx: &mut App) {
                 ConnectionEvent::Daemon(event) => match event.as_ref() {
                     Event::NotesChanged(_) => Area::Notes,
                     Event::ChannelsChanged => Area::Channels,
-                    Event::HermesChanged => Area::Hermes,
+                    Event::HermesChanged(_) => Area::Hermes,
                     Event::TurnFinished(done) if is_hermes_chat(&done.chat_id) => Area::Hermes,
                     // A terminal server comes and goes with the account's
                     // capabilities.
@@ -404,6 +499,18 @@ mod tests {
         assert!(is_hermes_chat("local:hermes_s1"));
         assert!(!is_hermes_chat("local:hermes_") && !is_hermes_chat("c1"));
         assert_eq!(visible_areas(&Capabilities::default()), [Area::Chats]);
+        // Scheduled tasks are offered with Settings' Advanced on, as on the
+        // phone: the server allowing them is not enough.
+        let tasks = |advanced: bool| Capabilities {
+            automations: true,
+            scheduled_tasks: advanced,
+            ..Default::default()
+        };
+        assert_eq!(visible_areas(&tasks(false)), [Area::Chats]);
+        assert_eq!(
+            visible_areas(&tasks(true)),
+            [Area::Chats, Area::Automations]
+        );
     }
 
     #[gpui_kit::test]
@@ -441,6 +548,79 @@ mod tests {
         cx.run_until_parked();
         store.read_with(cx, |s, _| assert!(s.channels.is_none()));
     }
+    /// A Hidden Chats refresh that fails says so in its pane, but the
+    /// sessions it last listed are still found (an open hidden session's
+    /// title and More menu).
+    #[gpui_kit::test]
+    fn a_failed_hidden_refresh_keeps_the_last_sessions_found(cx: &mut TestAppContext) {
+        let daemon = FakeDaemon::new();
+        let session: HermesSessionDto = serde_json::from_value(
+            serde_json::json!({"id": "s1", "chatId": "local:hermes_s1", "title": "Tide tables"}),
+        )
+        .unwrap();
+        daemon.once::<methods::HermesHiddenList>(Ok(HermesSessions {
+            sessions: vec![session],
+            ..Default::default()
+        }));
+        daemon.once::<methods::HermesHiddenList>(Err(conduit_daemon::protocol::error(
+            "rpc.daemonUnavailable",
+            "offline",
+        )));
+        let store = cx.new(|_| AreasStore::new(daemon.rpc()));
+        store.update(cx, |s, cx| s.refresh_hermes_hidden(cx));
+        cx.run_until_parked();
+        store.read_with(cx, |s, _| assert!(s.hermes_session("s1").is_some()));
+        store.update(cx, |s, cx| s.refresh_hermes_hidden(cx));
+        cx.run_until_parked();
+        store.read_with(cx, |s, _| {
+            assert!(
+                matches!(s.hermes_hidden, Some(Err(_))),
+                "the pane says the list failed"
+            );
+            assert_eq!(
+                s.hermes_session("s1").map(|h| h.title.as_str()),
+                Some("Tide tables"),
+                "a failed refresh lost the hidden session"
+            );
+        });
+        // Another account: nothing of the last one's is found.
+        store.update(cx, |s, cx| s.reset(cx));
+        store.read_with(cx, |s, _| assert!(s.hermes_session("s1").is_none()));
+    }
+
+    /// New Channel is one account's right: the next account's channels
+    /// list says whether it has it, and until then it is not offered.
+    #[gpui_kit::test]
+    fn another_account_is_offered_no_new_channel_before_its_list(cx: &mut TestAppContext) {
+        let daemon = FakeDaemon::new();
+        daemon.once::<methods::ChannelsList>(Ok(conduit_protocol::ChannelList {
+            enabled: true,
+            can_create: true,
+            ..Default::default()
+        }));
+        daemon.once::<methods::ChannelsList>(Err(conduit_daemon::protocol::error(
+            "rpc.daemonUnavailable",
+            "offline",
+        )));
+        let store = cx.new(|_| AreasStore::new(daemon.rpc()));
+        store.update(cx, |s, cx| s.set_wanted(&[Area::Channels], cx));
+        cx.run_until_parked();
+        store.read_with(cx, |s, _| assert!(s.channels_can_create));
+        // Another account: its first list fails.
+        store.update(cx, |s, cx| {
+            s.reset(cx);
+            s.set_wanted(&[Area::Channels], cx);
+        });
+        store.read_with(cx, |s, _| {
+            assert!(
+                !s.channels_can_create,
+                "the last account's New Channel was offered"
+            )
+        });
+        cx.run_until_parked();
+        store.read_with(cx, |s, _| assert!(!s.channels_can_create));
+    }
+
     #[gpui_kit::test]
     fn a_list_that_fails_says_so_until_it_is_asked_again(cx: &mut TestAppContext) {
         let daemon = FakeDaemon::new();
@@ -468,6 +648,53 @@ mod tests {
         store.read_with(cx, |s, _| {
             assert_eq!(s.notes.as_ref().map(Vec::len), Some(1));
             assert!(s.failed.is_empty());
+        });
+    }
+
+    fn servers(selected: &str) -> conduit_protocol::TerminalServers {
+        serde_json::from_value(serde_json::json!({
+            "servers": [
+                {"id": "box", "name": "Workbench", "kind": "system"},
+                {"id": "lab", "name": "Lab", "kind": "system"},
+            ],
+            "selectedId": selected,
+        }))
+        .unwrap()
+    }
+
+    /// Another account: the terminal chats send goes with the list, and a
+    /// `terminal.select` answer is not undone by a list read asked before it.
+    #[gpui_kit::test]
+    fn the_terminal_selection_is_the_accounts_and_the_newest(cx: &mut TestAppContext) {
+        let daemon = FakeDaemon::new();
+        daemon.returns::<methods::TerminalServers>(servers("box"));
+        let store = cx.new(|_| AreasStore::new(daemon.rpc()));
+        store.update(cx, |s, cx| s.set_wanted(&[Area::Chats, Area::Terminal], cx));
+        cx.run_until_parked();
+        store.read_with(cx, |s, _| {
+            assert_eq!(s.terminal_selected.as_deref(), Some("box"))
+        });
+
+        store.update(cx, |s, cx| s.reset(cx));
+        store.read_with(cx, |s, _| {
+            assert_eq!(
+                s.terminal_selected, None,
+                "the last account's terminal outlived its list"
+            )
+        });
+
+        let older = daemon.hold::<methods::TerminalServers>();
+        store.update(cx, |s, cx| s.set_wanted(&[Area::Chats, Area::Terminal], cx));
+        cx.run_until_parked();
+        store.update(cx, |s, cx| s.set_terminals(servers("lab"), cx));
+        drop(older);
+        cx.run_until_parked();
+        store.read_with(cx, |s, _| {
+            assert_eq!(
+                s.terminal_selected.as_deref(),
+                Some("lab"),
+                "a list read asked before the pick undid it"
+            )
         });
     }
 }

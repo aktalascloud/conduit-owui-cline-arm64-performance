@@ -41,7 +41,16 @@ abstract final class ConduitEvents {
   /// unread count. No payload.
   static const String channelsChanged = 'channels.changed';
 
+  /// An app answered the user alone, under one of a channel's messages.
+  /// Payload [ChannelAppReplyEvent], scoped to `channel:<id>`.
+  static const String channelsAppReply = 'channels.appReply';
+
+  /// Someone else posted in a channel that is not in front of the user.
+  /// Payload [ChannelPosted], unscoped (for notifications).
+  static const String channelsPosted = 'channels.posted';
+
   static const String syncStatus = 'sync.status';
+
   /// The realtime socket's health changed (connected, transport, latency,
   /// reconnects). No payload; `data.connection` says what it is now.
   static const String socketHealth = 'socket.health';
@@ -96,6 +105,10 @@ abstract final class ConduitEvents {
   /// [TerminalDisplayFile], scoped to the chat.
   static const String terminalDisplayFile = 'terminal.displayFile';
 
+  /// A watched terminal's directory or ports changed (`terminal.watch`).
+  /// Payload [TerminalChanged]; unscoped, named by its handle.
+  static const String terminalChanged = 'terminal.changed';
+
   /// A chat's queued messages changed. Payload [QueueState], scoped to the
   /// chat.
   static const String queueChanged = 'queue.changed';
@@ -121,6 +134,44 @@ abstract final class ConduitEvents {
   /// to the app's chat.
   static const String mcpAppsEvent = 'mcpApps.event';
 
+  /// The reading moved on: a word, a sentence, a pause, an end. Payload
+  /// [SpeechProgress]; a new `reading` means new sentences (`speech.get`).
+  static const String speechChanged = 'speech.changed';
+
+  /// The daemon asks the window's speech engine to speak or play. Payload
+  /// [SpeechCommand]; answered with `speech.report`.
+  static const String speechCommand = 'speech.command';
+
+  /// A watched Hermes chat's agent work changed: its subagents, processes,
+  /// plan or the output a window reads. Payload [HermesWork], scoped to the
+  /// chat.
+  static const String hermesWorkChanged = 'hermes.work.changed';
+
+  /// A watched Group Chat changed: its log, its bots' state, what it waits
+  /// on. Payload [HermesRoomView], scoped to `hermes-room:<roomId>`.
+  static const String hermesRoomsChanged = 'hermes.rooms.changed';
+
+  /// The Group Chats listed changed: one was made, renamed or disbanded,
+  /// or one had news. Payload [HermesRooms].
+  static const String hermesRoomsListChanged = 'hermes.rooms.listChanged';
+  /// The voice call changed: its phase, words, meter or error. Payload
+  /// [CallState].
+  static const String callsChanged = 'calls.changed';
+
+  /// The daemon asks the window to listen, or to open the realtime audio,
+  /// for the call. Payload [CallCommand]; answered with `calls.report`.
+  static const String callsCommand = 'calls.command';
+  /// The calendars or the agenda changed: `calendar.agenda` again. No
+  /// payload.
+  static const String calendarChanged = 'calendar.changed';
+
+  /// The scheduled tasks changed: `automations.list` again (and the open
+  /// task). No payload.
+  static const String automationsChanged = 'automations.changed';
+
+  /// A Run Now moved on. Payload [AutomationRunProgress].
+  static const String automationsRunProgress = 'automations.runProgress';
+
   /// Every event name, for subscription validation and tests.
   static const Set<String> all = {
     turnStarted,
@@ -135,6 +186,8 @@ abstract final class ConduitEvents {
     channelsMessage,
     channelsTyping,
     channelsChanged,
+    channelsAppReply,
+    channelsPosted,
     syncStatus,
     socketHealth,
     notifyShow,
@@ -148,6 +201,7 @@ abstract final class ConduitEvents {
     hermesChanged,
     voiceChanged,
     terminalDisplayFile,
+    terminalChanged,
     settingsChanged,
     queueChanged,
     messagesMerge,
@@ -155,6 +209,16 @@ abstract final class ConduitEvents {
     handoffSettled,
     chatPromptsChanged,
     mcpAppsEvent,
+    speechChanged,
+    speechCommand,
+    hermesWorkChanged,
+    callsChanged,
+    callsCommand,
+    calendarChanged,
+    automationsChanged,
+    automationsRunProgress,
+    hermesRoomsChanged,
+    hermesRoomsListChanged,
   };
 }
 

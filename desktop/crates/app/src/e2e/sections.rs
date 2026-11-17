@@ -8,8 +8,9 @@
 //! account; the arrow keys cross the sections and ← and → close and open
 //! them; `conduit://note` and `conduit://channel` open the item's pane; Go
 //! › a section and Back and Forward; a note saved and a channel made
-//! appear on `notes.changed` and `channels.changed`; and Hermes switched on
-//! and off adds and takes away its section (`capabilities.changed`).
+//! appear on `notes.changed` and `channels.changed`; Scheduled Tasks waits
+//! for Settings' Advanced, as on the phone; and Hermes switched on and off
+//! adds and takes away its section (`capabilities.changed`).
 //! Screenshots in light and dark, and AccessKit checks of the headings.
 
 use std::path::Path;
@@ -53,12 +54,13 @@ fn headings(cx: &mut App) -> Vec<(Area, bool)> {
         .collect()
 }
 
-/// The items listed in `area`, in order.
+/// The items listed in `area`, in order (All Notes, which opens the list
+/// pane, is no item of the list).
 fn items(area: Area, cx: &mut App) -> Vec<AreaItem> {
     rows(cx)
         .iter()
         .filter_map(SidebarItem::area_item)
-        .filter(|i| i.area() == area)
+        .filter(|i| i.area() == area && **i != AreaItem::AllNotes)
         .cloned()
         .collect()
 }
@@ -126,10 +128,43 @@ pub async fn run(inputs: &E2eInputs, dir: &Path, cx: &mut AsyncApp) -> bool {
         return ok("main window", false);
     };
 
+    // ── Scheduled tasks wait for Settings' Advanced, as on the phone ──
+    // The seed's server offers a terminal (owui.sh's "Build box").
+    let without = [
+        Area::Chats,
+        Area::Notes,
+        Area::Terminal,
+        Area::Channels,
+        Area::Workspace,
+        Area::Calendar,
+    ];
+    let gated = wait_until(cx, Duration::from_secs(60), move |cx| {
+        headings(cx).iter().map(|(a, _)| *a).collect::<Vec<_>>() == without
+    })
+    .await;
+    pass &= ok(
+        "with Advanced off there is no Scheduled Tasks section",
+        gated,
+    );
+    cx.update(|cx| {
+        let settings = cx.global::<AppState>().stores.app_settings.clone();
+        settings.update(cx, |s, cx| {
+            s.set(
+                conduit_protocol::AppSettingsPatch {
+                    advanced_features_enabled: Some(true),
+                    ..Default::default()
+                },
+                cx,
+            )
+        })
+    });
+
     // ── Sections, as the capabilities say ─────────────────────────────
+    // The seed's server offers a terminal (owui.sh's "Build box").
     let expected = [
         Area::Chats,
         Area::Notes,
+        Area::Terminal,
         Area::Channels,
         Area::Workspace,
         Area::Calendar,
@@ -159,9 +194,10 @@ pub async fn run(inputs: &E2eInputs, dir: &Path, cx: &mut AsyncApp) -> bool {
                 && c.channels
                 && c.calendar
                 && c.automations
+                && c.scheduled_tasks
                 && c.workspace_prompts
                 && c.folders
-                && !c.terminal
+                && c.terminal
                 && !c.hermes_only
         }),
     );
@@ -295,16 +331,17 @@ pub async fn run(inputs: &E2eInputs, dir: &Path, cx: &mut AsyncApp) -> bool {
     );
 
     // ── The keyboard crosses the sections ─────────────────────────────
+    // From the section under Notes: Terminal on the seeded server.
     in_main(cx, |mw, window, cx| {
         mw.sidebar
-            .update(cx, |s, cx| s.go_to_area(Area::Channels, window, cx))
+            .update(cx, |s, cx| s.go_to_area(Area::Terminal, window, cx))
     });
     settle(cx, 300).await;
     pass &= ok(
         "Go to a section puts the keyboard on its heading",
-        cx.update(cursor) == Some(KeyRow::Area(Area::Channels)),
+        cx.update(cursor) == Some(KeyRow::Area(Area::Terminal)),
     );
-    // ↑ from Channels: the closed Notes heading (its rows are hidden).
+    // ↑ from Terminal: the closed Notes heading (its rows are hidden).
     press(main, "up", cx);
     settle(cx, 200).await;
     pass &= ok(
@@ -320,10 +357,11 @@ pub async fn run(inputs: &E2eInputs, dir: &Path, cx: &mut AsyncApp) -> bool {
     press(main, "right", cx);
     settle(cx, 300).await;
     let on_note = cx.update(cursor);
+    // Its first row is All Notes, which opens the notes list.
     pass &= ok(
-        &format!("→ again steps into it, and the note opens ({on_note:?})"),
-        matches!(on_note, Some(KeyRow::Item(AreaItem::Note(_))))
-            && matches!(cx.update(selection), Selection::Area(AreaItem::Note(_))),
+        &format!("→ again steps into it, and its first row opens ({on_note:?})"),
+        on_note == Some(KeyRow::Item(AreaItem::AllNotes))
+            && cx.update(selection) == Selection::Area(AreaItem::AllNotes),
     );
     press(main, "left", cx);
     settle(cx, 200).await;
@@ -426,6 +464,9 @@ pub async fn run(inputs: &E2eInputs, dir: &Path, cx: &mut AsyncApp) -> bool {
             id: None,
             title: "Kite knots".into(),
             ops: None,
+            page_id: None,
+            base_ops: None,
+            account_id: None,
         },
         cx,
     )
@@ -493,6 +534,35 @@ pub async fn run(inputs: &E2eInputs, dir: &Path, cx: &mut AsyncApp) -> bool {
                 "Hermes's section appears beside Chats (capabilities.changed)",
                 added && cx.update(|cx| headings(cx).get(1).map(|(a, _)| *a)) == Some(Area::Hermes),
             );
+            // Its rows as the phone's tab has them: the connection in use
+            // atop (the switcher, which comes with the connection list a
+            // moment after the section), Scheduled Agents above the chats
+            // when the connection runs them, Hidden Chats last. Go to a
+            // section once they are in.
+            let hermes_rows = |cx: &mut App| -> Vec<SidebarItem> {
+                rows(cx)
+                    .into_iter()
+                    .skip_while(|r| {
+                        !matches!(
+                            r,
+                            SidebarItem::AreaHeader {
+                                area: Area::Hermes,
+                                ..
+                            }
+                        )
+                    })
+                    .skip(1)
+                    .take_while(|r| !matches!(r, SidebarItem::AreaHeader { .. }))
+                    .collect()
+            };
+            let switcher = wait_until(cx, Duration::from_secs(30), |cx| {
+                matches!(
+                    hermes_rows(cx).first(),
+                    Some(SidebarItem::HermesConnection { .. })
+                )
+            })
+            .await;
+            pass &= ok("the connection in use heads Hermes's section", switcher);
             in_main(cx, |mw, window, cx| {
                 mw.sidebar
                     .update(cx, |s, cx| s.go_to_area(Area::Hermes, window, cx))
@@ -506,6 +576,23 @@ pub async fn run(inputs: &E2eInputs, dir: &Path, cx: &mut AsyncApp) -> bool {
             pass &= ok(
                 "Go to a section brings its heading to the top",
                 in_view == Some(true),
+            );
+            let laid = cx.update(hermes_rows);
+            let at = |want: &dyn Fn(&AreaItem) -> bool| {
+                laid.iter().position(|r| r.area_item().is_some_and(want))
+            };
+            let jobs = at(&|i| *i == AreaItem::HermesJobs);
+            let first_chat = at(&|i| matches!(i, AreaItem::HermesSession(_)));
+            pass &= ok(
+                &format!("Scheduled Agents sits above the chats ({jobs:?} before {first_chat:?})"),
+                match (jobs, first_chat) {
+                    (Some(j), Some(c)) => j < c,
+                    _ => true,
+                },
+            );
+            pass &= ok(
+                "Hidden Chats closes the section",
+                laid.last().and_then(SidebarItem::area_item) == Some(&AreaItem::HermesHidden),
             );
             shoot_main(dir, "sections-hermes", cx).await;
             pass &= ok(

@@ -211,7 +211,7 @@ impl Transcript {
     }
 
     /// The view of row `ix`, made (not drawn) when it has none yet.
-    fn find_row_view(&mut self, ix: usize, cx: &mut App) -> Option<(String, RowView)> {
+    pub(super) fn find_row_view(&mut self, ix: usize, cx: &mut App) -> Option<(String, RowView)> {
         let store = self.store.read(cx);
         let row = store.rows().get(ix).copied()?;
         let item = store.item(row)?;
@@ -486,6 +486,7 @@ mod tests {
         let daemon = FakeDaemon::new();
         daemon.returns::<methods::ChatsGet>(ChatResult {
             chat: Some(ChatDetail {
+                hermes: None,
                 abilities: Default::default(),
                 temporary: false,
                 share_id: None,
@@ -502,6 +503,7 @@ mod tests {
                     model: None,
                     tags: vec![],
                     shared: false,
+                    menu: Default::default(),
                 },
                 messages,
                 system_prompt: None,

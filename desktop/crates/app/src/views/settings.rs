@@ -37,6 +37,8 @@ pub mod chats;
 pub mod connection;
 pub mod controls;
 pub mod data_controls;
+pub mod hermes;
+pub mod librechat_memories;
 pub mod personalization;
 pub mod profile;
 
@@ -79,9 +81,8 @@ use crate::stores::settings::{RecordMessage, SettingsStore};
 use crate::stores::shell::{HotkeyState, LoginState, NotificationAccess};
 use crate::views::accounts::{accounts_sections, remove_account};
 use crate::views::add_account::{self, AddAccountSheet};
-use crate::views::direct::DirectView;
+use crate::views::direct::pane::DirectPane;
 use crate::views::forms;
-use crate::views::hermes::HermesView;
 use crate::views::privacy;
 use crate::views::server_form::{ServerForm, ServerFormEvent};
 use crate::views::status::diagnostics_state;
@@ -264,6 +265,8 @@ pub fn shortcut_label(action: ShortcutAction, l10n: &L10n) -> String {
         A::DenyRequest => l10n.desktop_shortcut_deny_request(),
         A::Dictate => l10n.desktop_shortcut_dictate(),
         A::ToggleSidebar => l10n.desktop_shortcut_toggle_sidebar(),
+        A::ReadAloud => l10n.desktop_read_aloud(),
+        A::VoiceCall => l10n.voice_call_title(),
     }
 }
 
@@ -278,6 +281,7 @@ pub fn fixed_label(command: FixedCommand, l10n: &L10n) -> String {
         F::NextChat => l10n.desktop_menu_next_chat(),
         F::PreviousChat => l10n.desktop_menu_previous_chat(),
         F::Regenerate => l10n.regenerate(),
+        F::StopSpeaking => l10n.desktop_stop_speaking(),
         F::ExpandEditor => l10n.desktop_expand_editor(),
         F::AskConduit => l10n.ask_conduit_action(),
         F::ChatSettings => l10n.chat_settings_title(),
@@ -297,6 +301,35 @@ pub fn fixed_label(command: FixedCommand, l10n: &L10n) -> String {
         F::Back => l10n.desktop_menu_back(),
         F::Forward => l10n.desktop_menu_forward(),
         F::GoToSection(_) => l10n.desktop_keyboard_go_to_section(),
+    }
+}
+
+/// An area key's name in Settings › Keyboard: the Format menu's item, the
+/// File menu's New Note, Save.
+pub fn area_key_label(key: keymap::AreaKey, l10n: &L10n) -> String {
+    use keymap::AreaKey as K;
+    match key {
+        K::NewNote => l10n.desktop_new_note(),
+        K::Title => l10n.desktop_note_style_title(),
+        K::Heading => l10n.desktop_note_style_heading(),
+        K::Subheading => l10n.desktop_note_style_subheading(),
+        K::Body => l10n.desktop_note_style_body(),
+        K::Bold => l10n.desktop_note_bold(),
+        K::Italic => l10n.desktop_note_italic(),
+        K::Strikethrough => l10n.desktop_note_strikethrough(),
+        K::Code => l10n.desktop_note_code(),
+        K::Link => l10n.desktop_add_link_ellipsis(),
+        K::BulletedList => l10n.desktop_note_bulleted_list(),
+        K::NumberedList => l10n.desktop_note_numbered_list(),
+        K::Checklist => l10n.desktop_note_checklist(),
+        K::MarkChecked => l10n.desktop_note_mark_checked(),
+        K::Quote => l10n.desktop_note_quote(),
+        K::CodeBlock => l10n.desktop_note_code_block(),
+        K::SaveWorkspaceItem | K::SaveCalendarEvent | K::SaveScheduledTask => l10n.save(),
+        K::CalendarEarlier => l10n.desktop_keyboard_calendar_earlier(),
+        K::CalendarLater => l10n.desktop_keyboard_calendar_later(),
+        K::CalendarToday => l10n.calendar_today(),
+        K::DeleteCalendarItem | K::DeleteScheduledTask => l10n.desktop_delete_ellipsis(),
     }
 }
 
@@ -363,8 +396,7 @@ pub struct SettingsView {
     settings: Entity<SettingsStore>,
     connection: Entity<ConnectionStore>,
     stores: Stores,
-    direct: Option<Entity<DirectView>>,
-    hermes: Option<Entity<HermesView>>,
+    pub direct: Option<Entity<DirectPane>>,
     pub profile: Option<Entity<profile::ProfilePane>>,
     pub personalization: Option<Entity<personalization::PersonalizationPane>>,
     pub chats: Option<Entity<chats::ChatsPane>>,
@@ -405,8 +437,10 @@ impl SettingsView {
         let mut subscriptions = vec![
             cx.observe(&settings, |_, _, cx| cx.notify()),
             cx.observe(&connection, |_, _, cx| cx.notify()),
+            // The account in charge of the chats: an Open WebUI account, or
+            // a LibreChat one while the Open WebUI account stays parked.
             cx.observe(&stores.accounts, |this: &mut Self, accounts, cx| {
-                let active = accounts.read(cx).active().map(|a| a.id.clone());
+                let active = accounts.read(cx).scope_key();
                 if active != this.account {
                     this.account = active;
                     this.forget_account(cx);
@@ -415,6 +449,7 @@ impl SettingsView {
             }),
             cx.observe(&stores.session, |_, _, cx| cx.notify()),
             cx.observe(&stores.app_settings, |_, _, cx| cx.notify()),
+            cx.observe(&stores.hermes_admin, |_, _, cx| cx.notify()),
         ];
         if let Some(shell) = cx.try_global::<Desktop>().map(|d| d.shell.clone()) {
             subscriptions.push(cx.observe(&shell, |_, _, cx| cx.notify()));
@@ -431,7 +466,7 @@ impl SettingsView {
                 audio.update(cx, |a, cx| a.stop_preview(cx));
             }
         }));
-        let account = stores.accounts.read(cx).active().map(|a| a.id.clone());
+        let account = stores.accounts.read(cx).scope_key();
         // The system's answers may have changed since (System Settings).
         crate::desktop::refresh_statuses(cx);
         let focus = cx.focus_handle();
@@ -441,7 +476,6 @@ impl SettingsView {
             connection,
             stores,
             direct: None,
-            hermes: None,
             profile: None,
             personalization: None,
             chats: None,
@@ -471,6 +505,8 @@ impl SettingsView {
         }
         self.profile = None;
         self.personalization = None;
+        // The account's connections, history and web search settings.
+        self.direct = None;
         self.chats = None;
         self.data_controls = None;
         self.about_info = None;
@@ -499,6 +535,13 @@ impl SettingsView {
             }
             self.tab = tab;
             self.switched = Some(cx.background_executor().now());
+            // Direct Connections reads the account's connections again
+            // each time it is shown, as mobile's page does.
+            if tab == Tab::Direct
+                && let Some(p) = &self.direct
+            {
+                p.update(cx, |p, cx| p.refresh_quietly(cx));
+            }
             cx.notify();
         }
     }
@@ -643,6 +686,14 @@ impl SettingsView {
                 if let Some(p) = &self.personalization {
                     p.update(cx, |p, cx| p.choose_default_model(value, cx));
                 }
+            }
+            menu if menu.starts_with("direct-") || menu.starts_with("web-search-") => {
+                if let Some(p) = &self.direct {
+                    p.update(cx, |p, cx| p.choose(menu, value, window, cx));
+                }
+            }
+            hermes::MCP_MENU | hermes::CATALOG_MENU => {
+                hermes::choose(&self.stores, menu, value, window, cx)
             }
             menu if menu.starts_with("audio-") => {
                 if let Some(p) = &self.audio {
@@ -933,6 +984,18 @@ impl SettingsView {
                                 .into_any_element(),
                         );
                     }
+                    KeyRow::Area(key) => {
+                        let label = area_key_label(key, &l10n);
+                        let keys = describe(&keymap::area_stroke(key), mac);
+                        let field = ShortcutField::new(
+                            SharedString::from(format!("area-{key:?}")),
+                            keys,
+                            label.clone(),
+                            SharedString::default(),
+                        )
+                        .fixed(true);
+                        rows.push(setting_row(label, None, field, cx).into_any_element());
+                    }
                     KeyRow::QuickAsk => {
                         if recording_quick_ask && let Some(m) = &quick_ask_message {
                             footer = Some(record_message(m, &l10n).into());
@@ -953,9 +1016,51 @@ impl SettingsView {
                 KeyGroup::FindAndView => l10n.desktop_keyboard_find_and_view(),
                 KeyGroup::Go => l10n.desktop_menu_go(),
                 KeyGroup::Window => l10n.desktop_menu_window(),
+                KeyGroup::Notes => l10n.sidebar_notes_tab(),
+                KeyGroup::Workspace => l10n.workspace_title(),
+                KeyGroup::Calendar => l10n.calendar_title(),
+                KeyGroup::ScheduledTasks => l10n.scheduled_tasks_title(),
             };
+            // Where these keys work, under the areas' own groups.
+            let footer = footer.or_else(|| match group {
+                KeyGroup::Notes => Some(l10n.desktop_keyboard_notes_footer().into()),
+                KeyGroup::Workspace => Some(l10n.desktop_keyboard_workspace_footer().into()),
+                KeyGroup::Calendar => Some(l10n.desktop_keyboard_calendar_footer().into()),
+                KeyGroup::ScheduledTasks => Some(l10n.desktop_keyboard_tasks_footer().into()),
+                _ => None,
+            });
             sections.push(settings_section(title, footer, rows, cx).into_any_element());
         }
+        // The terminal's Option key: Meta, or the character it types.
+        let meta = desktop.terminal_option_as_meta;
+        let settings = self.settings.clone();
+        let meta_switch = Switch::new(
+            "terminal-option-as-meta",
+            l10n.desktop_terminal_option_as_meta(),
+            meta,
+        )
+        .on_click(Rc::new(move |_, _, cx| {
+            settings.update(cx, |s, cx| {
+                s.set_desktop(|d| d.terminal_option_as_meta = !meta, cx)
+            });
+        }));
+        sections.push(
+            settings_section(
+                l10n.terminal(),
+                Some(l10n.desktop_terminal_option_as_meta_footer().into()),
+                vec![
+                    setting_row(
+                        l10n.desktop_terminal_option_as_meta(),
+                        None,
+                        meta_switch,
+                        cx,
+                    )
+                    .into_any_element(),
+                ],
+                cx,
+            )
+            .into_any_element(),
+        );
         let s = self.settings.clone();
         sections.push(
             div()
@@ -1321,23 +1426,32 @@ impl SettingsView {
         let more = {
             let stores = self.stores.clone();
             Rc::new(move |id: &str, window: &mut Window, cx: &mut App| {
-                let Some(account) = stores
-                    .accounts
-                    .read(cx)
-                    .accounts()
-                    .iter()
-                    .find(|a| a.id == id)
-                    .cloned()
-                else {
+                // An Open WebUI account, or a LibreChat one.
+                let name = {
+                    let store = stores.accounts.read(cx);
+                    store
+                        .accounts()
+                        .iter()
+                        .find(|a| a.id == id)
+                        .map(crate::stores::accounts::display_name)
+                        .or_else(|| {
+                            store
+                                .libre_chat_accounts()
+                                .iter()
+                                .find(|a| a.id == id)
+                                .map(crate::stores::accounts::libre_chat_display_name)
+                        })
+                };
+                let Some(name) = name else {
                     return;
                 };
                 let l10n = cx.l10n().clone();
-                let name = privacy::name(&crate::stores::accounts::display_name(&account), cx);
+                let name = privacy::name(&name, cx);
                 NativeMenu::new()
                     .menu(
                         l10n.desktop_sign_out_of(&name),
                         Box::new(RemoveAccount {
-                            account_id: account.id.clone(),
+                            account_id: id.to_string(),
                         }),
                     )
                     .show(window.mouse_position(), window, cx);
@@ -1489,30 +1603,27 @@ impl SettingsView {
     }
 
     fn direct(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
-        let l10n = cx.l10n().clone();
-        let stores = self.stores.clone();
-        // The view draws its own groups (the list, the form) at the page's
-        // inset, as every other page's groups are, not inside another card.
-        let direct = self
-            .direct
-            .get_or_insert_with(|| {
-                cx.new(|cx| {
-                    let mut v = DirectView::new(stores, false, window, cx);
-                    v.footer = Some(l10n.direct_connections_description().into());
-                    v
-                })
-            })
-            .clone();
-        vec![direct.into_any_element()]
+        // The pane draws its own groups at the page's inset, as every
+        // other page's groups are, not inside another card.
+        vec![self.direct_pane(window, cx).into_any_element()]
     }
 
-    fn hermes(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
+    /// Settings › Direct Connections, made once.
+    pub fn direct_pane(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<DirectPane> {
         let stores = self.stores.clone();
-        let hermes = self
-            .hermes
-            .get_or_insert_with(|| cx.new(|cx| HermesView::new(stores, false, window, cx)))
-            .clone();
-        vec![hermes.into_any_element()]
+        self.direct
+            .get_or_insert_with(|| cx.new(|cx| DirectPane::new(stores, window, cx)))
+            .clone()
+    }
+
+    /// Settings › Hermes ([`hermes`]): the switch, the connections, and
+    /// the connection in use's status, schedules, catalog and MCP servers.
+    fn hermes(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
+        hermes::sections(&self.stores, window, cx)
     }
 
     fn desktop(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {
@@ -1606,8 +1717,15 @@ impl SettingsView {
             prefs.notify_answers,
             |d, on| d.notify_answers = on,
         );
+        let notify_channels = toggle(
+            "notify-channels",
+            l10n.desktop_notify_channels(),
+            prefs.notify_channels,
+            |d, on| d.notify_channels = on,
+        );
         let mut notify_footer = l10n.desktop_notify_answers_footer();
-        let denied = notifications == NotificationAccess::Denied && prefs.notify_answers;
+        let denied = notifications == NotificationAccess::Denied
+            && (prefs.notify_answers || prefs.notify_channels);
         if denied {
             notify_footer = format!("{notify_footer}\n\n{}", l10n.desktop_notifications_denied());
         } else if notifications == NotificationAccess::Unavailable {
@@ -1616,8 +1734,16 @@ impl SettingsView {
                 l10n.desktop_notifications_unavailable()
             );
         }
-        let mut notify_rows =
-            vec![setting_row(l10n.desktop_notify_answers(), None, notify, cx).into_any_element()];
+        let mut notify_rows = vec![
+            setting_row(l10n.desktop_notify_answers(), None, notify, cx).into_any_element(),
+            setting_row(
+                l10n.desktop_notify_channels(),
+                Some(l10n.desktop_notify_channels_footer().into()),
+                notify_channels,
+                cx,
+            )
+            .into_any_element(),
+        ];
         if denied {
             notify_rows.push(
                 setting_row(
@@ -2150,18 +2276,24 @@ mod tests {
         assert_eq!(at(100), 1.);
     }
 
-    /// The app's Info.plist carries the same line (LICENSE's holder).
+    /// The app, its Share extension and its widget carry the same line
+    /// (LICENSE's holder).
     #[test]
     fn the_about_copyright_is_the_bundles() {
-        let plist = include_str!("../../../../packaging/macos/Info.plist");
-        let key = plist.find("NSHumanReadableCopyright").unwrap();
-        let value = &plist[key..];
-        let start = value.find("<string>").unwrap() + "<string>".len();
-        assert!(
-            value[start..].starts_with(super::COPYRIGHT),
-            "{}",
-            &value[start..start + 40]
-        );
+        for plist in [
+            include_str!("../../../../packaging/macos/Info.plist"),
+            include_str!("../../../../packaging/macos/share/Info.plist"),
+            include_str!("../../../../packaging/macos/widget/Info.plist"),
+        ] {
+            let key = plist.find("NSHumanReadableCopyright").unwrap();
+            let value = &plist[key..];
+            let start = value.find("<string>").unwrap() + "<string>".len();
+            assert!(
+                value[start..].starts_with(super::COPYRIGHT),
+                "{}",
+                &value[start..start + 40]
+            );
+        }
     }
 
     #[test]
@@ -2209,6 +2341,7 @@ mod language_tests {
             v.profile_pane(window, cx);
             v.personalization_pane(window, cx);
             v.data_controls_pane(window, cx);
+            v.direct_pane(window, cx);
             v.about_info = Some(conduit_protocol::AboutInfo::default());
         });
         stores.accounts.update(vcx, |a, cx| {
@@ -2225,6 +2358,38 @@ mod language_tests {
             assert!(v.profile.is_none(), "B's Profile shows A's details");
             assert!(v.personalization.is_none() && v.data_controls.is_none());
             assert!(v.about_info.is_none(), "About shows A's server");
+            assert!(v.direct.is_none(), "Direct shows A's connections");
+        });
+
+        // LibreChat owns the chats, and its account changes while the Open
+        // WebUI account stays parked: the panes start over too.
+        let libre_chat = |id: &str| {
+            let mut l = list(vec![
+                account("a", "Avery", false, true),
+                account("b", "Blake", true, true),
+            ]);
+            l.primary = conduit_protocol::PrimaryAccount::LibreChat;
+            l.active_libre_chat_account_id = Some(id.into());
+            l
+        };
+        stores
+            .accounts
+            .update(vcx, |a, cx| a.adopt(libre_chat("lc-1"), cx));
+        vcx.run_until_parked();
+        view.update_in(vcx, |v, window, cx| {
+            v.personalization_pane(window, cx);
+            v.profile_pane(window, cx);
+        });
+        stores
+            .accounts
+            .update(vcx, |a, cx| a.adopt(libre_chat("lc-2"), cx));
+        vcx.run_until_parked();
+        view.read_with(vcx, |v, _| {
+            assert!(
+                v.personalization.is_none(),
+                "the second LibreChat account sees the first one's memories"
+            );
+            assert!(v.profile.is_none());
         });
     }
 

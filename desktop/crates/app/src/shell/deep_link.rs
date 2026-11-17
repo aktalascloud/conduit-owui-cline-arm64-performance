@@ -37,13 +37,24 @@ pub enum OpenRequest {
     /// Quick Ask's Open in Conduit: a new chat with the draft kept under
     /// `id` (its text and uploaded files), which only this request takes.
     QuickAskDraft { id: u64 },
+    /// `conduit://quick-ask`: the Quick Ask panel (the widget's Ask
+    /// Conduit); Shortcuts' Show Quick Ask may bring a question's `text`,
+    /// which starts a new question with it in the message box.
+    QuickAsk { text: Option<String> },
+    /// `conduit://call`, or mobile's `conduit://mic`: a voice call in a new
+    /// chat (the widget's Voice Call).
+    VoiceCall,
+    /// `conduit://share/<id>`: what the Share extension staged in the
+    /// inbox ([`super::share_inbox`]), as a new chat.
+    Share { id: String },
 }
 
 impl OpenRequest {
     /// Whether the request needs the main frame (signed in, routed to
-    /// Main). Settings opens in its own window whatever is routed.
+    /// Main). Settings opens in its own window whatever is routed, and
+    /// Quick Ask in its panel (which says when setup isn't finished).
     pub fn needs_main(&self) -> bool {
-        !matches!(self, Self::Settings { .. })
+        !matches!(self, Self::Settings { .. } | Self::QuickAsk { .. })
     }
 }
 
@@ -104,7 +115,9 @@ pub fn parse(url: &str) -> Option<OpenRequest> {
         "chat" => id
             .filter(|i| valid_id(i))
             .map(|id| OpenRequest::Chat { id }),
-        "new" => {
+        // `new_chat` and `mic` are the phone widget's links
+        // (`conduit://<action>?homeWidget=true`), so the same ones work here.
+        "new" | "new_chat" => {
             if id.is_some() {
                 return None;
             }
@@ -129,6 +142,11 @@ pub fn parse(url: &str) -> Option<OpenRequest> {
         "note" | "notes" => id
             .filter(|i| valid_id(i))
             .map(|id| OpenRequest::Note { id }),
+        "quick-ask" => id.is_none().then_some(OpenRequest::QuickAsk { text: None }),
+        "call" | "mic" => id.is_none().then_some(OpenRequest::VoiceCall),
+        "share" => id
+            .filter(|i| super::share_inbox::valid_id(i))
+            .map(|id| OpenRequest::Share { id }),
         "settings" => match id {
             None => Some(OpenRequest::Settings { tab: None }),
             Some(tab) if valid_tab(&tab) => Some(OpenRequest::Settings { tab: Some(tab) }),
@@ -198,7 +216,19 @@ pub fn redacted(url: &str) -> String {
                 .host_str()
                 .map(str::to_string)
                 .or_else(|| u.path().split('/').next().map(str::to_string))
-                .filter(|k| matches!(k.as_str(), "chat" | "new" | "settings"))
+                .filter(|k| {
+                    matches!(
+                        k.as_str(),
+                        "chat"
+                            | "new"
+                            | "settings"
+                            | "new_chat"
+                            | "quick-ask"
+                            | "call"
+                            | "mic"
+                            | "share"
+                    )
+                })
                 .unwrap_or_else(|| "?".into());
             format!("{SCHEME}://{kind}/…")
         }
@@ -280,6 +310,46 @@ mod tests {
     }
 
     #[test]
+    fn opens_quick_ask_or_a_voice_call_as_the_widget_asks() {
+        let quick_ask = Some(OpenRequest::QuickAsk { text: None });
+        assert_eq!(parse("conduit://quick-ask"), quick_ask);
+        assert_eq!(parse("conduit://call"), Some(OpenRequest::VoiceCall));
+        assert_eq!(parse("conduit://quick-ask/"), quick_ask);
+        // The phone widget's links.
+        assert_eq!(parse("conduit://new_chat?homeWidget=true"), new_chat(None));
+        assert_eq!(
+            parse("conduit://mic?homeWidget=true"),
+            Some(OpenRequest::VoiceCall)
+        );
+        // Neither takes an id.
+        assert_eq!(parse("conduit://quick-ask/x"), None);
+        assert_eq!(parse("conduit://call/c1"), None);
+    }
+
+    #[test]
+    fn opens_a_share_from_the_share_menu() {
+        assert_eq!(
+            parse("conduit://share/6f1c2b9e-0d2a-4c1e-9a77-1b2c3d4e5f60"),
+            Some(OpenRequest::Share {
+                id: "6f1c2b9e-0d2a-4c1e-9a77-1b2c3d4e5f60".into()
+            })
+        );
+        for rejected in [
+            "conduit://share",
+            "conduit://share/abc",
+            "conduit://share/6F1C2B9E-0D2A-4C1E-9A77-1B2C3D4E5F60",
+            "conduit://share/6f1c2b9e-0d2a-4c1e-9a77-1b2c3d4e5f60.part",
+            "conduit://share/../6f1c2b9e-0d2a-4c1e-9a77-1b2c3d4e5f60",
+        ] {
+            assert_eq!(parse(rejected), None, "{rejected}");
+        }
+        assert!(
+            OpenRequest::Share { id: "x".into() }.needs_main(),
+            "a share opens in the main window"
+        );
+    }
+
+    #[test]
     fn refuses_what_is_not_a_link_this_app_opens() {
         for rejected in [
             "https://example.com/chat/1",
@@ -345,12 +415,18 @@ mod tests {
         assert!(chat("c").unwrap().needs_main());
         assert!(new_chat(None).unwrap().needs_main());
         assert!(!OpenRequest::Settings { tab: None }.needs_main());
+        assert!(OpenRequest::VoiceCall.needs_main());
+        assert!(!OpenRequest::QuickAsk { text: None }.needs_main());
     }
 
     #[test]
     fn the_log_never_sees_ids_or_text() {
         assert_eq!(redacted("conduit://chat/secret-id"), "conduit://chat/…");
         assert_eq!(redacted("conduit://new?q=private"), "conduit://new/…");
+        assert_eq!(
+            redacted("conduit://share/6f1c2b9e-0d2a-4c1e-9a77-1b2c3d4e5f60"),
+            "conduit://share/…"
+        );
         assert_eq!(redacted("https://example.org/x"), "https:…");
         assert_eq!(redacted("nope"), "(not a URL)");
         assert_eq!(

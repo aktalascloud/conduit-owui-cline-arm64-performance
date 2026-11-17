@@ -1,12 +1,589 @@
 {
   "@@locale": "en",
+  "scheduledTaskDeleteTitle": "Delete scheduled task?",
+  "@scheduledTaskDeleteTitle": {
+    "description": "Title of the confirmation dialog before deleting a scheduled task."
+  },
+  "desktopIntentAskTitle": "Ask Conduit",
+  "@desktopIntentAskTitle": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). The Ask Conduit action's name and its short title, in Title Case."
+  },
+  "desktopIntentAskDescription": "Asks Conduit a question and gives back the answer as text.",
+  "@desktopIntentAskDescription": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). What the Ask Conduit action does, in sentence case."
+  },
+  "desktopIntentQuestion": "Question",
+  "@desktopIntentQuestion": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). The Ask Conduit action's question field, in Title Case."
+  },
+  "desktopIntentQuestionPrompt": "What would you like to ask?",
+  "@desktopIntentQuestionPrompt": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). What Shortcuts or Siri asks when the question is missing."
+  },
+  "desktopIntentOpenInConduit": "Open in Conduit",
+  "@desktopIntentOpenInConduit": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). The Ask Conduit action's switch that shows the chat in Conduit afterwards, in Title Case."
+  },
+  "desktopIntentOpenInConduitDescription": "Shows the chat in Conduit once the answer is in.",
+  "@desktopIntentOpenInConduitDescription": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). What the Open in Conduit switch does."
+  },
+  "desktopIntentAskSummary": "Ask Conduit {prompt}",
+  "@desktopIntentAskSummary": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). The Ask Conduit action as a sentence in the shortcut editor; {prompt} is the question field.",
+    "placeholders": {
+      "prompt": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentNewChatTitle": "New Chat",
+  "@desktopIntentNewChatTitle": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). The New Chat action's name and short title, in Title Case."
+  },
+  "desktopIntentNewChatDescription": "Opens a new chat in Conduit with your text in the message box, ready to send.",
+  "@desktopIntentNewChatDescription": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). What the New Chat action does."
+  },
+  "desktopIntentMessage": "Message",
+  "@desktopIntentMessage": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). The New Chat action's text field, in Title Case."
+  },
+  "desktopIntentNewChatSummary": "New chat with {prompt}",
+  "@desktopIntentNewChatSummary": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). The New Chat action as a sentence in the shortcut editor; {prompt} is the message field.",
+    "placeholders": {
+      "prompt": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentOpenChatTitle": "Open Chat",
+  "@desktopIntentOpenChatTitle": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). The Open Chat action's name and short title, in Title Case."
+  },
+  "desktopIntentOpenChatDescription": "Opens one of your chats in Conduit.",
+  "@desktopIntentOpenChatDescription": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). What the Open Chat action does."
+  },
+  "desktopIntentChat": "Chat",
+  "@desktopIntentChat": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). The Open Chat action's chat field, and the name Shortcuts gives a chat, in Title Case."
+  },
+  "desktopIntentWhichChat": "Which chat?",
+  "@desktopIntentWhichChat": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). What Shortcuts or Siri asks when the chat is missing."
+  },
+  "desktopIntentOpenChatSummary": "Open {target}",
+  "@desktopIntentOpenChatSummary": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). The Open Chat action as a sentence in the shortcut editor; {target} is the chat field.",
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentVoiceCallTitle": "Start Voice Call",
+  "@desktopIntentVoiceCallTitle": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). The Start Voice Call action's name and short title, in Title Case."
+  },
+  "desktopIntentVoiceCallDescription": "Starts a voice call with Conduit in a new chat.",
+  "@desktopIntentVoiceCallDescription": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). What the Start Voice Call action does."
+  },
+  "desktopIntentQuickAskTitle": "Show Quick Ask",
+  "@desktopIntentQuickAskTitle": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). The Show Quick Ask action's name, in Title Case; Quick Ask is the floating panel."
+  },
+  "desktopIntentQuickAskDescription": "Opens Quick Ask over the app you're using, with your text in it if you give some.",
+  "@desktopIntentQuickAskDescription": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). What the Show Quick Ask action does."
+  },
+  "desktopIntentText": "Text",
+  "@desktopIntentText": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). The Show Quick Ask action's text field, in Title Case."
+  },
+  "desktopIntentQuickAskSummary": "Show Quick Ask with {text}",
+  "@desktopIntentQuickAskSummary": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). The Show Quick Ask action as a sentence in the shortcut editor; {text} is the text field.",
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentQuickAskShortTitle": "Quick Ask",
+  "@desktopIntentQuickAskShortTitle": {
+    "description": "Shown in Shortcuts, Spotlight and Siri (App Intents, read from Localizable.strings that packaging/macos/intents.sh writes). Show Quick Ask's short title on its tile, in Title Case."
+  },
+  "desktopIntentUnexpected": "Conduit couldn't do that. Try again.",
+  "@desktopIntentUnexpected": {
+    "description": "When a Shortcuts action fails for no reason Conduit can name (also for the app's own unexpected failures)."
+  },
+  "desktopIntentPhraseAsk": "Ask {applicationName}",
+  "@desktopIntentPhraseAsk": {
+    "description": "A phrase Siri and Spotlight recognise for an App Shortcut (AppShortcuts.strings); {applicationName} is the app's name and must stay exactly once. Runs Ask Conduit.",
+    "placeholders": {
+      "applicationName": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentPhraseAskQuestion": "Ask {applicationName} a question",
+  "@desktopIntentPhraseAskQuestion": {
+    "description": "A phrase Siri and Spotlight recognise for an App Shortcut (AppShortcuts.strings); {applicationName} is the app's name and must stay exactly once. Runs Ask Conduit.",
+    "placeholders": {
+      "applicationName": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentPhraseNewChat": "Start a new chat in {applicationName}",
+  "@desktopIntentPhraseNewChat": {
+    "description": "A phrase Siri and Spotlight recognise for an App Shortcut (AppShortcuts.strings); {applicationName} is the app's name and must stay exactly once. Runs New Chat.",
+    "placeholders": {
+      "applicationName": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentPhraseNewChatShort": "New {applicationName} chat",
+  "@desktopIntentPhraseNewChatShort": {
+    "description": "A phrase Siri and Spotlight recognise for an App Shortcut (AppShortcuts.strings); {applicationName} is the app's name and must stay exactly once. Runs New Chat.",
+    "placeholders": {
+      "applicationName": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentPhraseOpenChat": "Open a chat in {applicationName}",
+  "@desktopIntentPhraseOpenChat": {
+    "description": "A phrase Siri and Spotlight recognise for an App Shortcut (AppShortcuts.strings); {applicationName} is the app's name and must stay exactly once. Runs Open Chat (Siri then asks which chat).",
+    "placeholders": {
+      "applicationName": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentPhraseVoiceCall": "Start a voice call in {applicationName}",
+  "@desktopIntentPhraseVoiceCall": {
+    "description": "A phrase Siri and Spotlight recognise for an App Shortcut (AppShortcuts.strings); {applicationName} is the app's name and must stay exactly once. Runs Start Voice Call.",
+    "placeholders": {
+      "applicationName": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentPhraseCall": "Call {applicationName}",
+  "@desktopIntentPhraseCall": {
+    "description": "A phrase Siri and Spotlight recognise for an App Shortcut (AppShortcuts.strings); {applicationName} is the app's name and must stay exactly once. Runs Start Voice Call.",
+    "placeholders": {
+      "applicationName": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentPhraseQuickAsk": "Show Quick Ask in {applicationName}",
+  "@desktopIntentPhraseQuickAsk": {
+    "description": "A phrase Siri and Spotlight recognise for an App Shortcut (AppShortcuts.strings); {applicationName} is the app's name and must stay exactly once. Runs Show Quick Ask.",
+    "placeholders": {
+      "applicationName": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentNeedsSignIn": "Open Conduit and sign in, then try again.",
+  "@desktopIntentNeedsSignIn": {
+    "description": "The error a Shortcuts action shows (sentence case). Conduit has no signed-in account yet."
+  },
+  "desktopIntentNotReady": "Conduit is still starting up. Try again in a moment.",
+  "@desktopIntentNotReady": {
+    "description": "The error a Shortcuts action shows (sentence case). Conduit was launched for the action and could not get ready in time."
+  },
+  "desktopIntentAskEmpty": "Type a question for Conduit to answer.",
+  "@desktopIntentAskEmpty": {
+    "description": "The error a Shortcuts action shows (sentence case). Ask Conduit was run with an empty question."
+  },
+  "desktopIntentAskTimedOut": "Conduit is still answering. You'll find the answer in the chat “{title}”.",
+  "@desktopIntentAskTimedOut": {
+    "description": "The error a Shortcuts action shows (sentence case). Ask Conduit stopped waiting; the answer keeps going in the chat titled {title}.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentAskTimedOutUntitled": "Conduit is still answering. You'll find the answer in Conduit.",
+  "@desktopIntentAskTimedOutUntitled": {
+    "description": "The error a Shortcuts action shows (sentence case). Ask Conduit stopped waiting; the answer keeps going in a chat that has no title yet."
+  },
+  "desktopIntentAskFailed": "The answer didn't come through: {detail}",
+  "@desktopIntentAskFailed": {
+    "description": "The error a Shortcuts action shows (sentence case). The model answered with an error; {detail} is the server's own words.",
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentAskFailedPlain": "The answer didn't come through. Try again.",
+  "@desktopIntentAskFailedPlain": {
+    "description": "The error a Shortcuts action shows (sentence case). The model answered with an error and gave no reason."
+  },
+  "desktopIntentAskQueued": "You're offline. Conduit will send your question when you're back online, and the answer will be in Conduit.",
+  "@desktopIntentAskQueued": {
+    "description": "The error a Shortcuts action shows (sentence case). The question waits in the outbox until the Mac is online again."
+  },
+  "desktopIntentChatMissing": "That chat isn't in Conduit anymore.",
+  "@desktopIntentChatMissing": {
+    "description": "The error a Shortcuts action shows (sentence case). Open Chat named a chat that was deleted."
+  },
+  "desktopIntentOffline": "Conduit can't reach your server. Check your connection and try again.",
+  "@desktopIntentOffline": {
+    "description": "The error a Shortcuts action shows (sentence case). Conduit could not reach the server to ask the question."
+  },
+  "desktopAddLinkEllipsis": "Add Link…",
+  "@desktopAddLinkEllipsis": {
+    "description": "Format menu item that asks for an address and links the selected text (⌘K). Title Case, ellipsis because it asks."
+  },
+  "desktopNoteMarkChecked": "Mark as Checked",
+  "@desktopNoteMarkChecked": {
+    "description": "Format menu item that checks or unchecks the selected checklist items (⇧⌘U), as Notes names it. Title Case."
+  },
+  "desktopNewNote": "New Note",
+  "@desktopNewNote": {
+    "description": "File menu item, button and tooltip that make a new note named for today and open it. Title Case."
+  },
+  "desktopSearchNotes": "Search Notes",
+  "@desktopSearchNotes": {
+    "description": "Accessible name of the notes list's search field (its placeholder is Search)."
+  },
+  "desktopSearchNoNotes": "Try fewer or different words.",
+  "@desktopSearchNoNotes": {
+    "description": "Hint under No Notes Found when a search of the notes matches nothing."
+  },
+  "desktopNoteNoText": "No additional text",
+  "@desktopNoteNoText": {
+    "description": "The notes list's second line for a note with nothing but its title (as Notes shows it)."
+  },
+  "desktopShareAccessEllipsis": "Share Access…",
+  "@desktopShareAccessEllipsis": {
+    "description": "Menu item and button that open who may read or edit a note or a workspace item (Share Note, Share Model…). Title Case, ellipsis because a sheet opens."
+  },
+  "desktopDeleteNoteTitle": "Delete “{title}”?",
+  "@desktopDeleteNoteTitle": {
+    "description": "Title of the alert that asks before deleting a note; title is the note's title.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopDeleteNoteMessage": "It’s deleted from the server and your other devices. You can’t undo this.",
+  "@desktopDeleteNoteMessage": {
+    "description": "Body of the alert that asks before deleting a note."
+  },
+  "desktopNoteDeleteFailed": "Couldn’t delete the note. Try again.",
+  "@desktopNoteDeleteFailed": {
+    "description": "Notice when deleting a note failed."
+  },
+  "desktopNoteCreateFailed": "Couldn’t create the note. Try again.",
+  "@desktopNoteCreateFailed": {
+    "description": "Notice when making a new note failed."
+  },
+  "desktopNoteTitlePlaceholder": "Title",
+  "@desktopNoteTitlePlaceholder": {
+    "description": "Placeholder and accessible name of a note's title field."
+  },
+  "desktopNoteBodyPlaceholder": "Write something…",
+  "@desktopNoteBodyPlaceholder": {
+    "description": "Placeholder of an empty note's text."
+  },
+  "desktopNoteBody": "Note Text",
+  "@desktopNoteBody": {
+    "description": "Accessible name of a note's text editor."
+  },
+  "desktopNoteFormat": "Format",
+  "@desktopNoteFormat": {
+    "description": "Accessible name of the note's formatting toolbar."
+  },
+  "desktopNoteStyleTitle": "Title",
+  "@desktopNoteStyleTitle": {
+    "description": "Paragraph style: a title (the largest heading). Title Case."
+  },
+  "desktopNoteStyleHeading": "Heading",
+  "@desktopNoteStyleHeading": {
+    "description": "Paragraph style: a heading. Title Case."
+  },
+  "desktopNoteStyleSubheading": "Subheading",
+  "@desktopNoteStyleSubheading": {
+    "description": "Paragraph style: a subheading. Title Case."
+  },
+  "desktopNoteStyleBody": "Body",
+  "@desktopNoteStyleBody": {
+    "description": "Paragraph style: plain body text. Title Case."
+  },
+  "desktopNoteBold": "Bold",
+  "@desktopNoteBold": {
+    "description": "Formatting button and tooltip."
+  },
+  "desktopNoteItalic": "Italic",
+  "@desktopNoteItalic": {
+    "description": "Formatting button and tooltip."
+  },
+  "desktopNoteStrikethrough": "Strikethrough",
+  "@desktopNoteStrikethrough": {
+    "description": "Formatting button and tooltip."
+  },
+  "desktopNoteCode": "Code",
+  "@desktopNoteCode": {
+    "description": "Formatting button and tooltip: inline code."
+  },
+  "desktopNoteLink": "Link",
+  "@desktopNoteLink": {
+    "description": "Formatting button and tooltip that adds or edits a link."
+  },
+  "desktopNoteBulletedList": "Bulleted List",
+  "@desktopNoteBulletedList": {
+    "description": "Formatting button and tooltip. Title Case."
+  },
+  "desktopNoteNumberedList": "Numbered List",
+  "@desktopNoteNumberedList": {
+    "description": "Formatting button and tooltip. Title Case."
+  },
+  "desktopNoteChecklist": "Checklist",
+  "@desktopNoteChecklist": {
+    "description": "Formatting button and tooltip. Title Case."
+  },
+  "desktopNoteQuote": "Quote",
+  "@desktopNoteQuote": {
+    "description": "Formatting button and tooltip: a quote block."
+  },
+  "desktopNoteCodeBlock": "Code Block",
+  "@desktopNoteCodeBlock": {
+    "description": "Formatting button and tooltip. Title Case."
+  },
+  "desktopLinkPlaceholder": "Web address or email",
+  "@desktopLinkPlaceholder": {
+    "description": "Placeholder of the field where a link's address is typed (⌘K)."
+  },
+  "desktopAddLink": "Add Link",
+  "@desktopAddLink": {
+    "description": "Button that applies the address typed for a link. Title Case."
+  },
+  "desktopRemoveLink": "Remove Link",
+  "@desktopRemoveLink": {
+    "description": "Button that takes the link off the selected text. Title Case."
+  },
+  "desktopFindInNote": "Find in Note",
+  "@desktopFindInNote": {
+    "description": "Placeholder and accessible name of Find in a note (⌘F)."
+  },
+  "desktopAttachFile": "Attach File…",
+  "@desktopAttachFile": {
+    "description": "Toolbar button and tooltip that pick files to attach to a note. Title Case, ellipsis because a panel opens."
+  },
+  "desktopNoteAiActions": "AI Actions",
+  "@desktopNoteAiActions": {
+    "description": "Tooltip and accessible name of the note toolbar's menu of AI actions (Generate Title, Enhance Note). Title Case."
+  },
+  "desktopQuickLook": "Quick Look",
+  "@desktopQuickLook": {
+    "description": "File card button and tooltip that shows the file in Quick Look (macOS's name for it). Title Case."
+  },
+  "desktopTranscribe": "Transcribe",
+  "@desktopTranscribe": {
+    "description": "File card button for a recording: its words go into the note under it. Title Case."
+  },
+  "desktopFileOpenFailed": "Couldn’t open the file. Try again.",
+  "@desktopFileOpenFailed": {
+    "description": "Notice when a note's file could not be opened or shown."
+  },
+  "desktopFileDownloadFailed": "Couldn’t download the file. Try again.",
+  "@desktopFileDownloadFailed": {
+    "description": "Notice when downloading a note's file failed."
+  },
+  "desktopRemoveFileTitle": "Remove “{name}” from this note?",
+  "@desktopRemoveFileTitle": {
+    "description": "Title of the alert that asks before taking a file off a note; name is the file's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopRemoveFileMessage": "The file stays on the server.",
+  "@desktopRemoveFileMessage": {
+    "description": "Body of the alert that asks before taking a file off a note."
+  },
+  "desktopStopAndSave": "Stop and Save",
+  "@desktopStopAndSave": {
+    "description": "Button that ends a recording and keeps it in the note. Title Case."
+  },
+  "desktopRecordingsWaiting": "Recordings to Upload",
+  "@desktopRecordingsWaiting": {
+    "description": "Heading over a note's recordings that are not uploaded yet. Title Case."
+  },
+  "desktopRecordingWaiting": "Waiting to upload",
+  "@desktopRecordingWaiting": {
+    "description": "A recording's state: kept on this Mac, uploaded when the server can be reached."
+  },
+  "desktopRecordingUploading": "Uploading…",
+  "@desktopRecordingUploading": {
+    "description": "A recording's state while it uploads and is attached."
+  },
+  "desktopRecordingUploadFailed": "Upload failed. It’s kept on this Mac.",
+  "@desktopRecordingUploadFailed": {
+    "description": "A recording's state when its upload failed; it is kept for another try."
+  },
+  "desktopNoteSaved": "Saved",
+  "@desktopNoteSaved": {
+    "description": "The note footer's save state: everything is saved."
+  },
+  "desktopNoteEdited": "Edited",
+  "@desktopNoteEdited": {
+    "description": "The note footer's save state: there are changes waiting to be saved."
+  },
+  "desktopNoteNotSaved": "Not saved",
+  "@desktopNoteNotSaved": {
+    "description": "The note footer's save state when the changes cannot be saved to this note."
+  },
+  "desktopNoteEnhanced": "Note enhanced. Press ⌘Z to undo.",
+  "@desktopNoteEnhanced": {
+    "description": "Notice after Enhance Note rewrote the note."
+  },
+  "desktopNoteEnhancing": "Enhancing…",
+  "@desktopNoteEnhancing": {
+    "description": "The note footer's status while Enhance Note runs."
+  },
+  "desktopNoteGeneratingTitle": "Generating a title…",
+  "@desktopNoteGeneratingTitle": {
+    "description": "The note footer's status while Generate Title runs."
+  },
+  "desktopNoteLoadFailed": "Couldn’t open this note.",
+  "@desktopNoteLoadFailed": {
+    "description": "Shown in the note's pane when it could not be read."
+  },
+  "desktopNoteMissingMessage": "It may have been deleted on another device.",
+  "@desktopNoteMissingMessage": {
+    "description": "Shown under Note not found: the note is gone."
+  },
+  "desktopNoteRecovered": "This note was deleted on another device. Your changes were kept as a new note.",
+  "@desktopNoteRecovered": {
+    "description": "Notice in a note's pane: the note was deleted elsewhere while it had changes here, which were kept as a new note."
+  },
+  "desktopNoteUnsavedTitle": "Keep your changes to “{title}”?",
+  "@desktopNoteUnsavedTitle": {
+    "description": "Title of the alert when a note whose changes could not be saved is left; title is the note's title.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopNoteUnsavedMessage": "They can’t be saved to this note any more. You can keep them as a note of your own.",
+  "@desktopNoteUnsavedMessage": {
+    "description": "Body of the alert when a note whose changes could not be saved is left."
+  },
+  "desktopNoteShowDraft": "Show Note",
+  "@desktopNoteShowDraft": {
+    "description": "Alert button that goes back to a note whose changes could not be saved. Title Case."
+  },
+  "desktopTerminalServerPicker": "Terminal Server: {name}",
+  "@desktopTerminalServerPicker": {
+    "description": "Accessibility label of the terminal pane's title, a pop-up button listing the terminal servers. {name} is the server shown.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopTerminalView": "View",
+  "@desktopTerminalView": {
+    "description": "Accessibility label of the terminal pane's Terminal/Files switch in the toolbar."
+  },
+  "desktopTerminalConnectionFailed": "Connection Failed",
+  "@desktopTerminalConnectionFailed": {
+    "description": "Terminal status badge: the shell could not connect, or the server ended it with an error. Title Case."
+  },
+  "desktopTerminalConnecting": "Connecting…",
+  "@desktopTerminalConnecting": {
+    "description": "Terminal status badge while the shell connects."
+  },
+  "desktopTerminalReconnect": "Reconnect",
+  "@desktopTerminalReconnect": {
+    "description": "Toolbar button that opens a new shell after the last one ended. Title Case."
+  },
+  "desktopTerminalFind": "Find in Terminal",
+  "@desktopTerminalFind": {
+    "description": "Placeholder and accessibility label of the terminal's find field (⌘F)."
+  },
+  "desktopTerminalLoadingPorts": "Looking for listening ports…",
+  "@desktopTerminalLoadingPorts": {
+    "description": "Shown in the Listening Ports list while the ports load."
+  },
+  "desktopTerminalOpenPort": "Open {address}",
+  "@desktopTerminalOpenPort": {
+    "description": "Accessibility label of a listening port's row, which opens its preview. {address} is like localhost:5173.",
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopTerminalDeleteTitle": "Delete “{name}”?",
+  "@desktopTerminalDeleteTitle": {
+    "description": "Title of the sheet asking before a terminal file or folder is deleted. {name} is its name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopTerminalDeleteMessage": "It’s deleted from the terminal’s computer. This can’t be undone.",
+  "@desktopTerminalDeleteMessage": {
+    "description": "Message of the sheet asking before a terminal file or folder is deleted."
+  },
+  "desktopTerminalOpen": "Open",
+  "@desktopTerminalOpen": {
+    "description": "Context menu item that opens a terminal file or folder. Title Case."
+  },
+  "desktopTerminalRefresh": "Refresh",
+  "@desktopTerminalRefresh": {
+    "description": "Button and menu item that lists a terminal folder again. Title Case."
+  },
+  "desktopTerminalEnclosingFolder": "Enclosing Folder",
+  "@desktopTerminalEnclosingFolder": {
+    "description": "Button that shows the folder holding the terminal folder shown (⌘↑). Title Case."
+  },
+  "desktopTerminalFolderRow": "{name}, folder",
+  "@desktopTerminalFolderRow": {
+    "description": "Accessibility label of a folder row in the terminal's files. {name} is the folder's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopTerminalOptionAsMeta": "Use Option as Meta Key",
+  "@desktopTerminalOptionAsMeta": {
+    "description": "Settings › Keyboard switch. Title Case."
+  },
+  "desktopTerminalOptionAsMetaFooter": "In the terminal, Option sends Escape before the key, as Meta does in shells and editors, instead of typing a special character.",
+  "@desktopTerminalOptionAsMetaFooter": {
+    "description": "Footer under the Use Option as Meta Key switch in Settings › Keyboard."
+  },
+  "desktopTerminalClearScrollback": "Clear Scrollback",
+  "@desktopTerminalClearScrollback": {
+    "description": "Terminal context menu item that clears the history above the screen. Title Case."
+  },
   "desktopSignIn": "Sign In",
   "@desktopSignIn": {
     "description": "Title and button of the desktop sign-in form, in Title Case as Mac buttons are."
   },
   "desktopSignOut": "Sign Out",
   "@desktopSignOut": {
-    "description": "Settings › Data row label, and the button of the sign-out confirmation, in Title Case."
+    "description": "Settings › Data row label, the button of the sign-out confirmation, and the button that forgets an MCP server's sign-in, in Title Case."
   },
   "desktopSignOutEllipsis": "Sign Out…",
   "@desktopSignOutEllipsis": {
@@ -232,7 +809,7 @@
   },
   "desktopSaving": "Saving…",
   "@desktopSaving": {
-    "description": "Save button while the change is saved."
+    "description": "Save button (a chat setting, a workspace editor) while the change is saved."
   },
   "desktopSignInWithHermes": "Sign In with Hermes Agent",
   "@desktopSignInWithHermes": {
@@ -1135,6 +1712,851 @@
   "@desktopWorkspaceDefaultFeaturesHint": {
     "description": "Hint under the default features field of the model editor."
   },
+  "desktopWorkspaceImportMarkdownEllipsis": "Import Markdown…",
+  "@desktopWorkspaceImportMarkdownEllipsis": {
+    "description": "Menu item in the Skills section's action menu: reads a skill from a Markdown file into a new skill to review. Title Case, ellipsis (opens a file panel)."
+  },
+  "desktopWorkspaceSkillImportMarkdownLoaded": "Markdown loaded. Review and save to create the skill.",
+  "@desktopWorkspaceSkillImportMarkdownLoaded": {
+    "description": "Toast after a Markdown file filled a new skill's form; nothing is saved yet."
+  },
+  "desktopWorkspaceSkillImportMarkdownFailed": "Couldn't read the Markdown file.",
+  "@desktopWorkspaceSkillImportMarkdownFailed": {
+    "description": "Toast when the picked Markdown file could not be read."
+  },
+  "desktopWorkspaceDenied": "You do not have permission to manage this workspace section.",
+  "@desktopWorkspaceDenied": {
+    "description": "Shown when the user lacks permission to manage a workspace section. (Desktop copy of the phone's workspaceDenied, translated for the desktop.)"
+  },
+  "desktopWorkspaceImportBatchFailed": "The import could not be completed.",
+  "@desktopWorkspaceImportBatchFailed": {
+    "description": "Error shown when the entire import operation fails unexpectedly. (Desktop copy of the phone's workspaceImportBatchFailed, translated for the desktop.)"
+  },
+  "desktopWorkspaceImportInvalidJson": "That doesn't look like valid JSON.",
+  "@desktopWorkspaceImportInvalidJson": {
+    "description": "Error shown when the pasted or selected content is not valid JSON. (Desktop copy of the phone's workspaceImportInvalidJson, translated for the desktop.)"
+  },
+  "desktopWorkspaceImportReadFailed": "Could not read the selected file.",
+  "@desktopWorkspaceImportReadFailed": {
+    "description": "Error shown when the chosen import file cannot be read. (Desktop copy of the phone's workspaceImportReadFailed, translated for the desktop.)"
+  },
+  "desktopWorkspaceImportRun": "Import",
+  "@desktopWorkspaceImportRun": {
+    "description": "Button that starts importing the provided JSON items. (Desktop copy.) (Desktop copy of the phone's workspaceImportRun, translated for the desktop.)"
+  },
+  "desktopWorkspaceImportSummary": "Imported {success} of {total} items",
+  "@desktopWorkspaceImportSummary": {
+    "description": "Summary of how many items were imported successfully out of the total. (Desktop copy of the phone's workspaceImportSummary, translated for the desktop.)",
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "desktopWorkspaceKnowledge": "Knowledge",
+  "@desktopWorkspaceKnowledge": {
+    "description": "Label for the Knowledge section of the Workspace. (Desktop copy of the phone's workspaceKnowledge, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeAddTextContent": "Content",
+  "@desktopWorkspaceKnowledgeAddTextContent": {
+    "description": "Label for the content field when adding a text file. (Desktop copy of the phone's workspaceKnowledgeAddTextContent, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeDeleteConfirmMessage": "This permanently removes {name} and detaches its files.",
+  "@desktopWorkspaceKnowledgeDeleteConfirmMessage": {
+    "description": "Confirmation dialog body for deleting a knowledge base. (Desktop copy of the phone's workspaceKnowledgeDeleteConfirmMessage, translated for the desktop.)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorkspaceKnowledgeDeleteConfirmTitle": "Delete knowledge base?",
+  "@desktopWorkspaceKnowledgeDeleteConfirmTitle": {
+    "description": "Confirmation dialog title for deleting a knowledge base. (Desktop copy of the phone's workspaceKnowledgeDeleteConfirmTitle, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeDeleteFolderConfirmMessage": "Files inside {name} move to the parent folder.",
+  "@desktopWorkspaceKnowledgeDeleteFolderConfirmMessage": {
+    "description": "Confirmation dialog body for deleting a knowledge base directory. (Desktop copy of the phone's workspaceKnowledgeDeleteFolderConfirmMessage, translated for the desktop.)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorkspaceKnowledgeDeleteFolderConfirmTitle": "Delete folder?",
+  "@desktopWorkspaceKnowledgeDeleteFolderConfirmTitle": {
+    "description": "Confirmation dialog title for deleting a knowledge base directory. (Desktop copy of the phone's workspaceKnowledgeDeleteFolderConfirmTitle, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeDeleted": "Knowledge base deleted.",
+  "@desktopWorkspaceKnowledgeDeleted": {
+    "description": "Confirmation that the knowledge base was deleted. (Desktop copy of the phone's workspaceKnowledgeDeleted, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeDescription": "Description",
+  "@desktopWorkspaceKnowledgeDescription": {
+    "description": "Label for the knowledge base description field. (Desktop copy of the phone's workspaceKnowledgeDescription, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeExternalBadge": "Connected",
+  "@desktopWorkspaceKnowledgeExternalBadge": {
+    "description": "Badge marking a knowledge base as external/connected (read-only). (Desktop copy of the phone's workspaceKnowledgeExternalBadge, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeExternalReadOnly": "Connected knowledge bases are read-only in this app.",
+  "@desktopWorkspaceKnowledgeExternalReadOnly": {
+    "description": "Notice shown when viewing an external/connected knowledge base. (Desktop copy of the phone's workspaceKnowledgeExternalReadOnly, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeFileDetachMessage": "Remove {name} from this knowledge base?",
+  "@desktopWorkspaceKnowledgeFileDetachMessage": {
+    "description": "Confirmation dialog body for detaching a file from a knowledge base. (Desktop copy of the phone's workspaceKnowledgeFileDetachMessage, translated for the desktop.)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorkspaceKnowledgeFileDetachTitle": "Remove file?",
+  "@desktopWorkspaceKnowledgeFileDetachTitle": {
+    "description": "Confirmation dialog title for detaching a file from a knowledge base. (Desktop copy of the phone's workspaceKnowledgeFileDetachTitle, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeFileMove": "Move To",
+  "@desktopWorkspaceKnowledgeFileMove": {
+    "description": "Per-file action to move a knowledge base file to another folder. (Desktop copy.) (Desktop copy of the phone's workspaceKnowledgeFileMove, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeFileReindexed": "Re-indexing started.",
+  "@desktopWorkspaceKnowledgeFileReindexed": {
+    "description": "Confirmation that re-indexing a knowledge base file began. (Desktop copy of the phone's workspaceKnowledgeFileReindexed, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeFileRename": "Rename File",
+  "@desktopWorkspaceKnowledgeFileRename": {
+    "description": "Per-file action to rename a knowledge base file. (Desktop copy.) (Desktop copy of the phone's workspaceKnowledgeFileRename, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeFilesEmpty": "No files yet.",
+  "@desktopWorkspaceKnowledgeFilesEmpty": {
+    "description": "Empty state when a knowledge base directory contains no files. (Desktop copy of the phone's workspaceKnowledgeFilesEmpty, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeFilesLoadFailed": "Files could not be loaded.",
+  "@desktopWorkspaceKnowledgeFilesLoadFailed": {
+    "description": "Error when the knowledge base file list fails to load. (Desktop copy of the phone's workspaceKnowledgeFilesLoadFailed, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeFilesTitle": "Files",
+  "@desktopWorkspaceKnowledgeFilesTitle": {
+    "description": "Heading of the knowledge base file browser. (Desktop copy of the phone's workspaceKnowledgeFilesTitle, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeName": "Name",
+  "@desktopWorkspaceKnowledgeName": {
+    "description": "Label for the knowledge base name field. (Desktop copy of the phone's workspaceKnowledgeName, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeNameRequired": "A name is required.",
+  "@desktopWorkspaceKnowledgeNameRequired": {
+    "description": "Validation error when the knowledge base name is empty. (Desktop copy of the phone's workspaceKnowledgeNameRequired, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeRefreshFiles": "Refresh",
+  "@desktopWorkspaceKnowledgeRefreshFiles": {
+    "description": "Tooltip for the button that refreshes the knowledge file list. (Desktop copy of the phone's workspaceKnowledgeRefreshFiles, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeReset": "Reset",
+  "@desktopWorkspaceKnowledgeReset": {
+    "description": "Overflow action that removes all files from a knowledge base. (Desktop copy of the phone's workspaceKnowledgeReset, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeResetConfirmMessage": "This removes all files from {name} but keeps the knowledge base.",
+  "@desktopWorkspaceKnowledgeResetConfirmMessage": {
+    "description": "Confirmation dialog body for resetting a knowledge base. (Desktop copy of the phone's workspaceKnowledgeResetConfirmMessage, translated for the desktop.)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorkspaceKnowledgeResetConfirmTitle": "Reset knowledge base?",
+  "@desktopWorkspaceKnowledgeResetConfirmTitle": {
+    "description": "Confirmation dialog title for resetting a knowledge base. (Desktop copy of the phone's workspaceKnowledgeResetConfirmTitle, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeResetDone": "Knowledge base reset.",
+  "@desktopWorkspaceKnowledgeResetDone": {
+    "description": "Confirmation that the knowledge base files were reset. (Desktop copy of the phone's workspaceKnowledgeResetDone, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeRoot": "Root",
+  "@desktopWorkspaceKnowledgeRoot": {
+    "description": "Breadcrumb label for the top level of a knowledge base. (Desktop copy of the phone's workspaceKnowledgeRoot, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeSaved": "Knowledge base saved.",
+  "@desktopWorkspaceKnowledgeSaved": {
+    "description": "Confirmation that the knowledge base was saved. (Desktop copy of the phone's workspaceKnowledgeSaved, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeSourceExternal": "Connected",
+  "@desktopWorkspaceKnowledgeSourceExternal": {
+    "description": "Knowledge collection filter showing only external/connected knowledge bases. (Desktop copy of the phone's workspaceKnowledgeSourceExternal, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeSourceLocal": "Local",
+  "@desktopWorkspaceKnowledgeSourceLocal": {
+    "description": "Knowledge collection filter showing only local knowledge bases. (Desktop copy of the phone's workspaceKnowledgeSourceLocal, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeStatusFailed": "Failed",
+  "@desktopWorkspaceKnowledgeStatusFailed": {
+    "description": "Status shown for a knowledge base file whose ingestion failed. (Desktop copy of the phone's workspaceKnowledgeStatusFailed, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeStatusPending": "Processing…",
+  "@desktopWorkspaceKnowledgeStatusPending": {
+    "description": "Status shown for a knowledge base file still being ingested. (Desktop copy of the phone's workspaceKnowledgeStatusPending, translated for the desktop.)"
+  },
+  "desktopWorkspaceKnowledgeUploading": "Uploading {name}…",
+  "@desktopWorkspaceKnowledgeUploading": {
+    "description": "Progress label shown while a file uploads into a knowledge base. (Desktop copy of the phone's workspaceKnowledgeUploading, translated for the desktop.)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorkspaceKnowledgeViewAll": "All",
+  "@desktopWorkspaceKnowledgeViewAll": {
+    "description": "Knowledge collection filter showing all knowledge bases. (Desktop copy of the phone's workspaceKnowledgeViewAll, translated for the desktop.)"
+  },
+  "desktopWorkspaceLoadFailed": "Workspace could not be loaded.",
+  "@desktopWorkspaceLoadFailed": {
+    "description": "Error message shown when the Workspace fails to load. (Desktop copy of the phone's workspaceLoadFailed, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelActions": "Actions",
+  "@desktopWorkspaceModelActions": {
+    "description": "Label for the action functions selector. (Desktop copy of the phone's workspaceModelActions, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelActivate": "Activate",
+  "@desktopWorkspaceModelActivate": {
+    "description": "Action that marks the model active. (Desktop copy of the phone's workspaceModelActivate, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelCapabilities": "Capabilities",
+  "@desktopWorkspaceModelCapabilities": {
+    "description": "Label for the model capability toggles. (Desktop copy of the phone's workspaceModelCapabilities, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelClone": "Duplicate",
+  "@desktopWorkspaceModelClone": {
+    "description": "Action that duplicates the model. (Desktop copy of the phone's workspaceModelClone, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelCloneSuffix": "(copy)",
+  "@desktopWorkspaceModelCloneSuffix": {
+    "description": "Suffix appended to a duplicated model name. (Desktop copy of the phone's workspaceModelCloneSuffix, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelDeactivate": "Deactivate",
+  "@desktopWorkspaceModelDeactivate": {
+    "description": "Action that marks the model inactive. (Desktop copy of the phone's workspaceModelDeactivate, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelDeleteConfirmMessage": "This permanently removes {name}.",
+  "@desktopWorkspaceModelDeleteConfirmMessage": {
+    "description": "Confirmation dialog body for deleting a model. (Desktop copy of the phone's workspaceModelDeleteConfirmMessage, translated for the desktop.)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorkspaceModelDeleteConfirmTitle": "Delete model?",
+  "@desktopWorkspaceModelDeleteConfirmTitle": {
+    "description": "Confirmation dialog title for deleting a model. (Desktop copy of the phone's workspaceModelDeleteConfirmTitle, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelDeleted": "Model deleted.",
+  "@desktopWorkspaceModelDeleted": {
+    "description": "Confirmation that the model was deleted. (Desktop copy of the phone's workspaceModelDeleted, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelDescription": "Description",
+  "@desktopWorkspaceModelDescription": {
+    "description": "Label for the model description field. (Desktop copy of the phone's workspaceModelDescription, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelExportFailed": "The export could not be completed.",
+  "@desktopWorkspaceModelExportFailed": {
+    "description": "Error when exporting models fails. (Desktop copy of the phone's workspaceModelExportFailed, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelFilters": "Filters",
+  "@desktopWorkspaceModelFilters": {
+    "description": "Label for the filter functions selector. (Desktop copy of the phone's workspaceModelFilters, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelIdLabel": "Model ID",
+  "@desktopWorkspaceModelIdLabel": {
+    "description": "Label for the unique model identifier field. (Desktop copy of the phone's workspaceModelIdLabel, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelIdRequired": "A model ID is required.",
+  "@desktopWorkspaceModelIdRequired": {
+    "description": "Validation error when the model ID is empty. (Desktop copy of the phone's workspaceModelIdRequired, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelImageFailed": "Could not load the selected image.",
+  "@desktopWorkspaceModelImageFailed": {
+    "description": "Error when picking a profile image fails. (Desktop copy of the phone's workspaceModelImageFailed, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelInvalidJson": "Enter a valid JSON object.",
+  "@desktopWorkspaceModelInvalidJson": {
+    "description": "Validation error for a malformed JSON field. (Desktop copy of the phone's workspaceModelInvalidJson, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelKnowledge": "Knowledge",
+  "@desktopWorkspaceModelKnowledge": {
+    "description": "Label for the knowledge relationship selector. (Desktop copy of the phone's workspaceModelKnowledge, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelName": "Name",
+  "@desktopWorkspaceModelName": {
+    "description": "Label for the model display-name field. (Desktop copy of the phone's workspaceModelName, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelNameRequired": "A name is required.",
+  "@desktopWorkspaceModelNameRequired": {
+    "description": "Validation error when the model name is empty. (Desktop copy of the phone's workspaceModelNameRequired, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelParamsHint": "JSON object of additional parameters",
+  "@desktopWorkspaceModelParamsHint": {
+    "description": "Helper text for a JSON parameters field. (Desktop copy of the phone's workspaceModelParamsHint, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelRelationshipEmpty": "Nothing available to select.",
+  "@desktopWorkspaceModelRelationshipEmpty": {
+    "description": "Empty state for a relationship picker. (Desktop copy of the phone's workspaceModelRelationshipEmpty, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelSaved": "Model saved.",
+  "@desktopWorkspaceModelSaved": {
+    "description": "Confirmation that the model was saved. (Desktop copy of the phone's workspaceModelSaved, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelSectionAdvanced": "Advanced",
+  "@desktopWorkspaceModelSectionAdvanced": {
+    "description": "Section header for advanced model fields. (Desktop copy of the phone's workspaceModelSectionAdvanced, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelSectionBasics": "Basics",
+  "@desktopWorkspaceModelSectionBasics": {
+    "description": "Section header for basic model fields. (Desktop copy of the phone's workspaceModelSectionBasics, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelSectionPrompt": "Prompt",
+  "@desktopWorkspaceModelSectionPrompt": {
+    "description": "Section header for prompt-related model fields. (Desktop copy of the phone's workspaceModelSectionPrompt, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelSectionRelationships": "Relationships",
+  "@desktopWorkspaceModelSectionRelationships": {
+    "description": "Section header for model relationship selectors. (Desktop copy of the phone's workspaceModelSectionRelationships, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelSelectNone": "None selected",
+  "@desktopWorkspaceModelSelectNone": {
+    "description": "Subtitle when no relationship items are selected. (Desktop copy of the phone's workspaceModelSelectNone, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelSkills": "Skills",
+  "@desktopWorkspaceModelSkills": {
+    "description": "Label for the skills relationship selector. (Desktop copy of the phone's workspaceModelSkills, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelStopHint": "Comma-separated stop sequences",
+  "@desktopWorkspaceModelStopHint": {
+    "description": "Helper text for the stop-sequences field. (Desktop copy of the phone's workspaceModelStopHint, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelTags": "Tags",
+  "@desktopWorkspaceModelTags": {
+    "description": "Label for the model tags editor. (Desktop copy of the phone's workspaceModelTags, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelTools": "Tools",
+  "@desktopWorkspaceModelTools": {
+    "description": "Label for the tools relationship selector. (Desktop copy of the phone's workspaceModelTools, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptCloneSuffix": "(copy)",
+  "@desktopWorkspacePromptCloneSuffix": {
+    "description": "Suffix appended to the name and command of a cloned prompt. (Desktop copy of the phone's workspacePromptCloneSuffix, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptCommand": "Command",
+  "@desktopWorkspacePromptCommand": {
+    "description": "Label for the prompt slash-command field. (Desktop copy of the phone's workspacePromptCommand, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptCommandHint": "Only letters, numbers, hyphens, and underscores. Type it as a slash command in chat.",
+  "@desktopWorkspacePromptCommandHint": {
+    "description": "Helper text explaining the allowed prompt command characters. (Desktop copy of the phone's workspacePromptCommandHint, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptCommandInvalid": "Only letters, numbers, hyphens, and underscores are allowed.",
+  "@desktopWorkspacePromptCommandInvalid": {
+    "description": "Validation error when the prompt command contains illegal characters. (Desktop copy of the phone's workspacePromptCommandInvalid, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptCommandRequired": "Command is required.",
+  "@desktopWorkspacePromptCommandRequired": {
+    "description": "Validation error when the prompt command is empty. (Desktop copy of the phone's workspacePromptCommandRequired, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptCommitMessageHint": "Describe what changed (optional)",
+  "@desktopWorkspacePromptCommitMessageHint": {
+    "description": "Placeholder for the prompt commit message field. (Desktop copy of the phone's workspacePromptCommitMessageHint, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptContentHint": "Write the prompt template…",
+  "@desktopWorkspacePromptContentHint": {
+    "description": "Placeholder text for the empty prompt content field. (Desktop copy of the phone's workspacePromptContentHint, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptContentRequired": "Prompt content is required.",
+  "@desktopWorkspacePromptContentRequired": {
+    "description": "Validation error when the prompt content is empty. (Desktop copy of the phone's workspacePromptContentRequired, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptDeleteConfirmMessage": "\"{name}\" will be permanently deleted.",
+  "@desktopWorkspacePromptDeleteConfirmMessage": {
+    "description": "Confirmation dialog body for deleting a prompt. (Desktop copy of the phone's workspacePromptDeleteConfirmMessage, translated for the desktop.)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorkspacePromptDeleteConfirmTitle": "Delete prompt?",
+  "@desktopWorkspacePromptDeleteConfirmTitle": {
+    "description": "Confirmation dialog title for deleting a prompt. (Desktop copy of the phone's workspacePromptDeleteConfirmTitle, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptDeleted": "Prompt deleted.",
+  "@desktopWorkspacePromptDeleted": {
+    "description": "Confirmation that a prompt was deleted. (Desktop copy.) (Desktop copy of the phone's workspacePromptDeleted, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptDetailsSaved": "Name and command saved.",
+  "@desktopWorkspacePromptDetailsSaved": {
+    "description": "Confirmation that prompt name and command were updated. (Desktop copy.) (Desktop copy of the phone's workspacePromptDetailsSaved, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptHistoryCommitFallback": "No commit message",
+  "@desktopWorkspacePromptHistoryCommitFallback": {
+    "description": "Placeholder shown for a history entry without a commit message. (Desktop copy of the phone's workspacePromptHistoryCommitFallback, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptHistoryDeleteConfirmMessage": "This version snapshot will be removed. This can't be undone.",
+  "@desktopWorkspacePromptHistoryDeleteConfirmMessage": {
+    "description": "Confirmation dialog body for deleting a prompt version. (Desktop copy of the phone's workspacePromptHistoryDeleteConfirmMessage, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptHistoryDeleteConfirmTitle": "Delete version?",
+  "@desktopWorkspacePromptHistoryDeleteConfirmTitle": {
+    "description": "Confirmation dialog title for deleting a prompt version. (Desktop copy of the phone's workspacePromptHistoryDeleteConfirmTitle, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptHistoryDeleteProduction": "The live production version can't be deleted.",
+  "@desktopWorkspacePromptHistoryDeleteProduction": {
+    "description": "Error shown when trying to delete the active production version. (Desktop copy of the phone's workspacePromptHistoryDeleteProduction, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptHistoryDeleted": "Version deleted.",
+  "@desktopWorkspacePromptHistoryDeleted": {
+    "description": "Confirmation that a prompt version was deleted. (Desktop copy.) (Desktop copy of the phone's workspacePromptHistoryDeleted, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptHistoryDiffEmpty": "No content differences.",
+  "@desktopWorkspacePromptHistoryDiffEmpty": {
+    "description": "Shown when two prompt versions have identical content. (Desktop copy of the phone's workspacePromptHistoryDiffEmpty, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptHistoryDiffFailed": "Couldn't compute the diff.",
+  "@desktopWorkspacePromptHistoryDiffFailed": {
+    "description": "Error shown when computing a prompt version diff fails. (Desktop copy of the phone's workspacePromptHistoryDiffFailed, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptHistoryDiffNameChanged": "The name changed between these versions.",
+  "@desktopWorkspacePromptHistoryDiffNameChanged": {
+    "description": "Note shown in the diff sheet when the prompt name changed. (Desktop copy of the phone's workspacePromptHistoryDiffNameChanged, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptHistoryEmpty": "No versions yet.",
+  "@desktopWorkspacePromptHistoryEmpty": {
+    "description": "Empty-state text when a prompt has no version history. (Desktop copy of the phone's workspacePromptHistoryEmpty, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptHistoryLive": "Live",
+  "@desktopWorkspacePromptHistoryLive": {
+    "description": "Badge marking the active production version of a prompt. (Desktop copy of the phone's workspacePromptHistoryLive, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptHistoryLoadFailed": "Couldn't load version history.",
+  "@desktopWorkspacePromptHistoryLoadFailed": {
+    "description": "Error shown when loading prompt history fails. (Desktop copy of the phone's workspacePromptHistoryLoadFailed, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptHistoryProductionSet": "Production version updated.",
+  "@desktopWorkspacePromptHistoryProductionSet": {
+    "description": "Confirmation that the production version was changed. (Desktop copy of the phone's workspacePromptHistoryProductionSet, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptHistoryRestored": "Version content restored. Save to keep it.",
+  "@desktopWorkspacePromptHistoryRestored": {
+    "description": "Confirmation that a version snapshot was loaded into the editor. (Desktop copy of the phone's workspacePromptHistoryRestored, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptName": "Name",
+  "@desktopWorkspacePromptName": {
+    "description": "Label for the prompt name field. (Desktop copy of the phone's workspacePromptName, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptNameRequired": "Name is required.",
+  "@desktopWorkspacePromptNameRequired": {
+    "description": "Validation error when the prompt name is empty. (Desktop copy of the phone's workspacePromptNameRequired, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptPreviewEmpty": "Nothing to preview yet.",
+  "@desktopWorkspacePromptPreviewEmpty": {
+    "description": "Empty-state text shown in the prompt preview when there is no content. (Desktop copy of the phone's workspacePromptPreviewEmpty, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptPreviewTab": "Preview",
+  "@desktopWorkspacePromptPreviewTab": {
+    "description": "Toggle label for the rendered markdown preview of the prompt content. (Desktop copy of the phone's workspacePromptPreviewTab, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptSaved": "Prompt saved.",
+  "@desktopWorkspacePromptSaved": {
+    "description": "Confirmation that a prompt was saved. (Desktop copy.) (Desktop copy of the phone's workspacePromptSaved, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptSetProductionSubtitle": "Make this the live version used in chat.",
+  "@desktopWorkspacePromptSetProductionSubtitle": {
+    "description": "Explanation for the production-version toggle. (Desktop copy of the phone's workspacePromptSetProductionSubtitle, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptTags": "Tags",
+  "@desktopWorkspacePromptTags": {
+    "description": "Label for the prompt tags field. (Desktop copy of the phone's workspacePromptTags, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptVersionSection": "Version",
+  "@desktopWorkspacePromptVersionSection": {
+    "description": "Section header for prompt versioning controls. (Desktop copy of the phone's workspacePromptVersionSection, translated for the desktop.)"
+  },
+  "desktopWorkspacePromptWriteTab": "Write",
+  "@desktopWorkspacePromptWriteTab": {
+    "description": "Toggle label for the editable prompt content view. (Desktop copy of the phone's workspacePromptWriteTab, translated for the desktop.)"
+  },
+  "desktopWorkspaceSelectItem": "Select an item to view its details.",
+  "@desktopWorkspaceSelectItem": {
+    "description": "Placeholder prompting the user to select a resource to view its details. (Desktop copy of the phone's workspaceSelectItem, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillCloneSuffix": "(Clone)",
+  "@desktopWorkspaceSkillCloneSuffix": {
+    "description": "Suffix appended to the name of a cloned skill. (Desktop copy of the phone's workspaceSkillCloneSuffix, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillContent": "Instructions",
+  "@desktopWorkspaceSkillContent": {
+    "description": "Label for the skill Markdown instructions body field. (Desktop copy of the phone's workspaceSkillContent, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillContentHint": "Enter skill instructions in markdown…",
+  "@desktopWorkspaceSkillContentHint": {
+    "description": "Placeholder text for the empty skill instructions field. (Desktop copy of the phone's workspaceSkillContentHint, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillContentRequired": "Instructions are required.",
+  "@desktopWorkspaceSkillContentRequired": {
+    "description": "Validation error when the skill instructions are empty. (Desktop copy of the phone's workspaceSkillContentRequired, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillDeleteConfirmMessage": "\"{name}\" will be permanently deleted.",
+  "@desktopWorkspaceSkillDeleteConfirmMessage": {
+    "description": "Confirmation dialog body for deleting a skill. (Desktop copy of the phone's workspaceSkillDeleteConfirmMessage, translated for the desktop.)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorkspaceSkillDeleteConfirmTitle": "Delete skill?",
+  "@desktopWorkspaceSkillDeleteConfirmTitle": {
+    "description": "Confirmation dialog title for deleting a skill. (Desktop copy of the phone's workspaceSkillDeleteConfirmTitle, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillDeleted": "Skill deleted.",
+  "@desktopWorkspaceSkillDeleted": {
+    "description": "Confirmation that a skill was deleted. (Desktop copy.) (Desktop copy of the phone's workspaceSkillDeleted, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillDescription": "Description",
+  "@desktopWorkspaceSkillDescription": {
+    "description": "Label for the optional skill description field. (Desktop copy of the phone's workspaceSkillDescription, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillDescriptionHint": "e.g. Step-by-step instructions for code reviews",
+  "@desktopWorkspaceSkillDescriptionHint": {
+    "description": "Placeholder example for the skill description field. (Desktop copy of the phone's workspaceSkillDescriptionHint, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillId": "Skill ID",
+  "@desktopWorkspaceSkillId": {
+    "description": "Label for the skill identifier field. (Desktop copy of the phone's workspaceSkillId, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillIdHint": "e.g. code-review-guidelines",
+  "@desktopWorkspaceSkillIdHint": {
+    "description": "Placeholder example for the skill identifier field. (Desktop copy of the phone's workspaceSkillIdHint, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillIdInvalid": "Only letters, numbers, hyphens, and underscores are allowed.",
+  "@desktopWorkspaceSkillIdInvalid": {
+    "description": "Validation error when the skill identifier contains illegal characters. (Desktop copy of the phone's workspaceSkillIdInvalid, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillIdRequired": "Skill ID is required.",
+  "@desktopWorkspaceSkillIdRequired": {
+    "description": "Validation error when the skill identifier is empty. (Desktop copy of the phone's workspaceSkillIdRequired, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillName": "Name",
+  "@desktopWorkspaceSkillName": {
+    "description": "Label for the skill name field. (Desktop copy of the phone's workspaceSkillName, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillNameHint": "e.g. Code Review Guidelines",
+  "@desktopWorkspaceSkillNameHint": {
+    "description": "Placeholder example for the skill name field. (Desktop copy of the phone's workspaceSkillNameHint, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillNameRequired": "Name is required.",
+  "@desktopWorkspaceSkillNameRequired": {
+    "description": "Validation error when the skill name is empty. (Desktop copy of the phone's workspaceSkillNameRequired, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillPreviewEmpty": "Nothing to preview yet.",
+  "@desktopWorkspaceSkillPreviewEmpty": {
+    "description": "Empty-state text shown in the skill preview when there is no content. (Desktop copy of the phone's workspaceSkillPreviewEmpty, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillPreviewTab": "Preview",
+  "@desktopWorkspaceSkillPreviewTab": {
+    "description": "Toggle label for the rendered markdown preview of the skill instructions. (Desktop copy of the phone's workspaceSkillPreviewTab, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillSaved": "Skill saved.",
+  "@desktopWorkspaceSkillSaved": {
+    "description": "Confirmation that a skill was saved. (Desktop copy.) (Desktop copy of the phone's workspaceSkillSaved, translated for the desktop.)"
+  },
+  "desktopWorkspaceSkillWriteTab": "Write",
+  "@desktopWorkspaceSkillWriteTab": {
+    "description": "Toggle label for the editable skill instructions view. (Desktop copy of the phone's workspaceSkillWriteTab, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolCloneSuffix": "(Clone)",
+  "@desktopWorkspaceToolCloneSuffix": {
+    "description": "Suffix appended to the name of a cloned tool. (Desktop copy of the phone's workspaceToolCloneSuffix, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolContentRequired": "Add Python source before saving.",
+  "@desktopWorkspaceToolContentRequired": {
+    "description": "Validation error when the tool source is empty. (Desktop copy of the phone's workspaceToolContentRequired, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolDeleteConfirmMessage": "\"{name}\" will be permanently deleted.",
+  "@desktopWorkspaceToolDeleteConfirmMessage": {
+    "description": "Confirmation dialog body for deleting a tool. (Desktop copy of the phone's workspaceToolDeleteConfirmMessage, translated for the desktop.)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorkspaceToolDeleteConfirmTitle": "Delete tool?",
+  "@desktopWorkspaceToolDeleteConfirmTitle": {
+    "description": "Title of the tool delete confirmation dialog. (Desktop copy of the phone's workspaceToolDeleteConfirmTitle, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolDeleted": "Tool deleted.",
+  "@desktopWorkspaceToolDeleted": {
+    "description": "Confirmation that a tool was deleted. (Desktop copy.) (Desktop copy of the phone's workspaceToolDeleted, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolDescription": "Description",
+  "@desktopWorkspaceToolDescription": {
+    "description": "Label for the tool description field. (Desktop copy of the phone's workspaceToolDescription, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolDescriptionHint": "e.g. Tools for performing various operations",
+  "@desktopWorkspaceToolDescriptionHint": {
+    "description": "Placeholder for the tool description field. (Desktop copy of the phone's workspaceToolDescriptionHint, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolId": "Tool ID",
+  "@desktopWorkspaceToolId": {
+    "description": "Label for the tool ID field. (Desktop copy of the phone's workspaceToolId, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolIdHint": "Letters, numbers, and underscores; can't start with a number.",
+  "@desktopWorkspaceToolIdHint": {
+    "description": "Helper text describing the allowed format of a tool ID. (Desktop copy of the phone's workspaceToolIdHint, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolIdInvalid": "Tool IDs use letters, numbers, and underscores and can't start with a number.",
+  "@desktopWorkspaceToolIdInvalid": {
+    "description": "Validation error when the tool ID is not a valid identifier. (Desktop copy of the phone's workspaceToolIdInvalid, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolIdRequired": "Enter a tool ID.",
+  "@desktopWorkspaceToolIdRequired": {
+    "description": "Validation error when the tool ID is empty. (Desktop copy of the phone's workspaceToolIdRequired, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolImportUrlFailed": "Couldn't import the tool from that URL.",
+  "@desktopWorkspaceToolImportUrlFailed": {
+    "description": "Error shown when a tool URL import fails. (Desktop copy of the phone's workspaceToolImportUrlFailed, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolImportUrlHost": "Only GitHub tool URLs can be imported.",
+  "@desktopWorkspaceToolImportUrlHost": {
+    "description": "Validation error when the tool import URL is not a permitted GitHub host. (Desktop copy of the phone's workspaceToolImportUrlHost, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolImportUrlLabel": "URL",
+  "@desktopWorkspaceToolImportUrlLabel": {
+    "description": "Label above the tool URL import field. (Desktop copy of the phone's workspaceToolImportUrlLabel, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolManifest": "Manifest",
+  "@desktopWorkspaceToolManifest": {
+    "description": "Heading for the server-generated tool manifest summary. (Desktop copy of the phone's workspaceToolManifest, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolManifestRequiredVersion": "Requires Open WebUI {version}",
+  "@desktopWorkspaceToolManifestRequiredVersion": {
+    "description": "Displays the Open WebUI version a tool requires. (Desktop copy of the phone's workspaceToolManifestRequiredVersion, translated for the desktop.)",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorkspaceToolName": "Name",
+  "@desktopWorkspaceToolName": {
+    "description": "Label for the tool name field. (Desktop copy of the phone's workspaceToolName, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolNameHint": "e.g. My Tools",
+  "@desktopWorkspaceToolNameHint": {
+    "description": "Placeholder for the tool name field. (Desktop copy of the phone's workspaceToolNameHint, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolNameRequired": "Enter a tool name.",
+  "@desktopWorkspaceToolNameRequired": {
+    "description": "Validation error when the tool name is empty. (Desktop copy of the phone's workspaceToolNameRequired, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolSaved": "Tool saved.",
+  "@desktopWorkspaceToolSaved": {
+    "description": "Confirmation that a tool was saved. (Desktop copy.) (Desktop copy of the phone's workspaceToolSaved, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolSpecsEmpty": "No specifications were generated for this tool.",
+  "@desktopWorkspaceToolSpecsEmpty": {
+    "description": "Empty state when a tool produced no function specifications. (Desktop copy of the phone's workspaceToolSpecsEmpty, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolValvesLoadFailed": "Couldn't load valves.",
+  "@desktopWorkspaceToolValvesLoadFailed": {
+    "description": "Error shown when loading tool valves fails. (Desktop copy of the phone's workspaceToolValvesLoadFailed, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolValvesSaveFailed": "Couldn't save the valves.",
+  "@desktopWorkspaceToolValvesSaveFailed": {
+    "description": "Error shown when saving tool valves fails. (Desktop copy.) (Desktop copy of the phone's workspaceToolValvesSaveFailed, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolValvesSaved": "Valves saved.",
+  "@desktopWorkspaceToolValvesSaved": {
+    "description": "Confirmation that tool valves were saved. (Desktop copy.) (Desktop copy of the phone's workspaceToolValvesSaved, translated for the desktop.)"
+  },
+  "desktopWorkspaceToolValvesTitle": "Valves",
+  "@desktopWorkspaceToolValvesTitle": {
+    "description": "Title of the tool valves sheet. (Desktop copy of the phone's workspaceToolValvesTitle, translated for the desktop.)"
+  },
+  "desktopWorkspaceAddTextFile": "Add Text File…",
+  "@desktopWorkspaceAddTextFile": {
+    "description": "Button in a knowledge base's files: opens a sheet to type a text file into the base. Title Case, ellipsis (opens a sheet)."
+  },
+  "desktopWorkspaceCapabilityCitations": "Citations",
+  "@desktopWorkspaceCapabilityCitations": {
+    "description": "Model capability checkbox: the model's answers cite their sources. Title Case."
+  },
+  "desktopWorkspaceCapabilityFileUpload": "File Upload",
+  "@desktopWorkspaceCapabilityFileUpload": {
+    "description": "Model capability checkbox: files can be attached to messages for this model. Title Case."
+  },
+  "desktopWorkspaceCapabilityUsage": "Usage",
+  "@desktopWorkspaceCapabilityUsage": {
+    "description": "Model capability checkbox: token usage is reported for this model's answers. Title Case."
+  },
+  "desktopWorkspaceCapabilityVision": "Vision",
+  "@desktopWorkspaceCapabilityVision": {
+    "description": "Model capability checkbox: the model can read images. Title Case."
+  },
+  "desktopWorkspaceChangeImage": "Change Image…",
+  "@desktopWorkspaceChangeImage": {
+    "description": "Button in the model editor: picks a new profile image for the model from a file. Title Case, ellipsis (opens a file panel)."
+  },
+  "desktopWorkspaceChoose": "Choose…",
+  "@desktopWorkspaceChoose": {
+    "description": "Button on a model relationship row (knowledge, tools, skills…): opens a sheet of checkboxes to choose them. Title Case, ellipsis."
+  },
+  "desktopWorkspaceDeleteFile": "Delete File…",
+  "@desktopWorkspaceDeleteFile": {
+    "description": "Context menu item on a knowledge base file: deletes the file itself, not only from this base. Title Case, ellipsis (asks first)."
+  },
+  "desktopWorkspaceDeleteFileTitle": "Delete this file?",
+  "@desktopWorkspaceDeleteFileTitle": {
+    "description": "Title of the alert asking before a knowledge file is deleted. Sentence case question."
+  },
+  "desktopWorkspaceDeleteFileMessage": "{name} will be taken out of this knowledge base and deleted from your files. This can’t be undone.",
+  "@desktopWorkspaceDeleteFileMessage": {
+    "description": "Message of the alert asking before a knowledge file is deleted; {name} is the file name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorkspaceDropFiles": "No files yet. Drop files here, or use Upload Files.",
+  "@desktopWorkspaceDropFiles": {
+    "description": "Shown in an empty knowledge base's file table, where files can be dropped. Sentence case."
+  },
+  "desktopWorkspaceEdited": "Edited",
+  "@desktopWorkspaceEdited": {
+    "description": "Status beside the Save button when a workspace item has unsaved changes."
+  },
+  "desktopWorkspaceExportAllEllipsis": "Export All…",
+  "@desktopWorkspaceExportAllEllipsis": {
+    "description": "Menu item in a workspace section's action menu: saves every item of the section to a JSON file. Title Case, ellipsis (opens a save panel)."
+  },
+  "desktopWorkspaceHidden": "Hidden from the model picker",
+  "@desktopWorkspaceHidden": {
+    "description": "Tooltip of the badge on a workspace model that is hidden from the model picker."
+  },
+  "desktopWorkspaceImageTooLarge": "Choose an image of 1 MB or less.",
+  "@desktopWorkspaceImageTooLarge": {
+    "description": "Error when the picked model profile image is too big."
+  },
+  "desktopWorkspaceImportFromUrl": "Import from URL…",
+  "@desktopWorkspaceImportFromUrl": {
+    "description": "Menu item and button: fills a new tool from a GitHub address. Title Case, ellipsis (opens a sheet)."
+  },
+  "desktopWorkspaceItemCount": "{count, plural, =1{1 item} other{{count} items}}",
+  "@desktopWorkspaceItemCount": {
+    "description": "How many items a workspace section's list holds, at the bottom of the list.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "desktopWorkspaceNewFolder": "New Folder…",
+  "@desktopWorkspaceNewFolder": {
+    "description": "Button in a knowledge base's files: makes a folder in the folder shown. Title Case, ellipsis (opens a sheet)."
+  },
+  "desktopWorkspaceNewKnowledge": "New Knowledge Base…",
+  "@desktopWorkspaceNewKnowledge": {
+    "description": "Button and tooltip of the workspace's + in the Knowledge section. Title Case, ellipsis (opens a sheet)."
+  },
+  "desktopWorkspaceNewTool": "New Tool",
+  "@desktopWorkspaceNewTool": {
+    "description": "Button and title of a new tool in the workspace's Tools section. Title Case."
+  },
+  "desktopWorkspaceNoMatches": "Nothing matches. Try fewer or different words.",
+  "@desktopWorkspaceNoMatches": {
+    "description": "Shown in a workspace list when the search finds nothing."
+  },
+  "desktopWorkspaceOwnedBy": "By {name}",
+  "@desktopWorkspaceOwnedBy": {
+    "description": "Under a workspace item's name: who owns it; {name} is a person's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWorkspacePromptVariablesHint": "Words in double braces become fields to fill in when the prompt is used.",
+  "@desktopWorkspacePromptVariablesHint": {
+    "description": "Help under a prompt's content in the editor, about template variables."
+  },
+  "desktopWorkspaceRemove": "Remove",
+  "@desktopWorkspaceRemove": {
+    "description": "Button of the alert that takes a file out of a knowledge base (the file itself is kept). Title Case."
+  },
+  "desktopWorkspaceResetEllipsis": "Reset…",
+  "@desktopWorkspaceResetEllipsis": {
+    "description": "Button in the knowledge editor: takes every file out of the base. Title Case, ellipsis (asks first)."
+  },
+  "desktopWorkspaceRevert": "Revert",
+  "@desktopWorkspaceRevert": {
+    "description": "Button in a workspace editor: throws away unsaved changes and shows the item as saved. Title Case."
+  },
+  "desktopWorkspaceShareAccessTitle": "Share Access",
+  "@desktopWorkspaceShareAccessTitle": {
+    "description": "Title of the sheet that says who may use or edit a workspace item. Title Case."
+  },
+  "desktopShareModelTitle": "Share Model",
+  "@desktopShareModelTitle": {
+    "description": "Title of the sheet that says who may use or edit a workspace model. Title Case."
+  },
+  "desktopShareKnowledgeTitle": "Share Knowledge",
+  "@desktopShareKnowledgeTitle": {
+    "description": "Title of the sheet that says who may use or edit a knowledge collection in the workspace. Title Case."
+  },
+  "desktopSharePromptTitle": "Share Prompt",
+  "@desktopSharePromptTitle": {
+    "description": "Title of the sheet that says who may use or edit a workspace prompt. Title Case."
+  },
+  "desktopShareToolTitle": "Share Tool",
+  "@desktopShareToolTitle": {
+    "description": "Title of the sheet that says who may use or edit a workspace tool. Title Case."
+  },
+  "desktopShareSkillTitle": "Share Skill",
+  "@desktopShareSkillTitle": {
+    "description": "Title of the sheet that says who may use or edit a workspace skill. Title Case."
+  },
+  "desktopWorkspaceShow": "Show",
+  "@desktopWorkspaceShow": {
+    "description": "Label of the pop-up that filters a workspace list: all items, created by you, shared with you. Title Case."
+  },
+  "desktopWorkspaceShowInPicker": "Show in Model Picker",
+  "@desktopWorkspaceShowInPicker": {
+    "description": "Switch in the model editor: whether the model is offered in the chat's model picker. Title Case."
+  },
+  "desktopWorkspaceSortBy": "Sort By",
+  "@desktopWorkspaceSortBy": {
+    "description": "Label of the pop-up that orders a workspace list. Title Case."
+  },
+  "desktopWorkspaceSortModified": "Date Modified",
+  "@desktopWorkspaceSortModified": {
+    "description": "Sort order of a workspace list: the most recently changed first. Title Case."
+  },
+  "desktopWorkspaceSource": "Source",
+  "@desktopWorkspaceSource": {
+    "description": "Label of the pop-up that filters knowledge bases by where they come from. Title Case."
+  },
+  "desktopWorkspaceUploadFiles": "Upload Files…",
+  "@desktopWorkspaceUploadFiles": {
+    "description": "Button in a knowledge base's files: picks files to add. Title Case, ellipsis (opens a file panel)."
+  },
+  "desktopWorkspaceValvesEllipsis": "Valves…",
+  "@desktopWorkspaceValvesEllipsis": {
+    "description": "Button in the tool editor: opens the tool's settings (valves). Title Case, ellipsis."
+  },
   "desktopHermesTestOk": "Connected to Hermes Agent.",
   "@desktopHermesTestOk": {
     "description": "Result of testing a Hermes connection that answered."
@@ -1163,7 +2585,7 @@
   "@desktopHermesSignInRequired": {
     "description": "Error when a message is sent to Hermes before signing in to its desktop gateway."
   },
-  "desktopStopDictation": "Stop dictation",
+  "desktopStopDictation": "Stop Dictation",
   "@desktopStopDictation": {
     "description": "Button that ends dictation and transcribes what was said."
   },
@@ -1183,6 +2605,84 @@
   "@desktopShortcutDictate": {
     "description": "Shortcuts overlay: the dictation shortcut."
   },
+  "desktopCancelDictation": "Cancel Dictation",
+  "@desktopCancelDictation": {
+    "description": "Button and tooltip that ends dictation and drops what was said, putting the text back as it was (Esc). Title Case."
+  },
+  "desktopListening": "Listening…",
+  "@desktopListening": {
+    "description": "The composer's placeholder and status while dictation listens."
+  },
+  "desktopListeningFor": "Listening, {time}",
+  "@desktopListeningFor": {
+    "description": "Accessible name of the dictation status while it listens; time is how long, e.g. 0:07.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopTranscribing": "Transcribing…",
+  "@desktopTranscribing": {
+    "description": "Status while the server or Whisper turns a dictation or a saved recording into text."
+  },
+  "desktopRecordingNow": "Recording…",
+  "@desktopRecordingNow": {
+    "description": "Label of the recording being made by the dictation under way, above the composer."
+  },
+  "desktopTranscribeOnThisMac": "Transcribe on This Mac",
+  "@desktopTranscribeOnThisMac": {
+    "description": "Menu item on a saved recording: turn it into text on this Mac (its own speech recognition, or Whisper). Title Case."
+  },
+  "desktopExportRecording": "Export…",
+  "@desktopExportRecording": {
+    "description": "Menu item on a saved recording that saves it as a WAV file; a save panel follows. Title Case."
+  },
+  "desktopDiscardRecordingMenu": "Discard Recording…",
+  "@desktopDiscardRecordingMenu": {
+    "description": "Menu item on a saved recording that deletes it; a confirmation follows. Title Case."
+  },
+  "desktopDiscardRecordingTitle": "Discard This Recording?",
+  "@desktopDiscardRecordingTitle": {
+    "description": "Title of the alert before a saved recording is deleted."
+  },
+  "desktopDiscardRecordingBody": "Its audio is deleted from this Mac. You can’t undo this.",
+  "@desktopDiscardRecordingBody": {
+    "description": "Body of the alert before a saved recording is deleted."
+  },
+  "desktopRecordingActions": "Recording Actions",
+  "@desktopRecordingActions": {
+    "description": "Accessible name and tooltip of the button that opens a saved recording's menu. Title Case."
+  },
+  "desktopSpeechRecognitionOff": "Speech Recognition is off for Conduit. Turn it on in System Settings, or choose another engine in Settings › Audio.",
+  "@desktopSpeechRecognitionOff": {
+    "description": "Shown when dictation on this Mac cannot start because speech recognition is turned off for the app in macOS."
+  },
+  "desktopSpeechNotOnThisMac": "This Mac can’t recognize {language} on its own. Choose another language or engine in Settings › Audio.",
+  "@desktopSpeechNotOnThisMac": {
+    "description": "Shown when this Mac's own speech recognition cannot recognize the chosen transcription language without a network; language is a locale code, e.g. ko-KR.",
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopServerDoesNotTranscribe": "This chat’s server doesn’t transcribe speech. Choose another engine in Settings › Audio.",
+  "@desktopServerDoesNotTranscribe": {
+    "description": "Shown when the server engine is chosen but the chat's backend does not transcribe speech."
+  },
+  "desktopWhisperNeedsModel": "To transcribe with Whisper on this Mac, download a model in Settings › Audio first.",
+  "@desktopWhisperNeedsModel": {
+    "description": "Shown when Whisper on this Mac is the chosen engine but no model has been downloaded yet."
+  },
+  "desktopRecordingSaveFailed": "Your recording couldn’t be saved on this Mac. Keep Conduit open and try again.",
+  "@desktopRecordingSaveFailed": {
+    "description": "Shown when a dictation's audio could not be saved as it was recorded; a Try Again button follows."
+  },
+  "desktopAudioSettingsButton": "Audio Settings…",
+  "@desktopAudioSettingsButton": {
+    "description": "Button that opens Settings at its Audio pane. Title Case; the ellipsis says a window opens."
+  },
   "desktopMilliseconds": "{ms} ms",
   "@desktopMilliseconds": {
     "description": "A duration in milliseconds, next to a slider.",
@@ -1190,9 +2690,9 @@
       "ms": {}
     }
   },
-  "desktopReadAloud": "Read aloud",
+  "desktopReadAloud": "Read Aloud",
   "@desktopReadAloud": {
-    "description": "Button under an answer that reads it aloud."
+    "description": "Read Aloud: the action under an answer that reads it aloud, the Chat menu item and its Settings › Keyboard row. Title Case."
   },
   "desktopStopReading": "Stop reading",
   "@desktopStopReading": {
@@ -1302,7 +2802,7 @@
   "@desktopSttEngineLocalDescription": {
     "description": "Help under the on-this-computer speech-to-text choice."
   },
-  "desktopSttModelsTitle": "Speech models",
+  "desktopSttModelsTitle": "Speech Models",
   "@desktopSttModelsTitle": {
     "description": "Heading of the list of downloadable Whisper models."
   },
@@ -1477,9 +2977,9 @@
   "@desktopResizeShell": {
     "description": "Accessible name of the draggable divider between the conversation and the shell under it; arrow keys also resize."
   },
-  "desktopAllNotes": "All notes",
+  "desktopAllNotes": "All Notes",
   "@desktopAllNotes": {
-    "description": "Button in the side pane's Notes tab that goes back from a note to the list of notes."
+    "description": "The Notes section's first sidebar row and the title of its pane: every note, searchable, in time groups. Title Case."
   },
   "desktopMenuSettings": "Settings…",
   "@desktopMenuSettings": {
@@ -1863,6 +3363,292 @@
       }
     }
   },
+  "desktopDirectOpenRouterUrl": "Use OpenRouter's address, https://openrouter.ai/api/v1.",
+  "@desktopDirectOpenRouterUrl": {
+    "description": "Error under a Direct connection's address when OpenRouter is chosen but the address is not its HTTPS API root."
+  },
+  "desktopDirectKeyRequired": "Enter an API key, or choose No Authentication.",
+  "@desktopDirectKeyRequired": {
+    "description": "Error under the API Key field of a new Direct connection with no key. 'No Authentication' names the Authentication pop-up's choice."
+  },
+  "desktopDirectHeaderNameRequired": "Give this header a name, or remove it.",
+  "@desktopDirectHeaderNameRequired": {
+    "description": "Error under a custom header row that has a value but no name."
+  },
+  "desktopDirectOllamaUrlHelp": "Ollama on this Mac listens at http://localhost:11434. For Ollama Cloud, use https://ollama.com with an API key.",
+  "@desktopDirectOllamaUrlHelp": {
+    "description": "Help under the server address of an Ollama Direct connection."
+  },
+  "desktopDirectSecretsStayBehind": "This is a different server: the saved key and headers stay with the old one. Enter them again to use them here.",
+  "@desktopDirectSecretsStayBehind": {
+    "description": "Help under a Direct connection's address once it was changed to another server while a key or headers are saved."
+  },
+  "desktopDirectAuthentication": "Authentication",
+  "@desktopDirectAuthentication": {
+    "description": "Form label of the pop-up choosing how a Direct connection or MCP server sends its credentials."
+  },
+  "desktopCompletionApi": "Completion API",
+  "@desktopCompletionApi": {
+    "description": "Form label of the pop-up choosing Chat Completions or Responses (OpenAI API names, keep them in English)."
+  },
+  "desktopDirectApiVersionHelp": "Optional. Azure OpenAI needs its api-version here.",
+  "@desktopDirectApiVersionHelp": {
+    "description": "Help under the API Version field. 'api-version' is a literal parameter name."
+  },
+  "desktopDirectOpenRouterApiHelp": "OpenRouter uses Chat Completions, for its web search, image generation and PDF reading.",
+  "@desktopDirectOpenRouterApiHelp": {
+    "description": "Note under the Completion API row for an OpenRouter connection. 'Chat Completions' is an API name."
+  },
+  "desktopDirectResponsesHelp": "Uses the Responses API. Choose it only if the provider offers /responses.",
+  "@desktopDirectResponsesHelp": {
+    "description": "Note under the Completion API row when Responses is chosen. 'Responses' is an API name, '/responses' a literal path."
+  },
+  "desktopDirectPrefixHelp": "Optional. Shows the models as prefix.model-name, without changing the IDs sent to the provider.",
+  "@desktopDirectPrefixHelp": {
+    "description": "Help under the Model ID Prefix field. 'prefix.model-name' is an example, keep it as is."
+  },
+  "desktopDirectTagsHelp": "Optional. Labels for these models in the picker, separated by commas.",
+  "@desktopDirectTagsHelp": {
+    "description": "Help under the Model Tags field."
+  },
+  "desktopTesting": "Testing…",
+  "@desktopTesting": {
+    "description": "A Test Connection button while the test runs."
+  },
+  "desktopDirectEditorSubtitle": "Your key is kept securely on this Mac and sent only to this provider.",
+  "@desktopDirectEditorSubtitle": {
+    "description": "Subtitle of the Add Connection / Edit Connection sheet for a Direct connection on this Mac."
+  },
+  "desktopDirectDeleteTitle": "Delete “{name}”?",
+  "@desktopDirectDeleteTitle": {
+    "description": "Title of the alert confirming a Direct connection's deletion.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopDirectDeleteMessage": "Its key and settings are removed from this Mac.",
+  "@desktopDirectDeleteMessage": {
+    "description": "Message of the alert confirming a Direct connection's deletion."
+  },
+  "desktopDirectHistoryLocalHelp": "New direct chats stay on this Mac only.",
+  "@desktopDirectHistoryLocalHelp": {
+    "description": "Footer under the Open WebUI History switch when it is off."
+  },
+  "desktopDirectConnectionsHelp": "Connect to model providers without Open WebUI. Keys are kept securely on this Mac and sent only to their provider.",
+  "@desktopDirectConnectionsHelp": {
+    "description": "Footer under this Mac's Direct connections in Settings."
+  },
+  "desktopImagesPerRequest": "Images per Request",
+  "@desktopImagesPerRequest": {
+    "description": "Row label: how many of a chat's newest images one request to a Direct model carries."
+  },
+  "desktopContextLimitFor": "Context Limit for {name}",
+  "@desktopContextLimitFor": {
+    "description": "VoiceOver label of a model's context limit pop-up.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopWebSearchRegion": "Region",
+  "@desktopWebSearchRegion": {
+    "description": "Row label: the region on-device web searches ask for results from."
+  },
+  "desktopWebSearchRegionThisMac": "Match This Mac",
+  "@desktopWebSearchRegionThisMac": {
+    "description": "Region choice that follows the Mac's language and region; the region it gives follows in parentheses."
+  },
+  "desktopWebSearchFooterAuto": "For direct models that have no web search of their own. Searches run from this Mac: queries go to DuckDuckGo, then to Brave, Bing, Mojeek or Wikipedia if it doesn't answer. Pages the model reads are fetched from this Mac too.",
+  "@desktopWebSearchFooterAuto": {
+    "description": "Footer under the Web Search settings when the engine is Auto. Engine names are brands."
+  },
+  "desktopWebSearchFooterEngine": "For direct models that have no web search of their own. Searches run from this Mac, and queries go only to {engine}. Pages the model reads are fetched from this Mac too.",
+  "@desktopWebSearchFooterEngine": {
+    "description": "Footer under the Web Search settings when one engine is chosen.",
+    "placeholders": {
+      "engine": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopMcpSectionHelp": "Tools from these servers can be offered to the models of your direct connections. You're asked before a tool runs.",
+  "@desktopMcpSectionHelp": {
+    "description": "Footer under the MCP Servers list in Settings › Direct Connections."
+  },
+  "desktopMcpAddEllipsis": "Add Server…",
+  "@desktopMcpAddEllipsis": {
+    "description": "Button that opens the Add MCP Server sheet."
+  },
+  "desktopMcpLoadFailed": "MCP servers couldn't be loaded.",
+  "@desktopMcpLoadFailed": {
+    "description": "Row shown when the MCP server list can't be read; a Retry button follows."
+  },
+  "desktopMcpNameHint": "My Tools",
+  "@desktopMcpNameHint": {
+    "description": "Example placeholder in an MCP server's Server Name field."
+  },
+  "desktopMcpEndpoint": "Endpoint",
+  "@desktopMcpEndpoint": {
+    "description": "Form label of an MCP server's Streamable HTTP address."
+  },
+  "desktopMcpAuthNone": "None",
+  "@desktopMcpAuthNone": {
+    "description": "Authentication choice for an MCP server that takes no credentials."
+  },
+  "desktopMcpAuthOauth": "OAuth",
+  "@desktopMcpAuthOauth": {
+    "description": "Authentication choice for an MCP server that signs in with OAuth (a protocol name)."
+  },
+  "desktopMcpEditorSubtitle": "A Streamable HTTP MCP server. Its token and headers are kept securely on this Mac.",
+  "@desktopMcpEditorSubtitle": {
+    "description": "Subtitle of the Add MCP Server / Edit MCP Server sheet."
+  },
+  "desktopMcpEnabledHelp": "Offer this server's tools to direct models.",
+  "@desktopMcpEnabledHelp": {
+    "description": "Subtitle of an MCP server's Enabled switch."
+  },
+  "desktopMcpWaitingForBrowser": "Waiting for you to sign in in your browser…",
+  "@desktopMcpWaitingForBrowser": {
+    "description": "Status while an MCP server's OAuth sign-in is open in the browser."
+  },
+  "desktopMcpNoScopes": "no scopes reported",
+  "@desktopMcpNoScopes": {
+    "description": "Shown in place of the granted OAuth scopes when the server reported none (inside a sentence, lower case)."
+  },
+  "desktopMcpConnectedTo": "Connected to {host} · {scopes}",
+  "@desktopMcpConnectedTo": {
+    "description": "An MCP server's OAuth status: the authorization server's host and the scopes it granted.",
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "scopes": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopMcpSignInHelp": "Sign in with the server's provider in your browser.",
+  "@desktopMcpSignInHelp": {
+    "description": "Status under an MCP server's OAuth row before signing in."
+  },
+  "desktopMcpSignInFailed": "Signing in didn't finish. Try again.",
+  "@desktopMcpSignInFailed": {
+    "description": "Error after an MCP server's OAuth sign-in failed or timed out."
+  },
+  "desktopMcpSignOutFailed": "Couldn't sign out of this server.",
+  "@desktopMcpSignOutFailed": {
+    "description": "Error when forgetting an MCP server's OAuth sign-in failed."
+  },
+  "desktopMcpSignedInNote": "Signed in.",
+  "@desktopMcpSignedInNote": {
+    "description": "Status line after an MCP server's OAuth sign-in worked."
+  },
+  "desktopMcpRevoke": "Revoke",
+  "@desktopMcpRevoke": {
+    "description": "Button that forgets one always-allowed MCP tool."
+  },
+  "desktopMcpRevokeFailed": "That approval couldn't be revoked.",
+  "@desktopMcpRevokeFailed": {
+    "description": "Error when forgetting an always-allowed MCP tool failed."
+  },
+  "desktopMcpApprovalsHelp": "These tools run without asking while the server and their inputs stay the same.",
+  "@desktopMcpApprovalsHelp": {
+    "description": "Footer under an MCP server's Always Allowed Tools list."
+  },
+  "desktopMcpTestFailed": "Couldn't list this server's tools.",
+  "@desktopMcpTestFailed": {
+    "description": "Status after Test Connection on an MCP server failed."
+  },
+  "desktopMcpDeleteTitle": "Delete “{name}”?",
+  "@desktopMcpDeleteTitle": {
+    "description": "Title of the alert confirming an MCP server's deletion.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopMcpDeleteMessage": "The server, its token and its approvals are removed from this Mac.",
+  "@desktopMcpDeleteMessage": {
+    "description": "Message of the alert confirming an MCP server's deletion."
+  },
+  "desktopOllamaModels": "Models",
+  "@desktopOllamaModels": {
+    "description": "Section title over an Ollama connection's models in its editor sheet."
+  },
+  "desktopOllamaModelsFailed": "This server's models couldn't be listed.",
+  "@desktopOllamaModelsFailed": {
+    "description": "Shown when an Ollama server's model list can't be read."
+  },
+  "desktopOllamaInMemory": "In Memory",
+  "@desktopOllamaInMemory": {
+    "description": "An Ollama model's status: loaded into RAM or VRAM now."
+  },
+  "desktopOllamaNotInMemory": "Not Loaded",
+  "@desktopOllamaNotInMemory": {
+    "description": "An Ollama model's status: not in memory now."
+  },
+  "desktopOllamaKeepAliveFor": "Keep Alive for {name}",
+  "@desktopOllamaKeepAliveFor": {
+    "description": "VoiceOver label of an Ollama model's keep-alive pop-up.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopOllamaThinkingFor": "Thinking for {name}",
+  "@desktopOllamaThinkingFor": {
+    "description": "VoiceOver label of an Ollama Cloud model's thinking-level pop-up.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopOllamaFiveMinutes": "5 Minutes",
+  "@desktopOllamaFiveMinutes": {
+    "description": "Keep-alive choice for an Ollama model."
+  },
+  "desktopOllamaThirtyMinutes": "30 Minutes",
+  "@desktopOllamaThirtyMinutes": {
+    "description": "Keep-alive choice for an Ollama model."
+  },
+  "desktopOllamaOneHour": "1 Hour",
+  "@desktopOllamaOneHour": {
+    "description": "Keep-alive choice for an Ollama model."
+  },
+  "desktopOllamaKeepAliveHelp": "Seconds, or a duration such as 10m or 24h. -1 keeps it loaded; 0 unloads it after each answer.",
+  "@desktopOllamaKeepAliveHelp": {
+    "description": "Help under the custom keep-alive field. 10m, 24h, -1 and 0 are literal values."
+  },
+  "desktopOllamaKeepAliveInvalid": "Use seconds or a duration such as 10m or 24h.",
+  "@desktopOllamaKeepAliveInvalid": {
+    "description": "Error for a keep-alive Ollama doesn't understand."
+  },
+  "desktopOllamaActionFailed": "Ollama couldn't change this model's memory.",
+  "@desktopOllamaActionFailed": {
+    "description": "Error when loading, unloading or setting an Ollama model failed."
+  },
+  "desktopOllamaMemoryHelp": "Load a model to make its first answer faster. Keep Alive is how long it stays in memory after each chat.",
+  "@desktopOllamaMemoryHelp": {
+    "description": "Footer under a local Ollama server's models. 'Keep Alive' names the pop-up."
+  },
+  "desktopOllamaThinkingHelp": "How much each model reasons before it answers. The levels on offer depend on the model.",
+  "@desktopOllamaThinkingHelp": {
+    "description": "Footer under an Ollama Cloud connection's models, whose pop-ups set the thinking level."
+  },
+  "desktopThinkingOff": "Off",
+  "@desktopThinkingOff": {
+    "description": "Thinking-level choice that turns an Ollama Cloud model's thinking off."
+  },
+  "desktopSet": "Set",
+  "@desktopSet": {
+    "description": "Button that applies a typed custom keep-alive."
+  },
   "desktopHermesModeApi": "API Server",
   "@desktopHermesModeApi": {
     "description": "Hermes connection type: the API server with a key."
@@ -2209,6 +3995,309 @@
   "@desktopChannelsUnavailable": {
     "description": "Toast when a conduit://channel link is opened and the account has no channels."
   },
+  "desktopNewChannel": "New Channel…",
+  "@desktopNewChannel": {
+    "description": "Button on the sidebar's Channels heading and menu item that opens the New Channel sheet. Title Case with an ellipsis: a sheet follows."
+  },
+  "desktopNewChannelTitle": "New Channel",
+  "@desktopNewChannelTitle": {
+    "description": "Title of the sheet that makes a channel."
+  },
+  "desktopChannelPrivateFooter": "Only the people you add can see a private channel.",
+  "@desktopChannelPrivateFooter": {
+    "description": "Footer under the Private Channel switch in the New Channel sheet."
+  },
+  "desktopChannelNameRequired": "Enter a name for the channel.",
+  "@desktopChannelNameRequired": {
+    "description": "Error under the name field when a channel is made or saved without a name."
+  },
+  "desktopChannelSaveFailed": "The channel wasn't saved.",
+  "@desktopChannelSaveFailed": {
+    "description": "Error in the channel sheet when the server did not make or change the channel."
+  },
+  "desktopChannelMarkRead": "Mark as Read",
+  "@desktopChannelMarkRead": {
+    "description": "Context menu item on a channel in the sidebar that clears its unread count."
+  },
+  "desktopChannelEditMenu": "Edit Channel…",
+  "@desktopChannelEditMenu": {
+    "description": "Menu item that opens the Edit Channel sheet (name and description). Ellipsis: a sheet follows."
+  },
+  "desktopChannelLeaveMenu": "Leave Channel…",
+  "@desktopChannelLeaveMenu": {
+    "description": "Menu item that asks before leaving a channel or direct message."
+  },
+  "desktopChannelDeleteMenu": "Delete Channel…",
+  "@desktopChannelDeleteMenu": {
+    "description": "Menu item that asks before deleting a channel for everyone."
+  },
+  "desktopChannelLeaveTitle": "Leave “{name}”?",
+  "@desktopChannelLeaveTitle": {
+    "description": "Title of the alert that asks before leaving channel {name}.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopChannelLeaveMessage": "You'll stop seeing its messages.",
+  "@desktopChannelLeaveMessage": {
+    "description": "Informative text of the alert that asks before leaving a channel."
+  },
+  "desktopChannelLeave": "Leave",
+  "@desktopChannelLeave": {
+    "description": "Default button of the alert that leaves a channel."
+  },
+  "desktopChannelDeleteTitle": "Delete “{name}”?",
+  "@desktopChannelDeleteTitle": {
+    "description": "Title of the alert that asks before deleting channel {name}.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopChannelDeleteMessage": "Its messages are deleted for everyone. This can't be undone.",
+  "@desktopChannelDeleteMessage": {
+    "description": "Informative text of the alert that asks before deleting a channel."
+  },
+  "desktopChannelChangeFailed": "The channel wasn't changed.",
+  "@desktopChannelChangeFailed": {
+    "description": "Toast when leaving, deleting, muting or marking a channel read failed on the server."
+  },
+  "desktopChannelUnavailable": "This channel is no longer available.",
+  "@desktopChannelUnavailable": {
+    "description": "Shown in the channel pane when the channel was deleted or the user may no longer see it."
+  },
+  "desktopChannelMembers": "Members",
+  "@desktopChannelMembers": {
+    "description": "Title of the channel's members sheet, and the tooltip of its toolbar button before the count is known."
+  },
+  "desktopChannelLoadingOlder": "Loading earlier messages…",
+  "@desktopChannelLoadingOlder": {
+    "description": "Row at the top of a channel while its earlier messages load."
+  },
+  "desktopChannelOlderFailed": "Earlier messages didn't load.",
+  "@desktopChannelOlderFailed": {
+    "description": "Toast when a channel's earlier messages did not load."
+  },
+  "desktopChannelEdited": "(edited)",
+  "@desktopChannelEdited": {
+    "description": "Small note after a channel message's time when it was edited after it was posted."
+  },
+  "desktopChannelReplies": "{count, plural, =1{1 reply} other{{count} replies}}",
+  "@desktopChannelReplies": {
+    "description": "Link under a channel message that opens its thread, with how many replies it has.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "desktopChannelAddReaction": "Add Reaction",
+  "@desktopChannelAddReaction": {
+    "description": "Tooltip and VoiceOver name of the button that opens the emoji picker for a channel message."
+  },
+  "desktopChannelAddReactionMenu": "Add Reaction…",
+  "@desktopChannelAddReactionMenu": {
+    "description": "Context menu item on a channel message that opens the emoji picker. Ellipsis: a picker follows."
+  },
+  "desktopChannelReplyInThread": "Reply in Thread",
+  "@desktopChannelReplyInThread": {
+    "description": "Button and menu item that opens a channel message's thread beside the channel."
+  },
+  "desktopChannelCopyText": "Copy Text",
+  "@desktopChannelCopyText": {
+    "description": "Context menu item that copies a channel message's text."
+  },
+  "desktopChannelDeleteMessageMenu": "Delete Message…",
+  "@desktopChannelDeleteMessageMenu": {
+    "description": "Context menu item that asks before deleting a channel message."
+  },
+  "desktopChannelDeleteMessageTitle": "Delete this message?",
+  "@desktopChannelDeleteMessageTitle": {
+    "description": "Title of the alert that asks before deleting a channel message."
+  },
+  "desktopChannelDeleteMessageMessage": "It's deleted for everyone in the channel.",
+  "@desktopChannelDeleteMessageMessage": {
+    "description": "Informative text of the alert that asks before deleting a channel message."
+  },
+  "desktopChannelReactedBy": "{names} reacted with {emoji}",
+  "@desktopChannelReactedBy": {
+    "description": "Tooltip of a reaction under a channel message: who reacted ({names}, a list) with {emoji}.",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      },
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopChannelEditHint": "Esc to cancel, Return to save",
+  "@desktopChannelEditHint": {
+    "description": "Hint under the field where a channel message is edited in place."
+  },
+  "desktopChannelCancelReply": "Cancel Reply",
+  "@desktopChannelCancelReply": {
+    "description": "Tooltip of the close button on the \"Replying to …\" bar above the channel composer."
+  },
+  "desktopChannelTypingOne": "{name} is typing…",
+  "@desktopChannelTypingOne": {
+    "description": "Line above a channel's composer while one person ({name}) is typing.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopChannelTypingTwo": "{first} and {second} are typing…",
+  "@desktopChannelTypingTwo": {
+    "description": "Line above a channel's composer while two people are typing.",
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "second": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopChannelTypingMany": "Several people are typing…",
+  "@desktopChannelTypingMany": {
+    "description": "Line above a channel's composer while three or more people are typing."
+  },
+  "desktopChannelMessageHint": "Message {channel}",
+  "@desktopChannelMessageHint": {
+    "description": "Placeholder of a channel's composer; {channel} is its name or, for a direct message, the people in it.",
+    "placeholders": {
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopChannelThreadHint": "Reply in thread…",
+  "@desktopChannelThreadHint": {
+    "description": "Placeholder of the composer in a thread beside a channel."
+  },
+  "desktopChannelCloseThread": "Close Thread",
+  "@desktopChannelCloseThread": {
+    "description": "Tooltip of the button that closes the thread beside a channel."
+  },
+  "desktopChannelSendFailed": "Your message wasn't sent.",
+  "@desktopChannelSendFailed": {
+    "description": "Toast when a channel message was not sent."
+  },
+  "desktopChannelEditFailed": "Your edit wasn't saved.",
+  "@desktopChannelEditFailed": {
+    "description": "Toast when an edit to a channel message was not saved."
+  },
+  "desktopChannelDeleteFailed": "The message wasn't deleted.",
+  "@desktopChannelDeleteFailed": {
+    "description": "Toast when a channel message was not deleted."
+  },
+  "desktopChannelReactFailed": "Your reaction wasn't saved.",
+  "@desktopChannelReactFailed": {
+    "description": "Toast when a reaction to a channel message was not saved."
+  },
+  "desktopChannelPinFailed": "The pin wasn't changed.",
+  "@desktopChannelPinFailed": {
+    "description": "Toast when pinning or unpinning a channel message failed."
+  },
+  "desktopChannelAddPeople": "Add People…",
+  "@desktopChannelAddPeople": {
+    "description": "Button in the members sheet that opens the list of people and groups to add. Ellipsis: a list follows."
+  },
+  "desktopChannelAddPeopleTitle": "Add People",
+  "@desktopChannelAddPeopleTitle": {
+    "description": "Heading of the members sheet while people and groups are being chosen to add."
+  },
+  "desktopChannelAddSearchHint": "Search people and groups",
+  "@desktopChannelAddSearchHint": {
+    "description": "Placeholder of the search field that finds people and groups to add to a channel."
+  },
+  "desktopNotifyChannels": "Notify About Channel Messages",
+  "@desktopNotifyChannels": {
+    "description": "Settings › Desktop switch: a notification when someone posts in a channel that is not in front of the user."
+  },
+  "desktopNotifyChannelsFooter": "A channel set to Mentions Only notifies only when you're mentioned. Notifications never show the message.",
+  "@desktopNotifyChannelsFooter": {
+    "description": "Footer under the channel notifications switch in Settings › Desktop."
+  },
+  "desktopChannelNotificationTitle": "{author} in {channel}",
+  "@desktopChannelNotificationTitle": {
+    "description": "Title of a notification for a channel message: {author} posted in {channel}.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopChannelNotificationMessage": "New message",
+  "@desktopChannelNotificationMessage": {
+    "description": "Body of a notification for a new channel message (the message itself is never shown)."
+  },
+  "desktopChannelNotificationMention": "Mentioned you",
+  "@desktopChannelNotificationMention": {
+    "description": "Body of a notification for a channel message that mentions the user."
+  },
+  "desktopChannelEmojiPicker": "Choose a Reaction",
+  "@desktopChannelEmojiPicker": {
+    "description": "VoiceOver name of the emoji picker that adds a reaction to a channel message."
+  },
+  "desktopChannelDownloadFailed": "The file wasn't saved.",
+  "@desktopChannelDownloadFailed": {
+    "description": "Toast when an app's report could not be saved to a file."
+  },
+  "desktopChannelJumpToLatest": "Jump to Latest",
+  "@desktopChannelJumpToLatest": {
+    "description": "Button at the bottom of a channel, shown while scrolled up, that goes to the newest message."
+  },
+  "desktopChannelDirectMessage": "Direct message",
+  "@desktopChannelDirectMessage": {
+    "description": "What VoiceOver says a direct-message conversation is, after its title."
+  },
+  "desktopChannelGroup": "Group channel",
+  "@desktopChannelGroup": {
+    "description": "What VoiceOver says a group channel (one with its own members) is, after its title."
+  },
+  "desktopChannelMembersAdded": "Members added",
+  "@desktopChannelMembersAdded": {
+    "description": "Toast after people or groups were added to a channel."
+  },
+  "desktopChannelMemberRemoved": "{name} removed",
+  "@desktopChannelMemberRemoved": {
+    "description": "Toast after {name} was removed from a channel.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopChannelRemoveMember": "Remove",
+  "@desktopChannelRemoveMember": {
+    "description": "Default button of the alert that removes a member from a channel."
+  },
+  "desktopChannelRemoveMemberTitle": "Remove {name}?",
+  "@desktopChannelRemoveMemberTitle": {
+    "description": "Title of the alert that asks before removing {name} from a channel.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopChannelRemoveMemberMessage": "They'll no longer see this channel or its messages.",
+  "@desktopChannelRemoveMemberMessage": {
+    "description": "Informative text of the alert that asks before removing someone from a channel."
+  },
+  "desktopChannelYou": "(You)",
+  "@desktopChannelYou": {
+    "description": "Shown after the signed-in user's own name in the members list."
+  },
   "desktopNotesUnavailable": "Notes aren't available for this account.",
   "@desktopNotesUnavailable": {
     "description": "Toast when a conduit://note link is opened and the account has no notes."
@@ -2249,6 +4338,30 @@
   "desktopKeyboardGoToSection": "Go to Sidebar Section",
   "@desktopKeyboardGoToSection": {
     "description": "Settings › Keyboard row for ⌘1–⌘8: open the sidebar's sections in order."
+  },
+  "desktopKeyboardNotesFooter": "These work in Notes, where ⌘N makes a note instead of a chat.",
+  "@desktopKeyboardNotesFooter": {
+    "description": "Settings › Keyboard: footer under the Notes group, whose keys work only in Notes (there ⌘N makes a note; elsewhere it starts a chat). Sentence case."
+  },
+  "desktopKeyboardWorkspaceFooter": "Saves the model, prompt, tool, skill or knowledge open in Workspace.",
+  "@desktopKeyboardWorkspaceFooter": {
+    "description": "Settings › Keyboard: footer under the Workspace group, whose ⌘S saves the item open in a Workspace editor. Sentence case."
+  },
+  "desktopKeyboardCalendarEarlier": "Earlier Days",
+  "@desktopKeyboardCalendarEarlier": {
+    "description": "Settings › Keyboard: row in the Calendar group for ⌘←, which moves the agenda to the days before the ones shown. Title Case."
+  },
+  "desktopKeyboardCalendarLater": "Later Days",
+  "@desktopKeyboardCalendarLater": {
+    "description": "Settings › Keyboard: row in the Calendar group for ⌘→, which moves the agenda to the days after the ones shown. Title Case."
+  },
+  "desktopKeyboardCalendarFooter": "These work in Calendar: Delete removes the selected event, and Save saves the event you're editing.",
+  "@desktopKeyboardCalendarFooter": {
+    "description": "Settings › Keyboard: footer under the Calendar group, whose keys work only in the Calendar pane (Delete on the selected event; Save in the event editor). Sentence case."
+  },
+  "desktopKeyboardTasksFooter": "These work in Scheduled Tasks: Delete removes the selected task, and Save saves the task you're editing.",
+  "@desktopKeyboardTasksFooter": {
+    "description": "Settings › Keyboard: footer under the Scheduled Tasks group, whose keys work only in the Scheduled Tasks pane (Delete on the selected task; Save in the task editor). Sentence case."
   },
   "desktopNotificationAnswerReady": "The answer is ready.",
   "@desktopNotificationAnswerReady": {
@@ -2625,7 +4738,7 @@
   },
   "desktopCustomEllipsis": "Custom…",
   "@desktopCustomEllipsis": {
-    "description": "Last item of the reasoning effort menu: type a value of your own. Title Case with an ellipsis."
+    "description": "Last item of a menu of preset values (reasoning effort, Ollama keep-alive) that opens a field for a value of your own. Title Case with an ellipsis."
   },
   "desktopPinModel": "Pin {name}",
   "@desktopPinModel": {
@@ -2862,6 +4975,58 @@
   "@desktopHermesModeGatewayHelp": {
     "description": "Footer under the Hermes Agent form while Connection Type is Desktop Gateway: what that type does instead of an API key."
   },
+  "desktopHermesShowBackgroundWork": "Show Background Work",
+  "@desktopHermesShowBackgroundWork": {
+    "description": "Tooltip of the chip above the composer that names a Hermes agent's running subagents and processes; it opens the background work sheet."
+  },
+  "desktopHermesBackgroundWork": "Background Work",
+  "@desktopHermesBackgroundWork": {
+    "description": "Title of the sheet listing a Hermes agent's subagents and background processes."
+  },
+  "desktopHermesStopAgent": "Stop Agent",
+  "@desktopHermesStopAgent": {
+    "description": "Button in the background work sheet that stops a Hermes subagent."
+  },
+  "desktopHermesKillProcess": "Kill Process",
+  "@desktopHermesKillProcess": {
+    "description": "Button (and its tooltip) that kills a Hermes background process."
+  },
+  "desktopHermesKillProcessTitle": "Kill This Process?",
+  "@desktopHermesKillProcessTitle": {
+    "description": "Title of the alert asking before a Hermes background process is killed."
+  },
+  "desktopHermesLiveOutput": "Live Output",
+  "@desktopHermesLiveOutput": {
+    "description": "Label over a Hermes subagent's live output in the background work sheet."
+  },
+  "desktopHermesContextUsageMenu": "Context & Usage…",
+  "@desktopHermesContextUsageMenu": {
+    "description": "Chat menu and More menu item that opens a Hermes chat's Context & Usage sheet."
+  },
+  "desktopHermesNewRoomMenu": "New Room…",
+  "@desktopHermesNewRoomMenu": {
+    "description": "Menu item (the Rooms heading's and a room's context menu) that opens the sheet making a new Hermes Group Chat."
+  },
+  "desktopHermesRoomInfoMenu": "Room Info…",
+  "@desktopHermesRoomInfoMenu": {
+    "description": "Menu item and toolbar button that opens a Hermes Group Chat's Room Info sheet (purpose, notes, who answers, its bots)."
+  },
+  "desktopHermesDisbandRoomMenu": "Disband Room…",
+  "@desktopHermesDisbandRoomMenu": {
+    "description": "Menu item and button that asks before ending a Hermes Group Chat for good."
+  },
+  "desktopHermesOpenBotChat": "Open Bot Chat",
+  "@desktopHermesOpenBotChat": {
+    "description": "Context-menu item on a Hermes bot's sidebar row: opens the bot's permanent Bot Chat."
+  },
+  "desktopHermesShowChanges": "Show Changes",
+  "@desktopHermesShowChanges": {
+    "description": "Tooltip of a changed file's row on a Hermes reply; it opens the file's coloured diff."
+  },
+  "desktopHermesDiffFile": "File",
+  "@desktopHermesDiffFile": {
+    "description": "Accessible name of the pop-up that picks which changed file the diff sheet shows."
+  },
   "desktopSendWaitsReconnecting": "You can send once Conduit reconnects.",
   "@desktopSendWaitsReconnecting": {
     "description": "Tooltip of the dimmed Send button while the window reconnects to Conduit's background service (the toolbar pill says Reconnecting…)."
@@ -2918,6 +5083,87 @@
   "desktopTryAgain": "Try Again",
   "@desktopTryAgain": {
     "description": "Button on an error toast whose change can be tried again: sends the same request once more."
+  },
+  "desktopStopSpeaking": "Stop Speaking",
+  "@desktopStopSpeaking": {
+    "description": "Stop Speaking: ends the reading aloud (the message action while it reads, the Chat menu item, the playback bar's close button). As macOS's Edit › Speech › Stop Speaking. Title Case."
+  },
+  "desktopStartVoiceCall": "Start Voice Call",
+  "@desktopStartVoiceCall": {
+    "description": "Start Voice Call: the composer's call button (its tooltip and label) and the Chat menu item. Starts a voice call in the open chat, or in a new chat. Title Case."
+  },
+  "desktopEndVoiceCall": "End Voice Call",
+  "@desktopEndVoiceCall": {
+    "description": "End Voice Call: the Chat menu item while a call is on (it replaces Start Voice Call). Title Case."
+  },
+  "desktopCallThinking": "Thinking…",
+  "@desktopCallThinking": {
+    "description": "A voice call's state while the user's words went to the chat and the answer is on its way. Short, with an ellipsis character."
+  },
+  "desktopCallStatusTime": "{status} · {time}",
+  "@desktopCallStatusTime": {
+    "description": "A voice call's state and how long it has run, as the call strip and the menu-bar item show them: {status} is the state (Listening, Speaking…) or Voice Call, {time} the time (1:23).",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopCallRealtimeUnavailable": "Realtime isn’t available for this chat, so this call takes turns.",
+  "@desktopCallRealtimeUnavailable": {
+    "description": "A note in the voice call's strip when Settings › Audio chose Realtime calls but this chat cannot have one (its model's backend has no realtime voice, the chat is temporary, …): the call listens, sends and speaks in turn. Sentence case."
+  },
+  "desktopCallElsewhere": "Voice call in another chat",
+  "@desktopCallElsewhere": {
+    "description": "The minimised voice call's capsule, shown above another chat's composer: the call goes on in another chat. Sentence case."
+  },
+  "desktopShowCall": "Show Call",
+  "@desktopShowCall": {
+    "description": "Show Call: opens the voice call's chat and its call strip (the capsule's button over another chat, and the menu-bar item's command). Title Case."
+  },
+  "desktopPreviousSentence": "Previous Sentence",
+  "@desktopPreviousSentence": {
+    "description": "The playback bar's button that moves the reading back one sentence. Title Case."
+  },
+  "desktopNextSentence": "Next Sentence",
+  "@desktopNextSentence": {
+    "description": "The playback bar's button that moves the reading on one sentence. Title Case."
+  },
+  "desktopSpeechPreparing": "Preparing…",
+  "@desktopSpeechPreparing": {
+    "description": "The playback bar while the reading gets ready (the server's speech is being made)."
+  },
+  "desktopSpeechSentenceOf": "Sentence {current} of {total}",
+  "@desktopSpeechSentenceOf": {
+    "description": "The playback bar: which sentence of the answer is being read.",
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopSpeechFailed": "Couldn't read this aloud.",
+  "@desktopSpeechFailed": {
+    "description": "The playback bar when the reading failed, beside Try Again. Sentence case."
+  },
+  "desktopReadingAloud": "Reading Aloud",
+  "@desktopReadingAloud": {
+    "description": "Accessibility name of the playback bar above the message field while an answer is read aloud."
+  },
+  "desktopGoToSentence": "Go to Sentence {number}",
+  "@desktopGoToSentence": {
+    "description": "Tooltip and accessibility name of one sentence's mark on the playback bar's track: a click moves the reading there. Title Case.",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
   },
   "desktopSendOnEnterDescription": "Return sends your message instead of starting a new line.",
   "@desktopSendOnEnterDescription": {
@@ -2994,7 +5240,7 @@
   },
   "desktopOnThisMac": "On This Mac",
   "@desktopOnThisMac": {
-    "description": "Settings › Audio: the speech engine that runs on this Mac (speech to text and text to speech), the phone's \"On Device\". Title Case."
+    "description": "Settings › Audio: the speech engine that runs on this Mac (the phone's \"On Device\"); Settings › Direct Connections: the section of connections kept on this Mac. Title Case."
   },
   "desktopSttEngineWhisper": "Whisper on This Mac",
   "@desktopSttEngineWhisper": {
@@ -3008,7 +5254,7 @@
   "@desktopSilenceDuration": {
     "description": "Settings › Audio › Speech to Text: the row with the stepper for how long a pause ends dictation. Title Case."
   },
-  "desktopSilenceDurationDescription": "How long you pause before what you said is sent to be transcribed.",
+  "desktopSilenceDurationDescription": "How long a pause ends dictation.",
   "@desktopSilenceDurationDescription": {
     "description": "Settings › Audio, under Pause Length."
   },
@@ -3148,5 +5394,467 @@
   "desktopStopComparing": "Don't Compare",
   "@desktopStopComparing": {
     "description": "Tooltip and accessibility name of the chip's remove button: the next message goes to one model only. Title Case."
+  },
+  "desktopHermesChatHidden": "Chat hidden. Find it under Hidden Chats in the Hermes section.",
+  "@desktopHermesChatHidden": {
+    "description": "Toast after hiding a Hermes chat from the sidebar's Hermes section; Hidden Chats is a row at the end of that section."
+  },
+  "desktopHermesHiddenChatsFooter": "Chats hidden from the Hermes list on this Mac. Click one to open it, or unhide it to list it again.",
+  "@desktopHermesHiddenChatsFooter": {
+    "description": "Footer under the list of hidden Hermes chats in the Hidden Chats pane."
+  },
+  "desktopHermesSessionsFailed": "Couldn't load Hermes chats.",
+  "@desktopHermesSessionsFailed": {
+    "description": "Sidebar hint in the Hermes section when the session list could not be read; a Try Again button follows."
+  },
+  "desktopLibreChatSignInSubtitle": "Sign in with your LibreChat account.",
+  "@desktopLibreChatSignInSubtitle": {
+    "description": "Subtitle of the LibreChat sign-in step, under its Sign In title. Sentence case."
+  },
+  "desktopCalendarShowOnly": "Show Only This Calendar",
+  "@desktopCalendarShowOnly": {"description": "Calendar context menu item: hide every other calendar's events."},
+  "desktopCalendarOpenEvent": "Open Event",
+  "@desktopCalendarOpenEvent": {"description": "Agenda row context menu item: open the event's sheet."},
+  "desktopCalendarEditSeriesEllipsis": "Edit Series…",
+  "@desktopCalendarEditSeriesEllipsis": {"description": "Button and menu item that opens the editor for a repeating event's whole series."},
+  "desktopCalendarDeleteSeriesEllipsis": "Delete Series…",
+  "@desktopCalendarDeleteSeriesEllipsis": {"description": "Button and menu item that asks before deleting a repeating event and every repeat of it."},
+  "desktopCalendarLastShown": "At least one calendar stays shown.",
+  "@desktopCalendarLastShown": {"description": "Tooltip on the only checked calendar's checkbox, which cannot be unchecked."},
+  "desktopCalendarHideEvents": "Hide Events",
+  "@desktopCalendarHideEvents": {"description": "Tooltip on a checked calendar's checkbox: unchecking hides its events in the agenda."},
+  "desktopCalendarShowEvents": "Show Events",
+  "@desktopCalendarShowEvents": {"description": "Tooltip on an unchecked calendar's checkbox: checking shows its events in the agenda."},
+  "desktopCalendarNewCalendarEllipsis": "New Calendar…",
+  "@desktopCalendarNewCalendarEllipsis": {"description": "Button in the calendars column that opens the New Calendar sheet."},
+  "desktopCalendarVisibilityFooter": "Events from checked calendars are shown.",
+  "@desktopCalendarVisibilityFooter": {"description": "Note under the calendars column on the Mac (the phone's version says to tap)."},
+  "desktopCalendarAgenda": "Agenda",
+  "@desktopCalendarAgenda": {"description": "Accessibility name of the calendar pane's list of upcoming events."},
+  "desktopCalendarOpenTask": "Open Task",
+  "@desktopCalendarOpenTask": {"description": "Button on a scheduled task's calendar entry that opens the task in Scheduled Tasks."},
+  "desktopCalendarScheduledTitle": "Scheduled Task",
+  "@desktopCalendarScheduledTitle": {"description": "Title of the sheet a scheduled task's calendar entry opens."},
+  "desktopCalendarSearchPeople": "Search people",
+  "@desktopCalendarSearchPeople": {"description": "Placeholder of the field that finds people to invite to an event."},
+  "desktopCalendarNoPeople": "No people found.",
+  "@desktopCalendarNoPeople": {"description": "Shown under the people search field when nobody matches."},
+  "desktopCalendarName": "Name",
+  "@desktopCalendarName": {"description": "Label of a new calendar's name field."},
+  "desktopCalendarColor": "Color",
+  "@desktopCalendarColor": {"description": "Label of a new calendar's colour choices."},
+  "desktopTasksPause": "Pause",
+  "@desktopTasksPause": {"description": "Scheduled task context menu item that pauses an active task."},
+  "desktopTasksResume": "Resume",
+  "@desktopTasksResume": {"description": "Scheduled task context menu item that makes a paused task active again."},
+  "desktopTasksFilter": "Show",
+  "@desktopTasksFilter": {"description": "Accessibility name of the All / Active / Paused filter above the scheduled task list."},
+  "desktopTasksStale": "This list may be out of date.",
+  "@desktopTasksStale": {"description": "Notice above the scheduled task list when a change went through but the list could not be read back."},
+  "desktopTasksSelect": "Select a task to see its schedule and history.",
+  "@desktopTasksSelect": {"description": "Shown beside the scheduled task list when no task is selected."},
+  "desktopScheduledTasksDescription": "Your Open WebUI server runs these tasks on its own schedule, even while this Mac is offline.",
+  "@desktopScheduledTasksDescription": {"description": "Explains scheduled tasks on the Mac (the phone's version says this phone)."},
+  "desktopTasksLastRun": "Last Run",
+  "@desktopTasksLastRun": {"description": "Row label on a scheduled task's page: when it last ran."},
+  "desktopWidgetAsk": "Ask Conduit",
+  "@desktopWidgetAsk": {
+    "description": "The desktop widget's field-like bar that opens Quick Ask (the phone widget's Ask Conduit pill). No ellipsis."
+  },
+  "desktopWidgetNewChat": "New Chat",
+  "@desktopWidgetNewChat": {
+    "description": "The desktop widget's New Chat button: a new chat in the main window. Title Case; the same words as New Chat elsewhere."
+  },
+  "desktopWidgetVoiceCall": "Voice Call",
+  "@desktopWidgetVoiceCall": {
+    "description": "The desktop widget's Voice Call button: a voice call in a new chat (the phone widget's mic). Title Case."
+  },
+  "desktopWidgetRecentChats": "Recent Chats",
+  "@desktopWidgetRecentChats": {
+    "description": "The desktop widget's heading over the latest chats' titles. Title Case."
+  },
+  "desktopWidgetNoChats": "No chats yet",
+  "@desktopWidgetNoChats": {
+    "description": "The desktop widget's list when the signed-in account has no chats yet. Sentence case, no period."
+  },
+  "desktopWidgetSignedOut": "Sign in to Conduit to see your recent chats here.",
+  "@desktopWidgetSignedOut": {
+    "description": "The desktop widget while nobody is signed in to Conduit: it shows no chats. Sentence case."
+  },
+  "desktopWidgetOpenConduit": "Open Conduit",
+  "@desktopWidgetOpenConduit": {
+    "description": "The desktop widget's button while signed out: opens the app (its sign-in). Title Case."
+  },
+  "desktopWidgetDescription": "Your recent chats, with New Chat, Quick Ask and Voice Call a click away.",
+  "@desktopWidgetDescription": {
+    "description": "The desktop widget's description in the macOS widget gallery, under its name Conduit. Names the widget's three buttons by their labels. Sentence case."
+  },
+  "desktopShareSheetMessage": "Add a message",
+  "@desktopShareSheetMessage": {
+    "description": "Placeholder of the optional message field in Conduit's Share sheet (Conduit chosen in another app's Share menu). The message goes into the new chat's message field with the shared items; nothing is sent."
+  },
+  "desktopShareSheetItems": "Shared items",
+  "@desktopShareSheetItems": {
+    "description": "Accessibility name of the list of items (files, links, text) in Conduit's Share sheet."
+  },
+  "desktopShareSheetNothing": "None of these items can be added to a chat.",
+  "@desktopShareSheetNothing": {
+    "description": "Note in Conduit's Share sheet when nothing shared can be used (for example only folders)."
+  },
+  "desktopShareSheetFailed": "Conduit couldn't be opened. Try again.",
+  "@desktopShareSheetFailed": {
+    "description": "Note in Conduit's Share sheet when handing the items to the app failed."
+  },
+  "desktopServicesNewChat": "New Conduit Chat With Selection",
+  "@desktopServicesNewChat": {
+    "description": "Services menu item (in every app's Services menu and text context menu) that starts a new Conduit chat with the selected text in the message field. Title Case, as Apple's \"New Email With Selection\"."
+  },
+  "desktopShareSheetUnavailable": "The shared items couldn't be opened. Share them again.",
+  "@desktopShareSheetUnavailable": {
+    "description": "Toast when Conduit was asked to open items from the Share menu that are no longer there."
+  },
+  "desktopHermesConnectionsFooter": "Click a connection to use it. Hermes's chats, scheduled agents and MCP servers follow the one in use.",
+  "@desktopHermesConnectionsFooter": {
+    "description": "Footer under Settings › Hermes › Connections."
+  },
+  "desktopHermesEditConnectionNamed": "Edit {name}",
+  "@desktopHermesEditConnectionNamed": {
+    "description": "VoiceOver label of a connection row's Edit… button.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesUsingConnection": "Now using {name}.",
+  "@desktopHermesUsingConnection": {
+    "description": "Toast after switching Hermes connections.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesStatus": "Status",
+  "@desktopHermesStatus": {
+    "description": "Row title for the Hermes server's reachability."
+  },
+  "desktopHermesUnreachable": "Not reachable",
+  "@desktopHermesUnreachable": {
+    "description": "The Hermes server did not answer."
+  },
+  "desktopHermesRefresh": "Refresh",
+  "@desktopHermesRefresh": {
+    "description": "Button that reads the Hermes server's status again."
+  },
+  "desktopHermesStatusFailed": "Couldn't read the server's status.",
+  "@desktopHermesStatusFailed": {
+    "description": "Shown when the Hermes status could not be read."
+  },
+  "desktopHermesReviewSchedules": "Review Schedules",
+  "@desktopHermesReviewSchedules": {
+    "description": "Button that opens the Scheduled Agents list in the main window."
+  },
+  "desktopHermesScheduledAgentsFooter": "Prompts the agent runs on a schedule. They're also in the Hermes section of the sidebar.",
+  "@desktopHermesScheduledAgentsFooter": {
+    "description": "Footer under Settings › Hermes › Scheduled Agents."
+  },
+  "desktopHermesSkillsFooter": "Type / in a Hermes chat to use one.",
+  "@desktopHermesSkillsFooter": {
+    "description": "Footer under the agent's skills list."
+  },
+  "desktopHermesSkillsMore": "{count, plural, =1{and 1 more} other{and {count} more}}",
+  "@desktopHermesSkillsMore": {
+    "description": "After a shortened list of skills.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "desktopHermesCatalogFailed": "Couldn't load the agent's skills and toolsets.",
+  "@desktopHermesCatalogFailed": {
+    "description": "Shown when the Hermes catalog could not be read."
+  },
+  "desktopHermesMcpFooter": "Servers whose tools the agent can use. Changes apply to new Hermes chats.",
+  "@desktopHermesMcpFooter": {
+    "description": "Footer under Settings › Hermes › MCP Servers."
+  },
+  "desktopHermesMcpUnavailable": "MCP servers are managed on a Desktop Gateway connection.",
+  "@desktopHermesMcpUnavailable": {
+    "description": "Shown when the connection in use is an API server."
+  },
+  "desktopHermesMcpEmpty": "No MCP servers yet.",
+  "@desktopHermesMcpEmpty": {
+    "description": "Empty MCP server list."
+  },
+  "desktopHermesMcpLoadFailed": "Couldn't load the MCP servers.",
+  "@desktopHermesMcpLoadFailed": {
+    "description": "Shown when the MCP server list could not be read."
+  },
+  "desktopHermesMcpAddEllipsis": "Add Server…",
+  "@desktopHermesMcpAddEllipsis": {
+    "description": "Button that opens the Add MCP Server sheet."
+  },
+  "desktopHermesMcpAddFromCatalog": "Add from Catalog",
+  "@desktopHermesMcpAddFromCatalog": {
+    "description": "Pop-up button listing Hermes's ready-made MCP servers."
+  },
+  "desktopHermesMcpCatalogEmpty": "Nothing more to add from the catalog.",
+  "@desktopHermesMcpCatalogEmpty": {
+    "description": "Shown when every catalog server is already added."
+  },
+  "desktopHermesMcpCatalogFailed": "Couldn't load the catalog.",
+  "@desktopHermesMcpCatalogFailed": {
+    "description": "Shown when the MCP catalog could not be read."
+  },
+  "desktopHermesMcpActionsNamed": "Actions for {name}",
+  "@desktopHermesMcpActionsNamed": {
+    "description": "VoiceOver label and tooltip of an MCP server row's menu button.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesMcpSignIn": "Sign In…",
+  "@desktopHermesMcpSignIn": {
+    "description": "MCP server menu item: sign in with OAuth in the browser."
+  },
+  "desktopHermesMcpSetApiKey": "Set API Key…",
+  "@desktopHermesMcpSetApiKey": {
+    "description": "MCP server menu item."
+  },
+  "desktopHermesMcpEnableTools": "Enable Tools",
+  "@desktopHermesMcpEnableTools": {
+    "description": "MCP server menu item."
+  },
+  "desktopHermesMcpDisableTools": "Disable Tools",
+  "@desktopHermesMcpDisableTools": {
+    "description": "MCP server menu item."
+  },
+  "desktopHermesMcpRemoveEllipsis": "Remove…",
+  "@desktopHermesMcpRemoveEllipsis": {
+    "description": "MCP server menu item; asks first."
+  },
+  "desktopHermesMcpRemoveTitle": "Remove {name}?",
+  "@desktopHermesMcpRemoveTitle": {
+    "description": "Alert title before removing an MCP server.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesMcpRemoveMessage": "Hermes stops using this server. Its tools leave new chats.",
+  "@desktopHermesMcpRemoveMessage": {
+    "description": "Alert message before removing an MCP server."
+  },
+  "desktopHermesMcpToolsOn": "Tools on",
+  "@desktopHermesMcpToolsOn": {
+    "description": "An MCP server whose tools the agent can use."
+  },
+  "desktopHermesMcpToolsOff": "Tools off",
+  "@desktopHermesMcpToolsOff": {
+    "description": "An MCP server whose tools are turned off."
+  },
+  "desktopHermesMcpToolsList": "Tools: {tools}",
+  "@desktopHermesMcpToolsList": {
+    "description": "An MCP server's tools, comma-separated.",
+    "placeholders": {
+      "tools": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesMcpTestOk": "{name} is working.",
+  "@desktopHermesMcpTestOk": {
+    "description": "Toast after an MCP server test succeeded.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesMcpTestFailed": "Couldn't connect to {name}.",
+  "@desktopHermesMcpTestFailed": {
+    "description": "Toast after an MCP server test failed.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesMcpActionFailed": "Couldn't change the MCP server.",
+  "@desktopHermesMcpActionFailed": {
+    "description": "Toast when an MCP server action failed."
+  },
+  "desktopHermesMcpAdded": "Added {name}.",
+  "@desktopHermesMcpAdded": {
+    "description": "Toast after adding an MCP server.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesMcpRemoved": "Removed {name}.",
+  "@desktopHermesMcpRemoved": {
+    "description": "Toast after removing an MCP server.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesMcpKeySaved": "Saved the API key for {name}.",
+  "@desktopHermesMcpKeySaved": {
+    "description": "Toast after setting an MCP server's API key.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesMcpSignedIn": "Signed in to {name}.",
+  "@desktopHermesMcpSignedIn": {
+    "description": "Toast after an MCP server's OAuth sign-in.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesMcpSignInFailed": "Couldn't sign in to {name}.",
+  "@desktopHermesMcpSignInFailed": {
+    "description": "Toast when an MCP server's sign-in failed.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesMcpSigningIn": "Finish signing in to {name} in your browser…",
+  "@desktopHermesMcpSigningIn": {
+    "description": "Toast while an MCP server's sign-in waits on the browser.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesMcpAddTitle": "Add MCP Server",
+  "@desktopHermesMcpAddTitle": {
+    "description": "Title of the Add MCP Server sheet."
+  },
+  "desktopHermesMcpConnectsBy": "Connects By",
+  "@desktopHermesMcpConnectsBy": {
+    "description": "Label of the choice between a web address and a command."
+  },
+  "desktopHermesMcpByUrl": "Web Address",
+  "@desktopHermesMcpByUrl": {
+    "description": "An MCP server reached at an HTTP address."
+  },
+  "desktopHermesMcpByCommand": "Command",
+  "@desktopHermesMcpByCommand": {
+    "description": "An MCP server Hermes runs as a command."
+  },
+  "desktopHermesMcpUrl": "URL",
+  "@desktopHermesMcpUrl": {
+    "description": "Field label: the MCP server's address."
+  },
+  "desktopHermesMcpArguments": "Arguments",
+  "@desktopHermesMcpArguments": {
+    "description": "Field label: the command's arguments."
+  },
+  "desktopHermesMcpArgumentsHelp": "One argument per line.",
+  "@desktopHermesMcpArgumentsHelp": {
+    "description": "Help under the MCP command's arguments."
+  },
+  "desktopHermesMcpKeyHelp": "Sent to the server as a bearer token. Hermes keeps it, not this Mac.",
+  "@desktopHermesMcpKeyHelp": {
+    "description": "Help under an MCP server's API key field."
+  },
+  "desktopHermesMcpApiKeyTitle": "API Key for {name}",
+  "@desktopHermesMcpApiKeyTitle": {
+    "description": "Title of the sheet that sets an MCP server's API key.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesSignInWith": "Sign In With",
+  "@desktopHermesSignInWith": {
+    "description": "Label of a Desktop Gateway's authentication choice."
+  },
+  "desktopHermesAuthNative": "Hermes Sign-In",
+  "@desktopHermesAuthNative": {
+    "description": "Desktop Gateway authentication: sign in through the browser."
+  },
+  "desktopHermesAuthToken": "Session Token",
+  "@desktopHermesAuthToken": {
+    "description": "Desktop Gateway authentication: the gateway's legacy session token."
+  },
+  "desktopHermesAuthTokenHelp": "The session token your Hermes gateway gives you. Kept in this Mac's keychain.",
+  "@desktopHermesAuthTokenHelp": {
+    "description": "Help under the legacy session token field."
+  },
+  "desktopHermesTestKeyRequired": "Enter the API key to test this connection.",
+  "@desktopHermesTestKeyRequired": {
+    "description": "Shown when Test is pressed on an API server without a key."
+  },
+  "desktopHermesSettingsEllipsis": "Hermes Settings…",
+  "@desktopHermesSettingsEllipsis": {
+    "description": "Menu item that opens Settings › Hermes."
+  },
+  "desktopHermesJobNewEllipsis": "New Scheduled Job…",
+  "@desktopHermesJobNewEllipsis": {
+    "description": "Button that opens the scheduled job editor."
+  },
+  "desktopHermesJobDeliveryError": "Delivery failed: {error}",
+  "@desktopHermesJobDeliveryError": {
+    "description": "A job's last delivery error, as Hermes reports it.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopHermesJobNoRuns": "No runs yet.",
+  "@desktopHermesJobNoRuns": {
+    "description": "Empty run history of a scheduled job."
+  },
+  "desktopHermesJobRunsFailed": "Couldn't load the run history.",
+  "@desktopHermesJobRunsFailed": {
+    "description": "Shown when a job's run history could not be read."
+  },
+  "desktopHermesJobStateScheduled": "Scheduled",
+  "@desktopHermesJobStateScheduled": {
+    "description": "A job waiting for its next run."
+  },
+  "desktopHermesJobStateCompleted": "Completed",
+  "@desktopHermesJobStateCompleted": {
+    "description": "A job that has no runs left."
+  },
+  "desktopHermesJobLastOk": "Last run succeeded",
+  "@desktopHermesJobLastOk": {
+    "description": "A job's last run finished without an error."
+  },
+  "desktopHermesJobLastFailed": "Last run failed",
+  "@desktopHermesJobLastFailed": {
+    "description": "A job's last run ended with an error."
+  },
+  "desktopHermesJobOpenRun": "Open Result",
+  "@desktopHermesJobOpenRun": {
+    "description": "Tooltip of a run in a job's run history; opens its chat."
+  },
+  "desktopHermesJobsNote": "Each run is saved as a Hermes chat. Open one from a job's run history.",
+  "@desktopHermesJobsNote": {
+    "description": "Note under the Scheduled Agents list."
+  },
+  "desktopHermesJobHideRuns": "Hide Run History",
+  "@desktopHermesJobHideRuns": {
+    "description": "Disclosure button when a job's run history is open."
   }
 }

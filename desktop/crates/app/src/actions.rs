@@ -32,7 +32,19 @@ actions!(
         DenyRequest,
         Dictate,
         ToggleSidebar,
+        ReadAloud,
+        VoiceCall,
     ]
+);
+
+// Chat › Stop Speaking (⌘.): ends the reading, wherever it is.
+actions!(conduit, [StopSpeaking]);
+
+// The voice call's strip: Pause or Resume, Mute, Minimize or Expand, and
+// the menu-bar item's Show Call.
+actions!(
+    conduit,
+    [CallPause, CallMute, CallMinimize, ShowCall, EndCall]
 );
 
 // The ⌘K palette's "Choose model" command: opens the composer's model
@@ -100,8 +112,12 @@ actions!(
         // (the open chat's whole tree) and Save Chat (a temporary chat).
         MarkChatUnread,
         GenerateChatTitle,
+        // A LibreChat chat copied whole, on its server.
+        DuplicateChat,
         ShowBranches,
-        SaveTemporaryChat
+        SaveTemporaryChat,
+        // Chat › Context & Usage… (a Hermes chat's context window).
+        ShowContextUsage
     ]
 );
 
@@ -149,6 +165,16 @@ pub struct RemoveAccount {
     pub account_id: String,
 }
 
+/// The Hermes switcher's menu item: put connection `connection_id` in use.
+#[derive(Clone, Debug, PartialEq, Action)]
+#[action(namespace = conduit, no_json)]
+pub struct HermesSwitchConnection {
+    pub connection_id: String,
+}
+
+// Settings › Hermes, from the Hermes switcher's menu.
+actions!(conduit, [OpenHermesSettings]);
+
 /// A Settings pop-up button's menu item: `value` picked in the pop-up
 /// named `menu` (Settings routes it to the pane that drew the pop-up).
 #[derive(Clone, Debug, PartialEq, Action)]
@@ -156,6 +182,24 @@ pub struct RemoveAccount {
 pub struct SettingsChoice {
     pub menu: String,
     pub value: String,
+}
+
+/// A command from a Calendar pane menu (`make-default`, `open`, `edit`,
+/// `delete`) for a calendar or agenda item.
+#[derive(Clone, Debug, PartialEq, Action)]
+#[action(namespace = conduit, no_json)]
+pub struct CalendarMenu {
+    pub command: String,
+    pub id: String,
+}
+
+/// A command from a Scheduled Tasks menu (`run`, `edit`, `pause`, `resume`,
+/// `delete`) for a task.
+#[derive(Clone, Debug, PartialEq, Action)]
+#[action(namespace = conduit, no_json)]
+pub struct TaskMenu {
+    pub command: String,
+    pub id: String,
 }
 
 /// The GPUI action a shortcut dispatches.
@@ -175,5 +219,7 @@ pub fn for_shortcut(action: ShortcutAction) -> Box<dyn Action> {
         S::DenyRequest => Box::new(DenyRequest),
         S::Dictate => Box::new(Dictate),
         S::ToggleSidebar => Box::new(ToggleSidebar),
+        S::ReadAloud => Box::new(ReadAloud),
+        S::VoiceCall => Box::new(VoiceCall),
     }
 }

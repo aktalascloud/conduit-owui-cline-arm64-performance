@@ -17,11 +17,19 @@ beta channel).
 Conduit.app/Contents/
 ├── Info.plist                  packaging/macos/Info.plist, filled in by bundle.sh
 ├── MacOS/Conduit               the Rust app (conduit-desktop), arm64
-├── Frameworks/Sparkle.framework    Sparkle 2, thinned to arm64 (release bundles)
+├── Frameworks/
+│   ├── Sparkle.framework       Sparkle 2, thinned to arm64 (release bundles)
+│   └── libconduit_widget.dylib the widget's WidgetCenter calls (Swift)
+├── PlugIns/
+│   ├── ConduitWidget.appex     the desktop widget (WidgetKit, Swift)
+│   └── ConduitShare.appex      the Share extension (packaging/macos/share), sandboxed
 └── Resources/
+    ├── <lang>.lproj/ServicesMenu.strings   the Services items' titles, 14 languages
     ├── AppIcon.icns            packaging/macos/AppIcon.icns (macOS 14/15)
     ├── Assets.car              packaging/macos/Assets.car (the icon on macOS 26+)
     ├── THIRD_PARTY_NOTICES.md  made by packaging/notices/notices.sh at bundle time
+    ├── Metadata.appintents/    the App Intents' metadata (packaging/macos/intents.sh)
+    ├── <locale>.lproj/         their strings: Localizable.strings, AppShortcuts.strings
     └── conduitd/
         ├── bin/conduitd        `dart build cli` of apps/daemon (Dart AOT)
         └── lib/
@@ -39,7 +47,7 @@ and the master key in the Keychain item `app.cogwheel.conduit.desktop`.
 | | |
 | --- | --- |
 | Mac | Apple Silicon (the scripts build `aarch64-apple-darwin` only) |
-| Xcode | with the Metal toolchain (`xcrun metal --version`; else `xcodebuild -downloadComponent MetalToolchain`) |
+| Xcode | with the Metal toolchain (`xcrun metal --version`; else `xcodebuild -downloadComponent MetalToolchain`); its `swiftc` and macOS SDK build the widget |
 | Rust | rustup; `desktop/rust-toolchain.toml` pins 1.99.1 |
 | Flutter / Dart | as in [BUILDING.md](BUILDING.md); `dart build cli` builds conduitd |
 | CMake | 3.16 or newer, for the whisper library (`CMAKE=/path/to/cmake` if it is not on `PATH`) |
@@ -130,7 +138,10 @@ The order, all with `--options runtime` and a secure timestamp:
 3. Sparkle, in Sparkle's documented order: `XPCServices/Installer.xpc`,
    `XPCServices/Downloader.xpc` (keeping its entitlements), `Autoupdate`,
    `Updater.app`, then `Sparkle.framework`
-4. `Conduit.app` with `Conduit.entitlements`
+4. `Frameworks/libconduit_widget.dylib`, then `PlugIns/ConduitWidget.appex`
+   with `widget/ConduitWidget.entitlements`
+5. `PlugIns/ConduitShare.appex` with `Share.entitlements` (filled in for the bundle id)
+6. `Conduit.app` with `Conduit.entitlements`
 
 Entitlements (`desktop/packaging/macos/`):
 
@@ -138,12 +149,77 @@ Entitlements (`desktop/packaging/macos/`):
 | --- | --- | --- |
 | `Conduit.entitlements` | `network.client`, `network.server` | the app is a loopback client and server of conduitd and a client of your servers (enforced only under the App Sandbox, which Conduit does not use) |
 | `conduitd.entitlements` | `cs.allow-unsigned-executable-memory` | the Dart VM maps executable memory at run time; `allow-jit` alone is not enough |
+| `widget/ConduitWidget.entitlements` | `app-sandbox` | app extensions run in the App Sandbox |
+| both of the app's and the widget's, added when signing | `application-groups`: `WIDGET_APP_GROUP` | the widget reads the app's snapshot from the group's container ([The desktop widget](#the-desktop-widget)) |
+| both, with provisioning profiles only | `com.apple.application-identifier`, `com.apple.developer.team-identifier` | what each profile vouches for |
+| `share/Share.entitlements` | `app-sandbox`, `temporary-exception.files.home-relative-path.read-write` for `~/Library/Caches/<bundle id>.share-inbox/` | every app extension is sandboxed; the inbox is the one folder it hands shares through (see below) |
 
 Ad-hoc builds add `cs.disable-library-validation` to both, because without a
 team ID dyld refuses the bundle's own libraries (libsqlite3, the whisper
 library, Sparkle). Developer ID builds keep library validation. Nothing asks
 for the microphone yet: there is no `audio-input` entitlement and no
 `NSMicrophoneUsageDescription` until dictation lands.
+
+## The Share menu and the Services menu
+
+**Share extension** (`packaging/macos/share/`): "Conduit" in every app's
+Share menu takes text, web links and up to ten files, images or movies, and
+shows a small sheet with an optional message, Cancel and Open in Conduit.
+`share/build.sh` compiles it with `swiftc` (no Xcode project) and fills its
+Info.plist; `bundle.sh` embeds and signs it before the app.
+
+The hand-off works with ad-hoc and Developer ID signatures alike. The
+sandboxed extension copies what it was given into
+`~/Library/Caches/<bundle id>.share-inbox/<uuid>/` (a `manifest.json` and
+`files/<n>/<name>`; written as `<uuid>.part`, then renamed), and opens
+`conduit://share/<uuid>` **with its own containing app** (never whichever
+app owns `conduit://`). The app reads the share once
+(`shell/share_inbox.rs`), opens a new chat with the message and text in the
+composer and the files attached, nothing sent, and clears taken shares
+after ten minutes and abandoned ones after a day. Why not an App Group: since
+macOS 15 a group container needs a team ID prefix or a provisioning profile,
+or the system asks the user before the app may read it, and an ad-hoc build
+has no team ID. A home-relative temporary exception needs neither (the Mac
+App Store would refuse it; Conduit is not sold there).
+
+Limits of an ad-hoc build: Gatekeeper refuses it on other Macs, and
+PlugInKit only offers the extension once the app is registered with
+LaunchServices (a first launch, or `lsregister`) and the extension is turned
+on (System Settings › General › Login Items & Extensions › Sharing, or
+`pluginkit -e use -i <bundle id>.share`).
+
+**Services** (`NSServices` in `Info.plist`, `shell/services.rs`): "Ask
+Conduit" opens Quick Ask with the selected text quoted (a new chat when Quick
+Ask is off or not set up), and "New Conduit Chat With Selection" opens a new
+chat with it. Their titles are translated by `ServicesMenu.strings`, which
+`share/build.sh` writes from the ARB catalogs (`native_strings.py table`).
+Dev bundles (`crates/app/run.sh`) leave `NSServices` out, so worktree builds
+never appear in the Services menu.
+
+**Tests:**
+
+- `share/test.sh`: the inbox's tests (`share/tests/InboxTests.swift`, which
+  checks the manifest against `share/tests/manifest-v1.json`, as the app's
+  `share_inbox` tests do) and a type-check of the extension and its preview.
+- `share/preview.sh DIR`: the sheet's content in light and dark, drawn off
+  screen by the extension's own view controller over synthetic items
+  (built with `-D SHARE_PREVIEW`, which the extension never is).
+- `crates/app/run.sh --shots DIR --e2e share`: the app's side, against the
+  local Open WebUI: a share staged as the extension stages it, its link, the
+  new chat, the upload and the send; the Services provider called as macOS
+  calls it.
+- `share/e2e-system.sh APP --shots DIR`: a bundle built with a **test**
+  bundle id (`bundle.sh --bundle-id … --test-env CONDUIT_FLAVOR=dev …`; the
+  release id is refused) registered with LaunchServices and PlugInKit; the
+  real sheet opened from another app (`share/tests/ShareDriver.swift`) and
+  the copy the sandboxed extension stages; that share finished as Open in
+  Conduit finishes it and its link delivered to the test app;
+  `NSPerformService("Ask Conduit")` once only the test bundle provides it;
+  then everything unregistered. It never opens another app's extension.
+- By hand: the real sheet's Open in Conduit and Cancel, and its look in
+  place. Since macOS 13 the sheet is a remote view in windows ShareKit lays
+  over the host; it takes no synthetic keys from the host and cannot be
+  captured without Screen Recording permission.
 
 ## Notarization
 
@@ -283,8 +359,12 @@ key, then `smoke.sh --launch`; the DMG is kept for five days.
 | `MACOS_NOTARY_API_ISSUER_ID` | secret | the team's issuer ID | shown above the keys |
 | `SPARKLE_ED_PRIVATE_KEY` | secret | Sparkle's private EdDSA key | [Keys](#keys) |
 | `SPARKLE_PUBLIC_ED_KEY` | variable | the matching public key | [Keys](#keys) |
+| `MACOS_APP_PROVISIONING_PROFILE` | secret, optional | base64 of the app's Developer ID provisioning profile | [The desktop widget](#the-desktop-widget) |
+| `MACOS_WIDGET_PROVISIONING_PROFILE` | secret, optional | base64 of the widget extension's | the same |
 
-The workflow checks that all of them are present before it builds. The
+The workflow checks that all but the two profiles are present before it
+builds; without the profiles it warns, and the release's widget is not
+listed by macOS. The
 `GITHUB_TOKEN` (with `contents: write` for that job only) publishes the
 release and the appcast.
 
@@ -332,6 +412,67 @@ feed on `127.0.0.1`, without touching the real app:
 5. Afterwards unregister the test bundles from Launch Services
    (`lsregister -u <path>`).
 
+## The desktop widget
+
+`PlugIns/ConduitWidget.appex` is a WidgetKit extension (small, medium and
+large; desktop and Notification Center): Ask Conduit (Quick Ask), New
+Chat, Voice Call, and the newest chats, each a `conduit://` link the app
+opens (`quick-ask`, `new`, `call`, `chat/<id>`). Its sources are Swift in
+`desktop/packaging/macos/widget/`, built by `widget/build.sh` with `swiftc`
+(no Xcode project); `bundle.sh build` runs it.
+
+**Data.** The widget never talks to conduitd. The app writes
+`widget-snapshot.json` (ids, titles and times of the six newest chats,
+whether anyone is signed in, the app's language; never message text; no
+chats when signed out; owner-only) into the app group's container
+`~/Library/Group Containers/<WIDGET_APP_GROUP>/`, and asks WidgetKit to
+reload through `libconduit_widget.dylib` (`WidgetCenter` is Swift-only,
+and it honours only the app that contains the widget). The group is
+`WIDGET_APP_GROUP` in `release.env`, `@TEAM_ID@` replaced by the signing
+team (`TEAM_ID`, or the identity's certificate); `bundle.sh sign` writes it
+into both Info.plists (`ConduitAppGroup`) and both entitlements.
+
+**What it needs from Apple.** Checked on macOS 27.0.1 with throwaway test
+bundles (never the release id):
+
+| Signature | The app's group container | macOS lists the widget |
+| --- | --- | --- |
+| ad-hoc (`-`), any group id | refused (EPERM, no prompt) | no: chronod logs "Ignoring restricted or unknown extension" and drops its descriptors |
+| Apple Development certificate, team-prefixed group, no profile | works | no, the same (also from `~/Applications`, and with `com.apple.application-identifier` claimed) |
+| Developer ID + Developer ID provisioning profiles | expected to work | expected (not testable here) |
+
+`pluginkit -m` shows every variant registered; `WidgetCenter` answers the
+app in all of them. So a release needs, besides the Developer ID
+certificate:
+
+1. In the Apple Developer account (Certificates, IDs & Profiles): App IDs
+   `app.cogwheel.conduit.desktop` and `app.cogwheel.conduit.desktop.widget`,
+   both with the **App Groups** capability, and the group
+   (`<TEAMID>.app.cogwheel.conduit.desktop`, or a registered `group.…` id
+   set in `WIDGET_APP_GROUP`).
+2. Two **Developer ID** provisioning profiles, one per App ID, from the
+   Developer ID certificate.
+3. Locally: `CONDUIT_APP_PROFILE=… CONDUIT_WIDGET_PROFILE=… bundle.sh`; in
+   CI: the two optional secrets above (base64 of each profile). `bundle.sh`
+   embeds them as `embedded.provisionprofile`, checks each one is for
+   `<TEAMID>.<bundle id>`, and adds the application and team identifiers to
+   the entitlements.
+
+For development, Xcode's own way (an Apple Development certificate and a
+Mac Development profile naming this Mac) is expected to work as well.
+
+**Trying it.** `CONDUIT_DEV_WIDGET=1 crates/app/run.sh` embeds the widget
+in the dev bundle (ad-hoc, group `app.cogwheel.conduit.desktop.dev`): the
+app loads the library and asks for reloads, but macOS won't list the
+widget. `CONDUIT_WIDGET_SNAPSHOT=<file>` sends the snapshot to a file
+instead (the `--e2e widget` pass does). `widget/render.sh OUT_DIR` draws
+the widget's views to PNGs (light and dark, each family and state) from
+`widget/Fixtures/snapshot.json`, which the app's writer test keeps equal to
+what the app writes. The widget's words come from the ARBs
+(`desktopWidget*`, "Yesterday" and the weekdays): `widget/build.sh` and
+`render.sh` generate `WidgetStrings.swift` with `native_strings.py widget`
+before compiling.
+
 ## Third-party notices
 
 `THIRD_PARTY_NOTICES.md` ships in the bundle. It is not committed:
@@ -377,6 +518,60 @@ All three files are committed, so builds never render. `bundle.sh` copies
 both into `Contents/Resources`, and `verify` checks them (`--release` fails
 without them). On macOS 26+ the system adds its own glass edge and lighting
 to the tile; the artwork itself is the iOS icon's.
+
+## Shortcuts and App Intents
+
+Conduit's actions in Shortcuts, Spotlight and Siri (Ask Conduit, New Chat,
+Open Chat, Start Voice Call, Show Quick Ask, and their App Shortcuts) are
+App Intents written in Swift, in `desktop/crates/app/intents/`. They are
+built without Xcode:
+
+1. `crates/app/build.rs` runs `packaging/macos/intents.sh compile`: `swiftc`
+   (Swift 6, `-parse-as-library`, the deployment target) makes one object
+   and the compiler's constant values, and `libtool` a static library that
+   the Rust binary links whole. AppKit registers the process with the App
+   Intents runtime at launch; nothing in Rust names the intents.
+2. `bundle.sh` (and `crates/app/run.sh` for the dev bundle) runs
+   `intents.sh bundle`, which recompiles for the constant values and runs
+   Apple's `appintentsmetadataprocessor` as Xcode's "Extract App Intents
+   Metadata" step does, into `Resources/Metadata.appintents`. Then
+   `native_strings.py intents` writes each locale's `Localizable.strings` and
+   `AppShortcuts.strings` from `lib/l10n/desktop` (`desktopIntent*` keys).
+   A string the intents show with no ARB key fails the bundle, and
+   `cargo test` (`intents::tests`) checks the same before any bundle.
+3. `verify` and `smoke.sh` run `intents.sh verify` (five actions, the chat
+   entity and its query, five App Shortcuts, every locale's strings), and
+   `smoke.sh --launch` checks that every type the metadata names is in the
+   binary (`SMOKE intents <n> types resolve`).
+
+Each intent's `perform()` hands the app one JSON request over a C function
+(`conduit_intents_request`, `src/intents.rs`) and gets one reply. The app
+does the work through conduitd: Ask Conduit is `intents.ask` (a new chat,
+then the answer, up to two minutes), Open Chat's list is `intents.chats`,
+and New Chat and Open Chat take the `conduit://` links' path. The intents
+are in the app rather than in an App Intents extension: an extension must
+be sandboxed, could only reach conduitd through an app group (which needs
+a team ID), and could do nothing while the app is not running, since
+conduitd is the app's child.
+
+`--e2e intents` runs the Swift intents' own `perform()` and query in the
+app's process against the local Open WebUI; Shortcuts itself can't be
+driven from a test (`shortcuts run` only runs shortcuts in the user's
+library).
+
+### Signing and App Intents
+
+| Signature | Shortcuts and Spotlight list the actions | The actions run |
+| --- | --- | --- |
+| Ad-hoc (`-`, local builds) | yes, once Launch Services has launched the bundle (before that, linkd logs "not trusted for binding") | no: linkd refuses the app's runtime registration ("requiresValidatedBundle", "Unable to get teamId") |
+| Apple Development (a free or paid team) | yes | expected yes: the signature has a team ID |
+| Developer ID (releases) | yes | yes, as for any notarized app |
+
+No entitlement is needed for App Intents. To see what linkd did with a
+bundle: `/usr/bin/log show --last 10m --predicate 'process == "linkd" AND
+eventMessage CONTAINS "<bundle id>"'`. Test bundles are registered with
+Launch Services when they are launched; take them out afterwards with
+`lsregister -u <path to the .app>` (`LSREGISTER` in `lib.sh`).
 
 ## Troubleshooting
 

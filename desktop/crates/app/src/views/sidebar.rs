@@ -66,11 +66,14 @@ use conduit_components::views::kit::{Button, ClickHandler, IconButton, bare_inpu
 use conduit_components::views::model::{Account, Backend, ChatRow, SyncState};
 use conduit_components::views::palette::{find_words, match_highlight};
 use conduit_components::views::sidebar::{
-    AREA_GAP, FolderLine, ItemLine, ROW_ACTION_SLOT, ROW_CONTENT_INSET, ROW_STATUS_GUTTER,
-    RowAction, RowState, SECTION_HEADER_HEIGHT, SidebarFrame, area_header, chat_row, folder_row,
-    item_row, more_row, quiet_section_header, section_header,
+    AREA_GAP, FaceLine, FolderLine, ItemLine, ROW_ACTION_SLOT, ROW_CONTENT_INSET,
+    ROW_STATUS_GUTTER, RowAction, RowState, SECTION_HEADER_HEIGHT, SidebarFrame, area_header,
+    chat_row, face_row, folder_row, item_row, more_row, quiet_section_header, section_header,
 };
-use conduit_protocol::{BulkChatAction, ChatSearchHit, ChatSummary, FolderSummary, NoticeLevel};
+use conduit_protocol::{
+    BulkChatAction, ChatSearchHit, ChatSummary, FolderSummary, HermesBotDto, HermesRoomDto,
+    HermesSessionDto, NoticeLevel,
+};
 use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::component::native_menu::NativeMenu;
 use gpui_kit::component::{VirtualListScrollHandle, v_virtual_list};
@@ -87,8 +90,8 @@ use super::sidebar_keys::{
     selection_row,
 };
 use super::sidebar_model::{
-    AreaHint, AreaLists, AreaRow, DateBucket, Hint, Section, SidebarItem, area_rows, build_sidebar,
-    collapse, compose, flatten, parse_snippet, with_new_folder,
+    AreaHint, AreaLists, AreaRow, DateBucket, HermesGroup, Hint, Section, SidebarItem, area_rows,
+    build_sidebar, collapse, compose, flatten, parse_snippet, with_new_folder,
 };
 use crate::actions::{DeleteChat, FocusComposer, NewChat, OpenSettings, ToggleSidebar};
 use crate::l10n::{ActiveL10n as _, L10n};
@@ -99,9 +102,11 @@ use crate::shell::sheet::{SheetSpec, present_sheet};
 use crate::stores::Stores;
 use crate::stores::areas::{visible_areas, workspace_sections};
 use crate::stores::chat_list::{ChatAction, ChatListEvent, ChatListStore};
+use crate::stores::hermes_rooms::HermesRoomsStore;
 use crate::stores::navigation::{Area, AreaItem, NavigationEvent, Selection, WorkspaceSection};
 use crate::stores::session;
 use crate::views::accounts::account_row;
+use conduit_components::views::focus::ControlExt as _;
 
 /// The fades at the list's ends, elsewhere than macOS: nothing (the CI
 /// `cargo check` platforms).
@@ -132,6 +137,8 @@ pub enum ChatCommand {
     GenerateTitle,
     /// Export › Backup (JSON)… or Transcript (Markdown)….
     Export(conduit_protocol::ChatExportFormat),
+    /// Duplicate Chat: a LibreChat chat copied whole, on its server.
+    Duplicate,
 }
 
 /// The context menu's action: `command` on `chat_id`.
@@ -297,6 +304,10 @@ struct RowsKey {
     revision: u64,
     /// The other areas' lists.
     areas_revision: u64,
+    /// Hermes's bots and rooms.
+    hermes_rooms: u64,
+    /// Hermes's connections and jobs (the switcher and jobs rows).
+    hermes_admin: u64,
     /// Bumped when a section opens or closes, or shows all.
     sections: u64,
     /// The areas shown, and the workspace sections.
@@ -316,6 +327,8 @@ struct RowsKey {
 pub enum NameTarget {
     Chat(String),
     Folder(String),
+    /// A Hermes session, by its session id.
+    HermesSession(String),
     /// A folder not made yet, in `parent` (`None`: the top level): Return
     /// (or leaving the field) makes it, Esc drops it.
     NewFolder {
@@ -362,9 +375,14 @@ pub fn workspace_label(section: WorkspaceSection, l: &L10n) -> String {
 /// An area item's glyph, as the phone draws its tab or section.
 pub fn item_icon(item: &AreaItem) -> IconName {
     match item {
+        AreaItem::AllNotes => IconName::NotebookPen,
         AreaItem::Note(_) => IconName::FileText,
         AreaItem::Channel(_) => IconName::Hash,
         AreaItem::HermesSession(_) => IconName::Sparkles,
+        AreaItem::HermesHidden => IconName::EyeOff,
+        AreaItem::HermesBot(_) => IconName::Bot,
+        AreaItem::HermesRoom(_) => IconName::Users,
+        AreaItem::HermesJobs => IconName::CalendarClock,
         AreaItem::Workspace(WorkspaceSection::Models) => IconName::Network,
         AreaItem::Workspace(WorkspaceSection::Knowledge) => IconName::LibraryBig,
         AreaItem::Workspace(WorkspaceSection::Prompts) => IconName::TextQuote,
@@ -384,26 +402,37 @@ pub fn item_title(item: &AreaItem, listed: Option<&str>, l: &L10n) -> String {
         AreaItem::Workspace(section) => workspace_label(*section, l),
         AreaItem::Calendar => l.desktop_calendar_upcoming(),
         AreaItem::Automations => l.desktop_scheduled_tasks_all(),
+        AreaItem::HermesHidden => l.hermes_hidden_chats_title(),
+        AreaItem::AllNotes => l.desktop_all_notes(),
+        AreaItem::HermesJobs => l.hermes_scheduled_agents_title(),
         AreaItem::HermesSession(_) => named
             .map(String::from)
             .unwrap_or_else(|| l.hermes_session_untitled()),
-        AreaItem::Note(_) | AreaItem::Channel(_) | AreaItem::Terminal(_) => {
-            named.map(String::from).unwrap_or_else(|| l.untitled())
-        }
+        AreaItem::Note(_)
+        | AreaItem::Channel(_)
+        | AreaItem::Terminal(_)
+        | AreaItem::HermesBot(_)
+        | AreaItem::HermesRoom(_) => named.map(String::from).unwrap_or_else(|| l.untitled()),
     }
 }
 
 /// The scope the sidebar's sections are kept under: the Open WebUI account
 /// by id, or the setup in use (Direct, Hermes, the demo).
 pub fn sections_scope(stores: &Stores, cx: &App) -> String {
-    if let Some(account) = stores.accounts.read(cx).active() {
+    let accounts = stores.accounts.read(cx);
+    if accounts.libre_chat_in_charge()
+        && let Some(account) = accounts.libre_chat_active()
+    {
+        return format!("account:{}", account.id);
+    }
+    if let Some(account) = accounts.active() {
         return format!("account:{}", account.id);
     }
     match stores.session.read(cx).backend(cx) {
         Some(session::Backend::Direct) => "direct".into(),
         Some(session::Backend::Hermes) => "hermes".into(),
         Some(session::Backend::Demo) => "demo".into(),
-        Some(session::Backend::OpenWebUi) | None => "none".into(),
+        Some(session::Backend::OpenWebUi | session::Backend::LibreChat) | None => "none".into(),
     }
 }
 
@@ -462,7 +491,13 @@ pub fn sync_state(store: &ChatListStore, l: &L10n) -> SyncState {
 pub fn footer_account(stores: &Stores, cx: &App) -> Account {
     let l10n = cx.l10n().clone();
     let session = stores.session.read(cx);
-    if let Some(active) = stores.accounts.read(cx).active() {
+    let accounts = stores.accounts.read(cx);
+    if accounts.libre_chat_in_charge()
+        && let Some(active) = accounts.libre_chat_active()
+    {
+        return crate::views::accounts::libre_chat_account_row(active, cx);
+    }
+    if let Some(active) = accounts.active() {
         return account_row(active, cx);
     }
     let (name, backend, server) = match session.backend(cx) {
@@ -588,6 +623,8 @@ impl SidebarView {
             cx.observe(&stores.chat_list, |_, _, cx| cx.notify()),
             cx.observe(&stores.navigation, |_, _, cx| cx.notify()),
             cx.observe(&stores.areas, |_, _, cx| cx.notify()),
+            cx.observe(&stores.hermes_rooms, |_, _, cx| cx.notify()),
+            cx.observe(&stores.hermes_admin, |_, _, cx| cx.notify()),
             cx.observe(&stores.sections, |_, _, cx| cx.notify()),
             // Each account keeps its own sections.
             cx.observe(&stores.session, |this, _, cx| {
@@ -597,7 +634,7 @@ impl SidebarView {
             cx.observe(&stores.accounts, |this, accounts, cx| {
                 this.sync_scope(cx);
                 // Another account: nothing chosen carries over.
-                let active = accounts.read(cx).active().map(|a| a.id.clone());
+                let active = accounts.read(cx).scope_key();
                 if active != this.account {
                     this.account = active;
                     this.selecting = None;
@@ -649,7 +686,7 @@ impl SidebarView {
                 }
             }
         });
-        let account = stores.accounts.read(cx).active().map(|a| a.id.clone());
+        let account = stores.accounts.read(cx).scope_key();
         Self {
             stores,
             search,
@@ -778,6 +815,8 @@ impl SidebarView {
         let key = RowsKey {
             revision: store.revision(),
             areas_revision: self.stores.areas.read(cx).revision(),
+            hermes_rooms: self.stores.hermes_rooms.read(cx).revision(),
+            hermes_admin: self.stores.hermes_admin.read(cx).revision(),
             sections: self.stores.sections.read(cx).revision(),
             areas: areas.clone(),
             workspace: workspace.clone(),
@@ -808,13 +847,27 @@ impl SidebarView {
         } else {
             let lists = self.stores.areas.read(cx);
             let failed: Vec<Area> = lists.failed.iter().copied().collect();
+            let hermes_rooms = self.stores.hermes_rooms.read(cx);
+            let admin = self.stores.hermes_admin.read(cx);
+            let connection = admin.active().map(|c| c.name.clone());
+            let connections = admin
+                .connections
+                .as_ref()
+                .map(|l| l.connections.len())
+                .unwrap_or(0);
             let area_lists = AreaLists {
                 notes: lists.notes.as_deref(),
                 channels: lists.channels.as_deref(),
                 hermes: lists.hermes.as_ref(),
+                hermes_connection: connection.as_deref().map(|name| (name, connections)),
+                hermes_jobs: hermes_jobs_shown(admin),
                 terminals: lists.terminals.as_deref(),
                 failed: &failed,
                 workspace: &workspace,
+                bots: hermes_rooms.bot_list(),
+                rooms: hermes_rooms.rooms.as_ref(),
+                bots_open: !sections.is_collapsed(HermesGroup::Bots.key()),
+                rooms_open: !sections.is_collapsed(HermesGroup::Rooms.key()),
             };
             compose(
                 &areas,
@@ -947,10 +1000,14 @@ impl SidebarView {
             return false;
         };
         let top: f32 = self.sizes[..ix].iter().map(|s| f32::from(s.height)).sum();
+        // A heading's row starts with the gap above it, which
+        // [`Self::scroll_to_top`] scrolls past.
+        let previous = ix.checked_sub(1).and_then(|p| self.rows.get(p));
+        let gap = self.rows.get(ix).map_or(0., |r| header_gap(r, previous));
         let scrolled = -f32::from(self.scroll.offset().y);
         let visible = f32::from(self.scroll.base_handle().bounds().size.height);
         let at_end = scrolled + 1. >= f32::from(self.scroll.max_offset().y);
-        top + 1. >= scrolled
+        top + gap + 1. >= scrolled
             && (top < scrolled + visible / 2. || at_end && top < scrolled + visible)
     }
 
@@ -1061,6 +1118,19 @@ impl SidebarView {
                     }))
                     .into_any_element()
             }
+            SidebarItem::HermesConnection { name, count } => {
+                let count = *count;
+                let selected = self.is_selection(&KeyRow::HermesConnection);
+                hermes_connection_row(name, count, selected, self.list_focused, t, &l)
+                    .when(self.areas_shown, |d| {
+                        d.pl(px(ROW_CONTENT_INSET + ROW_STATUS_GUTTER))
+                    })
+                    .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+                        this.cursor = Some(KeyRow::HermesConnection);
+                        this.hermes_connection_menu(window, cx);
+                    }))
+                    .into_any_element()
+            }
             SidebarItem::HermesArchived { count, visible } => {
                 let visible = *visible;
                 footer_button(
@@ -1083,9 +1153,15 @@ impl SidebarView {
                 }))
                 .into_any_element()
             }
+            SidebarItem::HermesGroup {
+                group,
+                count,
+                expanded,
+                can_create,
+            } => self.hermes_group(*group, *count, *expanded, *can_create, t, cx),
             SidebarItem::AreaHint { area, hint } => {
                 let text = area_hint_text(*area, *hint, &l);
-                let retry = matches!(hint, AreaHint::Failed);
+                let retry = matches!(hint, AreaHint::Failed | AreaHint::ArchivedFailed);
                 let area = *area;
                 div()
                     .id(ElementId::Name(
@@ -1102,6 +1178,7 @@ impl SidebarView {
                     .text_size(px(t.metrics.small))
                     .text_color(r.sidebar_text_subtle)
                     .child(div().flex_1().min_w_0().truncate().child(text))
+                    // As the phone's archived row: Try Again.
                     .when(retry, |d| {
                         let areas = self.stores.areas.downgrade();
                         d.child(
@@ -1233,7 +1310,20 @@ impl SidebarView {
         let l = cx.l10n().clone();
         let label: SharedString = area_label(area, &l).into();
         let row = KeyRow::Area(area);
+        // Channels carry New Channel… ("+"), as Folders carry New Folder,
+        // for an account that may make one.
+        let add =
+            (area == Area::Channels && self.stores.areas.read(cx).channels_can_create).then(|| {
+                IconButton::new("new-channel", IconName::Plus, l.desktop_new_channel())
+                    .size(20., 13.)
+                    .on_click(Rc::new(|_, window, cx| {
+                        // The heading under it would close the section.
+                        cx.stop_propagation();
+                        window.dispatch_action(Box::new(crate::views::channels::NewChannel), cx);
+                    }))
+            });
         area_header(area.id(), &label, expanded, self.row_state(&row, ""), t)
+            .children(add)
             .when(self.is_cursor(&row), |d| d.aria_active_descendant())
             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
                 this.cursor = Some(KeyRow::Area(area));
@@ -1250,6 +1340,15 @@ impl SidebarView {
         t: &ConduitTheme,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        if let Some(session) = &row.session {
+            return self.hermes_row(session, now, t, cx);
+        }
+        if let Some(bot) = &row.bot {
+            return self.bot_row(bot, now, t, cx);
+        }
+        if let Some(room) = &row.room {
+            return self.room_row(room, now, t, cx);
+        }
         let l = cx.l10n().clone();
         let item = row.item.clone();
         let id = area_item_id(&item);
@@ -1260,19 +1359,139 @@ impl SidebarView {
         } else if let Some(ms) = row.updated_at_ms {
             let (time, spoken) = dates::stamp(ms, now, &l);
             (Some(time), Some(spoken), false)
+        } else if row.dimmed {
+            // A channel set to mentions only says so.
+            (None, Some(l.channel_notify_mentions_only()), false)
         } else {
             (None, None, false)
         };
         let line = ItemLine {
             id: id.clone().into(),
-            icon: item_icon(&item),
+            icon: row.icon.unwrap_or_else(|| item_icon(&item)),
             title: item_title(&item, Some(&row.title), &l).into(),
             trailing: trailing.map(Into::into),
             description: description.map(Into::into),
             pinned: row.pinned,
             emphasized,
         };
+        // A channel's own menu: Mark as Read, Notifications, Edit, Leave,
+        // Delete.
+        let menu_item = item.clone();
+        // A note's row has the note's menu (Open, Copy, Pin, Share
+        // Access…, Delete…), as the list pane's rows do.
+        let note = match &row.item {
+            AreaItem::Note(note_id) => self.stores.areas.read(cx).note(note_id).cloned(),
+            _ => None,
+        };
+        let menu_key = key.clone();
         item_row(&line, self.row_state(&key, &id), t)
+            .when(row.dimmed, |d| d.opacity(0.6))
+            .when(self.is_cursor(&key), |d| d.aria_active_descendant())
+            .on_mouse_down(
+                gpui_kit::MouseButton::Right,
+                cx.listener(move |this, e: &gpui_kit::MouseDownEvent, window, cx| {
+                    let AreaItem::Channel(channel_id) = &menu_item else {
+                        return;
+                    };
+                    let Some(channel) = this.stores.areas.read(cx).channel(channel_id).cloned()
+                    else {
+                        return;
+                    };
+                    let menu = crate::views::channels::channel_menu(&channel, true, cx.l10n());
+                    // Its own menu only: not the list's New Folder after it.
+                    cx.stop_propagation();
+                    menu.show(e.position, window, cx);
+                }),
+            )
+            .on_hover(self.hover_listener(id, cx))
+            .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                this.cursor = Some(KeyRow::Item(item.clone()));
+                let item = item.clone();
+                this.stores
+                    .navigation
+                    .update(cx, |n, cx| n.open_item(item, cx));
+            }))
+            .when_some(note, |d, note| {
+                d.on_mouse_down(
+                    MouseButton::Right,
+                    cx.listener(move |this, ev: &MouseDownEvent, window, cx| {
+                        cx.stop_propagation();
+                        this.cursor = Some(menu_key.clone());
+                        let l = cx.l10n().clone();
+                        crate::views::notes::note_menu(&note, &l).show(ev.position, window, cx);
+                        cx.notify();
+                    }),
+                )
+            })
+            .into_any_element()
+    }
+
+    /// A Hermes session: drawn as a chat's row (its date, its pin, a
+    /// spinner while a reply is written in it), its commands on "…" and in
+    /// its context menu, its name edited in place.
+    fn hermes_row(
+        &mut self,
+        session: &HermesSessionDto,
+        now: &DateTime<Local>,
+        t: &ConduitTheme,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let l = cx.l10n().clone();
+        let item = AreaItem::HermesSession(session.id.clone());
+        let id = area_item_id(&item);
+        let title = hermes_title(session, &l);
+        let (time, spoken) = session
+            .updated_at_ms
+            .map(|ms| dates::stamp(ms, now, &l))
+            .unwrap_or_default();
+        let row = ChatRow {
+            id: id.clone().into(),
+            title: title.clone().into(),
+            time: time.into(),
+            time_spoken: spoken.into(),
+            pinned: session.pinned,
+            streaming: session.running,
+            working: session.running,
+            reduce_motion: cx.reduce_motion(),
+            status: Some(l.desktop_chat_running().into()),
+            ..Default::default()
+        };
+        let key = KeyRow::Item(item.clone());
+        let hovered = self.hovered.as_deref() == Some(id.as_str());
+        let field = self.name_field_for(&NameTarget::HermesSession(session.id.clone()), t, cx);
+        let actions = if hovered && field.is_none() {
+            let quoted = format!("\u{201c}{title}\u{201d}");
+            let this = cx.entity().downgrade();
+            let menu_id = session.id.clone();
+            vec![
+                RowAction::new(
+                    format!("more-{id}"),
+                    IconName::Ellipsis,
+                    l.desktop_more_actions_for(&quoted),
+                )
+                .tooltip(l.more())
+                .on_click(Rc::new(move |e, window, cx| {
+                    // The row under the button would open the chat too.
+                    cx.stop_propagation();
+                    let (id, position) = (menu_id.clone(), e.position());
+                    this.update(cx, |s, cx| {
+                        s.hermes_context_menu(&id, vec![], position, window, cx)
+                    })
+                    .ok();
+                })),
+            ]
+        } else {
+            vec![]
+        };
+        let state = RowState {
+            selected: self.is_selection(&key),
+            hovered,
+            context: self.context_target.as_deref() == Some(id.as_str()),
+            keyboard: self.list_focused,
+            ..Default::default()
+        };
+        let menu_id = session.id.clone();
+        chat_row(&row, state, 0., actions, field, t)
             .when(self.is_cursor(&key), |d| d.aria_active_descendant())
             .on_hover(self.hover_listener(id, cx))
             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
@@ -1282,7 +1501,445 @@ impl SidebarView {
                     .navigation
                     .update(cx, |n, cx| n.open_item(item, cx));
             }))
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(move |this, ev: &MouseDownEvent, window, cx| {
+                    cx.stop_propagation();
+                    this.hermes_context_menu(&menu_id, vec![], ev.position, window, cx)
+                }),
+            )
             .into_any_element()
+    }
+
+    /// A heading of Hermes's section: Bots and Rooms open and close (their
+    /// counts beside them, as the phone's), Rooms carries New Room ("+");
+    /// Conversations heads the sessions under them.
+    fn hermes_group(
+        &mut self,
+        group: HermesGroup,
+        count: usize,
+        expanded: bool,
+        can_create: bool,
+        t: &ConduitTheme,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let l = cx.l10n().clone();
+        let name = match group {
+            HermesGroup::Bots => l.hermes_bots_title(),
+            HermesGroup::Rooms => l.hermes_rooms_title(),
+            HermesGroup::Conversations => l.hermes_conversations_title(),
+        };
+        let label: SharedString = name.into();
+        // The count beside the name, in the heading's own tone, as the
+        // phone's headers show it.
+        let counted = (group.collapsible() && count > 0).then(|| {
+            div()
+                .flex_none()
+                .text_size(px(t.metrics.small))
+                .text_color(t.roles.sidebar_text_subtle)
+                .child(SharedString::from(count.to_string()))
+                .into_any_element()
+        });
+        let add = (group == HermesGroup::Rooms && can_create).then(|| {
+            let stores = self.stores.clone();
+            IconButton::new("hermes-new-room", IconName::Plus, l.hermes_room_new())
+                .size(20., 13.)
+                .on_click(Rc::new(move |_, window, cx| {
+                    // The heading under it would close the group.
+                    cx.stop_propagation();
+                    crate::views::hermes_room_sheets::open_create(stores.clone(), window, cx);
+                }))
+                .into_any_element()
+        });
+        let id = format!("hermes-{}", group.key().trim_start_matches("hermes."));
+        let trailing = match (counted, add) {
+            (None, None) => None,
+            (counted, add) => Some(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(6.))
+                    .children(counted)
+                    .children(add)
+                    .into_any_element(),
+            ),
+        };
+        let header = section_header(
+            &id,
+            &label,
+            trailing,
+            group.collapsible().then_some(expanded),
+            t,
+        )
+        .when(self.areas_shown, |d| {
+            d.pl(px(ROW_CONTENT_INSET + ROW_STATUS_GUTTER))
+                .aria_level(3)
+        });
+        if !group.collapsible() {
+            return header.into_any_element();
+        }
+        let key = group.key();
+        let header = header.on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+            this.stores
+                .sections
+                .update(cx, |s, cx| s.toggle_collapsed(key, cx));
+        }));
+        if group == HermesGroup::Rooms && can_create {
+            let menu_stores = self.stores.clone();
+            header
+                .on_mouse_down(
+                    MouseButton::Right,
+                    cx.listener(move |_, ev: &MouseDownEvent, window, cx| {
+                        cx.stop_propagation();
+                        let l = cx.l10n().clone();
+                        let _ = &menu_stores;
+                        NativeMenu::new()
+                            .menu(
+                                l.desktop_hermes_new_room_menu(),
+                                Box::new(crate::views::hermes_rooms::NewRoom),
+                            )
+                            .show(ev.position, window, cx);
+                    }),
+                )
+                .into_any_element()
+        } else {
+            header.into_any_element()
+        }
+    }
+
+    /// A bot: its face and name; a click (or Return) opens its Bot Chat,
+    /// whose session is then the selection (the row reads as selected).
+    fn bot_row(
+        &mut self,
+        bot: &HermesBotDto,
+        now: &DateTime<Local>,
+        t: &ConduitTheme,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let l = cx.l10n().clone();
+        let item = AreaItem::HermesBot(bot.name.clone());
+        let id = area_item_id(&item);
+        let key = KeyRow::Item(item.clone());
+        let rooms = self.stores.hermes_rooms.read(cx);
+        let opening = rooms.opening_bot.as_deref() == Some(bot.name.as_str());
+        let face = crate::views::hermes_faces::bot_face(bot, rooms);
+        if bot.has_avatar && face.image.is_none() {
+            crate::views::hermes_faces::request_avatars(
+                [bot.name.as_str()],
+                &self.stores.hermes_rooms,
+                cx,
+            );
+        }
+        let (time, spoken) = bot
+            .last_active_ms
+            .map(|ms| dates::stamp(ms, now, &l))
+            .unwrap_or_default();
+        let line = FaceLine {
+            id: id.clone().into(),
+            title: bot.title.clone().into(),
+            trailing: (!time.is_empty()).then(|| time.into()),
+            description: (!spoken.is_empty()).then(|| spoken.into()),
+            working: opening,
+            reduce_motion: cx.reduce_motion(),
+            working_spoken: Some(l.loading_short().into()),
+            ..Default::default()
+        };
+        // Its chat open: the session's selection is the bot's row.
+        let state = RowState {
+            selected: self.is_selection(&key),
+            hovered: self.hovered.as_deref() == Some(id.as_str()),
+            context: self.context_target.as_deref() == Some(id.as_str()),
+            keyboard: self.list_focused,
+            ..Default::default()
+        };
+        let name = bot.name.clone();
+        let menu_name = bot.name.clone();
+        let menu_target = id.clone();
+        face_row(
+            &line,
+            crate::views::hermes_faces::face(
+                ElementId::Name(format!("face-{id}").into()),
+                &face,
+                18.,
+                false,
+                true,
+            ),
+            state,
+            vec![],
+            t,
+        )
+        .when(self.is_cursor(&key), |d| d.aria_active_descendant())
+        .on_hover(self.hover_listener(id, cx))
+        .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+            this.cursor = Some(KeyRow::Item(AreaItem::HermesBot(name.clone())));
+            crate::views::hermes_rooms::open_bot(&this.stores, &name, cx);
+        }))
+        .on_mouse_down(
+            MouseButton::Right,
+            cx.listener(move |this, ev: &MouseDownEvent, window, cx| {
+                cx.stop_propagation();
+                this.show_context_menu(
+                    menu_target.clone(),
+                    crate::views::hermes_rooms::bot_menu(&menu_name, cx.l10n()),
+                    ev.position,
+                    window,
+                    cx,
+                );
+            }),
+        )
+        .into_any_element()
+    }
+
+    /// A Group Chat: its bots' faces, its name, when it was last active;
+    /// a dot when something was said since it was shown, a spinner while
+    /// its bots work. A click opens it; "…" and its context menu offer
+    /// Room Info…, Rename…, Stop All Work and Disband Room….
+    fn room_row(
+        &mut self,
+        room: &HermesRoomDto,
+        now: &DateTime<Local>,
+        t: &ConduitTheme,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let l = cx.l10n().clone();
+        let item = AreaItem::HermesRoom(room.id.clone());
+        let id = area_item_id(&item);
+        let key = KeyRow::Item(item.clone());
+        let rooms = self.stores.hermes_rooms.read(cx);
+        let faces: Vec<_> = HermesRoomsStore::faces(room)
+            .iter()
+            .map(|m| crate::views::hermes_faces::member_face(m, rooms))
+            .collect();
+        let (time, spoken) = room
+            .updated_at_ms
+            .map(|ms| dates::stamp(ms, now, &l))
+            .unwrap_or_default();
+        let mut description = vec![l.hermes_room_bot_count(room.members.len() as i64)];
+        if !spoken.is_empty() {
+            description.push(spoken);
+        }
+        if room.needs_you {
+            description.push(l.hermes_room_needs_you());
+        }
+        let line = FaceLine {
+            id: id.clone().into(),
+            title: room.name.clone().into(),
+            trailing: (!time.is_empty()).then(|| time.into()),
+            description: Some(description.join(", ").into()),
+            unread: room.unread || room.needs_you,
+            working: room.working,
+            reduce_motion: cx.reduce_motion(),
+            unread_spoken: Some(l.desktop_unread().into()),
+            working_spoken: Some(l.hermes_room_working().into()),
+        };
+        let hovered = self.hovered.as_deref() == Some(id.as_str());
+        let actions = if hovered {
+            let quoted = format!("\u{201c}{}\u{201d}", room.name);
+            let this = cx.entity().downgrade();
+            let (menu_id, target) = (room.id.clone(), id.clone());
+            vec![
+                RowAction::new(
+                    format!("more-{id}"),
+                    IconName::Ellipsis,
+                    l.desktop_more_actions_for(&quoted),
+                )
+                .tooltip(l.more())
+                .on_click(Rc::new(move |e, window, cx| {
+                    cx.stop_propagation();
+                    let (room_id, target, position) =
+                        (menu_id.clone(), target.clone(), e.position());
+                    this.update(cx, |s, cx| {
+                        let menu = crate::views::hermes_rooms::native_menu(&s.stores, &room_id, cx);
+                        s.show_context_menu(target, menu, position, window, cx)
+                    })
+                    .ok();
+                })),
+            ]
+        } else {
+            vec![]
+        };
+        let state = RowState {
+            selected: self.is_selection(&key),
+            hovered,
+            context: self.context_target.as_deref() == Some(id.as_str()),
+            keyboard: self.list_focused,
+            ..Default::default()
+        };
+        let (menu_id, menu_target) = (room.id.clone(), id.clone());
+        face_row(
+            &line,
+            crate::views::hermes_faces::stack(&format!("faces-{id}"), &faces, 20., true),
+            state,
+            actions,
+            t,
+        )
+        .when(self.is_cursor(&key), |d| d.aria_active_descendant())
+        .on_hover(self.hover_listener(id, cx))
+        .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+            this.cursor = Some(KeyRow::Item(item.clone()));
+            let item = item.clone();
+            this.stores
+                .navigation
+                .update(cx, |n, cx| n.open_item(item, cx));
+        }))
+        .on_mouse_down(
+            MouseButton::Right,
+            cx.listener(move |this, ev: &MouseDownEvent, window, cx| {
+                cx.stop_propagation();
+                let menu = crate::views::hermes_rooms::native_menu(&this.stores, &menu_id, cx);
+                this.show_context_menu(menu_target.clone(), menu, ev.position, window, cx);
+            }),
+        )
+        .into_any_element()
+    }
+
+    /// Shows `menu` at `position` for the row `target` (outlined while it
+    /// is open).
+    fn show_context_menu(
+        &mut self,
+        target: String,
+        menu: NativeMenu,
+        position: Point<Pixels>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.context_target = Some(target);
+        cx.notify();
+        menu.show(position, window, cx);
+        cx.spawn(async move |this: WeakEntity<Self>, cx| {
+            cx.background_executor()
+                .timer(Duration::from_millis(300))
+                .await;
+            this.update(cx, |s, cx| {
+                s.context_target = None;
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    /// Opens Hermes session `session_id`'s menu at `position`, with the
+    /// open chat's own items (the toolbar's More) before Delete….
+    pub fn hermes_context_menu(
+        &mut self,
+        session_id: &str,
+        open_items: Vec<(String, Box<dyn Action>)>,
+        position: Point<Pixels>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(session) = self
+            .stores
+            .areas
+            .read(cx)
+            .hermes_session(session_id)
+            .cloned()
+        else {
+            return;
+        };
+        let menu = crate::views::hermes_sessions::native_menu(&session, open_items, cx.l10n());
+        let target = area_item_id(&AreaItem::HermesSession(session.id));
+        self.context_target = Some(target);
+        cx.notify();
+        menu.show(position, window, cx);
+        cx.spawn(async move |this: WeakEntity<Self>, cx| {
+            cx.background_executor()
+                .timer(Duration::from_millis(300))
+                .await;
+            this.update(cx, |s, cx| {
+                s.context_target = None;
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    /// The Hermes switcher: the saved connections, the one in use checked,
+    /// then Hermes Settings…; with one connection, Settings › Hermes.
+    pub fn hermes_connection_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let l = cx.l10n().clone();
+        let admin = self.stores.hermes_admin.read(cx);
+        let Some(list) = admin.connections.clone() else {
+            return;
+        };
+        if list.connections.len() <= 1 {
+            window.dispatch_action(Box::new(crate::actions::OpenHermesSettings), cx);
+            return;
+        }
+        let mut menu = NativeMenu::new();
+        for c in &list.connections {
+            menu = menu.menu_with_check(
+                c.name.clone(),
+                c.active,
+                Box::new(crate::actions::HermesSwitchConnection {
+                    connection_id: c.id.clone(),
+                }),
+            );
+        }
+        menu.separator()
+            .menu(
+                l.desktop_hermes_settings_ellipsis(),
+                Box::new(crate::actions::OpenHermesSettings),
+            )
+            .show(window.mouse_position(), window, cx);
+    }
+
+    /// Carries out `command` on Hermes session `session_id`: Rename here,
+    /// in its row; the rest through the daemon.
+    pub fn run_hermes(
+        &mut self,
+        session_id: &str,
+        command: crate::views::hermes_sessions::HermesCommand,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        use crate::views::hermes_sessions::HermesCommand;
+        if command == HermesCommand::Rename {
+            self.start_rename_hermes(session_id, window, cx);
+            return;
+        }
+        crate::views::hermes_sessions::run(&self.stores, session_id, command, window, cx);
+    }
+
+    /// Starts renaming Hermes session `session_id` in its row, which is
+    /// shown first (its section open, its archived row too).
+    pub fn start_rename_hermes(
+        &mut self,
+        session_id: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(session) = self
+            .stores
+            .areas
+            .read(cx)
+            .hermes_session(session_id)
+            .cloned()
+            .filter(|s| !s.hidden)
+        else {
+            return;
+        };
+        let item = AreaItem::HermesSession(session.id.clone());
+        self.stores.sections.update(cx, |s, cx| {
+            s.set_collapsed(Area::Hermes.id(), false, cx);
+            // Past the first few: every session listed.
+            if !s.shows_all(Area::Hermes.id()) && !session.archived {
+                s.set_show_all(Area::Hermes.id(), true, cx);
+            }
+        });
+        if session.archived {
+            self.hermes_archived = true;
+        }
+        self.cursor = Some(KeyRow::Item(item.clone()));
+        self.reveal_row(|r| r.area_item() == Some(&item));
+        self.edit_name(
+            NameTarget::HermesSession(session.id),
+            session.title,
+            window,
+            cx,
+        );
     }
 
     /// Lists all of `area`, or its first few again.
@@ -1477,6 +2134,9 @@ impl SidebarView {
         let (placeholder, ax_id) = match target {
             NameTarget::Chat(id) => (l.desktop_rename_prompt(), format!("rename-{id}")),
             NameTarget::Folder(id) => (l.folder_name(), format!("rename-folder-{id}")),
+            NameTarget::HermesSession(id) => {
+                (l.hermes_session_name_hint(), format!("rename-hermes-{id}"))
+            }
             NameTarget::NewFolder { .. } => (l.folder_name(), "new-folder-name".to_string()),
         };
         Some(
@@ -1578,6 +2238,8 @@ impl SidebarView {
             time_spoken: spoken.into(),
             pinned: chat.pinned,
             streaming: false,
+            working: false,
+            reduce_motion: false,
             status: None,
             note: read_only.then(|| l.read_only().into()),
             unread: chat.unread,
@@ -1803,11 +2465,27 @@ impl SidebarView {
     /// The list's one selection: while it has focus, the row the arrows
     /// stand on (a folder or footer row too); otherwise the open chat.
     pub fn selection(&self, cx: &App) -> Option<KeyRow> {
+        let open = KeyRow::of_selection(self.stores.navigation.read(cx).selection()).map(|row| {
+            // A Bot Chat (a session no list shows) is its bot's row.
+            match &row {
+                KeyRow::Item(AreaItem::HermesSession(session))
+                    if index_of(&self.rows, &row).is_none() =>
+                {
+                    self.stores
+                        .hermes_rooms
+                        .read(cx)
+                        .bot_of_session(session)
+                        .map(|b| KeyRow::Item(AreaItem::HermesBot(b.name.clone())))
+                        .unwrap_or(row)
+                }
+                _ => row,
+            }
+        });
         selection_row(
             &self.rows,
             self.list_focused,
             self.cursor.as_ref(),
-            KeyRow::of_selection(self.stores.navigation.read(cx).selection()).as_ref(),
+            open.as_ref(),
         )
     }
 
@@ -1937,7 +2615,11 @@ impl SidebarView {
                 if let Some(id) = row.chat_id() {
                     let id = id.to_string();
                     self.stores.navigation.update(cx, |n, cx| n.open(id, cx));
-                } else if let KeyRow::Item(item) = &row {
+                } else if let KeyRow::Item(item) = &row
+                    // A bot's row opens its chat on Return or a click
+                    // only: passing over it makes nothing.
+                    && !matches!(item, AreaItem::HermesBot(_))
+                {
                     let item = item.clone();
                     self.stores
                         .navigation
@@ -2030,6 +2712,10 @@ impl SidebarView {
                 self.hermes_archived = !self.hermes_archived;
                 cx.notify();
             }
+            Some(KeyRow::Item(AreaItem::HermesBot(name))) => {
+                crate::views::hermes_rooms::open_bot(&self.stores, &name, cx);
+            }
+            Some(KeyRow::HermesConnection) => self.hermes_connection_menu(window, cx),
             // Already shown in its pane.
             Some(KeyRow::Item(_)) => {}
             Some(KeyRow::Chat(_)) | None => {
@@ -2389,12 +3075,17 @@ impl SidebarView {
         .detach();
     }
 
-    /// The context menu's items for `chat`.
+    /// The context menu's items for `chat`: what its menus offer by the
+    /// core's rule for its backend (`ChatSummary::menu`: an Open WebUI
+    /// chat's server actions, a LibreChat chat's Duplicate and links, none
+    /// of either for an on-device Direct chat), in the order every chat
+    /// menu shares.
     pub fn menu_items(&self, chat: &ChatSummary, cx: &App) -> Vec<(String, ChatCommand)> {
         if chat.read_only {
             return vec![];
         }
         let l = cx.l10n();
+        let offered = &chat.menu;
         let mut items = vec![
             if chat.pinned {
                 (l.desktop_unpin_chat(), ChatCommand::Unpin)
@@ -2403,21 +3094,23 @@ impl SidebarView {
             },
             (l.desktop_rename_ellipsis(), ChatCommand::Rename),
         ];
-        // What the server keeps for a chat it holds (not one made on this
-        // computer that has not reached it yet).
-        let served = self.has_server(cx) && !chat.id.starts_with("local:");
-        if served {
+        if offered.duplicate {
+            items.push((l.libre_chat_duplicate_chat(), ChatCommand::Duplicate));
+        }
+        if offered.mark_unread {
             items.push(if chat.unread {
                 (l.desktop_mark_as_read(), ChatCommand::MarkRead)
             } else {
                 (l.mark_as_unread(), ChatCommand::MarkUnread)
             });
+        }
+        if offered.generate_title {
             items.push((l.generate_title(), ChatCommand::GenerateTitle));
         }
-        if self.has_server(cx) {
+        if offered.share {
             items.push((l.desktop_share_chat_sheet(), ChatCommand::Share));
         }
-        if served {
+        if offered.export {
             items.push((
                 format!("{}…", l.chat_export_json()),
                 ChatCommand::Export(conduit_protocol::ChatExportFormat::Json),
@@ -2427,7 +3120,7 @@ impl SidebarView {
                 ChatCommand::Export(conduit_protocol::ChatExportFormat::Markdown),
             ));
         }
-        if chat.folder_id.is_some() {
+        if offered.r#move && chat.folder_id.is_some() {
             items.push((
                 l.desktop_remove_from_folder(),
                 ChatCommand::RemoveFromFolder,
@@ -2471,7 +3164,9 @@ impl SidebarView {
             .map(|l| l.folders.clone())
             .unwrap_or_default();
         let mut menu = menu;
-        let mut filed = folders.is_empty();
+        // Move To where the core's rule offers it (not a LibreChat or an
+        // on-device chat) and there is a folder to move to.
+        let mut filed = !chat.menu.r#move || folders.is_empty();
         let mut export: Option<NativeMenu> = None;
         for (label, command) in self.menu_items(chat, cx) {
             // Export's two formats go in one submenu, in its place.
@@ -2553,6 +3248,7 @@ impl SidebarView {
                 .detach();
             }
             ChatCommand::GenerateTitle => self.generate_title(&id, cx),
+            ChatCommand::Duplicate => self.duplicate(&id, cx),
             ChatCommand::Export(format) => {
                 crate::views::chat::export::export(id, format, window, cx)
             }
@@ -2801,6 +3497,9 @@ impl SidebarView {
             NameTarget::Chat(id) => {
                 list.update(cx, |c, cx| c.rename(&id, &name, cx)).detach();
             }
+            NameTarget::HermesSession(id) => {
+                crate::views::hermes_sessions::rename(&self.stores, &id, &name, cx);
+            }
             NameTarget::Folder(id) => {
                 let parent = list.read(cx).folder(&id).and_then(|f| f.parent_id.clone());
                 if self.folder_name_taken(&name, parent.as_deref(), Some(&id), cx) {
@@ -3046,6 +3745,38 @@ impl SidebarView {
                 }
             })
             .ok();
+        })
+        .detach();
+    }
+
+    /// Duplicate Chat: LibreChat copies the chat whole, on its server
+    /// (`librechat.duplicate`); the copy opens, as on the phone.
+    fn duplicate(&mut self, chat_id: &str, cx: &mut Context<Self>) {
+        let rpc = self.stores.connection.read(cx).rpc();
+        let call =
+            rpc.call::<conduit_protocol::methods::LibrechatDuplicate>(&conduit_protocol::ChatRef {
+                id: chat_id.to_string(),
+            });
+        let navigation = self.stores.navigation.clone();
+        let list = self.stores.chat_list.clone();
+        // The copy is the account's the command was given under: once
+        // another one is in charge, it is not opened in its window.
+        let accounts = self.stores.accounts.clone();
+        let scope = accounts.read(cx).scope_key();
+        cx.spawn(async move |this: WeakEntity<Self>, cx| {
+            let result = call.await;
+            let _ = this.update(cx, |s, cx| match result {
+                Ok(_) if accounts.read(cx).scope_key() != scope => {}
+                Ok(copy) => {
+                    list.update(cx, |l, cx| l.refresh(cx));
+                    navigation.update(cx, |n, cx| n.open(copy.chat_id, cx));
+                }
+                Err(e) => {
+                    log::warn!("librechat.duplicate: {e}");
+                    let l = cx.l10n().clone();
+                    s.toast(NoticeLevel::Error, l.libre_chat_copy_failed(), cx);
+                }
+            });
         })
         .detach();
     }
@@ -3428,6 +4159,114 @@ fn footer_button(
         })
 }
 
+/// Whether the sidebar lists Hermes's Scheduled Agents: the connection
+/// in use is reachable for jobs (as far as its status says; until it is
+/// read, as long as one is in use).
+fn hermes_jobs_shown(admin: &crate::stores::hermes_admin::HermesAdminStore) -> bool {
+    if admin.active().is_none() || !admin.connections.as_ref().is_some_and(|l| l.enabled) {
+        return false;
+    }
+    admin
+        .status
+        .as_ref()
+        .and_then(crate::stores::hermes_admin::Loaded::ready)
+        .is_none_or(|s| s.capabilities.jobs || !s.reachable)
+}
+
+/// The Hermes section's switcher row: the connection in use, by its
+/// initials and name, and with more than one saved, the pop-up's ⌃⌄.
+fn hermes_connection_row(
+    name: &str,
+    count: usize,
+    selected: bool,
+    list_key: bool,
+    t: &ConduitTheme,
+    l: &L10n,
+) -> gpui_kit::Stateful<gpui_kit::Div> {
+    let r = t.roles;
+    let m = t.metrics;
+    let fill = selection_fill(t, list_key);
+    let switches = count > 1;
+    let initials = hermes_initials(name);
+    div()
+        .id("hermes-connection-switcher")
+        .role(if switches {
+            Role::ComboBox
+        } else {
+            Role::TreeItem
+        })
+        .aria_label(SharedString::from(name.to_string()))
+        .when(switches, |d| {
+            d.aria_description(SharedString::from(l.hermes_switch_connection_title()))
+        })
+        .aria_selected(selected)
+        .when(selected, |d| d.aria_active_descendant())
+        .h(px(m.row_height + 4.))
+        .px(px(conduit_components::views::sidebar::ROW_CONTENT_INSET))
+        .flex()
+        .items_center()
+        .gap(px(8.))
+        .rounded(t.row_radius())
+        .when(selected, |d| d.bg(fill))
+        .when(switches && !selected, |d| d.hover(|s| s.bg(r.hover)))
+        .when(switches, |d| {
+            d.cursor_pointer().active(|s| {
+                s.bg(conduit_components::views::focus::pressed_fill(
+                    if selected { fill } else { r.hover },
+                    t,
+                ))
+            })
+        })
+        .when(switches, |d| {
+            d.tip(l.hermes_switch_connection_title(), None)
+        })
+        .child(
+            div()
+                .size(px(20.))
+                .flex_none()
+                .rounded_full()
+                .flex()
+                .items_center()
+                .justify_center()
+                .bg(conduit_components::theme::with_alpha(
+                    r.text,
+                    if t.dark { 0.14 } else { 0.08 },
+                ))
+                .text_size(px(9.5))
+                .font_weight(FontWeight::BOLD)
+                .text_color(r.sidebar_text_subtle)
+                .child(SharedString::from(initials)),
+        )
+        .child(
+            div()
+                .flex_1()
+                .min_w_0()
+                .truncate()
+                .text_size(px(m.control))
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_color(on_selection(r.sidebar_text, t, selected && list_key))
+                .child(SharedString::from(name.to_string())),
+        )
+        .when(switches, |d| {
+            d.child(icon(IconName::ChevronsUpDown, 12., r.sidebar_text_subtle))
+        })
+}
+
+/// Up to two initials for a Hermes connection's name, as the phone's
+/// switcher draws them ("HA", Hermes Agent, without a usable name).
+pub fn hermes_initials(name: &str) -> String {
+    let words: Vec<&str> = name
+        .split(|c: char| c.is_whitespace() || c == '.' || c == '_' || c == '-')
+        .filter(|w| !w.is_empty())
+        .collect();
+    let initials: String = match words.as_slice() {
+        [] => "HA".into(),
+        [one] => one.chars().take(2).collect(),
+        [a, b, ..] => a.chars().take(1).chain(b.chars().take(1)).collect(),
+    };
+    initials.to_uppercase()
+}
+
 fn hint_text(hint: Hint, l: &L10n) -> String {
     match hint {
         Hint::Loading => l.loading_short(),
@@ -3468,8 +4307,11 @@ fn header_gap(item: &SidebarItem, previous: Option<&SidebarItem>) -> f32 {
     match (item, previous) {
         (_, None) => 0.,
         (SidebarItem::AreaHeader { .. }, Some(_)) => AREA_GAP,
-        (SidebarItem::Header(_), Some(SidebarItem::AreaHeader { .. })) => 0.,
-        (SidebarItem::Header(_), Some(_)) => 10.,
+        (
+            SidebarItem::Header(_) | SidebarItem::HermesGroup { .. },
+            Some(SidebarItem::AreaHeader { .. }),
+        ) => 0.,
+        (SidebarItem::Header(_) | SidebarItem::HermesGroup { .. }, Some(_)) => 10.,
         _ => 0.,
     }
 }
@@ -3478,21 +4320,43 @@ fn header_gap(item: &SidebarItem, previous: Option<&SidebarItem>) -> f32 {
 fn row_height(item: &SidebarItem, previous: Option<&SidebarItem>, t: &ConduitTheme) -> f32 {
     let row = t.metrics.row_height + 1.;
     match item {
-        SidebarItem::Header(_) | SidebarItem::AreaHeader { .. } => {
-            SECTION_HEADER_HEIGHT + header_gap(item, previous)
-        }
+        SidebarItem::Header(_)
+        | SidebarItem::AreaHeader { .. }
+        | SidebarItem::HermesGroup { .. } => SECTION_HEADER_HEIGHT + header_gap(item, previous),
         SidebarItem::SearchHit(hit) if visible_snippet(hit).is_some() => row + SNIPPET_LINE,
         SidebarItem::Hint(_) => 52.,
         _ => row,
     }
 }
 
+/// A Hermes session's name in its row, as the phone's tile: its title,
+/// else (Hermes left it untitled: a cron or messaging session) the start
+/// of what it says, else "Untitled Conversation".
+pub fn hermes_title(session: &HermesSessionDto, l: &L10n) -> String {
+    let title = session.title.trim();
+    if !title.is_empty() && title != "Untitled session" {
+        return title.to_string();
+    }
+    session
+        .preview
+        .as_deref()
+        .map(str::trim)
+        .filter(|p| !p.is_empty())
+        .map(|p| p.lines().next().unwrap_or(p).to_string())
+        .unwrap_or_else(|| l.hermes_session_untitled())
+}
+
 /// An area item's id among the rows (hover, AccessKit, the E2E).
 pub fn area_item_id(item: &AreaItem) -> String {
     match item {
+        AreaItem::AllNotes => "all-notes".into(),
         AreaItem::Note(id) => format!("note-{id}"),
         AreaItem::Channel(id) => format!("channel-{id}"),
         AreaItem::HermesSession(id) => format!("hermes-{id}"),
+        AreaItem::HermesHidden => "hermes-hidden".into(),
+        AreaItem::HermesBot(name) => format!("bot-{name}"),
+        AreaItem::HermesRoom(id) => format!("room-{id}"),
+        AreaItem::HermesJobs => "hermes-jobs".into(),
         AreaItem::Workspace(section) => format!("workspace-{}", section.id()),
         AreaItem::Terminal(id) => format!("terminal-{id}"),
         AreaItem::Calendar => "calendar".into(),
@@ -3510,7 +4374,9 @@ fn area_hint_text(area: Area, hint: AreaHint, l: &L10n) -> String {
         (_, AreaHint::Empty) => l.terminal_no_servers_configured(),
         (Area::Notes, AreaHint::Failed) => l.failed_to_load_notes(),
         (Area::Channels, AreaHint::Failed) => l.channel_load_error(),
+        (Area::Hermes, AreaHint::Failed) => l.desktop_hermes_sessions_failed(),
         (_, AreaHint::Failed) => l.desktop_action_failed(),
+        (_, AreaHint::ArchivedFailed) => l.hermes_archived_load_error(),
     }
 }
 
@@ -3745,7 +4611,13 @@ mod selection_tests {
     use crate::stores::rpc::fake::FakeDaemon;
 
     fn bench(cx: &mut TestAppContext) -> (Stores, Entity<SidebarView>, &mut VisualTestContext) {
-        let daemon = FakeDaemon::new();
+        bench_on(FakeDaemon::new(), cx)
+    }
+
+    fn bench_on(
+        daemon: FakeDaemon,
+        cx: &mut TestAppContext,
+    ) -> (Stores, Entity<SidebarView>, &mut VisualTestContext) {
         let scratch = std::env::temp_dir().join(format!("conduit-sidebar-{}", std::process::id()));
         let stores = cx.update(|cx| {
             gpui_kit::init(cx);
@@ -3810,6 +4682,40 @@ mod selection_tests {
         view.update(vcx, |s, cx| s.end_selection(cx));
         view.read_with(vcx, |s, _| {
             assert_eq!(s.on_selection(&ChatCommand::Delete), None)
+        });
+    }
+
+    /// A LibreChat copy made under one account, answered after another
+    /// signs in, is not opened in the new account's window.
+    #[gpui_kit::test]
+    fn a_late_duplicate_does_not_open_in_another_account(cx: &mut TestAppContext) {
+        use conduit_protocol::methods;
+        let daemon = FakeDaemon::new();
+        daemon.returns::<methods::LibrechatDuplicate>(conduit_protocol::ChatForked {
+            chat_id: "copy-1".into(),
+        });
+        let held = daemon.hold::<methods::LibrechatDuplicate>();
+        let (stores, view, vcx) = bench_on(daemon, cx);
+        view.update(vcx, |s, cx| s.duplicate("chat-a", cx));
+        vcx.run_until_parked();
+        stores.accounts.update(vcx, |a, cx| {
+            a.adopt(
+                list(vec![
+                    account("a", "Avery", false, true),
+                    account("b", "Blake", true, true),
+                ]),
+                cx,
+            )
+        });
+        vcx.run_until_parked();
+        held.release();
+        vcx.run_until_parked();
+        stores.navigation.read_with(vcx, |n, _| {
+            assert_ne!(
+                n.selected_chat(),
+                Some("copy-1"),
+                "the last account's copy opened in the new account"
+            );
         });
     }
 

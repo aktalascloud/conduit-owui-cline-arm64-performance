@@ -8,7 +8,15 @@
     "tags": [],
     "shared": false,
     "readOnly": true,
-    "unread": false
+    "unread": false,
+    "menu": {
+      "share": false,
+      "duplicate": false,
+      "move": false,
+      "markUnread": false,
+      "generateTitle": false,
+      "export": false
+    }
   },
   "messages": [
     {
@@ -38,7 +46,11 @@
     "generateTitle": false,
     "share": false,
     "saveTemporary": false,
-    "compare": false
+    "compare": false,
+    "branchFromHere": false,
+    "undoLastTurn": false,
+    "hermesWork": false,
+    "hermesContext": false
   },
   "temporary": false,
   "tasks": [

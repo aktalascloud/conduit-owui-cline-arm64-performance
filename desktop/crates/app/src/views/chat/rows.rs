@@ -147,6 +147,11 @@ pub struct RowFlags {
     /// Settings › Chat › Message Actions: the actions shown inline, in
     /// order, or `None` for Automatic.
     pub actions: Option<Vec<String>>,
+    /// The answer being read aloud (its shown version's id), if any.
+    pub reading: Option<String>,
+    /// A Hermes session's chat: its answers are not rated, nor run again
+    /// with another model (the agent is the model).
+    pub hermes: bool,
 }
 
 /// The answer's More menu: rate it (`turns.rate`). Carries the chat's
@@ -173,6 +178,7 @@ pub struct CopyAnswerMarkdown {
 /// Registers the rows' menu actions on the app.
 pub fn register_actions(cx: &mut App) {
     super::actions::register(cx);
+    super::speech_bar::register(cx);
     super::composer::register_actions(cx);
     cx.on_action(|a: &RateAnswer, cx| {
         let (key, rating) = (a.key.clone(), a.rating);
@@ -258,6 +264,10 @@ impl AnswerActions {
         let mut available = vec![];
         if error.is_none() {
             available.push(A::Copy);
+            // The main window's: its bar follows the reading.
+            if pane && !item.streaming && !answer_markdown(item).trim().is_empty() {
+                available.push(A::ReadAloud);
+            }
             if flags.can_branch {
                 available.push(A::Regenerate);
             }
@@ -275,6 +285,15 @@ impl AnswerActions {
         if pane && ab.fork && stored && flags.can_branch {
             available.push(A::Fork);
         }
+        // A Hermes chat's history, from the reply its session keeps (not an
+        // older version shown in its place); Undo from its last reply.
+        let kept = item.version.is_none_or(|(s, n)| s == n);
+        if pane && ab.branch_from_here && stored && flags.can_branch && kept {
+            available.push(A::BranchFromHere);
+        }
+        if pane && ab.undo_last_turn && stored && flags.can_branch && item.last_answer {
+            available.push(A::UndoLastTurn);
+        }
         if error.is_none() && !answer_markdown(item).is_empty() && !item.streaming {
             available.push(A::Share);
         }
@@ -284,18 +303,19 @@ impl AnswerActions {
         let current = item.version.is_none_or(|(s, n)| s == n) || !item.siblings.is_empty();
         Self {
             available,
-            rate: error.is_none() && flags.can_branch && current,
-            regenerate_with: error.is_none() && flags.can_branch,
+            rate: error.is_none() && flags.can_branch && current && !flags.hermes,
+            regenerate_with: error.is_none() && flags.can_branch && !flags.hermes,
             copy_markdown: error.is_none() || !answer_markdown(item).is_empty(),
             copy_error: error,
         }
     }
 }
 
-/// An action's glyph.
-fn action_icon(a: MessageAction, merging: bool) -> IconName {
+/// An action's glyph. `reading`: the answer is being read aloud.
+fn action_icon(a: MessageAction, merging: bool, reading: bool) -> IconName {
     match a {
         MessageAction::Copy => IconName::Copy,
+        MessageAction::ReadAloud if reading => IconName::Square,
         MessageAction::ReadAloud => IconName::AudioLines,
         MessageAction::Regenerate => IconName::RotateCcw,
         MessageAction::RetryWithoutEffort => IconName::CircleSlash,
@@ -303,22 +323,33 @@ fn action_icon(a: MessageAction, merging: bool) -> IconName {
         MessageAction::Merge => IconName::GitMerge,
         MessageAction::Usage => IconName::Info,
         MessageAction::Fork => IconName::GitBranch,
+        MessageAction::BranchFromHere => IconName::Split,
+        MessageAction::UndoLastTurn => IconName::Undo2,
         MessageAction::Share => IconName::Share,
         MessageAction::Delete => IconName::Trash,
     }
 }
 
 /// An action's label (its tooltip, VoiceOver's name, its menu item).
-fn action_label(a: MessageAction, merging: bool, menu: bool, l10n: &crate::l10n::L10n) -> String {
+fn action_label(
+    a: MessageAction,
+    merging: bool,
+    reading: bool,
+    menu: bool,
+    l10n: &crate::l10n::L10n,
+) -> String {
     match a {
         MessageAction::Copy => l10n.copy(),
-        MessageAction::ReadAloud => l10n.tts_listen(),
+        MessageAction::ReadAloud if reading => l10n.desktop_stop_speaking(),
+        MessageAction::ReadAloud => l10n.desktop_read_aloud(),
         MessageAction::Regenerate => l10n.regenerate(),
         MessageAction::RetryWithoutEffort => l10n.retry_without_reasoning_effort(),
         MessageAction::Merge if merging => l10n.chat_merge_stop_action(),
         MessageAction::Merge => l10n.chat_merge_responses_action(),
         MessageAction::Usage => l10n.usage_info(),
         MessageAction::Fork => l10n.chat_branch_fork_chat(),
+        MessageAction::BranchFromHere => l10n.hermes_branch_from_here(),
+        MessageAction::UndoLastTurn => l10n.hermes_undo_last_turn(),
         MessageAction::Share => l10n.share_system_sheet(),
         MessageAction::Delete if menu => l10n.desktop_delete_ellipsis(),
         MessageAction::Delete => l10n.delete(),
@@ -328,16 +359,26 @@ fn action_label(a: MessageAction, merging: bool, menu: bool, l10n: &crate::l10n:
 /// What choosing `a` does for `item`.
 fn action_command(a: MessageAction, item: &RowItem) -> RowCommand {
     match a {
-        MessageAction::Copy | MessageAction::ReadAloud => RowCommand::Copy(item.text.clone()),
+        MessageAction::Copy => RowCommand::Copy(item.text.clone()),
+        MessageAction::ReadAloud => RowCommand::ReadAloud,
         MessageAction::Regenerate => RowCommand::Regenerate(None),
         MessageAction::RetryWithoutEffort => RowCommand::RetryWithoutEffort,
         MessageAction::Merge if item.merging => RowCommand::StopMerge,
         MessageAction::Merge => RowCommand::Merge,
         MessageAction::Usage => RowCommand::Usage,
         MessageAction::Fork => RowCommand::Fork,
+        MessageAction::BranchFromHere => RowCommand::BranchFromHere,
+        MessageAction::UndoLastTurn => RowCommand::UndoLastTurn,
         MessageAction::Share => RowCommand::Share(answer_markdown(item)),
         MessageAction::Delete => RowCommand::Delete,
     }
+}
+
+/// The id of the answer `item` shows (a version's while one is shown).
+pub fn shown_answer_id(item: &RowItem) -> String {
+    item.version
+        .and_then(|(at, _)| item.siblings.get(at.wrapping_sub(1)).cloned())
+        .unwrap_or_else(|| item.key.clone())
 }
 
 impl RowHost {
@@ -347,10 +388,7 @@ impl RowHost {
         item: &RowItem,
         position: gpui_kit::Point<gpui_kit::Pixels>,
     ) -> RowContext {
-        let target = item
-            .version
-            .and_then(|(at, _)| item.siblings.get(at.wrapping_sub(1)).cloned())
-            .unwrap_or_else(|| item.key.clone());
+        let target = shown_answer_id(item);
         RowContext {
             store: self.store.clone(),
             pane: match &self.pane {
@@ -1224,6 +1262,7 @@ impl AssistantRow {
         let sources = item.sources.clone();
         let pane_row = matches!(self.host.pane, RowSink::Pane(_));
         let offer = AnswerActions::of(&item, &self.flags, pane_row, &l10n);
+        let reading = self.flags.reading.as_deref() == Some(shown_answer_id(&item).as_str());
         let (inline, more) =
             super::actions::layout(&offer.available, self.flags.actions.as_deref());
         let show_actions = !item.streaming;
@@ -1279,15 +1318,17 @@ impl AssistantRow {
                     let (host, it) = (host.clone(), item.clone());
                     let mut button = small_action(
                         format!("{}-{key}", a.id()),
-                        action_icon(a, item.merging),
-                        action_label(a, item.merging, false, &l10n).into(),
-                        a == MessageAction::Merge && item.merging,
+                        action_icon(a, item.merging, reading),
+                        action_label(a, item.merging, reading, false, &l10n).into(),
+                        (a == MessageAction::Merge && item.merging)
+                            || (a == MessageAction::ReadAloud && reading),
                         &t,
                     );
                     if let Some(k) = &chords {
                         button = match a {
                             MessageAction::Copy => button.shortcut(k.copy_last_reply.clone()),
                             MessageAction::Regenerate => button.shortcut(k.regenerate.clone()),
+                            MessageAction::ReadAloud => button.shortcut(k.read_aloud.clone()),
                             _ => button,
                         };
                     }
@@ -1319,7 +1360,7 @@ impl AssistantRow {
                     let (host, it) = (host.clone(), item.clone());
                     let labels: Vec<String> = more
                         .iter()
-                        .map(|a| action_label(*a, it.merging, true, &l10n))
+                        .map(|a| action_label(*a, it.merging, reading, true, &l10n))
                         .collect();
                     let regenerate_with = l10n.desktop_regenerate_with();
                     let (pane, quick_ask) = match &host.pane {
@@ -1718,7 +1759,15 @@ impl Render for AssistantRow {
 
         let spoken = self.spoken(cx);
         let compared = item.columns.len() > 1;
-        let name = if compared {
+        // A Bot Chat's replies are its bot's: its name and face.
+        let bot = self
+            .host
+            .store
+            .upgrade()
+            .and_then(|s| s.read(cx).hermes().and_then(|h| h.bot.clone()));
+        let name = if let Some(bot) = &bot {
+            bot.title.clone()
+        } else if compared {
             l10n.chat_compare_models_action()
         } else if model.is_empty() {
             "Assistant".to_string()
@@ -1779,15 +1828,35 @@ impl Render for AssistantRow {
                     .flex()
                     .items_center()
                     .gap(px(5.))
-                    .child(icon(
-                        if compared {
-                            IconName::Columns2
-                        } else {
-                            IconName::Sparkles
-                        },
-                        15.,
-                        r.text_subtle,
-                    ))
+                    .child(match &bot {
+                        Some(bot) => {
+                            let face = cx
+                                .try_global::<crate::stores::hermes_rooms::HermesRoomsGlobal>()
+                                .map(|g| crate::views::hermes_faces::bot_face(bot, g.0.read(cx)))
+                                .unwrap_or_else(|| crate::views::hermes_faces::Face {
+                                    shape: bot.shape.clone(),
+                                    color: crate::views::hermes_faces::parse_color(&bot.color),
+                                    image: None,
+                                });
+                            crate::views::hermes_faces::face(
+                                ElementId::Name(format!("answer-face-{key}").into()),
+                                &face,
+                                16.,
+                                false,
+                                true,
+                            )
+                        }
+                        None => icon(
+                            if compared {
+                                IconName::Columns2
+                            } else {
+                                IconName::Sparkles
+                            },
+                            15.,
+                            r.text_subtle,
+                        )
+                        .into_any_element(),
+                    })
                     .child(
                         div()
                             .text_size(px(m.small))
@@ -2567,10 +2636,16 @@ mod activity_tests {
             offer.copy_error.as_deref(),
             Some(l10n.desktop_something_went_wrong().as_str())
         );
-        // A finished answer keeps Copy, Regenerate, Share and the rating.
+        // A finished answer keeps Copy, Read Aloud, Regenerate, Share and
+        // the rating; Quick Ask has no Read Aloud (no playback bar there).
         let finished = answer(vec![text], "High water is at");
         let offer = AnswerActions::of(&finished, &flags, true, &l10n);
-        assert_eq!(offer.available, vec![A::Copy, A::Regenerate, A::Share]);
+        assert_eq!(
+            offer.available,
+            vec![A::Copy, A::ReadAloud, A::Regenerate, A::Share]
+        );
+        let quick = AnswerActions::of(&finished, &flags, false, &l10n);
+        assert!(!quick.available.contains(&A::ReadAloud));
         assert!(offer.rate && offer.copy_markdown && offer.regenerate_with);
         assert_eq!(offer.copy_error, None);
     }
@@ -2613,6 +2688,7 @@ mod activity_tests {
         };
         let all = vec![
             A::Copy,
+            A::ReadAloud,
             A::Regenerate,
             A::Merge,
             A::Usage,
@@ -2636,8 +2712,8 @@ mod activity_tests {
         );
         // Automatic: three inline, the rest in More.
         let (inline, more) = super::super::actions::layout(&all, None);
-        assert_eq!(inline, vec![A::Copy, A::Regenerate, A::Merge]);
-        assert_eq!(more, vec![A::Usage, A::Fork, A::Share, A::Delete]);
+        assert_eq!(inline, vec![A::Copy, A::ReadAloud, A::Regenerate]);
+        assert_eq!(more, vec![A::Merge, A::Usage, A::Fork, A::Share, A::Delete]);
     }
 }
 

@@ -11,6 +11,7 @@ import 'chats_service.dart';
 import 'composer_service.dart';
 import 'drafts_service.dart';
 import 'direct_service.dart';
+import 'web_search_service.dart';
 import 'mcp_apps_service.dart';
 import 'mcp_service.dart';
 import 'notes_service.dart';
@@ -27,9 +28,21 @@ import 'valves_service.dart';
 import 'ui_requests_service.dart';
 import 'workspace_service.dart';
 import 'terminals_service.dart';
+import 'computer_rpc_service.dart';
 import 'handoff_service.dart';
+import 'automations_service.dart';
+import 'calendar_service.dart';
+import 'hermes_admin_service.dart';
+import 'hermes_cards_service.dart';
+import 'hermes_rooms_service.dart';
 import 'hermes_service.dart';
+import 'calls_service.dart';
+import 'librechat_service.dart';
+import 'intents_service.dart';
+import 'speech_service.dart';
 import 'voice_service.dart';
+import 'dictation_service.dart';
+import 'recordings_service.dart';
 import 'core_settings_service.dart';
 import 'data_service.dart';
 import 'access_service.dart';
@@ -53,19 +66,26 @@ final class CoreServices {
     this.uiRequests,
     this.chatPrompts,
     this.mcpApps,
+    this.hermesCards,
     this.composer,
     this.prompts,
     this.direct,
     this.mcp,
+    this.webSearch,
     this.notes,
     this.channels,
     this.workspace,
     this.terminals,
+    this.computer,
     this.hermes,
+    this.hermesAdmin,
     this.voice,
+    this.dictation,
+    this.recordings,
     this.coreSettings,
     this.profile,
     this.memories,
+    this.libreChat,
     this.releaseNotes,
     this.data,
     this.drafts,
@@ -73,7 +93,12 @@ final class CoreServices {
     this.valves,
     this.access,
     this.folderSettings,
+    this.speech,
+    this.calls,
     this.handoff,
+    this.calendar,
+    this.automations,
+    this.hermesRooms,
   });
 
   final AccountsService? accounts;
@@ -86,21 +111,30 @@ final class CoreServices {
   final UiRequestsService? uiRequests;
   final ChatPromptsService? chatPrompts;
   final McpAppsService? mcpApps;
+  final HermesCardsService? hermesCards;
   final ComposerService? composer;
   final PromptsService? prompts;
   final DirectService? direct;
   final McpService? mcp;
+  final WebSearchService? webSearch;
   final NotesService? notes;
   final ChannelsService? channels;
   final WorkspaceService? workspace;
   final TerminalsService? terminals;
+  final ComputerRpcService? computer;
   final HermesService? hermes;
+
+  /// Hermes's connections, MCP servers, scheduled agents and catalog.
+  final HermesAdminService? hermesAdmin;
   final VoiceService? voice;
 
   /// The rest of `settings.*` (core's `AppSettings` and the account's own).
   final CoreSettingsService? coreSettings;
   final ProfileService? profile;
   final MemoriesService? memories;
+
+  /// `librechat.*`: LibreChat sign-in, composer tools, memories, Duplicate.
+  final LibreChatService? libreChat;
   final ReleaseNotesRpcService? releaseNotes;
   final DataService? data;
   final DraftsService? drafts;
@@ -109,8 +143,25 @@ final class CoreServices {
   final AccessService? access;
   final FolderSettingsService? folderSettings;
 
+  /// `speech.*`: read aloud.
+  final SpeechService? speech;
+
+  /// `calls.*`: voice calls.
+  final CallsService? calls;
+
   /// A server's `chat:handoff`, put to the windows.
   final HandoffService? handoff;
+
+  /// `calendar.*`: the account's calendars and agenda.
+  final CalendarService? calendar;
+
+  /// `automations.*`: the account's scheduled tasks.
+  final AutomationsService? automations;
+
+  /// `hermes.rooms.*` and `hermes.bots.*`: Bot Chats and Group Chats.
+  final HermesRoomsService? hermesRooms;
+  final DictationService? dictation;
+  final RecordingsService? recordings;
 }
 
 /// One connected renderer window.
@@ -172,17 +223,26 @@ class RpcSession {
   PromptsService? get _prompts => _services().prompts;
   DirectService? get _direct => _services().direct;
   McpService? get _mcp => _services().mcp;
+  WebSearchService? get _webSearch => _services().webSearch;
   NotesService? get _notes => _services().notes;
   ChannelsService? get _channels => _services().channels;
   WorkspaceService? get _workspace => _services().workspace;
   TerminalsService? get _terminals => _services().terminals;
+  ComputerRpcService? get _computer => _services().computer;
   HermesService? get _hermes => _services().hermes;
+  HermesAdminService? get _hermesAdmin => _services().hermesAdmin;
   VoiceService? get _voice => _services().voice;
+  DictationService? get _dictation => _services().dictation;
+  RecordingsService? get _recordings => _services().recordings;
   CoreSettingsService? get _coreSettings => _services().coreSettings;
   ProfileService? get _profile => _services().profile;
   MemoriesService? get _memories => _services().memories;
+  LibreChatService? get _libreChat => _services().libreChat;
   ChatPromptsService? get _chatPrompts => _services().chatPrompts;
   McpAppsService? get _mcpApps => _services().mcpApps;
+  HermesCardsService? get _hermesCards => _services().hermesCards;
+  SpeechService? get _speech => _services().speech;
+  CallsService? get _calls => _services().calls;
   ReleaseNotesRpcService? get _releaseNotes => _services().releaseNotes;
   DataService? get _data => _services().data;
   ChatSettingsService? get _chatSettings => _services().chatSettings;
@@ -190,6 +250,9 @@ class RpcSession {
   AccessService? get _access => _services().access;
   FolderSettingsService? get _folderSettings => _services().folderSettings;
   HandoffService? get _handoff => _services().handoff;
+  CalendarService? get _calendar => _services().calendar;
+  AutomationsService? get _automations => _services().automations;
+  HermesRoomsService? get _hermesRooms => _services().hermesRooms;
 
   /// Where a window's `online`/`offline` events go: the connectivity port,
   /// which then tells every window. Null before the core is up.
@@ -204,6 +267,12 @@ class RpcSession {
     // the turn that asked them.
     _uiRequests?.onWindowsChanged();
     _handoff?.onWindowsChanged();
+    // The Hermes chats it watched are no longer shown here.
+    _hermesCards?.forgetWindow(sessionId);
+    // And the rooms it showed or listed.
+    _hermesRooms?.forgetWindow(sessionId);
+    // What this window was recording is kept for its next launch.
+    await _recordings?.closeOwnedBy(sessionId);
     await _peer.close();
   }
 
@@ -326,6 +395,7 @@ class RpcSession {
     _registerReleaseNotesAndData();
     _registerChats();
     _registerTurns();
+    _registerIntents();
     _registerModels();
 
     _peer.registerFallback((json_rpc.Parameters params) {
@@ -448,6 +518,41 @@ class RpcSession {
     _on(
       ConduitMethodSpecs.profileSignOutAll,
       (p) => _need(_profile).signOutAll(p),
+    );
+    _on(ConduitMethodSpecs.librechatProbe, (p) => _need(_libreChat).probe(p));
+    _on(ConduitMethodSpecs.librechatSignIn, (p) => _need(_libreChat).signIn(p));
+    _on(ConduitMethodSpecs.librechatVerify, (p) => _need(_libreChat).verify(p));
+    _on(
+      ConduitMethodSpecs.librechatSsoStart,
+      (p) => _need(_libreChat).ssoStart(p),
+    );
+    _on(
+      ConduitMethodSpecs.librechatCompleteSso,
+      (p) => _need(_libreChat).completeSso(p),
+    );
+    _on(
+      ConduitMethodSpecs.librechatComposer,
+      (p) => _need(_libreChat).composer(p),
+    );
+    _on(
+      ConduitMethodSpecs.librechatMemoriesList,
+      (_) => _need(_libreChat).memories(),
+    );
+    _on(
+      ConduitMethodSpecs.librechatMemoriesSave,
+      (p) => _need(_libreChat).saveMemory(p),
+    );
+    _on(
+      ConduitMethodSpecs.librechatMemoriesDelete,
+      (p) => _need(_libreChat).deleteMemory(p),
+    );
+    _on(
+      ConduitMethodSpecs.librechatMemoriesSetEnabled,
+      (p) => _need(_libreChat).setMemoriesEnabled(p),
+    );
+    _on(
+      ConduitMethodSpecs.librechatDuplicate,
+      (p) => _need(_libreChat).duplicate(p),
     );
     _on(ConduitMethodSpecs.memoriesList, (_) => _need(_memories).list());
     _on(ConduitMethodSpecs.memoriesAdd, (p) => _need(_memories).add(p));
@@ -636,6 +741,64 @@ class RpcSession {
       return handoff.answer(r);
     });
 
+    // calendar.*: the account's Open WebUI calendars and agenda.
+    _on(ConduitMethodSpecs.calendarAgenda, (r) => _need(_calendar).agenda(r));
+    _on(
+      ConduitMethodSpecs.calendarSetVisible,
+      (r) => _need(_calendar).setVisible(r),
+    );
+    _on(
+      ConduitMethodSpecs.calendarMakeDefault,
+      (r) => _need(_calendar).makeDefault(r),
+    );
+    _on(
+      ConduitMethodSpecs.calendarCreateCalendar,
+      (r) => _need(_calendar).createCalendar(r),
+    );
+    _on(ConduitMethodSpecs.calendarEvent, (r) => _need(_calendar).event(r));
+    _on(
+      ConduitMethodSpecs.calendarDeleteEvent,
+      (r) => _need(_calendar).deleteEvent(r),
+    );
+    _on(ConduitMethodSpecs.calendarRespond, (r) => _need(_calendar).respond(r));
+    _on(ConduitMethodSpecs.calendarEditor, (r) => _need(_calendar).editor(r));
+    _on(
+      ConduitMethodSpecs.calendarCheckDraft,
+      (r) => _need(_calendar).checkDraft(r),
+    );
+    _on(ConduitMethodSpecs.calendarSave, (r) => _need(_calendar).save(r));
+
+    // automations.*: the account's Open WebUI scheduled tasks.
+    _on(ConduitMethodSpecs.automationsList, (r) => _need(_automations).list(r));
+    _on(
+      ConduitMethodSpecs.automationsLoadMore,
+      (_) => _need(_automations).loadMore(),
+    );
+    _on(ConduitMethodSpecs.automationsGet, (r) => _need(_automations).get(r));
+    _on(ConduitMethodSpecs.automationsRuns, (r) => _need(_automations).runs(r));
+    _on(
+      ConduitMethodSpecs.automationsSetActive,
+      (r) => _need(_automations).setActive(r),
+    );
+    _on(ConduitMethodSpecs.automationsRun, (r) => _need(_automations).run(r));
+    _on(
+      ConduitMethodSpecs.automationsRunState,
+      (r) async => _need(_automations).runState(r),
+    );
+    _on(
+      ConduitMethodSpecs.automationsDelete,
+      (r) => _need(_automations).delete(r),
+    );
+    _on(
+      ConduitMethodSpecs.automationsEditor,
+      (r) => _need(_automations).editor(r),
+    );
+    _on(
+      ConduitMethodSpecs.automationsCheckDraft,
+      (r) => _need(_automations).checkDraft(r),
+    );
+    _on(ConduitMethodSpecs.automationsSave, (r) => _need(_automations).save(r));
+
     _on(
       ConduitMethodSpecs.turnsRetryQueued,
       (r) => _requireTurns().retryQueued(r),
@@ -663,10 +826,7 @@ class RpcSession {
       ConduitMethodSpecs.mcpAppsContext,
       (r) async => _need(_mcpApps).context(r),
     );
-    _on(
-      ConduitMethodSpecs.mcpAppsClose,
-      (r) async => _need(_mcpApps).close(r),
-    );
+    _on(ConduitMethodSpecs.mcpAppsClose, (r) async => _need(_mcpApps).close(r));
 
     // queue.*: messages queued behind a running answer.
     _on(ConduitMethodSpecs.queueGet, (r) => _requireTurns().queueGet(r.id));
@@ -678,6 +838,18 @@ class RpcSession {
       (r) => _requireTurns().queueSendNow(r),
     );
     _on(ConduitMethodSpecs.queueRetry, (r) => _requireTurns().queueRetry(r.id));
+  }
+
+  /// `intents.*`: Shortcuts' Ask Conduit and Open Chat (the Mac's App
+  /// Intents), over the turns and chats services.
+  void _registerIntents() {
+    IntentsService intents() => IntentsService.over(
+      turns: _requireTurns(),
+      chats: _requireChats(),
+      events: _events,
+    );
+    _on(ConduitMethodSpecs.intentsAsk, (request) => intents().ask(request));
+    _on(ConduitMethodSpecs.intentsChats, (query) => intents().chats(query));
   }
 
   void _registerModels() {
@@ -766,6 +938,23 @@ class RpcSession {
       ConduitMethodSpecs.directOllamaThinking,
       (a) => _requireDirect().ollamaThinking(a),
     );
+    _on(ConduitMethodSpecs.directReload, (_) => _requireDirect().reload());
+    _on(ConduitMethodSpecs.directOptions, (_) => _requireDirect().options());
+    _on(
+      ConduitMethodSpecs.directSetImagesPerRequest,
+      (r) => _requireDirect().setImagesPerRequest(r.count),
+    );
+    _on(
+      ConduitMethodSpecs.directSetContextLimit,
+      (r) => _requireDirect().setContextLimit(r),
+    );
+
+    // webSearch.*.
+    _on(
+      ConduitMethodSpecs.webSearchGet,
+      (_) async => _requireWebSearch().get(),
+    );
+    _on(ConduitMethodSpecs.webSearchSet, (p) => _requireWebSearch().set(p));
 
     // channels.*.
     const ok = OkResult(ok: true);
@@ -812,6 +1001,38 @@ class RpcSession {
       ConduitMethodSpecs.channelsMembers,
       (ref) => _requireChannels().members(ref.id),
     );
+    _on(
+      ConduitMethodSpecs.channelsOpen,
+      (ref) => _requireChannels().open(ref.id),
+    );
+    _on(ConduitMethodSpecs.channelsFocus, (p) async {
+      await _requireChannels().focus(p.id);
+      return ok;
+    });
+    _on(
+      ConduitMethodSpecs.channelsSetMuted,
+      (p) => _requireChannels().setMuted(p),
+    );
+    _on(
+      ConduitMethodSpecs.channelsMentions,
+      (q) => _requireChannels().mentions(q),
+    );
+    _on(
+      ConduitMethodSpecs.channelsMemberPage,
+      (q) => _requireChannels().memberPage(q),
+    );
+    _on(
+      ConduitMethodSpecs.channelsAddMembers,
+      (p) => _requireChannels().addMembers(p),
+    );
+    _on(
+      ConduitMethodSpecs.channelsRemoveMember,
+      (p) => _requireChannels().removeMember(p),
+    );
+    _on(
+      ConduitMethodSpecs.channelsAppAction,
+      (p) => _requireChannels().appAction(p),
+    );
 
     // hermes.*.
     _on(ConduitMethodSpecs.hermesSettings, (_) => _requireHermes().settings());
@@ -836,18 +1057,196 @@ class RpcSession {
       ConduitMethodSpecs.hermesForkSession,
       (p) => _requireHermes().fork(p.id),
     );
-    _on(ConduitMethodSpecs.hermesJobs, (_) => _requireHermes().jobs());
-    _on(ConduitMethodSpecs.hermesSaveJob, (p) => _requireHermes().saveJob(p));
+    _on(
+      ConduitMethodSpecs.hermesSessionsUpdate,
+      (p) => _requireHermes().update(p),
+    );
+    _on(
+      ConduitMethodSpecs.hermesSessionsContinue,
+      (p) => _requireHermes().continueChat(p),
+    );
+    _on(ConduitMethodSpecs.hermesHiddenList, (_) => _requireHermes().hidden());
+    _on(
+      ConduitMethodSpecs.hermesHistoryBranch,
+      (p) => _requireTurns().branchHermes(p),
+    );
+    _on(
+      ConduitMethodSpecs.hermesHistoryUndo,
+      (p) => _requireTurns().undoHermes(p),
+    );
+    // Scheduled agents, the catalog, connections and MCP servers.
+    _on(ConduitMethodSpecs.hermesJobs, (_) => _need(_hermesAdmin).jobs());
+    _on(
+      ConduitMethodSpecs.hermesSaveJob,
+      (p) => _need(_hermesAdmin).saveJob(p),
+    );
     _on(
       ConduitMethodSpecs.hermesSetJobEnabled,
-      (p) => _requireHermes().setJobEnabled(p),
+      (p) => _need(_hermesAdmin).setJobEnabled(p),
     );
-    _on(ConduitMethodSpecs.hermesRunJob, (p) => _requireHermes().runJob(p.id));
+    _on(
+      ConduitMethodSpecs.hermesRunJob,
+      (p) => _need(_hermesAdmin).runJob(p.id, connection: p.connection),
+    );
     _on(
       ConduitMethodSpecs.hermesDeleteJob,
-      (p) => _requireHermes().deleteJob(p.id),
+      (p) => _need(_hermesAdmin).deleteJob(p.id, connection: p.connection),
     );
-    _on(ConduitMethodSpecs.hermesCatalog, (_) => _requireHermes().catalog());
+    _on(ConduitMethodSpecs.hermesCatalog, (_) => _need(_hermesAdmin).catalog());
+    _on(
+      ConduitMethodSpecs.hermesJobsRuns,
+      (p) => _need(_hermesAdmin).jobRuns(p.id, connection: p.connection),
+    );
+    _on(
+      ConduitMethodSpecs.hermesJobsStop,
+      (p) => _need(_hermesAdmin).stopJob(p.id, connection: p.connection),
+    );
+    _on(
+      ConduitMethodSpecs.hermesJobsDelivery,
+      (_) => _need(_hermesAdmin).deliveryOptions(),
+    );
+    _on(
+      ConduitMethodSpecs.hermesConnectionsList,
+      (_) => _need(_hermesAdmin).connections(),
+    );
+    _on(
+      ConduitMethodSpecs.hermesConnectionsSave,
+      (p) => _need(_hermesAdmin).saveConnection(p),
+    );
+    _on(
+      ConduitMethodSpecs.hermesConnectionsTest,
+      (p) => _need(_hermesAdmin).testConnection(p),
+    );
+    _on(
+      ConduitMethodSpecs.hermesConnectionsActivate,
+      (p) => _need(_hermesAdmin).activate(p.id),
+    );
+    _on(
+      ConduitMethodSpecs.hermesConnectionsDelete,
+      (p) => _need(_hermesAdmin).deleteConnection(p.id),
+    );
+    _on(
+      ConduitMethodSpecs.hermesConnectionsSetEnabled,
+      (p) => _need(_hermesAdmin).setEnabled(p.enabled),
+    );
+    _on(
+      ConduitMethodSpecs.hermesMcpList,
+      (_) => _need(_hermesAdmin).mcpServers(),
+    );
+    _on(
+      ConduitMethodSpecs.hermesMcpCatalog,
+      (_) => _need(_hermesAdmin).mcpCatalog(),
+    );
+    _on(ConduitMethodSpecs.hermesMcpAdd, (p) => _need(_hermesAdmin).addMcp(p));
+    _on(
+      ConduitMethodSpecs.hermesMcpAddFromCatalog,
+      (p) => _need(_hermesAdmin).addMcpFromCatalog(p),
+    );
+    _on(
+      ConduitMethodSpecs.hermesMcpSetApiKey,
+      (p) => _need(_hermesAdmin).setMcpApiKey(p),
+    );
+    _on(
+      ConduitMethodSpecs.hermesMcpRemove,
+      (p) => _need(_hermesAdmin).removeMcp(p),
+    );
+    _on(
+      ConduitMethodSpecs.hermesMcpTest,
+      (p) => _need(_hermesAdmin).testMcp(p),
+    );
+    _on(
+      ConduitMethodSpecs.hermesMcpSetEnabled,
+      (p) => _need(_hermesAdmin).setMcpEnabled(p),
+    );
+    _on(
+      ConduitMethodSpecs.hermesMcpAuthenticate,
+      (p) => _need(_hermesAdmin).authenticateMcp(p),
+    );
+
+    // hermes.work.*, hermes.context.*, hermes.decisions.*: a Hermes chat's
+    // agent at work, its context window, and what it asks.
+    _on(
+      ConduitMethodSpecs.hermesWorkWatch,
+      (r) => _need(_hermesCards).watch(sessionId, r),
+    );
+    _on(
+      ConduitMethodSpecs.hermesWorkUnwatch,
+      (r) => _need(_hermesCards).unwatch(sessionId, r.chatId),
+    );
+    _on(
+      ConduitMethodSpecs.hermesWorkSteer,
+      (r) => _need(_hermesCards).steer(r),
+    );
+    _on(ConduitMethodSpecs.hermesWorkStop, (r) => _need(_hermesCards).stop(r));
+    _on(ConduitMethodSpecs.hermesWorkKill, (r) => _need(_hermesCards).kill(r));
+    _on(
+      ConduitMethodSpecs.hermesContextGet,
+      (r) => _need(_hermesCards).context(r),
+    );
+    _on(
+      ConduitMethodSpecs.hermesContextCompact,
+      (r) => _need(_hermesCards).compact(r),
+    );
+    _on(
+      ConduitMethodSpecs.hermesDecisionsAnswer,
+      (r) => _need(_hermesCards).answer(r),
+    );
+
+    // hermes.bots.*, hermes.rooms.*: Bot Mode and Group Chats.
+    _on(ConduitMethodSpecs.hermesBotsList, (_) => _need(_hermesRooms).bots());
+    _on(
+      ConduitMethodSpecs.hermesBotsAvatar,
+      (r) => _need(_hermesRooms).avatar(r.name, connection: r.connection),
+    );
+    _on(
+      ConduitMethodSpecs.hermesBotsOpen,
+      (r) =>
+          _need(_hermesRooms)
+              .openBot(r.name, _requireHermes(), connection: r.connection),
+    );
+    _on(
+      ConduitMethodSpecs.hermesRoomsList,
+      (_) => _need(_hermesRooms).rooms(sessionId),
+    );
+    _on(
+      ConduitMethodSpecs.hermesRoomsCreate,
+      (r) => _need(_hermesRooms).create(r),
+    );
+    _on(
+      ConduitMethodSpecs.hermesRoomsWatch,
+      (r) =>
+          _need(_hermesRooms)
+              .watch(sessionId, r.roomId, connection: r.connection),
+    );
+    _on(
+      ConduitMethodSpecs.hermesRoomsUnwatch,
+      (r) => _need(_hermesRooms).unwatch(sessionId, r.roomId),
+    );
+    _on(ConduitMethodSpecs.hermesRoomsSend, (r) => _need(_hermesRooms).send(r));
+    _on(
+      ConduitMethodSpecs.hermesRoomsStop,
+      (r) => _need(_hermesRooms).stop(r.roomId, connection: r.connection),
+    );
+    _on(
+      ConduitMethodSpecs.hermesRoomsContinue,
+      (r) => _need(_hermesRooms).continueDiscussion(r),
+    );
+    _on(
+      ConduitMethodSpecs.hermesRoomsAnswer,
+      (r) => _need(_hermesRooms).answer(r),
+    );
+    _on(
+      ConduitMethodSpecs.hermesRoomsRename,
+      (r) => _need(_hermesRooms).rename(r),
+    );
+    _on(
+      ConduitMethodSpecs.hermesRoomsSaveContext,
+      (r) => _need(_hermesRooms).saveContext(r),
+    );
+    _on(
+      ConduitMethodSpecs.hermesRoomsDisband,
+      (r) => _need(_hermesRooms).disband(r.roomId, connection: r.connection),
+    );
 
     // voice.*.
     _on(ConduitMethodSpecs.voiceSettings, (_) => _requireVoice().settings());
@@ -863,6 +1262,60 @@ class RpcSession {
       ConduitMethodSpecs.voiceDeleteModel,
       (p) => _requireVoice().deleteModel(p.id),
     );
+
+    // dictation.*, recordings.*.
+    _on(
+      ConduitMethodSpecs.dictationStatus,
+      (p) => _requireDictation().status(p),
+    );
+    _on(ConduitMethodSpecs.recordingsList, (p) => _requireRecordings().list(p));
+    _on(
+      ConduitMethodSpecs.recordingsBegin,
+      (p) => _requireRecordings().begin(p, sessionId: sessionId),
+    );
+    _on(
+      ConduitMethodSpecs.recordingsAppend,
+      (p) => _requireRecordings().append(p),
+    );
+    _on(
+      ConduitMethodSpecs.recordingsClose,
+      (p) => _requireRecordings().close(p),
+    );
+    _on(
+      ConduitMethodSpecs.recordingsDiscard,
+      (p) => _requireRecordings().discard(p),
+    );
+    _on(
+      ConduitMethodSpecs.recordingsTranscribe,
+      (p) => _requireRecordings().transcribe(p),
+    );
+
+    // speech.*: read aloud, run here; the window speaks and plays.
+    _on(ConduitMethodSpecs.speechGet, (_) async => _need(_speech).get());
+    _on(ConduitMethodSpecs.speechToggle, (p) => _need(_speech).toggle(p));
+    _on(ConduitMethodSpecs.speechPause, (_) => _need(_speech).pause());
+    _on(ConduitMethodSpecs.speechResume, (_) => _need(_speech).resume());
+    _on(ConduitMethodSpecs.speechStop, (_) => _need(_speech).stop());
+    _on(ConduitMethodSpecs.speechRetry, (_) => _need(_speech).retry());
+    _on(ConduitMethodSpecs.speechSeek, (p) => _need(_speech).seek(p));
+    _on(ConduitMethodSpecs.speechPreview, (p) => _need(_speech).preview(p));
+    _on(ConduitMethodSpecs.speechReport, (p) async {
+      _need(_speech).report(p);
+      return const OkResult(ok: true);
+    });
+
+    // calls.*: voice calls, run here; the window listens and plays.
+    _on(ConduitMethodSpecs.callsGet, (_) async => _need(_calls).get());
+    _on(ConduitMethodSpecs.callsStart, (p) => _need(_calls).start(p));
+    _on(ConduitMethodSpecs.callsEnd, (_) => _need(_calls).end());
+    _on(ConduitMethodSpecs.callsPause, (_) => _need(_calls).pause());
+    _on(ConduitMethodSpecs.callsResume, (_) => _need(_calls).resume());
+    _on(ConduitMethodSpecs.callsMute, (_) => _need(_calls).mute());
+    _on(ConduitMethodSpecs.callsSkip, (_) => _need(_calls).skip());
+    _on(ConduitMethodSpecs.callsReport, (p) async {
+      _need(_calls).report(p);
+      return const OkResult(ok: true);
+    });
 
     // terminal.*.
     _on(
@@ -895,6 +1348,37 @@ class RpcSession {
       ConduitMethodSpecs.terminalPreviewPort,
       (p) => _requireTerminals().previewPort(p),
     );
+    _on(
+      ConduitMethodSpecs.terminalWatch,
+      (p) async => _requireTerminals().watch(p),
+    );
+    _on(ConduitMethodSpecs.terminalDetach, (p) async {
+      await _requireTerminals().detach(p.handle);
+      return ok;
+    });
+
+    // computer.*.
+    _on(
+      ConduitMethodSpecs.computerStatus,
+      (p) => _requireComputer().status(p.chatId),
+    );
+    _on(ConduitMethodSpecs.computerOpen, (p) => _requireComputer().open(p));
+    _on(
+      ConduitMethodSpecs.computerTabs,
+      (p) => _requireComputer().tabs(p.chatId),
+    );
+    _on(ConduitMethodSpecs.computerCloseTab, (p) async {
+      await _requireComputer().closeTab(p);
+      return ok;
+    });
+    _on(ConduitMethodSpecs.computerShortcut, (p) async {
+      await _requireComputer().shortcut(p);
+      return ok;
+    });
+    _on(ConduitMethodSpecs.computerClose, (p) async {
+      await _requireComputer().close(p.handle);
+      return ok;
+    });
 
     // workspace.*.
     _on(
@@ -981,6 +1465,18 @@ class RpcSession {
       ConduitMethodSpecs.workspaceKnowledgeCleanup,
       (p) => _requireWorkspace().knowledgeCleanup(p.id),
     );
+    _on(
+      ConduitMethodSpecs.workspaceDuplicate,
+      (p) => _requireWorkspace().duplicate(p),
+    );
+    _on(
+      ConduitMethodSpecs.workspaceAddText,
+      (p) => _requireWorkspace().addText(p),
+    );
+    _on(
+      ConduitMethodSpecs.workspaceSkillFromMarkdown,
+      (p) async => _requireWorkspace().skillFromMarkdown(p.text),
+    );
 
     // notes.*.
     _on(ConduitMethodSpecs.notesList, (r) => _requireNotes().list(r.query));
@@ -988,7 +1484,9 @@ class RpcSession {
     // error.
     _on(
       ConduitMethodSpecs.notesGet,
-      (ref) async => NoteResult(note: await _requireNotes().get(ref.id)),
+      (open) async => NoteResult(
+        note: await _requireNotes().get(open.id, pageId: open.pageId),
+      ),
     );
     _on(ConduitMethodSpecs.notesSave, (r) => _requireNotes().save(r));
     _on(ConduitMethodSpecs.notesDelete, (ref) async {
@@ -1002,6 +1500,22 @@ class RpcSession {
     _on(ConduitMethodSpecs.notesEnhance, (r) => _requireNotes().enhance(r));
     _on(ConduitMethodSpecs.notesAttach, (r) => _requireNotes().attach(r));
     _on(ConduitMethodSpecs.notesDetach, (r) => _requireNotes().detach(r));
+    _on(
+      ConduitMethodSpecs.notesRecordings,
+      (ref) => _requireNotes().recordings(ref.id),
+    );
+    _on(
+      ConduitMethodSpecs.notesAddRecording,
+      (r) => _requireNotes().addRecording(r),
+    );
+    _on(
+      ConduitMethodSpecs.notesRetryRecording,
+      (r) => _requireNotes().retryRecording(r),
+    );
+    _on(
+      ConduitMethodSpecs.notesRemoveRecording,
+      (r) => _requireNotes().removeRecording(r),
+    );
     _on(
       ConduitMethodSpecs.notesSetPinned,
       (r) => _requireNotes().setPinned(r.id, pinned: r.pinned),
@@ -1091,6 +1605,20 @@ class RpcSession {
         debugMessage: 'the core is not up yet',
       ));
 
+  DictationService _requireDictation() =>
+      _dictation ??
+      (throw const RpcError(
+        code: ConduitErrorCodes.daemonUnavailable,
+        debugMessage: 'the core is not up yet',
+      ));
+
+  RecordingsService _requireRecordings() =>
+      _recordings ??
+      (throw const RpcError(
+        code: ConduitErrorCodes.daemonUnavailable,
+        debugMessage: 'the core is not up yet',
+      ));
+
   HermesService _requireHermes() =>
       _hermes ??
       (throw const RpcError(
@@ -1105,6 +1633,13 @@ class RpcSession {
         debugMessage: 'the core is not up yet',
       ));
 
+  ComputerRpcService _requireComputer() =>
+      _computer ??
+      (throw const RpcError(
+        code: ConduitErrorCodes.daemonUnavailable,
+        debugMessage: 'the core is not up yet',
+      ));
+
   WorkspaceService _requireWorkspace() =>
       _workspace ??
       (throw const RpcError(
@@ -1114,6 +1649,13 @@ class RpcSession {
 
   NotesService _requireNotes() =>
       _notes ??
+      (throw const RpcError(
+        code: ConduitErrorCodes.daemonUnavailable,
+        debugMessage: 'the core is not up yet',
+      ));
+
+  WebSearchService _requireWebSearch() =>
+      _webSearch ??
       (throw const RpcError(
         code: ConduitErrorCodes.daemonUnavailable,
         debugMessage: 'the core is not up yet',

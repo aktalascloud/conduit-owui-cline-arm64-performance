@@ -19,6 +19,11 @@
 //!   features, prompts and attachments for the next message.
 //! * [`files`]: `/files` images (bearer token added) and attachment opening.
 //! * [`settings`] and [`layout`]: preferences and window geometry.
+//! * [`speech`]: read aloud, which the daemon runs and this window speaks.
+//! * [`call`]: a voice call, which the daemon runs and this window hears
+//!   and, for a realtime voice, plays.
+//! * [`calendar`] and [`tasks`]: the calendar's agenda and the scheduled
+//!   tasks, as the daemon keeps them.
 //! * [`shell`]: the macOS shell extras' state (links waiting for the main
 //!   window, the hotkey, notification and login-item statuses).
 //!
@@ -29,11 +34,18 @@
 pub mod accounts;
 pub mod app_settings;
 pub mod areas;
+pub mod calendar;
+pub mod call;
+pub mod channel;
 pub mod chat;
 pub mod chat_list;
 pub mod composer;
 pub mod connection;
+pub mod dictation;
 pub mod files;
+pub mod hermes_admin;
+pub mod hermes_rooms;
+pub mod hermes_work;
 pub mod layout;
 pub mod navigation;
 pub mod palette;
@@ -43,6 +55,8 @@ pub mod sections;
 pub mod session;
 pub mod settings;
 pub mod shell;
+pub mod speech;
+pub mod tasks;
 pub mod toasts;
 pub mod ui_requests;
 
@@ -74,9 +88,20 @@ pub struct Stores {
     pub chat_list: Entity<ChatListStore>,
     pub palette: Entity<PaletteStore>,
     pub areas: Entity<AreasStore>,
+    /// Hermes's connections, status, catalog, MCP servers and jobs.
+    pub hermes_admin: Entity<hermes_admin::HermesAdminStore>,
     pub sections: Entity<SectionsStore>,
     /// Core's `AppSettings` and the socket's health (Settings, composer).
     pub app_settings: Entity<app_settings::AppSettingsStore>,
+    /// Read aloud: the reading, and this window's voice and player.
+    pub speech: Entity<speech::SpeechStore>,
+    /// A voice call: the call the daemon runs, and this window's ears and
+    /// realtime audio.
+    pub call: Entity<call::CallStore>,
+    pub calendar: Entity<calendar::CalendarStore>,
+    pub tasks: Entity<tasks::TasksStore>,
+    /// Hermes's bots and Group Chats, and the room the main window shows.
+    pub hermes_rooms: Entity<hermes_rooms::HermesRoomsStore>,
 }
 
 /// The session-wide events the stores follow (the views add their own scopes
@@ -118,7 +143,7 @@ impl Stores {
             cx.new(|cx| SessionStore::new(rpc, accounts, cx))
         };
         Self {
-            connection,
+            connection: connection.clone(),
             accounts,
             session,
             ui_requests: cx.new(|_| UiRequestsStore::new(rpc.clone())),
@@ -129,7 +154,13 @@ impl Stores {
             palette: cx.new(|_| PaletteStore::new(rpc.clone())),
             areas: cx.new(|_| AreasStore::new(rpc.clone())),
             sections: cx.new(|_| SectionsStore::load(None)),
-            app_settings: cx.new(|_| app_settings::AppSettingsStore::new(rpc)),
+            app_settings: cx.new(|_| app_settings::AppSettingsStore::new(rpc.clone())),
+            speech: cx.new(|cx| speech::SpeechStore::new(rpc.clone(), connection.clone(), cx)),
+            call: cx.new(|cx| call::CallStore::new(rpc.clone(), connection, cx)),
+            calendar: cx.new(|_| calendar::CalendarStore::new(rpc.clone())),
+            tasks: cx.new(|_| tasks::TasksStore::new(rpc.clone())),
+            hermes_rooms: cx.new(|_| hermes_rooms::HermesRoomsStore::new(rpc.clone())),
+            hermes_admin: cx.new(|_| hermes_admin::HermesAdminStore::new(rpc)),
         }
     }
 
@@ -149,6 +180,7 @@ impl Stores {
         let chat_list = cx.new(|_| ChatListStore::new(rpc.clone()));
         let palette = cx.new(|_| PaletteStore::new(rpc.clone()));
         let areas = cx.new(|_| AreasStore::new(rpc.clone()));
+        let hermes_admin = cx.new(|_| hermes_admin::HermesAdminStore::new(rpc.clone()));
         let sections_file = connection
             .read(cx)
             .paths()
@@ -156,6 +188,19 @@ impl Stores {
             .join("sidebar-sections.json");
         let sections = cx.new(|_| SectionsStore::load(Some(sections_file)));
         let app_settings = cx.new(|_| app_settings::AppSettingsStore::new(rpc.clone()));
+        let speech = {
+            let connection = connection.clone();
+            let rpc = rpc.clone();
+            cx.new(|cx| speech::SpeechStore::new(rpc, connection, cx))
+        };
+        let call = {
+            let connection = connection.clone();
+            let rpc = rpc.clone();
+            cx.new(|cx| call::CallStore::new(rpc, connection, cx))
+        };
+        let calendar = cx.new(|_| calendar::CalendarStore::new(rpc.clone()));
+        let tasks = cx.new(|_| tasks::TasksStore::new(rpc.clone()));
+        let hermes_rooms = cx.new(|_| hermes_rooms::HermesRoomsStore::new(rpc.clone()));
         let stores = Self {
             connection: connection.clone(),
             accounts,
@@ -167,13 +212,25 @@ impl Stores {
             chat_list,
             palette,
             areas,
+            hermes_admin,
             sections,
             app_settings,
+            speech,
+            call,
+            calendar,
+            tasks,
+            hermes_rooms,
         };
         connection.update(cx, |c, _| c.subscribe("session", SESSION_EVENTS, vec![]));
         chat_list::wire(&stores, cx);
         areas::wire(&stores, cx);
+        hermes_admin::wire(&stores, cx);
         app_settings::wire(&stores, cx);
+        speech::wire(&stores, cx);
+        call::wire(&stores, cx);
+        calendar::wire(&stores, cx);
+        tasks::wire(&stores, cx);
+        hermes_rooms::wire(&stores, cx);
         {
             // The server answers again after the window opened without it:
             // the session (a token may have lapsed meanwhile) and the chat
@@ -245,7 +302,7 @@ impl Stores {
                     .update(cx, |n, cx| n.on_remap(&from, &to, cx));
                 self.router.update(cx, |r, cx| r.on_remap(from, to, cx));
             }
-            Event::HermesChanged => self.session.update(cx, |s, cx| s.refresh(cx)),
+            Event::HermesChanged(_) => self.session.update(cx, |s, cx| s.refresh(cx)),
             Event::CapabilitiesChanged => self.session.update(cx, |s, cx| {
                 s.refresh_capabilities(cx);
                 s.refresh_server(cx);

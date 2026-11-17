@@ -417,6 +417,20 @@ abstract final class ConduitMethods {
   /// Sets an Ollama Cloud model's thinking level.
   static const String directOllamaThinking = 'direct.ollamaThinking';
 
+  /// Reads the Open WebUI account's connections again; answers with the
+  /// list.
+  static const String directReload = 'direct.reload';
+
+  /// What applies to every connection's models: images per request and the
+  /// context limits of models that report none.
+  static const String directOptions = 'direct.options';
+
+  /// Sets how many of a chat's newest images one request carries.
+  static const String directSetImagesPerRequest = 'direct.setImagesPerRequest';
+
+  /// Sets the context limit chats with a model are compacted at.
+  static const String directSetContextLimit = 'direct.setContextLimit';
+
   // ---------------------------------------------------------------------
   // mcp.* -- MCP servers the app talks to itself.
   // ---------------------------------------------------------------------
@@ -459,6 +473,16 @@ abstract final class ConduitMethods {
 
   /// Reads one of a server's resources, to preview and insert.
   static const String mcpReadResource = 'mcp.readResource';
+
+  // ---------------------------------------------------------------------
+  // webSearch.* -- the web search the app runs itself for direct models.
+  // ---------------------------------------------------------------------
+
+  /// The engine, safe search and region on-device searches use.
+  static const String webSearchGet = 'webSearch.get';
+
+  /// Changes them; answers with all of them.
+  static const String webSearchSet = 'webSearch.set';
 
   // ---------------------------------------------------------------------
   // turns.* -- sending and stopping generation.
@@ -678,6 +702,133 @@ abstract final class ConduitMethods {
   static const String notesPrefix = 'notes.';
   static const String chatPromptsPrefix = 'chatPrompts.';
   static const String mcpAppsPrefix = 'mcpApps.';
+  static const String speechPrefix = 'speech.';
+
+  // speech.* -- read aloud. The daemon runs the reading (the core's
+  // manager); the window is its voice and its player.
+
+  /// The reading now, with its sentences.
+  static const String speechGet = 'speech.get';
+
+  /// Reads an answer aloud, or stops the reading of it (resumes it when
+  /// paused): the Read Aloud action.
+  static const String speechToggle = 'speech.toggle';
+
+  static const String speechPause = 'speech.pause';
+  static const String speechResume = 'speech.resume';
+  static const String speechStop = 'speech.stop';
+
+  /// Reads the failed reading again.
+  static const String speechRetry = 'speech.retry';
+
+  /// Moves the reading to a sentence, by some sentences, or to a time.
+  static const String speechSeek = 'speech.seek';
+
+  /// Settings › Audio's sample, or stops it.
+  static const String speechPreview = 'speech.preview';
+
+  /// The window's speech engine answers a `speech.command`, or says what
+  /// it did.
+  static const String speechReport = 'speech.report';
+
+  static const String callsPrefix = 'calls.';
+
+  // calls.* -- voice calls. The call runs here (the core's voice-mode
+  // controller, in its chat's scope); the window is its microphone and,
+  // for a realtime voice, its speaker.
+
+  /// The call now.
+  static const String callsGet = 'calls.get';
+
+  /// Starts a call in a chat, or in a new one.
+  static const String callsStart = 'calls.start';
+
+  /// Ends the call.
+  static const String callsEnd = 'calls.end';
+
+  /// Stops listening and speaking until resumed.
+  static const String callsPause = 'calls.pause';
+  static const String callsResume = 'calls.resume';
+
+  /// Mutes the microphone, or unmutes it.
+  static const String callsMute = 'calls.mute';
+
+  /// Stops the answer being said and listens again.
+  static const String callsSkip = 'calls.skip';
+
+  /// The window answers a `calls.command`, or says what a listen did.
+  static const String callsReport = 'calls.report';
+  // calendar.* -- the account's Open WebUI calendars and the agenda over
+  // them (core's CalendarAgenda), in the Mac's time zone.
+  static const String calendarPrefix = 'calendar.';
+
+  /// The calendars and the agenda for the range, moving or reloading it.
+  static const String calendarAgenda = 'calendar.agenda';
+
+  /// Shows or hides a calendar's events; the last shown one stays.
+  static const String calendarSetVisible = 'calendar.setVisible';
+
+  /// Makes one of the account's own calendars its default.
+  static const String calendarMakeDefault = 'calendar.makeDefault';
+
+  /// Creates a private calendar of the account's own.
+  static const String calendarCreateCalendar = 'calendar.createCalendar';
+
+  /// What the event sheet shows of an agenda item.
+  static const String calendarEvent = 'calendar.event';
+
+  /// Deletes an event (a recurring event's whole series).
+  static const String calendarDeleteEvent = 'calendar.deleteEvent';
+
+  /// The account's own answer to an invitation.
+  static const String calendarRespond = 'calendar.respond';
+
+  /// Opens the event editor's draft: a new event, or an item's stored event.
+  static const String calendarEditor = 'calendar.editor';
+
+  /// Settles an edited draft (an end moved along with the start) and says
+  /// what stops it being saved.
+  static const String calendarCheckDraft = 'calendar.checkDraft';
+
+  /// Creates the draft's event, or sends what changed.
+  static const String calendarSave = 'calendar.save';
+
+  // automations.* -- the account's Open WebUI scheduled tasks (core's
+  // Automations), behind Settings' Advanced as on the phone.
+  static const String automationsPrefix = 'automations.';
+
+  /// The tasks, newest first, for a search and a status.
+  static const String automationsList = 'automations.list';
+
+  /// The next page of the list.
+  static const String automationsLoadMore = 'automations.loadMore';
+
+  /// One task, read from the server.
+  static const String automationsGet = 'automations.get';
+
+  /// A page of a task's history.
+  static const String automationsRuns = 'automations.runs';
+
+  /// Makes a task active or paused.
+  static const String automationsSetActive = 'automations.setActive';
+
+  /// Asks the server to run a task now, then watches its history for the
+  /// run (`automations.runProgress`).
+  static const String automationsRun = 'automations.run';
+
+  /// Where a task's Run Now stands.
+  static const String automationsRunState = 'automations.runState';
+
+  static const String automationsDelete = 'automations.delete';
+
+  /// Opens the task editor's draft and what it can pick.
+  static const String automationsEditor = 'automations.editor';
+
+  /// Settles an edited draft's schedule and says what stops it being saved.
+  static const String automationsCheckDraft = 'automations.checkDraft';
+
+  /// Creates the draft's task, or replaces the task with it.
+  static const String automationsSave = 'automations.save';
 
   // notes.* -- listed with the prefixes because they are few.
 
@@ -708,6 +859,20 @@ abstract final class ConduitMethods {
 
   /// Takes a file off a note; the file itself stays on the server.
   static const String notesDetach = 'notes.detach';
+
+  /// A note's recordings that are not attached yet; starts uploading the
+  /// ones waiting when the server can be reached.
+  static const String notesRecordings = 'notes.recordings';
+
+  /// Keeps a recording the window made, then uploads it and attaches it to
+  /// the note, surviving a lost connection and a relaunch.
+  static const String notesAddRecording = 'notes.addRecording';
+
+  /// Tries a waiting recording's upload again.
+  static const String notesRetryRecording = 'notes.retryRecording';
+
+  /// Deletes a recording that is not attached yet.
+  static const String notesRemoveRecording = 'notes.removeRecording';
   static const String channelsPrefix = 'channels.';
 
   // channels.*.
@@ -742,6 +907,28 @@ abstract final class ConduitMethods {
 
   /// Who is in a channel, for `@` mentions.
   static const String channelsMembers = 'channels.members';
+
+  /// Opens a channel's pane: the channel as it shows there, and what the
+  /// user may do to its members. Marks it read and starts listening to it.
+  static const String channelsOpen = 'channels.open';
+
+  /// The channel in front of the user now, or none: its new messages are
+  /// read as they come, and it neither counts as unread nor notifies.
+  static const String channelsFocus = 'channels.focus';
+
+  /// Notifies for every message, or (muted) for mentions only.
+  static const String channelsSetMuted = 'channels.setMuted';
+
+  /// The channel's members matching what follows an `@`.
+  static const String channelsMentions = 'channels.mentions';
+
+  /// The members sheet: a page of members, by name, for a search.
+  static const String channelsMemberPage = 'channels.memberPage';
+  static const String channelsAddMembers = 'channels.addMembers';
+  static const String channelsRemoveMember = 'channels.removeMember';
+
+  /// Presses a button on an app's message.
+  static const String channelsAppAction = 'channels.appAction';
   static const String workspacePrefix = 'workspace.';
 
   // workspace.*: models, knowledge, prompts, tools and skills. Most
@@ -810,8 +997,20 @@ abstract final class ConduitMethods {
 
   /// Takes the files that failed to be read in out of a knowledge base.
   static const String workspaceKnowledgeCleanup = 'workspace.knowledgeCleanup';
+
+  /// Makes a copy of an item on the server and answers with it.
+  static const String workspaceDuplicate = 'workspace.duplicate';
+
+  /// Puts a text file made from typed text into a knowledge base.
+  static const String workspaceAddText = 'workspace.addText';
+
+  /// Reads a skill from a Markdown file (front-matter name, id and
+  /// description, the file as instructions), not saved.
+  static const String workspaceSkillFromMarkdown =
+      'workspace.skillFromMarkdown';
   static const String directPrefix = 'direct.';
   static const String mcpPrefix = 'mcp.';
+  static const String webSearchPrefix = 'webSearch.';
   static const String hermesPrefix = 'hermes.';
 
   // hermes.*: the Hermes Agent connection, its sessions -- chats with
@@ -835,6 +1034,25 @@ abstract final class ConduitMethods {
 
   /// A copy of a session to go on from; answers with the new one.
   static const String hermesForkSession = 'hermes.forkSession';
+
+  /// Pins, archives or hides a session, or undoes it; answers with the
+  /// sessions.
+  static const String hermesSessionsUpdate = 'hermes.sessions.update';
+
+  /// Continues a read-only session's chat in a session this app owns:
+  /// Hermes's fork (Continue Here) or a copy; answers with the session to
+  /// open.
+  static const String hermesSessionsContinue = 'hermes.sessions.continue';
+
+  /// The sessions hidden from every list (Hidden Chats).
+  static const String hermesHiddenList = 'hermes.hidden.list';
+
+  /// Branch from Here: a new session with a Hermes chat up to a reply;
+  /// answers with the session to open.
+  static const String hermesHistoryBranch = 'hermes.history.branch';
+
+  /// Undo Last Turn of a Desktop Gateway chat, there and in the chat.
+  static const String hermesHistoryUndo = 'hermes.history.undo';
   static const String hermesJobs = 'hermes.jobs';
 
   /// Creates or edits a scheduled agent; answers with the jobs.
@@ -845,8 +1063,137 @@ abstract final class ConduitMethods {
   static const String hermesRunJob = 'hermes.runJob';
   static const String hermesDeleteJob = 'hermes.deleteJob';
 
-  /// The agent's skills and toolsets.
+  /// The agent's skills and toolsets, and a Hermes chat's `/` commands.
   static const String hermesCatalog = 'hermes.catalog';
+
+  /// The sessions a scheduled agent's runs wrote, newest first (a Desktop
+  /// Gateway's).
+  static const String hermesJobsRuns = 'hermes.jobs.runs';
+
+  /// Stops a scheduled agent's running run (its schedule stays); answers
+  /// with the jobs, and how the Stop settles comes in their notices.
+  static const String hermesJobsStop = 'hermes.jobs.stop';
+
+  /// Where the connection's scheduled agents can deliver.
+  static const String hermesJobsDelivery = 'hermes.jobs.delivery';
+
+  // hermes.connections.*: Hermes's switch and its saved connections.
+
+  static const String hermesConnectionsList = 'hermes.connections.list';
+
+  /// Saves a connection, new or edited; the first one saved is put in use.
+  static const String hermesConnectionsSave = 'hermes.connections.save';
+
+  /// Tries a connection's form without saving it.
+  static const String hermesConnectionsTest = 'hermes.connections.test';
+
+  /// Puts a saved connection in use: Hermes's sessions, jobs and servers
+  /// follow it.
+  static const String hermesConnectionsActivate = 'hermes.connections.activate';
+
+  /// Deletes a saved connection and its credentials; deleting the one in
+  /// use puts the most recently used other one in use.
+  static const String hermesConnectionsDelete = 'hermes.connections.delete';
+
+  /// Turns Hermes on or off, its connections kept.
+  static const String hermesConnectionsSetEnabled =
+      'hermes.connections.setEnabled';
+
+  // hermes.mcp.*: the MCP servers a Desktop Gateway connects its agent to.
+
+  static const String hermesMcpList = 'hermes.mcp.list';
+
+  /// The ready-made servers Hermes offers.
+  static const String hermesMcpCatalog = 'hermes.mcp.catalog';
+
+  /// Adds a server of the user's own (an HTTP address or a command).
+  static const String hermesMcpAdd = 'hermes.mcp.add';
+
+  /// Adds a server from Hermes's catalog, by its name there.
+  static const String hermesMcpAddFromCatalog = 'hermes.mcp.addFromCatalog';
+  static const String hermesMcpSetApiKey = 'hermes.mcp.setApiKey';
+  static const String hermesMcpRemove = 'hermes.mcp.remove';
+
+  /// Connects to a server once and lists what it offers.
+  static const String hermesMcpTest = 'hermes.mcp.test';
+
+  /// Offers a server's tools to the agent, or stops offering them.
+  static const String hermesMcpSetEnabled = 'hermes.mcp.setEnabled';
+
+  /// Signs in to a server with OAuth in the browser; answers once it is
+  /// done (or after two minutes).
+  static const String hermesMcpAuthenticate = 'hermes.mcp.authenticate';
+
+  // hermes.work.*, hermes.context.*, hermes.decisions.*: what a Hermes
+  // chat's agent is doing, its context window, and what it asks.
+
+  /// Follows a chat's agent work (subagents, processes, plan) while the
+  /// window shows it; changes come as `hermes.work.changed`.
+  static const String hermesWorkWatch = 'hermes.work.watch';
+  static const String hermesWorkUnwatch = 'hermes.work.unwatch';
+
+  /// New instructions for a running subagent.
+  static const String hermesWorkSteer = 'hermes.work.steer';
+
+  /// Stops a subagent.
+  static const String hermesWorkStop = 'hermes.work.stop';
+
+  /// Kills a background process.
+  static const String hermesWorkKill = 'hermes.work.kill';
+
+  /// A Hermes chat's context window, token totals and plan usage.
+  static const String hermesContextGet = 'hermes.context.get';
+
+  /// Summarizes a Hermes chat's older messages on the server.
+  static const String hermesContextCompact = 'hermes.context.compact';
+
+  /// Answers a clarify form, a sudo password, a secret or a set-up card,
+  /// and waits for Hermes to take it.
+  static const String hermesDecisionsAnswer = 'hermes.decisions.answer';
+
+  // hermes.bots.*: Bot Mode. A bot is a Hermes profile with a face and one
+  // permanent Bot Chat.
+
+  /// The gateway's bots, most recently active first.
+  static const String hermesBotsList = 'hermes.bots.list';
+
+  /// A bot's picture, as a `data:image/...` URL.
+  static const String hermesBotsAvatar = 'hermes.bots.avatar';
+
+  /// Opens a bot's Bot Chat (made when it has none); answers with its
+  /// session, opened as a chat.
+  static const String hermesBotsOpen = 'hermes.bots.open';
+
+  // hermes.rooms.*: Group Chats, two to six bots talking together on a
+  // Desktop Gateway.
+
+  /// The gateway's Group Chats, and whether a new one can be made.
+  static const String hermesRoomsList = 'hermes.rooms.list';
+  static const String hermesRoomsCreate = 'hermes.rooms.create';
+
+  /// Follows an open room, read every 2 s while a window watches it;
+  /// changes come as `hermes.rooms.changed`.
+  static const String hermesRoomsWatch = 'hermes.rooms.watch';
+  static const String hermesRoomsUnwatch = 'hermes.rooms.unwatch';
+
+  /// Posts a message in a room.
+  static const String hermesRoomsSend = 'hermes.rooms.send';
+
+  /// Stops the room's work.
+  static const String hermesRoomsStop = 'hermes.rooms.stop';
+
+  /// Continues a discussion that paused at its limit.
+  static const String hermesRoomsContinue = 'hermes.rooms.continue';
+
+  /// Answers an approval in a room, or retries uncertain work.
+  static const String hermesRoomsAnswer = 'hermes.rooms.answer';
+  static const String hermesRoomsRename = 'hermes.rooms.rename';
+
+  /// Saves a room's purpose, notes and who answers.
+  static const String hermesRoomsSaveContext = 'hermes.rooms.saveContext';
+
+  /// Ends a room for good.
+  static const String hermesRoomsDisband = 'hermes.rooms.disband';
   static const String terminalPrefix = 'terminal.';
 
   // terminal.*. The shell itself is `WS /terminal/{handle}`.
@@ -875,6 +1222,32 @@ abstract final class ConduitMethods {
 
   /// An address the system browser can open to see a port.
   static const String terminalPreviewPort = 'terminal.previewPort';
+
+  /// Keeps a directory's listing and the ports live (`terminal.changed`).
+  static const String terminalWatch = 'terminal.watch';
+
+  /// Lets a handle go: its watch, its port previews.
+  static const String terminalDetach = 'terminal.detach';
+  static const String computerPrefix = 'computer.';
+
+  // computer.*. The viewer page streams from a relay on this computer
+  // (`ComputerView.streamUrl`); the daemon holds the credentials.
+
+  /// Whether a chat's header offers Computer, and which surfaces.
+  static const String computerStatus = 'computer.status';
+
+  /// A view of a chat terminal's desktop or browser.
+  static const String computerOpen = 'computer.open';
+
+  /// The terminal browser's tabs.
+  static const String computerTabs = 'computer.tabs';
+  static const String computerCloseTab = 'computer.closeTab';
+
+  /// A key combination for the surface a view shows.
+  static const String computerShortcut = 'computer.shortcut';
+
+  /// Ends a view: its relay closes.
+  static const String computerClose = 'computer.close';
   static const String voicePrefix = 'voice.';
 
   // voice.*. Audio stays in the window; recordings reach the server
@@ -897,6 +1270,83 @@ abstract final class ConduitMethods {
 
   /// Deletes a downloaded model, or stops its download.
   static const String voiceDeleteModel = 'voice.deleteModel';
+  static const String dictationPrefix = 'dictation.';
+
+  // dictation.*. The window listens and records; what it heard reaches the
+  // backend through `POST /transcribe`.
+
+  /// Which engine dictates now, and what the target's backend can do.
+  static const String dictationStatus = 'dictation.status';
+  static const String recordingsPrefix = 'recordings.';
+
+  // recordings.*. A dictation's audio, kept with the unsent draft in the
+  // account's database so a crash or a relaunch loses none of it.
+
+  /// A draft's saved recordings.
+  static const String recordingsList = 'recordings.list';
+
+  /// Starts a recording for a draft.
+  static const String recordingsBegin = 'recordings.begin';
+
+  /// Stores the next audio of an open recording.
+  static const String recordingsAppend = 'recordings.append';
+
+  /// Ends an open recording; one with no audio is not kept.
+  static const String recordingsClose = 'recordings.close';
+
+  /// Deletes a saved recording.
+  static const String recordingsDiscard = 'recordings.discard';
+
+  /// A saved recording, as text: by the model's backend or by whisper.
+  static const String recordingsTranscribe = 'recordings.transcribe';
+  static const String librechatPrefix = 'librechat.';
+
+  // librechat.* -- LibreChat accounts (signing in; the list and switching
+  // are `accounts.*`), and what only LibreChat has: its composer tools,
+  // memories and Duplicate.
+
+  /// Checks an address for a LibreChat server and how to sign in there.
+  static const String librechatProbe = 'librechat.probe';
+
+  /// Signs in with an email (or LDAP username) and password.
+  static const String librechatSignIn = 'librechat.signIn';
+
+  /// The second step: an authenticator code or a backup code.
+  static const String librechatVerify = 'librechat.verify';
+
+  /// Where single sign-on starts, for the window's sign-in browser.
+  static const String librechatSsoStart = 'librechat.ssoStart';
+
+  /// Finishes single sign-on with the cookies the window captured.
+  static const String librechatCompleteSso = 'librechat.completeSso';
+
+  /// The tools the composer may offer a LibreChat turn.
+  static const String librechatComposer = 'librechat.composer';
+
+  /// The user's memories and whether the assistant uses them.
+  static const String librechatMemoriesList = 'librechat.memories.list';
+
+  /// Adds a memory, or changes one (and its key).
+  static const String librechatMemoriesSave = 'librechat.memories.save';
+  static const String librechatMemoriesDelete = 'librechat.memories.delete';
+
+  /// Turns the assistant's use of memories on or off.
+  static const String librechatMemoriesSetEnabled =
+      'librechat.memories.setEnabled';
+
+  /// Copies a LibreChat chat whole into a new chat on its server.
+  static const String librechatDuplicate = 'librechat.duplicate';
+  static const String intentsPrefix = 'intents.';
+
+  // intents.*. Shortcuts and App Intents on the Mac: the app's intents ask
+  // through these, and the daemon does the work.
+
+  /// A question whose answer comes back in the reply (Ask Conduit): sends
+  /// it as a new chat and waits for the answer, up to a timeout.
+  static const String intentsAsk = 'intents.ask';
+
+  /// The chats Shortcuts offers (Open Chat): by id, by search, or recent.
+  static const String intentsChats = 'intents.chats';
   static const String settingsPrefix = 'settings.';
   static const String syncPrefix = 'sync.';
   static const String socketPrefix = 'socket.';
@@ -939,7 +1389,12 @@ abstract final class ConduitMethods {
     mcpPrefix,
     hermesPrefix,
     terminalPrefix,
+    computerPrefix,
     voicePrefix,
+    dictationPrefix,
+    recordingsPrefix,
+    librechatPrefix,
+    intentsPrefix,
     settingsPrefix,
     syncPrefix,
     socketPrefix,
@@ -954,6 +1409,9 @@ abstract final class ConduitMethods {
     handoffPrefix,
     chatPromptsPrefix,
     mcpAppsPrefix,
+    speechPrefix,
+    calendarPrefix,
+    automationsPrefix,
   };
 
   /// Whether [method] sits in a namespace this protocol version defines.
@@ -981,7 +1439,17 @@ abstract final class ConduitHttpRoutes {
   /// transcription as a `VoiceTranscript`, by the active server or, with
   /// the local engine, by whisper on this computer -- which takes 16 kHz
   /// mono WAV only. The saved language applies.
+  ///
+  /// Query: `engine` (`server` or `local`; the saved one when absent) and
+  /// `model` (a model id: its backend transcribes on the server -- an Open
+  /// WebUI server, the Voice Provider, a Hermes gateway or a LibreChat
+  /// server; the account's server when absent).
   static const String transcribe = '/transcribe';
+
+  /// `GET /recordings/{id}?chatId=&folderId=` -- a saved recording
+  /// (`recordings.*`) as 16 kHz mono WAV, for Export and for transcribing
+  /// it on this computer.
+  static String recording(String id) => '/recordings/$id';
 
   /// `WS /terminal/{handle}` — raw byte tunnel to the Open WebUI terminal
   /// socket with auth added.

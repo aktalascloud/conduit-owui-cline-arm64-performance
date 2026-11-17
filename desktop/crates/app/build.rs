@@ -12,6 +12,8 @@
 //!
 //! Messages stay ICU strings; `src/l10n/icu.rs` formats them (placeholders,
 //! `plural` with `=n`/CLDR categories/`#`, and `select`).
+//!
+//! On macOS it also compiles the App Intents' Swift ([`app_intents`]).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -25,6 +27,7 @@ mod icu;
 
 fn main() {
     let manifest = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    app_intents(&manifest);
     let l10n = manifest.join("../../../lib/l10n");
     let desktop = l10n.join("desktop");
     println!("cargo:rerun-if-changed={}", l10n.display());
@@ -214,6 +217,71 @@ fn main() {
 
     let dest = PathBuf::from(std::env::var("OUT_DIR").unwrap()).join("l10n_generated.rs");
     std::fs::write(dest, out).unwrap();
+    model_logos(&manifest);
+}
+
+/// The App Intents (Shortcuts, Siri, Spotlight) on macOS: the Swift in
+/// `intents/`, compiled by `packaging/macos/intents.sh compile` into a
+/// static library linked whole into every binary of this crate (nothing in
+/// Rust names the intents; the App Intents runtime finds them by their
+/// Swift type names, from the bundle's `Metadata.appintents`). The library
+/// calls back into `intents::conduit_intents_request`.
+fn app_intents(manifest: &Path) {
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("macos") {
+        return;
+    }
+    let dir = manifest.join("intents");
+    let script = manifest.join("../../packaging/macos/intents.sh");
+    println!("cargo:rerun-if-changed={}", dir.display());
+    println!("cargo:rerun-if-changed={}", script.display());
+    // intents.sh sources lib.sh, which reads release.env (MACOS_MIN).
+    for sourced in ["lib.sh", "release.env"] {
+        let path = manifest.join("../../packaging/macos").join(sourced);
+        println!("cargo:rerun-if-changed={}", path.display());
+    }
+    println!("cargo:rerun-if-env-changed=MACOSX_DEPLOYMENT_TARGET");
+    for entry in std::fs::read_dir(&dir).unwrap() {
+        println!("cargo:rerun-if-changed={}", entry.unwrap().path().display());
+    }
+    let out = PathBuf::from(std::env::var("OUT_DIR").unwrap()).join("intents");
+    let arch = match std::env::var("CARGO_CFG_TARGET_ARCH").as_deref() {
+        Ok("aarch64") => "arm64",
+        Ok(other) => other,
+        Err(_) => "arm64",
+    }
+    .to_string();
+    let status = std::process::Command::new("/bin/bash")
+        .arg(&script)
+        .arg("compile")
+        .arg(&out)
+        .env("CONDUIT_INTENTS_ARCH", &arch)
+        .status()
+        .unwrap_or_else(|e| panic!("{}: {e}", script.display()));
+    assert!(
+        status.success(),
+        "the App Intents (intents/*.swift) did not compile"
+    );
+    println!("cargo:rustc-link-search=native={}", out.display());
+    println!("cargo:rustc-link-lib=static:+whole-archive=conduit_intents");
+    println!("cargo:rustc-link-lib=framework=AppIntents");
+    println!("cargo:rustc-link-lib=framework=Foundation");
+    // The Swift runtime is the system's (/usr/lib/swift); the toolchain's
+    // folder has the back-deployment shims the object may ask for. Below
+    // macOS 12 as the deployment target (cargo's default, 11.0, for dev
+    // builds; bundle.sh sets 14.0), the linker names Swift Concurrency by
+    // `@rpath`, so the system's folder is on the rpath too.
+    println!("cargo:rustc-link-search=native=/usr/lib/swift");
+    println!("cargo:rustc-link-arg=-Wl,-rpath,/usr/lib/swift");
+    let swiftc = std::process::Command::new("xcrun")
+        .args(["--sdk", "macosx", "--find", "swiftc"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| PathBuf::from(String::from_utf8_lossy(&o.stdout).trim()));
+    if let Some(toolchain) = swiftc.as_deref().and_then(|s| s.parent()?.parent()) {
+        let lib = toolchain.join("lib/swift/macosx");
+        println!("cargo:rustc-link-search=native={}", lib.display());
+    }
 }
 
 const RUST_KEYWORDS: &[&str] = &[
@@ -268,4 +336,47 @@ fn snake(s: &str) -> String {
         out.insert(0, '_');
     }
     out
+}
+
+/// `$OUT_DIR/model_logos.rs`: the models.dev logos the app bundles
+/// (`assets/model_logos/*.svg`, the same set mobile ships), as a sorted
+/// table of `(logo id, SVG bytes)`, and the catalog the daemon picks them
+/// from (`MODEL_LOGO_CATALOG_DIR`, for a run from the checkout).
+fn model_logos(manifest: &Path) {
+    let dir = manifest.join("../../../assets/model_logos");
+    println!("cargo:rerun-if-changed={}", dir.display());
+    let mut logos: Vec<(String, PathBuf)> = std::fs::read_dir(&dir)
+        .map(|entries| {
+            entries
+                .filter_map(Result::ok)
+                .map(|e| e.path())
+                .filter(|p| p.extension().is_some_and(|x| x == "svg"))
+                .filter_map(|p| {
+                    let id = p.file_stem()?.to_str()?.to_string();
+                    Some((id, p))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    logos.sort();
+    let mut out = String::from("pub static MODEL_LOGOS: &[(&str, &[u8])] = &[\n");
+    for (id, path) in &logos {
+        let path = path.canonicalize().unwrap_or_else(|_| path.clone());
+        writeln!(
+            out,
+            "    ({id:?}, include_bytes!({:?})),",
+            path.display().to_string()
+        )
+        .unwrap();
+    }
+    out.push_str("];\n");
+    let catalog = dir.canonicalize().unwrap_or(dir);
+    writeln!(
+        out,
+        "pub const MODEL_LOGO_CATALOG_DIR: &str = {:?};",
+        catalog.display().to_string()
+    )
+    .unwrap();
+    let dest = PathBuf::from(std::env::var("OUT_DIR").unwrap()).join("model_logos.rs");
+    std::fs::write(dest, out).unwrap();
 }

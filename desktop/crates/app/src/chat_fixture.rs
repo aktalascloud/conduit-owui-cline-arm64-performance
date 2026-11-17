@@ -62,6 +62,7 @@ impl Daemon for FixtureDaemon {
                         pinned: true,
                         capabilities: vec![],
                         connection: None,
+                        logo: None,
                     },
                     ModelSummary {
                         id: "fixture-model-2".into(),
@@ -70,6 +71,7 @@ impl Daemon for FixtureDaemon {
                         pinned: false,
                         capabilities: vec![],
                         connection: None,
+                        logo: None,
                     },
                 ],
                 selected_id: Some("fixture-model".into()),
@@ -164,6 +166,7 @@ fn chat_value() -> Value {
         .collect();
     serde_json::to_value(ChatResult {
         chat: Some(ChatDetail {
+            hermes: None,
             abilities: Default::default(),
             temporary: false,
             share_id: None,
@@ -180,6 +183,7 @@ fn chat_value() -> Value {
                 model: None,
                 tags: vec![],
                 shared: false,
+                menu: crate::fixture::owui_chat_menu(),
             },
             messages,
             system_prompt: None,
@@ -211,13 +215,13 @@ impl Phase {
 }
 
 #[derive(Default)]
-struct Samples {
-    intervals: Vec<f64>,
+pub(crate) struct Samples {
+    pub(crate) intervals: Vec<f64>,
     /// Render through paint of the window's tree, per frame.
-    work: Rc<std::cell::RefCell<Vec<f64>>>,
+    pub(crate) work: Rc<std::cell::RefCell<Vec<f64>>>,
 }
 
-fn summary(v: &[f64]) -> Value {
+pub(crate) fn summary(v: &[f64]) -> Value {
     let mut v = v.to_vec();
     v.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let n = v.len();
@@ -472,6 +476,7 @@ pub fn run(mode: String, shots: Option<PathBuf>, cx: &mut App) {
             message_id: "live".into(),
             ok: true,
             code: None,
+            queued: false,
         });
         store.update(cx, |s, cx| s.on_event(&done, cx));
         cx.background_executor().timer(Duration::from_secs(1)).await;
