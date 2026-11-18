@@ -3,9 +3,9 @@
   "grouping_version": 3,
   "ownership": "applied-downstream-only",
   "project": "conduit",
-  "upstream": "d5430398dc16dffb62785fc137fab44b55d58cfb",
-  "snapshot_source": "224bae6d08c920dd5b823f1d335c8b112f5fa474",
-  "downstream_tree_without_patches": "04fb0ffa6eeb403eb7d3bf113cca573a2e02eaa7",
+  "upstream": "397b45e8a518b90ba7ff352171914990f2e2c333",
+  "snapshot_source": "ebe2e67b5c498b40dd88b9322da426ef0e398f72",
+  "downstream_tree_without_patches": "6ca1e833cfd256bb549d5bea449e915d342dded0",
   "groups": [
     {
       "patch": "01-cline-ssh-gateway.patch",
@@ -276,6 +276,6 @@
     "14-runtime.patch": "7a01a1fca1e2b015e3383f5ace7fbd9d3cbbc7eeda1f261b378b3c6caf8221ec",
     ".gitattributes": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",
     "series": "40dacc80649bb4aec660d7f73fec8ed4fae643d5b6b8708c422c760b2cedf144",
-    "README.md": "e479294d6a47f75eb3a8b16c8d625337560f9a0fabb86ffe7ba9cfa4700a9bdf"
+    "README.md": "ade412662e3d48f5967475e55ceba7ee2e8e19e90b665f47095c1974473eaa47"
   }
 }

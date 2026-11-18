@@ -5,7 +5,7 @@ Only currently applied maintainer differences from the exact official baseline a
 Mainstream-only commits, rejected proposals and reverted experiments are excluded.
 Коммиты самого mainstream, неприменённые предложения и отменённые эксперименты исключены.
 
-Official baseline: `d5430398dc16dffb62785fc137fab44b55d58cfb`. Downstream snapshot: `224bae6d08c920dd5b823f1d335c8b112f5fa474`.
+Official baseline: `397b45e8a518b90ba7ff352171914990f2e2c333`. Downstream snapshot: `ebe2e67b5c498b40dd88b9322da426ef0e398f72`.
 Patches are already applied in this fork. Apply `series` only to a clean checkout of that exact baseline.
 В этом форке патчи уже применены. `series` предназначен только для чистого checkout указанной базы.
 Apply the numbered patches in the order listed in `series`. Each row describes one topic.
