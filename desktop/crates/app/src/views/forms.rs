@@ -219,6 +219,7 @@ fn field_box(
     state: &Entity<InputState>,
     hint: Option<SharedString>,
     error: bool,
+    locked: bool,
     window: &Window,
     cx: &App,
 ) -> Div {
@@ -275,7 +276,7 @@ fn field_box(
             div()
                 .flex_1()
                 .min_w_0()
-                .child(bare_input(state, label.clone(), m.control)),
+                .child(bare_input(state, label.clone(), m.control).disabled(locked)),
         )
 }
 
@@ -294,6 +295,22 @@ pub fn field(
     field_hinted(label, state, hint, help, error, window, cx)
 }
 
+/// [`field`] that takes no typing while `locked`: a form whose save or test
+/// is out, so what it answers is the form as it stands (nothing typed
+/// meanwhile is closed over or judged by an older answer).
+pub fn field_locked(
+    label: impl Into<SharedString>,
+    state: &Entity<InputState>,
+    help: Option<SharedString>,
+    error: Option<SharedString>,
+    locked: bool,
+    window: &Window,
+    cx: &App,
+) -> Div {
+    let hint = hint(state, cx);
+    field_with(label, state, hint, help, error, locked, window, cx)
+}
+
 /// [`field`] with its placeholder given here (one input that serves two
 /// labels, as sign-in's email or LDAP user name).
 pub fn field_hinted(
@@ -302,6 +319,20 @@ pub fn field_hinted(
     hint: Option<SharedString>,
     help: Option<SharedString>,
     error: Option<SharedString>,
+    window: &Window,
+    cx: &App,
+) -> Div {
+    field_with(label, state, hint, help, error, false, window, cx)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn field_with(
+    label: impl Into<SharedString>,
+    state: &Entity<InputState>,
+    hint: Option<SharedString>,
+    help: Option<SharedString>,
+    error: Option<SharedString>,
+    locked: bool,
     window: &Window,
     cx: &App,
 ) -> Div {
@@ -316,7 +347,15 @@ pub fn field_hinted(
         .flex()
         .flex_col()
         .gap(px(4.))
-        .child(field_box(&label, state, hint, error.is_some(), window, cx))
+        .child(field_box(
+            &label,
+            state,
+            hint,
+            error.is_some(),
+            locked,
+            window,
+            cx,
+        ))
         .when_some(help, |d, h| {
             d.child(
                 div()
@@ -378,7 +417,8 @@ pub fn form_error(
                 .pt(px(2.))
                 .child(icon(IconName::CircleAlert, 14., color)),
         )
-        .child(div().flex_1().child(message))
+        // Wraps rather than running past the form's edge.
+        .child(div().flex_1().min_w_0().child(message))
 }
 
 /// A status line under a form (a test result, "Saved").
@@ -525,28 +565,41 @@ pub fn header_rows(
         .gap(px(6.))
         .children(rows.iter().enumerate().map(|(i, row)| {
             let remove = on_remove.clone();
+            // A placeholder a field was given (a kept value's "configured"
+            // note) shows under its input while it is empty.
+            let placed = |state: &Entity<InputState>, label: &SharedString| {
+                let shown = hint(state, cx).filter(|_| state.read(cx).value().is_empty());
+                field_frame(false, h, cx)
+                    .relative()
+                    .flex_1()
+                    .when_some(shown, |d, h| {
+                        d.child(
+                            div()
+                                .absolute()
+                                .top_0()
+                                .bottom_0()
+                                .left(px(7.))
+                                .right(px(7.))
+                                .flex()
+                                .items_center()
+                                .overflow_hidden()
+                                .text_size(px(t.metrics.control))
+                                .text_color(t.roles.text_faint)
+                                .child(div().truncate().child(h)),
+                        )
+                    })
+                    .child(div().flex_1().min_w_0().child(bare_input(
+                        state,
+                        label.clone(),
+                        t.metrics.control,
+                    )))
+            };
             div()
                 .flex()
                 .items_center()
                 .gap(px(6.))
-                .child(
-                    field_frame(false, h, cx)
-                        .flex_1()
-                        .child(div().flex_1().child(bare_input(
-                            &row.name,
-                            name_label.clone(),
-                            t.metrics.control,
-                        ))),
-                )
-                .child(
-                    field_frame(false, h, cx)
-                        .flex_1()
-                        .child(div().flex_1().child(bare_input(
-                            &row.value,
-                            value_label.clone(),
-                            t.metrics.control,
-                        ))),
-                )
+                .child(placed(&row.name, &name_label))
+                .child(placed(&row.value, &value_label))
                 .child(
                     IconButton::new(
                         ElementId::NamedInteger("remove-header".into(), i as u64),

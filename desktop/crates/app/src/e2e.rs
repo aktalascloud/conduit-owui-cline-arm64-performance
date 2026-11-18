@@ -70,6 +70,15 @@
 //!   new chat, the language, sign-out) and its links ([`widget`]).
 //! * `intents`: Shortcuts' actions (App Intents) through the Swift
 //!   intents' own `perform()` and chat query ([`intents`]).
+//! * `mac-extras-2`: Send to Conduit, Send Link and Send Image; the Dock
+//!   menu; the clipboard link; Continuity Camera in the + menu; and
+//!   `{{USER_LOCATION}}` from the window's stand-in ([`mac_extras`]).
+//! * `apple`: Apple's on-device model: this Mac's real status in Settings ›
+//!   Direct Connections, then the engine's scripted model checked ready, in
+//!   the model picker, a chat streamed, stopped and failed ([`apple`]).
+//! * `apple-only`: Apple On-Device as the only model (Open WebUI signed
+//!   out, the engine's scripted model answering): Ask Conduit, Quick Ask and
+//!   the widget's links answer through it, or say why not ([`apple::only`]).
 //! * `offline-setup`, `offline`: a signed-in account whose server is out of
 //!   reach at launch, with conduitd restarted once while the window opens;
 //!   two launches, run by `crates/app/e2e-offline.sh` ([`offline`]).
@@ -81,6 +90,8 @@
 //! typed.
 
 mod actions;
+mod apple;
+mod apps_leftovers;
 mod calendar;
 mod channels;
 mod chat;
@@ -90,22 +101,29 @@ mod dictation;
 mod direct;
 mod hermes_admin;
 mod hermes_cards;
+mod hermes_extras;
 mod hermes_rooms;
 mod hermes_sessions;
 mod integration;
+mod integrations;
 mod intents;
 mod librechat;
+mod mac_extras;
 mod notes;
+mod notifications;
 mod offline;
 mod read_aloud;
 mod rendering;
+mod rendering_media;
 mod sections;
 mod settings;
 mod share;
 pub mod shell;
+mod sign_in;
 mod tasks;
 mod terminal;
 mod voice_call;
+mod voice_call_hermes;
 mod widget;
 mod workspace;
 
@@ -139,22 +157,31 @@ pub struct E2eInputs {
     pub env: BTreeMap<String, String>,
 }
 
-/// The env file's server addresses: every server a pass signs in to, or
-/// sends credentials, messages or settings to. Each must be this Mac's own
-/// (loopback), or the env file is not used.
-const SERVER_URLS: [&str; 6] = [
-    "OWUI_URL",
-    "LIBRECHAT_URL",
-    "HERMES_GATEWAY_URL",
-    "HERMES_DESKTOP_URL",
-    "HERMES_A_URL",
-    "HERMES_B_URL",
-];
+/// Whether env entry `key` names another machine. Every address in the
+/// env file (a `*_URL` with a host: every server a pass signs in to, or
+/// sends credentials, messages or settings to) must be this Mac's own
+/// (loopback), or the env file is not used. The address checked is the
+/// one a pass would use: a bare host is read as the server form reads it,
+/// its scheme added first ([`crate::views::forms::normalize_url`]). One that
+/// names no host (a database file) is no server.
+fn names_another_machine(key: &str, value: &str) -> bool {
+    if !key.ends_with("_URL") {
+        return false;
+    }
+    let value = value.trim();
+    let address = if value.contains("://") {
+        Some(value.to_string())
+    } else {
+        crate::views::forms::normalize_url(value)
+    };
+    address
+        .is_some_and(|a| url::Url::parse(&a).is_ok_and(|u| u.host().is_some()) && !is_local_url(&a))
+}
 
-/// Whether `url` is an http(s) address on this Mac (loopback).
+/// Whether `url` is an http(s) or ws(s) address on this Mac (loopback).
 pub(crate) fn is_local_url(url: &str) -> bool {
     url::Url::parse(url).is_ok_and(|u| {
-        matches!(u.scheme(), "http" | "https")
+        matches!(u.scheme(), "http" | "https" | "ws" | "wss")
             && match u.host() {
                 Some(url::Host::Domain(d)) => d.eq_ignore_ascii_case("localhost"),
                 Some(url::Host::Ipv4(ip)) => ip.is_loopback(),
@@ -187,21 +214,24 @@ impl E2eInputs {
         // The passes sign in with these credentials and photograph what
         // the server shows: only ever on this Mac's own test server.
         // The address itself is never logged: it may be private.
-        for key in SERVER_URLS {
-            if env.get(key).is_some_and(|u| !is_local_url(u)) {
-                println!("SMOKE FAILED e2e {key} is not a local (loopback) address");
-                env.clear();
-            }
+        let remote: Vec<String> = env
+            .iter()
+            .filter(|(k, v)| names_another_machine(k, v))
+            .map(|(k, _)| k.clone())
+            .collect();
+        for key in remote {
+            println!("SMOKE FAILED e2e {key} is not a local (loopback) address");
+            env.clear();
         }
         Some(Self { scenario, env })
     }
 
-    fn get(&self, key: &str) -> Option<String> {
+    pub(crate) fn get(&self, key: &str) -> Option<String> {
         self.env.get(key).cloned().filter(|v| !v.is_empty())
     }
 
     /// The seeded admin: `OWUI_URL`, `OWUI_EMAIL` and `OWUI_PASSWORD`.
-    fn owui(&self) -> Option<(String, String, String)> {
+    pub(crate) fn owui(&self) -> Option<(String, String, String)> {
         Some((
             self.get("OWUI_URL")?,
             self.get("OWUI_EMAIL")?,
@@ -210,7 +240,7 @@ impl E2eInputs {
     }
 
     /// The fake model's name in the server's model list.
-    fn model(&self) -> String {
+    pub(crate) fn model(&self) -> String {
         self.get("OWUI_MODEL")
             .unwrap_or_else(|| "fake-model".into())
     }
@@ -367,6 +397,7 @@ const CONTROL_ROLES: &[&str] = &[
     "Tab",
     "ListBoxOption",
     "TreeItem",
+    "Slider",
 ];
 
 /// Activates accessibility on `handle`, reads GPUI's AccessKit tree, and
@@ -414,8 +445,20 @@ pub(crate) async fn ax(
             break;
         }
     }
-    let Some(tree) = tree.and_then(|t| serde_json::from_str::<Value>(&t).ok()) else {
-        ok(&format!("ax {name}: tree"), false);
+    let parsed = tree.as_deref().map(serde_json::from_str::<Value>);
+    let Some(Ok(tree)) = parsed else {
+        // Say why, and keep what came, for the next look.
+        let why = match &parsed {
+            None => "no tree".to_string(),
+            Some(Err(e)) => e.to_string(),
+            Some(Ok(_)) => String::new(),
+        };
+        if let Some(raw) = &tree {
+            let out = dir.join("ax");
+            std::fs::create_dir_all(&out).ok();
+            std::fs::write(out.join(format!("{name}.raw.json")), raw).ok();
+        }
+        ok(&format!("ax {name}: tree ({why})"), false);
         return vec![];
     };
     let mut controls = vec![];
@@ -764,11 +807,13 @@ pub async fn run(inputs: E2eInputs, dir: PathBuf, cx: &mut AsyncApp) -> bool {
         "sso" => sso(&inputs, &dir, cx).await,
         "direct" => direct(&inputs, &dir, cx).await,
         "direct-advanced" => direct::run(&inputs, &dir, cx).await,
+        "apple" => apple::run(&inputs, &dir, cx).await,
         "hermes" => hermes(&inputs, &dir, cx).await,
         "hermes-sessions" => hermes_sessions::run_scenario(&inputs, &dir, cx).await,
         "hermes-rooms" => hermes_rooms::run_scenario(&inputs, &dir, cx).await,
         "hermes-cards" => hermes_cards::run(&inputs, &dir, cx).await,
         "hermes-admin" => hermes_admin::run(&inputs, &dir, cx).await,
+        "hermes-extras" => hermes_extras::run(&inputs, &dir, cx).await,
         "sidebar" => sidebar(&inputs, &dir, cx).await,
         "chat" | "chat-direct" | "chat-smoke" | "chat-read-only" => {
             chat::run(&inputs, &dir, cx).await
@@ -787,16 +832,26 @@ pub async fn run(inputs: E2eInputs, dir: PathBuf, cx: &mut AsyncApp) -> bool {
         "actions" => actions::run(&inputs, &dir, cx).await,
         "read-aloud" => read_aloud::run(&inputs, &dir, cx).await,
         "rendering" => rendering::run(&inputs, &dir, cx).await,
+        "rendering-media" => rendering_media::run(&inputs, &dir, cx).await,
         "dictation" => dictation::run(&inputs, &dir, cx).await,
         "notes" => notes::run(&inputs, &dir, cx).await,
         "dictation-recovered" => dictation::recovered(&inputs, &dir, cx).await,
         "voice-call" => voice_call::run(&inputs, &dir, cx).await,
+        "voice-call-hermes" => voice_call_hermes::run(&inputs, &dir, cx).await,
         "workspace" => workspace::run(&inputs, &dir, cx).await,
         "calendar" => calendar::run(&inputs, &dir, cx).await,
         "tasks" => tasks::run(&inputs, &dir, cx).await,
         "widget" => widget::run(&inputs, &dir, cx).await,
         "intents" => intents::run(&inputs, &dir, cx).await,
+        "mac-extras-2" => mac_extras::run(&inputs, &dir, cx).await,
         "terminal" => terminal::run(&inputs, &dir, cx).await,
+        "apple-only" => apple::only(&inputs, &dir, cx).await,
+        "onboarding-apple" => apple::onboarding(&inputs, &dir, cx).await,
+        "notifications" => notifications::run(&inputs, &dir, cx).await,
+        "integrations" => integrations::run(&inputs, &dir, cx).await,
+        "sign-in-two-step" => sign_in::two_step(&inputs, &dir, cx).await,
+        "sign-in-proxy" => sign_in::proxy(&inputs, &dir, cx).await,
+        "apps-leftovers" => apps_leftovers::run(&inputs, &dir, cx).await,
         other => ok(&format!("unknown scenario {other}"), false),
     }
 }
@@ -2220,8 +2275,20 @@ mod tests {
         assert!(!is_local_url("http://localhost.example.org"));
         assert!(!is_local_url("file:///tmp/x"));
         // An env file naming another machine is not used, for any kind of
-        // server.
-        for key in SERVER_URLS {
+        // server, whatever its name.
+        for key in [
+            "OWUI_URL",
+            "OWUI_PROXY_URL",
+            "LIBRECHAT_URL",
+            "HERMES_GATEWAY_URL",
+            "HERMES_DESKTOP_URL",
+            "HERMES_A_URL",
+            "HERMES_A_PROXY_URL",
+            "HERMES_B_URL",
+            "FAKE_HERMES_URL",
+            "GPT_LIVE_URL",
+            "SOME_NEW_SERVER_URL",
+        ] {
             let file = std::env::temp_dir()
                 .join(format!("conduit-e2e-env-{key}-{}.env", std::process::id()));
             std::fs::write(&file, format!("{key}=https://chat.example.org\nX=1\n")).unwrap();
@@ -2238,6 +2305,31 @@ mod tests {
                 "{key}: the rest of the file is still used"
             );
         }
+    }
+
+    #[test]
+    fn local_addresses_and_non_addresses_keep_the_env_file() {
+        for (key, value) in [
+            ("OWUI_URL", "http://127.0.0.1:20500"),
+            ("GPT_LIVE_URL", "ws://localhost:20501/live"),
+            ("DATABASE_URL", "sqlite:///tmp/webui.db"),
+            ("HERMES_A_HOME", "https://chat.example.org"),
+        ] {
+            assert!(!names_another_machine(key, value), "{key}={value}");
+        }
+        assert!(names_another_machine("OWUI_URL", "ws://chat.example.org"));
+        // A bare host is read as the server form reads it (a scheme first).
+        assert!(names_another_machine("OWUI_URL", "chat.example.org"));
+        assert!(names_another_machine(
+            "HERMES_A_PROXY_URL",
+            "chat.example.org:8443/x"
+        ));
+        assert!(!names_another_machine(
+            "HERMES_A_PROXY_URL",
+            "127.0.0.1:20501"
+        ));
+        assert!(!names_another_machine("OWUI_URL", "localhost:20500"));
+        assert!(names_another_machine("OWUI_URL", "ftp://127.0.0.1/x"));
     }
 
     #[test]

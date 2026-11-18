@@ -1,5 +1,5 @@
 {
-  "protocolVersion": "1.64.0",
+  "protocolVersion": "1.67.0",
   "appOrigin": "app://conduit",
   "subprotocol": "conduit.v1",
   "subprotocolsExample": {
@@ -142,6 +142,41 @@
       "result": "AuthSnapshot"
     },
     {
+      "name": "auth.twoStep.setup",
+      "params": null,
+      "result": "TwoStepSetup"
+    },
+    {
+      "name": "auth.twoStep.verify",
+      "params": "TwoStepCode",
+      "result": "AuthSnapshot"
+    },
+    {
+      "name": "auth.twoStep.redeem",
+      "params": "TwoStepResetToken",
+      "result": "AuthSnapshot"
+    },
+    {
+      "name": "auth.twoStep.finish",
+      "params": null,
+      "result": "AuthSnapshot"
+    },
+    {
+      "name": "auth.twoStep.cancel",
+      "params": null,
+      "result": "AuthSnapshot"
+    },
+    {
+      "name": "auth.retry",
+      "params": null,
+      "result": "AuthSnapshot"
+    },
+    {
+      "name": "auth.renewProxy",
+      "params": "ExternalAuthCompletion",
+      "result": "AuthSnapshot"
+    },
+    {
       "name": "settings.getApp",
       "params": null,
       "result": "AppPreferences"
@@ -257,6 +292,71 @@
       "result": "MemoryList"
     },
     {
+      "name": "notifications.get",
+      "params": null,
+      "result": "NotificationSettingsDto"
+    },
+    {
+      "name": "notifications.set",
+      "params": "NotificationSettingsPatch",
+      "result": "NotificationSettingsDto"
+    },
+    {
+      "name": "notifications.route",
+      "params": "NotificationRouteParams",
+      "result": "NotificationRoute"
+    },
+    {
+      "name": "webhooks.list",
+      "params": null,
+      "result": "WebhookList"
+    },
+    {
+      "name": "webhooks.create",
+      "params": "WebhookCreate",
+      "result": "WebhookList"
+    },
+    {
+      "name": "webhooks.update",
+      "params": "WebhookUpdate",
+      "result": "WebhookList"
+    },
+    {
+      "name": "webhooks.makeDefault",
+      "params": "WebhookRef",
+      "result": "WebhookList"
+    },
+    {
+      "name": "webhooks.test",
+      "params": "WebhookRef",
+      "result": "WebhookList"
+    },
+    {
+      "name": "webhooks.delete",
+      "params": "WebhookRef",
+      "result": "WebhookList"
+    },
+    {
+      "name": "integrations.list",
+      "params": null,
+      "result": "PersonalConnections"
+    },
+    {
+      "name": "integrations.save",
+      "params": "PersonalConnectionSave",
+      "result": "PersonalConnections"
+    },
+    {
+      "name": "integrations.test",
+      "params": "PersonalConnectionTest",
+      "result": "PersonalConnectionTestResult"
+    },
+    {
+      "name": "integrations.clearNotice",
+      "params": null,
+      "result": "PersonalConnections"
+    },
+    {
       "name": "releaseNotes.check",
       "params": "ReleaseNotesQuery",
       "result": "ReleaseNotesState"
@@ -318,6 +418,11 @@
     },
     {
       "name": "data.connection",
+      "params": null,
+      "result": "ConnectionHealth"
+    },
+    {
+      "name": "data.reconnect",
       "params": null,
       "result": "ConnectionHealth"
     },
@@ -1072,6 +1177,26 @@
       "result": "AutomationDraftState"
     },
     {
+      "name": "apple.status",
+      "params": null,
+      "result": "AppleModels"
+    },
+    {
+      "name": "apple.refresh",
+      "params": null,
+      "result": "AppleModels"
+    },
+    {
+      "name": "apple.choose",
+      "params": null,
+      "result": "AppleModelStatus"
+    },
+    {
+      "name": "apple.report",
+      "params": "AppleReport",
+      "result": "OkResult"
+    },
+    {
       "name": "notes.list",
       "params": "NoteQuery",
       "result": "NoteList"
@@ -1398,7 +1523,7 @@
     },
     {
       "name": "hermes.signIn",
-      "params": null,
+      "params": "HermesSignInRequest",
       "result": "HermesSettings"
     },
     {
@@ -1525,6 +1650,36 @@
       "name": "hermes.connections.setEnabled",
       "params": "HermesToggle",
       "result": "HermesConnections"
+    },
+    {
+      "name": "hermes.connections.profiles",
+      "params": "HermesConnectionEdit",
+      "result": "HermesProfiles"
+    },
+    {
+      "name": "hermes.toolsets.set",
+      "params": "HermesToolsetToggle",
+      "result": "HermesCatalog"
+    },
+    {
+      "name": "hermes.skills.reload",
+      "params": "HermesConnectionRef",
+      "result": "HermesCatalog"
+    },
+    {
+      "name": "hermes.dashboard.start",
+      "params": "HermesDashboardStart",
+      "result": "HermesDashboardPlan"
+    },
+    {
+      "name": "hermes.dashboard.complete",
+      "params": "HermesDashboardCookies",
+      "result": "HermesDashboardResult"
+    },
+    {
+      "name": "hermes.dashboard.cancel",
+      "params": "HermesDashboardCancel",
+      "result": "CancelledResult"
     },
     {
       "name": "hermes.mcp.list",
@@ -1900,6 +2055,16 @@
       "name": "intents.chats",
       "params": "IntentChatsQuery",
       "result": "IntentChats"
+    },
+    {
+      "name": "intents.sendLink",
+      "params": "IntentLink",
+      "result": "IntentLinkResult"
+    },
+    {
+      "name": "location.report",
+      "params": "LocationReport",
+      "result": "OkResult"
     }
   ],
   "events": [
@@ -2029,6 +2194,11 @@
       "scoped": false
     },
     {
+      "name": "auth.changed",
+      "payload": null,
+      "scoped": false
+    },
+    {
       "name": "voice.changed",
       "payload": "VoiceModels",
       "scoped": false
@@ -2046,6 +2216,16 @@
     {
       "name": "settings.changed",
       "payload": null,
+      "scoped": false
+    },
+    {
+      "name": "notifications.changed",
+      "payload": null,
+      "scoped": false
+    },
+    {
+      "name": "notifications.answered",
+      "payload": "AnswerNotice",
       "scoped": false
     },
     {
@@ -2126,6 +2306,16 @@
     {
       "name": "hermes.rooms.listChanged",
       "payload": "HermesRooms",
+      "scoped": false
+    },
+    {
+      "name": "apple.command",
+      "payload": "AppleCommand",
+      "scoped": false
+    },
+    {
+      "name": "location.command",
+      "payload": "LocationCommand",
       "scoped": false
     }
   ]

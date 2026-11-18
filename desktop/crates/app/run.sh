@@ -41,6 +41,9 @@ sed -e 's/@BUNDLE_ID@/app.cogwheel.conduit.desktop.dev/' \
 # E2E pass calls the provider itself (desktop::services_provider).
 /usr/libexec/PlistBuddy -c 'Delete :NSServices' "$app/Contents/Info.plist" >/dev/null
 plutil -lint -s "$app/Contents/Info.plist"
+# The privacy prompts in every language, as in a release bundle.
+python3 packaging/macos/native_strings.py infoplist ../lib/l10n \
+  "$app/Contents/Info.plist" "$app/Contents/Resources" >/dev/null
 # The desktop widget, only when asked: every dev bundle would otherwise
 # register an extension with the system. Without it, an earlier build's
 # widget is moved aside.
@@ -104,7 +107,7 @@ esac
 set -- --stdout "$log" --stderr "$log" --args --cwd "$PWD" "$@"
 for var in CONDUITD_PATH CONDUIT_USER_DATA CONDUIT_LOGS CONDUIT_FLAVOR CONDUIT_SHOT_WINDOW \
   CONDUIT_OWUI_ENV CONDUIT_OWUI_DIR CONDUIT_DEV_CACHE CONDUIT_WHISPER_LIB CONDUIT_DICTATION_INPUT \
-  CONDUIT_SPEECH_OUTPUT CONDUIT_WIDGET_SNAPSHOT; do
+  CONDUIT_SPEECH_OUTPUT CONDUIT_WIDGET_SNAPSHOT CONDUIT_APPLE_ENGINE; do
   eval "val=\${$var:-}"
   if [ -n "$val" ]; then set -- --env "$var=$val" "$@"; fi
 done

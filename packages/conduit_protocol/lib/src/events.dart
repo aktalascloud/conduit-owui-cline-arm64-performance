@@ -59,6 +59,14 @@ abstract final class ConduitEvents {
   /// No payload; `settings.get` says what they are now.
   static const String settingsChanged = 'settings.changed';
 
+  /// The notification settings changed (`notifications.get` says how), from
+  /// any window, the server's mirror or the daemon itself. No payload.
+  static const String notificationsChanged = 'notifications.changed';
+
+  /// An Open WebUI answer this Mac did not run finished (another device, a
+  /// scheduled task): the window notifies as for its own (`AnswerNotice`).
+  static const String notificationsAnswered = 'notifications.answered';
+
   /// Ask the shell to raise an OS notification.
   static const String notifyShow = 'notify.show';
 
@@ -96,6 +104,12 @@ abstract final class ConduitEvents {
 
   /// Hermes's settings, sessions or jobs changed. No payload.
   static const String hermesChanged = 'hermes.changed';
+
+  /// The active account's session changed in a way the account list does
+  /// not show: a second step began or moved on, or a kept session became a
+  /// connection issue (a sign-in proxy turning it away). No payload; ask
+  /// `auth.status` again.
+  static const String authChanged = 'auth.changed';
 
   /// The whisper models changed: a download moved, finished or failed, or
   /// one was deleted. Payload [VoiceModels].
@@ -172,6 +186,16 @@ abstract final class ConduitEvents {
   /// A Run Now moved on. Payload [AutomationRunProgress].
   static const String automationsRunProgress = 'automations.runProgress';
 
+  /// The daemon asks the window's Foundation Models engine for a model's
+  /// status, to start or stop a run, or answers a tool call. Payload
+  /// [AppleCommand]; answered with `apple.report`.
+  static const String appleCommand = 'apple.command';
+
+  /// The daemon asks the window's location services whether they are on, for
+  /// permission, or for a position fix (`{{USER_LOCATION}}`). Payload
+  /// [LocationCommand]; answered with `location.report`.
+  static const String locationCommand = 'location.command';
+
   /// Every event name, for subscription validation and tests.
   static const Set<String> all = {
     turnStarted,
@@ -199,10 +223,13 @@ abstract final class ConduitEvents {
     openUrl,
     workspaceChanged,
     hermesChanged,
+    authChanged,
     voiceChanged,
     terminalDisplayFile,
     terminalChanged,
     settingsChanged,
+    notificationsChanged,
+    notificationsAnswered,
     queueChanged,
     messagesMerge,
     handoffRequested,
@@ -219,6 +246,8 @@ abstract final class ConduitEvents {
     automationsRunProgress,
     hermesRoomsChanged,
     hermesRoomsListChanged,
+    appleCommand,
+    locationCommand,
   };
 }
 

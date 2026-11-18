@@ -1,5 +1,9 @@
 {
   "@@locale": "en",
+  "personalConnectionsDeleteTitle": "Delete connection?",
+  "@personalConnectionsDeleteTitle": {
+    "description": "Title of the confirmation for deleting a personal connection."
+  },
   "scheduledTaskDeleteTitle": "Delete scheduled task?",
   "@scheduledTaskDeleteTitle": {
     "description": "Title of the confirmation dialog before deleting a scheduled task."
@@ -241,6 +245,191 @@
   "desktopIntentOffline": "Conduit can't reach your server. Check your connection and try again.",
   "@desktopIntentOffline": {
     "description": "The error a Shortcuts action shows (sentence case). Conduit could not reach the server to ask the question."
+  },
+  "desktopIntentSendTextTitle": "Send to Conduit",
+  "@desktopIntentSendTextTitle": {
+    "description": "Shortcuts action title: puts text into a new Conduit chat (mobile's Send to Conduit)."
+  },
+  "desktopIntentSendTextDescription": "Starts a new Conduit chat with the text you give it.",
+  "@desktopIntentSendTextDescription": {
+    "description": "Shortcuts action description of Send to Conduit."
+  },
+  "desktopIntentSendTextPrompt": "What should Conduit process?",
+  "@desktopIntentSendTextPrompt": {
+    "description": "Shortcuts asks for Send to Conduit's text with this question (mobile's wording)."
+  },
+  "desktopIntentSendTextSummary": "Send {text} to Conduit",
+  "@desktopIntentSendTextSummary": {
+    "description": "Shortcuts action summary of Send to Conduit; {text} is the text the user gives.",
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentSendTextShortTitle": "Send Text",
+  "@desktopIntentSendTextShortTitle": {
+    "description": "Short title of the Send to Conduit App Shortcut in Shortcuts and Spotlight."
+  },
+  "desktopIntentPhraseSendText": "Send text to {applicationName}",
+  "@desktopIntentPhraseSendText": {
+    "description": "Siri and Spotlight phrase for Send to Conduit; {applicationName} is the app's name.",
+    "placeholders": {
+      "applicationName": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentPhraseSummarizeText": "Summarize this in {applicationName}",
+  "@desktopIntentPhraseSummarizeText": {
+    "description": "Siri and Spotlight phrase for Send to Conduit; {applicationName} is the app's name.",
+    "placeholders": {
+      "applicationName": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentSendLinkTitle": "Send Link to Conduit",
+  "@desktopIntentSendLinkTitle": {
+    "description": "Shortcuts action title: a link into a new Conduit chat for a summary (mobile's Send Link to Conduit)."
+  },
+  "desktopIntentSendLinkDescription": "Sends a link into Conduit for a summary or an analysis.",
+  "@desktopIntentSendLinkDescription": {
+    "description": "Shortcuts action description of Send Link to Conduit."
+  },
+  "desktopIntentUrl": "URL",
+  "@desktopIntentUrl": {
+    "description": "Name of Send Link to Conduit's parameter in Shortcuts: the web address."
+  },
+  "desktopIntentSendLinkPrompt": "Which link should Conduit analyze?",
+  "@desktopIntentSendLinkPrompt": {
+    "description": "Shortcuts asks for Send Link to Conduit's link with this question (mobile's wording)."
+  },
+  "desktopIntentSendLinkSummary": "Send {url} to Conduit",
+  "@desktopIntentSendLinkSummary": {
+    "description": "Shortcuts action summary of Send Link to Conduit; {url} is the link.",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentSendLinkShortTitle": "Send Link",
+  "@desktopIntentSendLinkShortTitle": {
+    "description": "Short title of the Send Link to Conduit App Shortcut."
+  },
+  "desktopIntentPhraseSendLink": "Send a link to {applicationName}",
+  "@desktopIntentPhraseSendLink": {
+    "description": "Siri and Spotlight phrase for Send Link to Conduit; {applicationName} is the app's name.",
+    "placeholders": {
+      "applicationName": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentPhraseSummarizeLink": "Summarize a link in {applicationName}",
+  "@desktopIntentPhraseSummarizeLink": {
+    "description": "Siri and Spotlight phrase for Send Link to Conduit; {applicationName} is the app's name.",
+    "placeholders": {
+      "applicationName": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentSendImageTitle": "Send Image to Conduit",
+  "@desktopIntentSendImageTitle": {
+    "description": "Shortcuts action title: an image into a new Conduit chat (mobile's Send Image to Conduit)."
+  },
+  "desktopIntentSendImageDescription": "Sends an image into Conduit for analysis.",
+  "@desktopIntentSendImageDescription": {
+    "description": "Shortcuts action description of Send Image to Conduit."
+  },
+  "desktopIntentImage": "Image",
+  "@desktopIntentImage": {
+    "description": "Name of Send Image to Conduit's parameter in Shortcuts."
+  },
+  "desktopIntentSendImagePrompt": "Choose an image for Conduit.",
+  "@desktopIntentSendImagePrompt": {
+    "description": "Shortcuts asks for Send Image to Conduit's image with this (mobile's wording)."
+  },
+  "desktopIntentSendImageSummary": "Send {image} to Conduit",
+  "@desktopIntentSendImageSummary": {
+    "description": "Shortcuts action summary of Send Image to Conduit; {image} is the image.",
+    "placeholders": {
+      "image": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentSendImageShortTitle": "Send Image",
+  "@desktopIntentSendImageShortTitle": {
+    "description": "Short title of the Send Image to Conduit App Shortcut."
+  },
+  "desktopIntentPhraseSendImage": "Send an image to {applicationName}",
+  "@desktopIntentPhraseSendImage": {
+    "description": "Siri and Spotlight phrase for Send Image to Conduit; {applicationName} is the app's name.",
+    "placeholders": {
+      "applicationName": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentPhraseAnalyzeImage": "Analyze an image with {applicationName}",
+  "@desktopIntentPhraseAnalyzeImage": {
+    "description": "Siri and Spotlight phrase for Send Image to Conduit; {applicationName} is the app's name.",
+    "placeholders": {
+      "applicationName": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopIntentSentText": "Sent to Conduit",
+  "@desktopIntentSentText": {
+    "description": "Shortcuts output of Send to Conduit when the new chat opened with the text (mobile's wording)."
+  },
+  "desktopIntentSentPage": "Webpage attached in Conduit",
+  "@desktopIntentSentPage": {
+    "description": "Shortcuts output of Send Link to Conduit when the page's text was attached (mobile's wording)."
+  },
+  "desktopIntentSentVideo": "YouTube video attached in Conduit",
+  "@desktopIntentSentVideo": {
+    "description": "Shortcuts output of Send Link to Conduit when a YouTube transcript was attached (mobile's wording)."
+  },
+  "desktopIntentSentLinkUnread": "Opening Conduit with the link (its content couldn't be read)",
+  "@desktopIntentSentLinkUnread": {
+    "description": "Shortcuts output of Send Link to Conduit when the server could not read the link: the chat opens with the link in the message box."
+  },
+  "desktopIntentSentImage": "Image attached in Conduit",
+  "@desktopIntentSentImage": {
+    "description": "Shortcuts output of Send Image to Conduit when the image was attached (mobile's wording)."
+  },
+  "desktopIntentSendTextEmpty": "No text provided.",
+  "@desktopIntentSendTextEmpty": {
+    "description": "Send to Conduit fails with this when it was given no text (mobile's wording)."
+  },
+  "desktopIntentSendLinkEmpty": "No link provided.",
+  "@desktopIntentSendLinkEmpty": {
+    "description": "Send Link to Conduit fails with this when it was given no link."
+  },
+  "desktopIntentSendImageNotImage": "Only image files are supported.",
+  "@desktopIntentSendImageNotImage": {
+    "description": "Send Image to Conduit fails with this for a file that is not an image (mobile's wording)."
+  },
+  "desktopIntentSendImageTooLarge": "This image is larger than 20 MB.",
+  "@desktopIntentSendImageTooLarge": {
+    "description": "Send Image to Conduit fails with this for an image over the phone's 20 MB limit."
+  },
+  "desktopIntentSendImageFailed": "Unable to send the image. Please try again.",
+  "@desktopIntentSendImageFailed": {
+    "description": "Send Image to Conduit fails with this when the image could not be taken (mobile's wording)."
+  },
+  "desktopIntentLinkPromptPage": "Please summarize or analyze this page:",
+  "@desktopIntentLinkPromptPage": {
+    "description": "Put in the message box of the new chat Send Link to Conduit opens for a web page (mobile's wording); the page's text is attached."
+  },
+  "desktopIntentLinkPromptVideo": "Please summarize or analyze this video:",
+  "@desktopIntentLinkPromptVideo": {
+    "description": "Put in the message box of the new chat Send Link to Conduit opens for a YouTube video (mobile's wording); its transcript is attached."
   },
   "desktopAddLinkEllipsis": "Add Link…",
   "@desktopAddLinkEllipsis": {
@@ -1909,6 +2098,35 @@
       }
     }
   },
+  "desktopWorkspaceAttachServerFile": "Attach Server File…",
+  "@desktopWorkspaceAttachServerFile": {
+    "description": "Button in a knowledge base's files: pick one of the user's files already on the server and link it in (mobile's workspaceKnowledgeAttachExisting, as a Mac button opening a sheet)."
+  },
+  "desktopWorkspaceKnowledgeAttaching": "Attaching {name}…",
+  "@desktopWorkspaceKnowledgeAttaching": {
+    "description": "Progress label shown while one of the user's server files is linked into a knowledge base.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopPdfPagePosition": "Page {page} of {count}",
+  "@desktopPdfPagePosition": {
+    "description": "Under a PDF's name in the PDF viewer's toolbar: the page in view and how many pages the document has.",
+    "placeholders": {
+      "page": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopNoteAudioPosition": "Playback Position",
+  "@desktopNoteAudioPosition": {
+    "description": "Accessible name of the scrubber under a note's recording while it plays (VoiceOver reads it with the time played and the length)."
+  },
   "desktopWorkspaceKnowledgeViewAll": "All",
   "@desktopWorkspaceKnowledgeViewAll": {
     "description": "Knowledge collection filter showing all knowledge bases. (Desktop copy of the phone's workspaceKnowledgeViewAll, translated for the desktop.)"
@@ -2037,6 +2255,18 @@
   "desktopWorkspaceModelStopHint": "Comma-separated stop sequences",
   "@desktopWorkspaceModelStopHint": {
     "description": "Helper text for the stop-sequences field. (Desktop copy of the phone's workspaceModelStopHint, translated for the desktop.)"
+  },
+  "desktopWorkspaceModelTerminal": "Terminal ID",
+  "@desktopWorkspaceModelTerminal": {
+    "description": "Label of the model editor's field for the terminal a chat with the model starts on (Open WebUI's terminal id); mobile's workspaceModelTerminal."
+  },
+  "desktopWorkspaceModelBuiltinTools": "Built-In Tools (JSON)",
+  "@desktopWorkspaceModelBuiltinTools": {
+    "description": "Label of the model editor's JSON field for Open WebUI's built-in tools; mobile's workspaceModelBuiltinTools."
+  },
+  "desktopWorkspaceModelBuiltinToolsHint": "JSON object turning Open WebUI's built-in tools on or off by name",
+  "@desktopWorkspaceModelBuiltinToolsHint": {
+    "description": "Footer under the built-in tools field: a JSON object turning Open WebUI's built-in tools on or off by name."
   },
   "desktopWorkspaceModelTags": "Tags",
   "@desktopWorkspaceModelTags": {
@@ -3363,6 +3593,50 @@
       }
     }
   },
+  "desktopAppleChecking": "Checking…",
+  "@desktopAppleChecking": {
+    "description": "Settings › Direct Connections, Apple On-Device row: shown while the app asks this Mac whether Apple's on-device model is ready."
+  },
+  "desktopAppleNeedsMacos26": "Requires macOS 26 or later.",
+  "@desktopAppleNeedsMacos26": {
+    "description": "Settings › Direct Connections, Apple On-Device row: why the model can't be used on a Mac whose macOS is older than 26."
+  },
+  "desktopAppleMacNotEligible": "This Mac can't run Apple Intelligence.",
+  "@desktopAppleMacNotEligible": {
+    "description": "Settings › Direct Connections, Apple On-Device row: this Mac's hardware can't run Apple Intelligence."
+  },
+  "desktopAppleIntelligenceOff": "Turn on Apple Intelligence in System Settings to use it.",
+  "@desktopAppleIntelligenceOff": {
+    "description": "Settings › Direct Connections, Apple On-Device row: Apple Intelligence is turned off in macOS System Settings."
+  },
+  "desktopAppleModelNotReady": "The model is still downloading or isn't ready yet.",
+  "@desktopAppleModelNotReady": {
+    "description": "Settings › Direct Connections, Apple On-Device row: Apple's on-device model is still downloading or not ready."
+  },
+  "desktopAppleUnavailableNow": "Not available right now.",
+  "@desktopAppleUnavailableNow": {
+    "description": "Settings › Direct Connections, Apple On-Device row: the model can't answer now, for a reason the app can't name."
+  },
+  "desktopAppleLanguageUnsupported": "Apple Intelligence may not support this Mac's language.",
+  "@desktopAppleLanguageUnsupported": {
+    "description": "Settings › Direct Connections, footer note under Apple On-Device when Apple says the Mac's language may not be supported."
+  },
+  "desktopAppleCheckAgain": "Check Again",
+  "@desktopAppleCheckAgain": {
+    "description": "Settings › Direct Connections, button beside Apple On-Device: asks this Mac again whether Apple's model is ready (Title Case)."
+  },
+  "desktopAppleCheckAgainTooltip": "Check whether Apple's model is ready on this Mac",
+  "@desktopAppleCheckAgainTooltip": {
+    "description": "Tooltip of the Check Again button beside Apple On-Device in Settings › Direct Connections."
+  },
+  "desktopAppleFooter": "Apple's private model runs on this Mac, even offline. Once it's ready, it appears in the model picker.",
+  "@desktopAppleFooter": {
+    "description": "Settings › Direct Connections, footer of the Apple Intelligence section."
+  },
+  "desktopAppleOnThisMac": "On this Mac, works offline",
+  "@desktopAppleOnThisMac": {
+    "description": "Model picker: the line under Apple On-Device, saying where it runs (the phone says 'On this device, works offline')."
+  },
   "desktopDirectOpenRouterUrl": "Use OpenRouter's address, https://openrouter.ai/api/v1.",
   "@desktopDirectOpenRouterUrl": {
     "description": "Error under a Direct connection's address when OpenRouter is chosen but the address is not its HTTPS API root."
@@ -4216,14 +4490,6 @@
   "@desktopChannelAddSearchHint": {
     "description": "Placeholder of the search field that finds people and groups to add to a channel."
   },
-  "desktopNotifyChannels": "Notify About Channel Messages",
-  "@desktopNotifyChannels": {
-    "description": "Settings › Desktop switch: a notification when someone posts in a channel that is not in front of the user."
-  },
-  "desktopNotifyChannelsFooter": "A channel set to Mentions Only notifies only when you're mentioned. Notifications never show the message.",
-  "@desktopNotifyChannelsFooter": {
-    "description": "Footer under the channel notifications switch in Settings › Desktop."
-  },
   "desktopChannelNotificationTitle": "{author} in {channel}",
   "@desktopChannelNotificationTitle": {
     "description": "Title of a notification for a channel message: {author} posted in {channel}.",
@@ -4363,6 +4629,18 @@
   "@desktopKeyboardTasksFooter": {
     "description": "Settings › Keyboard: footer under the Scheduled Tasks group, whose keys work only in the Scheduled Tasks pane (Delete on the selected task; Save in the task editor). Sentence case."
   },
+  "desktopKeyboardTerminalFooter": "These work in a terminal: Find searches its output, and Clear Scrollback clears the history above the screen. In a PDF the terminal shows, Save… keeps a copy.",
+  "@desktopKeyboardTerminalFooter": {
+    "description": "Settings › Keyboard: footer under the Terminal group, whose keys work only in a terminal's console (Find opens its own Find bar; Clear Scrollback, ⌥⌘K as in Terminal, clears the lines scrolled off above the screen). Sentence case."
+  },
+  "desktopKeyboardRoomsFooter": "Sends your message in a room, whether or not Return sends.",
+  "@desktopKeyboardRoomsFooter": {
+    "description": "Settings › Keyboard: footer under the Rooms group (Hermes Group Chats), whose ⌘↩ sends the message typed in a room whether or not Return is set to send. Sentence case."
+  },
+  "desktopKeyboardHermesJobsFooter": "Saves the scheduled agent you're editing.",
+  "@desktopKeyboardHermesJobsFooter": {
+    "description": "Settings › Keyboard: footer under the Scheduled Agents group (Hermes cron jobs), whose ⌘↩ saves the scheduled agent open in its sheet. Sentence case."
+  },
   "desktopNotificationAnswerReady": "The answer is ready.",
   "@desktopNotificationAnswerReady": {
     "description": "Body of the system notification when an answer finishes; the title is the conversation's title. Never includes the answer."
@@ -4415,10 +4693,6 @@
   "@desktopQuickAskShortcutUnavailable": {
     "description": "Shown when the system could not start global shortcuts at all."
   },
-  "desktopNotifyAnswers": "Notify When an Answer Finishes",
-  "@desktopNotifyAnswers": {
-    "description": "Switch in Settings > Desktop for system notifications when an answer finishes out of sight."
-  },
   "desktopNotifyAnswersFooter": "Notifications show only the chat's title, never the answer, because they can appear on the lock screen and on shared screens.",
   "@desktopNotifyAnswersFooter": {
     "description": "Footer under the notifications switch explaining why notifications never include message content."
@@ -4431,9 +4705,25 @@
   "@desktopNotificationsUnavailable": {
     "description": "Shown when the app runs outside an app bundle and cannot post notifications."
   },
-  "desktopNotificationsOff": "Notifications Off",
-  "@desktopNotificationsOff": {
-    "description": "Row title next to the button that opens macOS notification settings."
+  "desktopNotifyMentionsOnly": "Only Mentions and Direct Messages",
+  "@desktopNotifyMentionsOnly": {
+    "description": "Settings › Notifications: under Channel Messages, only mentions of you and direct messages alert."
+  },
+  "desktopNotifyMentionsOnlyDetail": "Other channel messages still count as unread.",
+  "@desktopNotifyMentionsOnlyDetail": {
+    "description": "Below Only Mentions and Direct Messages: what happens to the other messages."
+  },
+  "desktopAddDestinationEllipsis": "Add Destination…",
+  "@desktopAddDestinationEllipsis": {
+    "description": "Settings › Notifications › Webhook Destinations: opens the sheet that adds one."
+  },
+  "desktopAddToolServerEllipsis": "Add Tool Server…",
+  "@desktopAddToolServerEllipsis": {
+    "description": "Settings › Personal Connections: opens the sheet that adds a tool server."
+  },
+  "desktopAddTerminalEllipsis": "Add Terminal…",
+  "@desktopAddTerminalEllipsis": {
+    "description": "Settings › Personal Connections: opens the sheet that adds a terminal."
   },
   "desktopMenuBarSection": "Menu Bar",
   "@desktopMenuBarSection": {
@@ -4475,6 +4765,82 @@
   "@desktopImageLoadFailed": {
     "description": "Under the file name on the tile shown in place of an image in a message that could not be loaded, beside a Retry button."
   },
+  "desktopOpenImageMenu": "Open Image",
+  "@desktopOpenImageMenu": {"description": "Context menu item on a picture in an answer: shows it in the image viewer. Title Case."},
+  "desktopImageName": "Image",
+  "@desktopImageName": {"description": "A picture's name when its address and alt text give none (its viewer window's title, Save Image's file name)."},
+  "desktopCopyImage": "Copy Image",
+  "@desktopCopyImage": {"description": "Context menu item on a picture in an answer: puts the picture on the clipboard. Title Case."},
+  "desktopSaveImage": "Save Image…",
+  "@desktopSaveImage": {"description": "Context menu item on a picture in an answer: a save panel for the picture. Title Case, with an ellipsis."},
+  "desktopAlwaysLoadImagesFrom": "Always Load Images from {host}",
+  "@desktopAlwaysLoadImagesFrom": {"description": "Menu item on a picture from another site: from now on every picture from that site ({host}, e.g. pictures.example.org) loads without a click. Title Case.", "placeholders": {"host": {"type": "String"}}},
+  "desktopImageLoading": "Loading",
+  "@desktopImageLoading": {"description": "Spoken description of a picture in an answer while it loads."},
+  "desktopImageTooLarge": "This image is too large to load.",
+  "@desktopImageTooLarge": {"description": "Under a picture's name when the picture from another site is larger than Conduit loads."},
+  "desktopImageNotAnImage": "This link isn't an image.",
+  "@desktopImageNotAnImage": {"description": "Under a picture's name when its address answered with something that is not a picture (a web page)."},
+  "desktopRemoteImageFrom": "Image from {host}",
+  "@desktopRemoteImageFrom": {"description": "Title of the placeholder for a picture from another site that has not been loaded ({host}, e.g. pictures.example.org).", "placeholders": {"host": {"type": "String"}}},
+  "desktopRemoteImageLabel": "Remote image from {host}, not loaded",
+  "@desktopRemoteImageLabel": {"description": "What VoiceOver says for the placeholder of a picture from another site that has not been loaded; the picture's alt text may follow.", "placeholders": {"host": {"type": "String"}}},
+  "desktopLoadImage": "Load Image",
+  "@desktopLoadImage": {"description": "Button (and menu item) on the placeholder of a picture from another site: loads that one picture. Title Case."},
+  "desktopImageOptions": "Image Options",
+  "@desktopImageOptions": {"description": "Tooltip and VoiceOver name of the small menu button beside Load Image. Title Case."},
+  "desktopDiagram": "Diagram",
+  "@desktopDiagram": {"description": "What a Mermaid diagram drawn in an answer is called (VoiceOver, its block's name)."},
+  "desktopChart": "Chart",
+  "@desktopChart": {"description": "What a chart drawn in an answer is called (VoiceOver, its block's name)."},
+  "desktopShowCode": "Show Code",
+  "@desktopShowCode": {"description": "Button on a diagram or chart drawn in an answer: shows its code under the picture. Title Case."},
+  "desktopHideCode": "Hide Code",
+  "@desktopHideCode": {"description": "The same button while the code shows: hides it again. Title Case."},
+  "desktopOpenInPreview": "Open in Preview",
+  "@desktopOpenInPreview": {"description": "Button on a diagram or chart drawn in an answer: opens it larger in Conduit's sandboxed Preview window. Title Case."},
+  "desktopDiagramDrawing": "{kind}, drawing…",
+  "@desktopDiagramDrawing": {"description": "What VoiceOver says while a diagram or chart ({kind}: Diagram or Chart) is being drawn.", "placeholders": {"kind": {"type": "String"}}},
+  "desktopDiagramFailed": "Couldn't draw this diagram, so its code is shown.",
+  "@desktopDiagramFailed": {"description": "Note above a Mermaid diagram's code when it could not be drawn (a syntax error)."},
+  "desktopChartFailed": "Couldn't draw this chart, so its code is shown.",
+  "@desktopChartFailed": {"description": "Note above a chart's code when it could not be drawn (not a chart configuration, or a script, which only Preview runs)."},
+  "desktopPdfDocument": "PDF Document",
+  "@desktopPdfDocument": {"description": "A PDF card's title when the link's text and address give no name."},
+  "desktopPdfNotLoaded": "PDF {title} from {host}, preview not loaded",
+  "@desktopPdfNotLoaded": {"description": "What VoiceOver says for a PDF card from another site whose preview has not been loaded ({title}: the card's title; {host}: the site).", "placeholders": {"title": {"type": "String"}, "host": {"type": "String"}}},
+  "desktopOpenPdf": "Open PDF: {title}",
+  "@desktopOpenPdf": {"description": "What VoiceOver says for a PDF card in an answer; a click opens it ({title}: the card's title).", "placeholders": {"title": {"type": "String"}}},
+  "desktopPdfPages": "{count, plural, =1{1 page} other{# pages}}",
+  "@desktopPdfPages": {"description": "A PDF card's page count, beside its title.", "placeholders": {"count": {"type": "int"}}},
+  "desktopLoadPreview": "Load Preview",
+  "@desktopLoadPreview": {"description": "Button on a PDF card from another site: loads that one PDF's preview. Title Case."},
+  "desktopAlwaysLoadPreviewsFrom": "Always Load Previews from {host}",
+  "@desktopAlwaysLoadPreviewsFrom": {"description": "Menu item on a PDF card from another site: from now on previews (and pictures) from that site ({host}) load without a click. Title Case.", "placeholders": {"host": {"type": "String"}}},
+  "desktopPdfFrom": "PDF from {host}",
+  "@desktopPdfFrom": {"description": "On a PDF card from another site whose preview has not been loaded ({host}, e.g. docs.example.org).", "placeholders": {"host": {"type": "String"}}},
+  "desktopPreviewOptions": "Preview Options",
+  "@desktopPreviewOptions": {"description": "Tooltip and VoiceOver name of the small menu button beside Load Preview. Title Case."},
+  "desktopPdfTooLarge": "This PDF is too large to preview.",
+  "@desktopPdfTooLarge": {"description": "In a PDF card's preview area when the PDF is larger than Conduit previews; a click still opens it."},
+  "desktopPdfPreviewFailed": "Couldn't load the preview.",
+  "@desktopPdfPreviewFailed": {"description": "In a PDF card's preview area when the preview could not be loaded, beside Try Again; a click still opens the PDF."},
+  "desktopOpenPdfMenu": "Open PDF",
+  "@desktopOpenPdfMenu": {"description": "Context menu item on a PDF card: opens the PDF (in its app or the browser). Title Case."},
+  "desktopRemoteContent": "Remote Content",
+  "@desktopRemoteContent": {"description": "Settings › Chats section header: the sites whose pictures and PDF previews load without a click. Title Case."},
+  "desktopRemoteContentFooter": "Images and PDF previews from these sites load automatically. Others wait until you load them.",
+  "@desktopRemoteContentFooter": {"description": "Footer under the Remote Content list in Settings › Chats when it lists sites."},
+  "desktopRemoteContentFooterEmpty": "Images and PDF previews from other sites wait until you load them. Sites you always load are listed here.",
+  "@desktopRemoteContentFooterEmpty": {"description": "Footer under the Remote Content list in Settings › Chats while it lists no sites."},
+  "desktopRemoteContentNone": "No Sites",
+  "@desktopRemoteContentNone": {"description": "The Remote Content list's only row while it lists no sites. Title Case."},
+  "desktopRemoveSite": "Remove",
+  "@desktopRemoveSite": {"description": "Button on a site's row in Settings › Chats › Remote Content: its pictures wait for a click again. Title Case."},
+  "desktopLiveUpdatesRetryFailed": "Live updates are still disconnected.",
+  "@desktopLiveUpdatesRetryFailed": {"description": "In the Live Updates popover after Retry, when the realtime connection is still down."},
+  "desktopConnectionSettings": "Connection Settings…",
+  "@desktopConnectionSettings": {"description": "Button in the Live Updates popover: opens Settings › Connection. Title Case, with an ellipsis."},
   "desktopPreviewHtmlTitle": "HTML Preview",
   "@desktopPreviewHtmlTitle": {
     "description": "Title of the window that previews an HTML (or SVG) code block from a message."
@@ -5469,6 +5835,14 @@
   "@desktopWidgetVoiceCall": {
     "description": "The desktop widget's Voice Call button: a voice call in a new chat (the phone widget's mic). Title Case."
   },
+  "desktopWidgetClipboard": "Clipboard",
+  "@desktopWidgetClipboard": {
+    "description": "The desktop widget's button that opens a new chat with what was copied (the phone widget's Clipboard)."
+  },
+  "desktopUsageLocation": "Conduit shares your approximate location with a prompt that asks for it, when your account's settings allow it.",
+  "@desktopUsageLocation": {
+    "description": "macOS asks for location permission with this (Info.plist NSLocationUsageDescription). Sentence case."
+  },
   "desktopWidgetRecentChats": "Recent Chats",
   "@desktopWidgetRecentChats": {
     "description": "The desktop widget's heading over the latest chats' titles. Title Case."
@@ -5856,5 +6230,75 @@
   "desktopHermesJobHideRuns": "Hide Run History",
   "@desktopHermesJobHideRuns": {
     "description": "Disclosure button when a job's run history is open."
+  },
+  "desktopSignInTokenRequired": "Paste a token to sign in.",
+  "@desktopSignInTokenRequired": {
+    "description": "Error on the sign-in form when Token is the method and its field is empty. A token is a session token (JWT) copied from Open WebUI on the web."
+  },
+  "desktopProxySessionEnded": "Your session with the sign-in proxy in front of this server ended. Sign in to the proxy again to keep using this account.",
+  "@desktopProxySessionEnded": {
+    "description": "Status on the Connection Issue page when the account's server sits behind a sign-in proxy (oauth2-proxy, Authelia and the like) whose session expired. The account is still signed in to Conduit; the button below says Sign In to Proxy Again."
+  },
+  "desktopProxySignInFailed": "Couldn't sign in to the proxy. Try again.",
+  "@desktopProxySignInFailed": {
+    "description": "Error on the Connection Issue page when signing in to the sign-in proxy again did not finish (the proxy's page failed, or its new session was not accepted)."
+  },
+  "desktopUsageMicrophone": "Conduit listens when you dictate a message or talk in a voice call. A dictation's recording stays with your draft until you send it.",
+  "@desktopUsageMicrophone": {
+    "description": "macOS privacy prompt text (Info.plist NSMicrophoneUsageDescription), shown by the system when Conduit first asks for the microphone: dictation into the message box, and voice calls. A dictation's recording is kept with the unsent draft. Sentence case, full sentences."
+  },
+  "desktopUsageSpeechRecognition": "Conduit turns what you dictate into text on this Mac when you choose On This Mac in Settings › Audio.",
+  "@desktopUsageSpeechRecognition": {
+    "description": "macOS privacy prompt text (Info.plist NSSpeechRecognitionUsageDescription), shown by the system when Conduit first uses the Mac's own speech recognizer. 'On This Mac' is the speech-to-text choice in Settings › Audio; use the same words as that setting. Sentence case."
+  },
+  "desktopUsageLocalNetwork": "Conduit connects to servers on your local network that you add, such as Open WebUI, model providers and MCP tool servers.",
+  "@desktopUsageLocalNetwork": {
+    "description": "macOS privacy prompt text (Info.plist NSLocalNetworkUsageDescription), shown by the system when Conduit first reaches a server on the local network (a self-hosted Open WebUI, a model provider, an MCP tool server). The Mac's own wording: names Open WebUI, the main reason the Mac reaches the local network. Sentence case."
+  },
+  "desktopBackendAppleOnDeviceSubtitle": "Run Apple's private model on this Mac, even offline.",
+  "@desktopBackendAppleOnDeviceSubtitle": {
+    "description": "First-run backend chooser: subtitle of the Apple On-Device row (the phone's says 'this device'; this is the Mac's). Apple's on-device model runs on the Mac without a network. Sentence case."
+  },
+  "desktopHermesDashboardWindowTitle": "Hermes Dashboard Sign-In",
+  "@desktopHermesDashboardWindowTitle": {
+    "description": "Title of the window a Hermes Desktop Gateway dashboard sign-in runs in."
+  },
+  "desktopHermesDashboardHeadersUnsupported": "Dashboard sign-in can't send custom headers on this Mac. Use a session token, or remove the headers.",
+  "@desktopHermesDashboardHeadersUnsupported": {
+    "description": "Shown in the Hermes connection editor when Dashboard sign-in is chosen for a connection with custom headers, which the sign-in window cannot send."
+  },
+  "desktopHermesNativeHeadersUnsupported": "Hermes Sign-In can't send custom headers. Use a session token, or remove the headers.",
+  "@desktopHermesNativeHeadersUnsupported": {"description": "Note under Hermes Sign-In in a Hermes connection editor when access headers are set: the Mac's Hermes Sign-In (in the browser) cannot send them. Hermes Sign-In and Session Token are the names of two sign-in choices beside it."},
+  "desktopHermesDashboardFailed": "Hermes sign-in could not be loaded.",
+  "@desktopHermesDashboardFailed": {
+    "description": "Shown in the Hermes connection editor when the dashboard sign-in window could not load or failed."
+  },
+  "desktopHermesDashboardTimedOut": "Hermes sign-in took too long. Try again.",
+  "@desktopHermesDashboardTimedOut": {
+    "description": "Shown in the Hermes connection editor when the dashboard sign-in window was left open too long."
+  },
+  "desktopHermesDashboardSigningIn": "Finish signing in in the sign-in window…",
+  "@desktopHermesDashboardSigningIn": {
+    "description": "Shown in the Hermes connection editor while its dashboard sign-in window is open."
+  },
+  "desktopHermesProfilesNoUrl": "Enter the Hermes server URL first.",
+  "@desktopHermesProfilesNoUrl": {
+    "description": "Under a Hermes connection's profile menu when its profiles can't be listed: no server URL yet."
+  },
+  "desktopHermesProfilesTestFirst": "Test the connection, then refresh the profile list.",
+  "@desktopHermesProfilesTestFirst": {
+    "description": "Under a Hermes connection's profile menu when listing profiles would send credentials unencrypted before the user agreed."
+  },
+  "desktopHermesProfilesEmpty": "No Hermes profiles were returned.",
+  "@desktopHermesProfilesEmpty": {
+    "description": "Under a Hermes connection's profile menu when the gateway listed no profiles."
+  },
+  "desktopHermesProfilesSignInFirst": "Sign in, then refresh the profile list.",
+  "@desktopHermesProfilesSignInFirst": {
+    "description": "Under a Hermes connection's profile menu when the gateway refused or could not be reached."
+  },
+  "desktopHermesHeadersTooMany": "A connection can send up to 10 headers.",
+  "@desktopHermesHeadersTooMany": {
+    "description": "Error in the Hermes connection editor when more than 10 custom headers were added."
   }
 }

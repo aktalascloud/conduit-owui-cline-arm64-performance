@@ -210,16 +210,12 @@ pub struct ConnectionOptions {
 }
 
 impl ConnectionStore {
-    /// Starts the daemon and the connection.
+    /// Starts the daemon and the connection. In tests the client's events
+    /// are never followed, whoever starts it (a view test's stores or a
+    /// fixture's): nothing on the daemon's I/O thread may wake a test's
+    /// tasks, which the test scheduler refuses as not deterministic.
     pub fn start(options: ConnectionOptions, cx: &mut App) -> Entity<Self> {
-        cx.new(|cx| Self::new(options, true, cx))
-    }
-
-    /// A connection for view tests: its client's events are not followed,
-    /// so nothing on the daemon's I/O thread wakes the test's tasks.
-    #[cfg(test)]
-    pub fn start_quiet(options: ConnectionOptions, cx: &mut App) -> Entity<Self> {
-        cx.new(|cx| Self::new(options, false, cx))
+        cx.new(|cx| Self::new(options, !cfg!(test), cx))
     }
 
     fn new(options: ConnectionOptions, follow: bool, cx: &mut Context<Self>) -> Self {
@@ -357,6 +353,15 @@ impl ConnectionStore {
     /// Registers what `key` wants delivered; the union of every key's events
     /// and scopes is subscribed (now, and after each reconnect).
     pub fn subscribe(&mut self, key: &'static str, events: &[&'static str], scopes: Vec<String>) {
+        // A key is one follower's: it may change its scopes, but another
+        // follower's events under the same key would replace these (the
+        // union is built from one entry per key).
+        debug_assert!(
+            self.subscriptions
+                .get(key)
+                .is_none_or(|(held, _)| held.as_slice() == events),
+            "two followers share the event subscription key {key:?}"
+        );
         self.subscriptions.insert(key, (events.to_vec(), scopes));
         let mut names: BTreeSet<&'static str> = WINDOW_EVENTS.iter().copied().collect();
         let mut all_scopes: BTreeSet<String> = BTreeSet::new();

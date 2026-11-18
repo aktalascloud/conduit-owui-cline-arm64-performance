@@ -28,6 +28,7 @@ pub mod channel_fixture;
 pub mod chat_fixture;
 pub mod desktop;
 #[cfg(feature = "harness")]
+pub mod diagram_fixture;
 #[cfg(all(target_os = "macos", feature = "harness"))]
 pub mod e2e;
 #[cfg(all(target_os = "macos", feature = "harness"))]
@@ -39,6 +40,7 @@ pub mod menus;
 pub mod prefs;
 #[cfg(all(target_os = "macos", feature = "harness"))]
 pub mod rooms_fixture;
+pub mod scripted;
 pub mod shell;
 #[cfg(target_os = "macos")]
 pub mod smoke;
@@ -48,6 +50,8 @@ pub mod terminal_fixture;
 pub mod updates;
 pub mod views;
 pub mod voice;
+#[cfg(all(target_os = "macos", feature = "harness"))]
+pub mod web_media_fixture;
 pub mod windows;
 #[cfg(all(target_os = "macos", feature = "harness"))]
 pub mod workspace_fixture;
@@ -201,12 +205,7 @@ pub fn run() {
     // A build without the test harness refuses its flags rather than
     // starting normally, so a script can never drive a real profile.
     #[cfg(not(feature = "harness"))]
-    if let Some(flag) = args.iter().map(String::as_str).find(|a| {
-        a.starts_with("--e2e")
-            || a.starts_with("--capture")
-            || *a == "--probe"
-            || (a.starts_with("--") && a.ends_with("fixture"))
-    }) {
+    if let Some(flag) = scripted::harness_flag(&args) {
         eprintln!("conduit-desktop: {flag} needs a build with the `harness` feature");
         std::process::exit(64);
     }
@@ -219,6 +218,15 @@ pub fn run() {
     // The smoke wrapper launches through `open`, which starts apps in `/`.
     if let Some(dir) = arg(&args, "--cwd") {
         std::env::set_current_dir(dir).ok();
+    }
+    // A scripted launch (a pass, the capture, a fixture) never asks for a
+    // permission: see `scripted`.
+    scripted::set(scripted::requested(&args));
+    // The web views' media policy in real web views (tests/web_media.rs).
+    #[cfg(all(target_os = "macos", feature = "harness"))]
+    if web_media_fixture::requested(&args) {
+        web_media_fixture::run();
+        return;
     }
     // The sidebar and palette over canned data (tests/a11y.rs, perf).
     #[cfg(all(target_os = "macos", feature = "harness"))]
@@ -289,6 +297,13 @@ pub fn run() {
     let scripted = shots.is_some() || capture.is_some();
     #[cfg(not(all(target_os = "macos", feature = "harness")))]
     let scripted = shots.is_some();
+    // `{{USER_LOCATION}}`: a scripted run (any pass, the capture, a probe
+    // or a fixture: `scripted::active`) answers with a stand-in and never
+    // reaches CoreLocation (no test may raise the system's prompt).
+    shell::location::choose(
+        scripted::active(),
+        std::env::var("CONDUIT_LOCATION_STANDIN").ok(),
+    );
 
     let app = gpui_kit::application().with_assets(crate::views::model_logo::AppAssets);
     // `conduit://` links and "Open with" files, cold launch included: they
@@ -583,6 +598,7 @@ fn install_menu_observers(cx: &mut App) {
 }
 
 fn register_actions(cx: &mut App) {
+    views::chat::remote_image::register(cx);
     cx.on_action(|_: &Quit, cx| crate::views::sheet::quit(cx));
     cx.on_action(|_: &About, cx| open_settings(Some(Tab::About), cx));
     cx.on_action(|_: &Hide, cx| cx.hide());

@@ -14,6 +14,9 @@ import 'package:conduit_core/features/hermes/models/hermes_model.dart'
 import 'package:conduit_core/features/hermes/providers/hermes_providers.dart'
     show hermesSecretsLoadingProvider;
 import 'package:conduit_core/models/model.dart';
+import 'package:conduit_core/features/integrations/personal_connection_display.dart';
+import 'package:conduit_core/features/integrations/personal_connection_settings.dart';
+import 'package:conduit_core/features/integrations/providers/personal_connections_providers.dart';
 import 'package:conduit_core/features/tools/providers/tools_providers.dart';
 import 'package:conduit_core/models/file_info.dart';
 import 'package:conduit_core/models/tool.dart';
@@ -26,6 +29,8 @@ import 'package:riverpod/misc.dart' show ProviderListenable;
 import 'package:riverpod/riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import 'account_scope.dart';
+import 'server_rules.dart';
 import 'settled.dart';
 
 /// Implements `composer.*` (what the composer may offer) and what it draws
@@ -42,7 +47,10 @@ final class ComposerService {
 
   final ProviderContainer _container;
 
+  /// Bound to the account it was asked under ([AccountScope]): the tools,
+  /// personal tool servers and models are that account's, or refused.
   Future<ComposerOptions> options() async {
+    final account = AccountScope.capture(_container);
     await Future.wait<Object?>(<Future<Object?>>[
       _settle(backendConfigProvider.future),
       _settle(userPermissionsProvider.future),
@@ -67,6 +75,12 @@ final class ComposerService {
       DebugLogger.error('tools-failed', scope: 'daemon/composer', error: error);
       tools = const <ToolSummary>[];
     }
+
+    // The account's personal tool servers, as the phone's tool list offers
+    // them: each enabled one, chosen by its `direct_server:` id. A turn that
+    // chooses one sends it to Open WebUI, which asks this session to run its
+    // calls (core's `execute:tool` handler).
+    tools = <ToolSummary>[...tools, ...await _personalToolServers(account)];
 
     // Listed without connecting to them: opening every server to count
     // its tools would make the composer wait on the slowest one.
@@ -112,6 +126,7 @@ final class ComposerService {
           )
         : const <QuickPillCandidate>[];
     final voiceCall = await _voiceCallAdmitted(model);
+    account.require('the composer options are answered');
     return ComposerOptions(
       voiceCall: voiceCall,
       webSearch: webSearch,
@@ -166,6 +181,41 @@ final class ComposerService {
   /// the phone's launcher reads it. Hermes' secrets load at start; a Hermes
   /// model waits for them (as the launcher does) rather than reading
   /// "still loading" as "no".
+  /// The enabled personal tool servers of the signed-in account, when it
+  /// may use them; none while its list cannot be read.
+  ///
+  /// Access is read as Personal Connections reads it
+  /// ([readPersonalConnectionsAccess]), refreshing a config cached before
+  /// sign-in once; [account] is required after that wait.
+  Future<List<ToolSummary>> _personalToolServers(AccountScope account) async {
+    final access = await readPersonalConnectionsAccess(_container);
+    account.require('the personal tool servers are offered');
+    if (!access.available) return const <ToolSummary>[];
+    try {
+      final snapshot = await readSettled(
+        _container,
+        personalConnectionsProvider.future,
+      );
+      if (snapshot == null) return const <ToolSummary>[];
+      return <ToolSummary>[
+        for (final entry in snapshot.toolServers)
+          if (entry.enabled)
+            ToolSummary(
+              id: personalToolServerSelectionId(entry.list, entry.index),
+              name: entry.displayName,
+              description: personalToolServerSubtitle(entry.raw, entry.url),
+            ),
+      ];
+    } on Object catch (error) {
+      DebugLogger.error(
+        'personal-tools-failed',
+        scope: 'daemon/composer',
+        error: error,
+      );
+      return const <ToolSummary>[];
+    }
+  }
+
   Future<bool> _voiceCallAdmitted(Model? model) async {
     if (model != null && isHermesModel(model)) {
       final deadline = DateTime.now().add(const Duration(seconds: 3));
@@ -335,6 +385,27 @@ final class ComposerService {
       );
       return const FetchedUrl(error: 'failed');
     }
+  }
+
+  /// Shortcuts' Send Link to Conduit (`intents.sendLink`): what the server
+  /// reads from [url], as [fetchUrl] reads it for Web Page, and whether it
+  /// is a YouTube video, so the app words the new chat's message as the
+  /// phone does ("this video" or "this page").
+  ///
+  /// Read for the account in charge when it was asked: never handed back
+  /// once another one took charge meanwhile (the app would open it in that
+  /// account's new chat).
+  Future<IntentLinkResult> sendLink(String url) async {
+    final scope = AccountScope.capture(_container);
+    final trimmed = url.trim();
+    final fetched = await fetchUrl(trimmed);
+    scope.require('intents.sendLink answered');
+    return IntentLinkResult(
+      url: trimmed,
+      youtube: isYoutubeUrl(trimmed),
+      attachment: fetched.attachment,
+      error: fetched.error,
+    );
   }
 
   /// The account's files on the server, newest first, matching [query]:

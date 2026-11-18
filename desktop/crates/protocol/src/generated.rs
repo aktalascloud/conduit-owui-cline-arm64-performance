@@ -16,7 +16,7 @@ use crate::{EventSpec, MethodSpec};
 ///
 /// Bump this whenever a method, event, or DTO changes shape in a way that an
 /// older peer would misread.
-pub const PROTOCOL_VERSION: &str = "1.64.0";
+pub const PROTOCOL_VERSION: &str = "1.67.0";
 
 /// A resource whose access grants the everyday UI edits. Generic on
 /// purpose: chats, folders and notes, and the workspace's models,
@@ -437,6 +437,405 @@ pub struct AccountsChanged {
     pub active_account_id: Option<String>,
 }
 
+/// Apple's Foundation Models: the one on this Mac (`onDevice`), or the one
+/// on Apple's servers (`privateCloudCompute`), which a build without its
+/// entitlement never offers (FoundationModels traps on its first request).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AppleModelKind {
+    #[serde(rename = "onDevice")]
+    OnDevice,
+    #[serde(rename = "privateCloudCompute")]
+    PrivateCloudCompute,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Whether a model can answer: the phone's `PlatformPccAvailability`.
+/// `unsupported` means never on this Mac as it is (its macOS is too old, or
+/// the model is not offered in this build); `unavailable`, not now.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AppleAvailability {
+    #[serde(rename = "available")]
+    Available,
+    #[serde(rename = "unavailable")]
+    Unavailable,
+    #[serde(rename = "unsupported")]
+    Unsupported,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Why a model cannot answer, for the window to say in its own words.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AppleUnavailableReason {
+    /// This Mac runs a macOS older than 26.
+    #[serde(rename = "systemTooOld")]
+    SystemTooOld,
+    /// This Mac cannot run Apple Intelligence.
+    #[serde(rename = "deviceNotEligible")]
+    DeviceNotEligible,
+    /// Apple Intelligence is off in System Settings.
+    #[serde(rename = "appleIntelligenceNotEnabled")]
+    AppleIntelligenceNotEnabled,
+    /// The model is still downloading, or not ready yet.
+    #[serde(rename = "modelNotReady")]
+    ModelNotReady,
+    /// No window's engine answered (the app is starting or closing).
+    #[serde(rename = "noEngine")]
+    NoEngine,
+    /// Not offered in this build (Private Cloud Compute without its
+    /// entitlement).
+    #[serde(rename = "notOffered")]
+    NotOffered,
+    /// Apple gave a reason this version does not know.
+    #[serde(rename = "other")]
+    Other,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// What an engine says of one model: what a `status` command's answer
+/// carries.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppleEngineStatus {
+    #[serde(default = "default_apple_engine_status_availability")]
+    pub availability: AppleAvailability,
+    /// Why it cannot answer, when `availability` is not `available`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<AppleUnavailableReason>,
+    /// The context window the model reported, in tokens; none when it
+    /// reported none (or 0).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_size: Option<i64>,
+    /// False when Apple says the Mac's language may not be supported.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supports_current_locale: Option<bool>,
+}
+
+impl Default for AppleEngineStatus {
+    fn default() -> Self {
+        Self {
+            availability: default_apple_engine_status_availability(),
+            reason: None,
+            context_size: None,
+            supports_current_locale: None,
+        }
+    }
+}
+
+fn default_apple_engine_status_availability() -> AppleAvailability {
+    AppleAvailability::Unsupported
+}
+
+/// One of Apple's models as Settings › Direct Connections shows it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppleModelStatus {
+    pub model: AppleModelKind,
+    #[serde(default = "default_apple_model_status_availability")]
+    pub availability: AppleAvailability,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<AppleUnavailableReason>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_size: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supports_current_locale: Option<bool>,
+}
+
+fn default_apple_model_status_availability() -> AppleAvailability {
+    AppleAvailability::Unsupported
+}
+
+/// Apple Intelligence on this Mac: what `apple.status` and `apple.refresh`
+/// answer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AppleModels {
+    /// The models this Mac may offer, in the phone's order: Apple On-Device
+    /// only while the build lacks Private Cloud Compute's entitlement.
+    #[serde(default)]
+    pub models: Vec<AppleModelStatus>,
+}
+
+/// One message of the conversation a run sends: `system`, `user` or
+/// `assistant`, the last one the user's.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppleMessage {
+    pub role: String,
+    #[serde(default)]
+    pub content: String,
+}
+
+/// A tool the model may call during a run (a Direct MCP server's).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppleToolDefinition {
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    /// Its arguments' JSON Schema, as JSON text.
+    #[serde(default = "default_apple_tool_definition_input_schema_json")]
+    pub input_schema_json: String,
+}
+
+fn default_apple_tool_definition_input_schema_json() -> String {
+    "{}".to_owned()
+}
+
+/// A run for Apple's model: the conversation, its tools and the options the
+/// core's adapter checked.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppleGeneration {
+    pub run_id: String,
+    pub model: AppleModelKind,
+    #[serde(default)]
+    pub messages: Vec<AppleMessage>,
+    #[serde(default)]
+    pub tools: Vec<AppleToolDefinition>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub temperature: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub maximum_response_tokens: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub top_p: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub top_k: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seed: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub greedy_sampling: Option<bool>,
+    /// A JSON Schema the answer must follow, with its name; both or none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response_schema_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response_schema_json: Option<String>,
+}
+
+/// What `apple.command` asks the window's Foundation Models engine to do.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AppleCommandKind {
+    /// Whether `AppleCommand.model` can answer: answered with
+    /// `AppleReport.status`.
+    #[serde(rename = "status")]
+    Status,
+    /// Start `AppleCommand.request`. The answer only says it started; its
+    /// text, usage and end come as reports naming its run.
+    #[serde(rename = "start")]
+    Start,
+    /// Stop run `AppleCommand.runId`; it reports `done`.
+    #[serde(rename = "cancel")]
+    Cancel,
+    /// The answer to tool call `AppleCommand.callId` of run
+    /// `AppleCommand.runId`: `AppleCommand.toolContent`, or
+    /// `AppleCommand.toolCancelled`, which ends the run's tools.
+    #[serde(rename = "toolResult")]
+    ToolResult,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Payload of `apple.command`: the daemon runs the chat (the core's Direct
+/// engine and Apple adapter), the window runs Apple's model. Answered with
+/// `apple.report` naming `id`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppleCommand {
+    pub id: i64,
+    pub kind: AppleCommandKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<AppleModelKind>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request: Option<AppleGeneration>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub run_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub call_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_content: Option<String>,
+    #[serde(default)]
+    pub tool_cancelled: bool,
+}
+
+/// What an `AppleReport` tells, besides answering a command.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AppleReportKind {
+    /// The window's engine is here (sent each time the window connects):
+    /// `AppleReport.supported` says whether this Mac's macOS has Apple's
+    /// models, and `AppleReport.runs` which runs it still has.
+    #[serde(rename = "ready")]
+    Ready,
+    /// Run `AppleReport.runId` wrote `AppleReport.content`.
+    #[serde(rename = "content")]
+    Content,
+    /// Run `AppleReport.runId`'s token counts.
+    #[serde(rename = "usage")]
+    Usage,
+    /// Run `AppleReport.runId` failed: `AppleReport.failure` says how.
+    #[serde(rename = "failed")]
+    Failed,
+    /// Run `AppleReport.runId` ended (cancelled runs too).
+    #[serde(rename = "done")]
+    Done,
+    /// Run `AppleReport.runId`'s model calls tool `AppleReport.toolName`
+    /// with `AppleReport.argumentsJson` as `AppleReport.callId`: answered
+    /// with a `toolResult` command.
+    #[serde(rename = "toolCall")]
+    ToolCall,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// How a run failed: the daemon words it as the phone does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AppleFailure {
+    /// The conversation is longer than the model's context.
+    #[serde(rename = "contextExceeded")]
+    ContextExceeded,
+    /// The model is not ready (its assets are missing).
+    #[serde(rename = "notReady")]
+    NotReady,
+    /// Apple's guardrails blocked the request.
+    #[serde(rename = "guardrail")]
+    Guardrail,
+    /// The model declined the request.
+    #[serde(rename = "refusal")]
+    Refusal,
+    /// The model cannot process this request (a language, guide or
+    /// capability it lacks).
+    #[serde(rename = "unsupported")]
+    Unsupported,
+    /// The model's answer could not be read.
+    #[serde(rename = "decoding")]
+    Decoding,
+    /// Too many requests at once.
+    #[serde(rename = "busy")]
+    Busy,
+    #[serde(rename = "timedOut")]
+    TimedOut,
+    /// The request, its schema or a tool's schema was refused before it ran.
+    #[serde(rename = "invalidRequest")]
+    InvalidRequest,
+    #[serde(rename = "invalidSchema")]
+    InvalidSchema,
+    #[serde(rename = "invalidToolSchema")]
+    InvalidToolSchema,
+    /// The model's stream went back on what it had written.
+    #[serde(rename = "invalidStream")]
+    InvalidStream,
+    /// The model cannot answer now: `AppleReport.reason` says why.
+    #[serde(rename = "unavailable")]
+    Unavailable,
+    #[serde(rename = "failed")]
+    Failed,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Params for `apple.report`: a command's answer (`id`) and/or what the
+/// engine did (`kind`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppleReport {
+    /// The command answered, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<i64>,
+    /// Whether the command was carried out; `error` says why not, for the
+    /// log.
+    #[serde(default = "default_apple_report_ok")]
+    pub ok: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// What happened, when it reports an event.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<AppleReportKind>,
+    /// `ready`: whether this Mac's macOS has Apple's models (26 or later).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supported: Option<bool>,
+    /// `ready`: the runs the engine is still running. Runs end with the
+    /// session that ran them, so after a reconnect the daemon tells the
+    /// engine to stop each one; on the same session it ends any other it
+    /// started.
+    #[serde(default)]
+    pub runs: Vec<String>,
+    /// A `status` command's answer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<AppleEngineStatus>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub run_id: Option<String>,
+    /// A run's reports (`content`, `usage`, `toolCall`, `done`, `failed`)
+    /// are numbered from 1 by the window: a number skipped is a report lost
+    /// on the way, and the daemon ends the run rather than keep a reply with
+    /// words missing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seq: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input_tokens: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_tokens: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reasoning_tokens: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_tokens: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub call_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub arguments_json: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<AppleFailure>,
+    /// `failed` with `unavailable`: why.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<AppleUnavailableReason>,
+}
+
+impl Default for AppleReport {
+    fn default() -> Self {
+        Self {
+            id: None,
+            ok: default_apple_report_ok(),
+            error: None,
+            kind: None,
+            supported: None,
+            runs: Default::default(),
+            status: None,
+            run_id: None,
+            seq: None,
+            content: None,
+            input_tokens: None,
+            output_tokens: None,
+            reasoning_tokens: None,
+            total_tokens: None,
+            call_id: None,
+            tool_name: None,
+            arguments_json: None,
+            failure: None,
+            reason: None,
+        }
+    }
+}
+
+fn default_apple_report_ok() -> bool {
+    true
+}
+
 /// Mirrors the core's `AuthStatus` one-for-one.
 ///
 /// Repeated rather than shared because `conduit_core` cannot cross into the
@@ -500,6 +899,16 @@ pub struct AuthSnapshot {
     /// canned models and conversations with no server at all.
     #[serde(default)]
     pub is_reviewer_mode: bool,
+    /// Set while a password or LDAP sign-in waits on its second step
+    /// (`auth.twoStep.*`): the password was right, and the server asks for
+    /// an authenticator code before it issues a session.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub two_step: Option<TwoStepChallenge>,
+    /// The active server is reached through a reverse proxy whose session
+    /// cookie the account keeps, so an expired proxy session can be signed
+    /// in to again in place (`auth.renewProxy`) rather than signed out of.
+    #[serde(default)]
+    pub can_renew_proxy: bool,
 }
 
 /// The signed-in user, reduced to what the desktop chrome renders.
@@ -526,7 +935,8 @@ pub struct PasswordLogin {
     pub password: String,
 }
 
-/// Params for `auth.loginWithApiKey`.
+/// Params for `auth.loginWithApiKey`: a session token (JWT) copied from
+/// Open WebUI. API keys (`sk-…`) are refused with `auth.apiKeyNotSupported`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ApiKeyLogin {
@@ -553,6 +963,12 @@ pub struct ExternalAuthCompletion {
     /// cookie session.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
+    /// For `auth.renewProxy`, where it is required: the account whose
+    /// sign-in window this was (its id, as `accounts.list` names it).
+    /// Refused with `auth.sessionExpired` once another account is in charge,
+    /// or when the captured session is another user's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub account: Option<String>,
 }
 
 /// Reply to `auth.hasSavedCredentials`.
@@ -567,6 +983,85 @@ pub struct SavedCredentialsResult {
 #[serde(rename_all = "camelCase")]
 pub struct ReviewerMode {
     pub enabled: bool,
+}
+
+/// What an Open WebUI two-step sign-in asks for next.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TwoStepStage {
+    /// A code from the account's authenticator app, or one of its recovery
+    /// codes.
+    #[serde(rename = "verify")]
+    Verify,
+    /// The first sign-in since two-step verification became required: add
+    /// the authenticator (`auth.twoStep.setup`), then confirm it with a code.
+    #[serde(rename = "enroll")]
+    Enroll,
+    /// An administrator reset the authenticator: their recovery token, which
+    /// leads on to `enroll`.
+    #[serde(rename = "recover")]
+    Recover,
+    /// The authenticator was just added: the account's new recovery codes,
+    /// which the server shows only once, before the session is signed in to
+    /// (`auth.twoStep.finish`).
+    #[serde(rename = "recoveryCodes")]
+    RecoveryCodes,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// A sign-in waiting on its second step. Carries no challenge token: that
+/// stays in the daemon, as every token does.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TwoStepChallenge {
+    pub stage: TwoStepStage,
+    /// The username or email the sign-in began with, which labels the entry
+    /// in the authenticator app.
+    #[serde(default)]
+    pub account: String,
+    /// How long the server keeps this step, in seconds, from when it began.
+    #[serde(default)]
+    pub expires_in_seconds: i64,
+    /// For `TwoStepStage.recoveryCodes`: the codes, each of which signs in
+    /// once in place of an authenticator code.
+    #[serde(default)]
+    pub recovery_codes: Vec<String>,
+}
+
+/// Reply to `auth.twoStep.setup`: what to add to an authenticator app.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TwoStepSetup {
+    /// The base32 secret, for typing into an authenticator app.
+    pub manual_key: String,
+    /// The server's QR code for `manualKey`, as SVG markup; null when the
+    /// server sent none the app can draw.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub qr_svg: Option<String>,
+    /// An `otpauth://` link that adds the key to an authenticator app on
+    /// this computer, labelled as the server labels its QR code.
+    pub authenticator_uri: String,
+}
+
+/// Params for `auth.twoStep.verify`: a code for a `verify` or `enroll`
+/// step.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TwoStepCode {
+    pub code: String,
+    /// For a `verify` step: `code` is one of the account's recovery codes.
+    #[serde(default)]
+    pub recovery: bool,
+}
+
+/// Params for `auth.twoStep.redeem`: an administrator's recovery token for a
+/// `recover` step.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TwoStepResetToken {
+    pub reset_token: String,
 }
 
 /// A scheduled task's schedule, as the editor's controls hold it.
@@ -1865,9 +2360,15 @@ pub enum CallCommandKind {
     /// the audio runs, or with why it cannot.
     #[serde(rename = "audioStart")]
     AudioStart,
-    /// Close the realtime audio.
+    /// Close the realtime audio, or the WebRTC peer, at `CallCommand.path`.
     #[serde(rename = "audioStop")]
     AudioStop,
+    /// Open the realtime voice's WebRTC peer (Hermes GPT-Live): the
+    /// microphone with echo cancellation, the voice played, and a data channel
+    /// for the voice's events, driven over `WS` `CallCommand.path`. Answered
+    /// once the peer is ready to make its offer, or with why it cannot.
+    #[serde(rename = "webRtcStart")]
+    WebRtcStart,
     /// A value this build does not know, from a newer daemon. It decodes
     /// only: it encodes as `"unknown"`, which the daemon refuses.
     #[serde(other, rename = "unknown")]
@@ -1889,7 +2390,7 @@ pub struct CallCommand {
     /// The model whose backend transcribes (server speech).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model_id: Option<String>,
-    /// The realtime audio's WebSocket path on the daemon.
+    /// The realtime audio's (or WebRTC peer's) WebSocket path on the daemon.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
 }
@@ -5894,6 +6395,18 @@ pub struct HermesJobRef {
     pub connection: Option<String>,
 }
 
+/// Params of `hermes.signIn`: the connection the sign-in is for.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesSignInRequest {
+    /// The Hermes connection the request was made under
+    /// (`HermesChanged.connection`, or the one an activation answered
+    /// with): refused once another is in use. Null from an older window,
+    /// not checked.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
 /// Params for `hermes.renameSession`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -6244,6 +6757,18 @@ pub struct HermesConnectionDto {
     /// Signed in natively (a Desktop Gateway with `nativePkce`).
     #[serde(default)]
     pub desktop_signed_in: bool,
+    /// The names of the headers sent with every request to the server
+    /// (Cloudflare Access and the like), in the order saved. Their values
+    /// stay in the daemon.
+    #[serde(default)]
+    pub access_header_names: Vec<String>,
+    /// An API server's memory key is set (else the daemon makes one).
+    #[serde(default)]
+    pub has_memory_key: bool,
+    /// The daemon holds a dashboard sign-in for the server (a Desktop
+    /// Gateway with `dashboardCookie`).
+    #[serde(default)]
+    pub dashboard_signed_in: bool,
 }
 
 fn default_hermes_connection_dto_mode() -> String {
@@ -6330,6 +6855,16 @@ pub struct HermesConnectionEdit {
     /// (asked when the daemon refuses with `hermes.plainHttpConsent`).
     #[serde(default)]
     pub allow_plain_http: bool,
+    /// The headers every request carries, in order; null keeps the saved
+    /// ones. A refused list is `invalidParams` with `reason: accessHeader`,
+    /// `issue` (`tooMany`, `invalidName`, `duplicate`, `reserved`,
+    /// `tooLong`, `invalidValue`) and `header`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub access_headers: Option<Vec<HermesAccessHeaderEdit>>,
+    /// An API server's memory key (`X-Hermes-Session-Key`): null keeps the
+    /// saved one, empty clears it (the daemon makes one).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_key: Option<String>,
 }
 
 fn default_hermes_connection_edit_mode() -> String {
@@ -6342,6 +6877,165 @@ fn default_hermes_connection_edit_desktop_auth_kind() -> String {
 
 fn default_hermes_connection_edit_desktop_profile() -> String {
     "default".to_owned()
+}
+
+/// One access header in a connection's form. A saved header's value is
+/// never sent to the window, so a row left as it was says which saved
+/// header it keeps.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesAccessHeaderEdit {
+    pub name: String,
+    /// The value typed; null keeps the saved value of `savedName` (or of
+    /// `name` when that is null). Saved values never follow a connection
+    /// to another server.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<String>,
+    /// The saved header this row was, when it was renamed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub saved_name: Option<String>,
+}
+
+/// Reply to `hermes.connections.profiles`: the profiles a Desktop
+/// Gateway offers the form's connection, as the phone's profile menu
+/// lists them.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesProfiles {
+    #[serde(default)]
+    pub profiles: Vec<String>,
+    /// The profile the form should show: the one it had while listed,
+    /// else `default`, else the first. Null when nothing was listed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selected: Option<String>,
+    /// Why none were listed (the form keeps its profile and says so):
+    /// `noUrl`, `testFirst` (credentials would go unencrypted unasked),
+    /// `empty`, `signInFirst`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub issue: Option<String>,
+}
+
+/// Params naming only the Hermes connection a change is for
+/// (`hermes.skills.reload`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesConnectionRef {
+    /// The Hermes connection the request was made under
+    /// (`HermesChanged.connection`): a change naming none, or another
+    /// connection than the one in use, is refused.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Params for `hermes.dashboard.start`: the saved connection whose
+/// dashboard sign-in opens, put in use first.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesDashboardStart {
+    pub id: String,
+    /// The Hermes connection in use once `id` was put in use
+    /// (`HermesChanged.connection`): refused once another is in use, or
+    /// when it names none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Params for `hermes.toolsets.set`: a toolset on or off for new sessions.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesToolsetToggle {
+    pub name: String,
+    pub enabled: bool,
+    /// The Hermes connection the request was made under
+    /// (`HermesChanged.connection`): a change naming none, or another
+    /// connection than the one in use, is refused.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+}
+
+/// Reply to `hermes.dashboard.start`: where a Desktop Gateway's dashboard
+/// sign-in opens, for the window's browser window.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesDashboardPlan {
+    /// The dashboard's own sign-in page.
+    pub login_url: String,
+    /// The dashboard's origin (`scheme://host[:port]`): the flow is done
+    /// back there, and leaving it after the identity provider is refused.
+    pub origin: String,
+    /// False when this Mac's browser window cannot carry the connection's
+    /// access headers to the dashboard (as on an iPhone): the window says
+    /// so instead of opening.
+    #[serde(default = "default_hermes_dashboard_plan_supported")]
+    pub supported: bool,
+}
+
+fn default_hermes_dashboard_plan_supported() -> bool {
+    true
+}
+
+/// One cookie the dashboard sign-in window holds for the dashboard's host.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesCookieDto {
+    pub name: String,
+    pub value: String,
+    /// As WebKit reports it: the host for a host-only cookie, a leading
+    /// dot for a domain cookie.
+    pub domain: String,
+    #[serde(default = "default_hermes_cookie_dto_path")]
+    pub path: String,
+    #[serde(default)]
+    pub secure: bool,
+    #[serde(default)]
+    pub http_only: bool,
+    /// Milliseconds since the epoch; null for a session cookie.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expires_ms: Option<i64>,
+}
+
+fn default_hermes_cookie_dto_path() -> String {
+    "/".to_owned()
+}
+
+/// Params for `hermes.dashboard.complete`: the cookies a page the sign-in
+/// window loaded on the dashboard had.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesDashboardCookies {
+    /// The connection signing in.
+    pub id: String,
+    #[serde(default)]
+    pub cookies: Vec<HermesCookieDto>,
+    /// The Hermes connection in use the sign-in was started under
+    /// (`HermesChanged.connection`): refused once another is in use, or
+    /// when it names none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<String>,
+    /// The sign-in window's own id: nothing is kept once
+    /// `hermes.dashboard.cancel` named it (the window closed).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attempt: Option<String>,
+}
+
+/// `hermes.dashboard.cancel` params: the sign-in window `attempt` closed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesDashboardCancel {
+    pub attempt: String,
+}
+
+/// Reply to `hermes.dashboard.complete`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesDashboardResult {
+    /// The dashboard accepted the cookies as a signed-in session; they are
+    /// kept. False: not signed in yet (the window keeps waiting).
+    #[serde(default)]
+    pub signed_in: bool,
+    /// The connections, once signed in.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connections: Option<HermesConnections>,
 }
 
 /// Reply to `hermes.connections.test`.
@@ -7652,6 +8346,293 @@ pub struct HermesModelChoiceDto {
     pub label: String,
 }
 
+/// A personal connection's kind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PersonalKind {
+    #[serde(rename = "toolServer")]
+    ToolServer,
+    #[serde(rename = "terminal")]
+    Terminal,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Whether the account may keep personal connections, by Open WebUI's rule.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PersonalAccess {
+    #[serde(rename = "allowed")]
+    Allowed,
+    /// No Open WebUI account is signed in.
+    #[serde(rename = "noAccount")]
+    NoAccount,
+    /// The server has not switched on direct integrations.
+    #[serde(rename = "serverDisabled")]
+    ServerDisabled,
+    /// The account is neither an admin nor granted `direct_tool_servers`.
+    #[serde(rename = "noPermission")]
+    NoPermission,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// One personal tool server (OpenAPI) or terminal, with what its editor
+/// fills in. Never its key: `hasKey` says whether one is stored.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PersonalConnectionDto {
+    pub kind: PersonalKind,
+    /// Names the entry across list changes.
+    pub identity: String,
+    #[serde(default)]
+    pub name: String,
+    /// The URL without user info, query or fragment, for the list.
+    #[serde(default)]
+    pub endpoint: String,
+    #[serde(default = "default_personal_connection_dto_enabled")]
+    pub enabled: bool,
+    /// The editor understands it; one it does not can still be switched
+    /// and deleted.
+    #[serde(default = "default_personal_connection_dto_editable")]
+    pub editable: bool,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub url: String,
+    /// `url` (the document at `path`) or `json` (`spec` inline).
+    #[serde(default = "default_personal_connection_dto_spec_type")]
+    pub spec_type: String,
+    #[serde(default)]
+    pub path: String,
+    #[serde(default)]
+    pub spec: String,
+    /// `bearer` or `none`.
+    #[serde(default = "default_personal_connection_dto_auth_type")]
+    pub auth_type: String,
+    #[serde(default)]
+    pub has_key: bool,
+}
+
+fn default_personal_connection_dto_enabled() -> bool {
+    true
+}
+
+fn default_personal_connection_dto_editable() -> bool {
+    true
+}
+
+fn default_personal_connection_dto_spec_type() -> String {
+    "url".to_owned()
+}
+
+fn default_personal_connection_dto_auth_type() -> String {
+    "bearer".to_owned()
+}
+
+/// Reply to `integrations.list` and `integrations.save`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PersonalConnections {
+    #[serde(default = "default_personal_connections_access")]
+    pub access: PersonalAccess,
+    /// Names the account the list was read for; every change sends it back
+    /// and is refused once another account is signed in.
+    #[serde(default)]
+    pub owner: String,
+    #[serde(default)]
+    pub account_name: String,
+    #[serde(default)]
+    pub server_name: String,
+    #[serde(default)]
+    pub tool_servers: Vec<PersonalConnectionDto>,
+    #[serde(default)]
+    pub terminals: Vec<PersonalConnectionDto>,
+    /// Chat selections cleared because their connection went.
+    #[serde(default)]
+    pub cleared: Vec<String>,
+    /// The list could not be read.
+    #[serde(default)]
+    pub failed: bool,
+    /// A save reached the account that asked, which is no longer signed in.
+    #[serde(default)]
+    pub saved_for_previous_account: bool,
+}
+
+impl Default for PersonalConnections {
+    fn default() -> Self {
+        Self {
+            access: default_personal_connections_access(),
+            owner: Default::default(),
+            account_name: Default::default(),
+            server_name: Default::default(),
+            tool_servers: Default::default(),
+            terminals: Default::default(),
+            cleared: Default::default(),
+            failed: Default::default(),
+            saved_for_previous_account: Default::default(),
+        }
+    }
+}
+
+fn default_personal_connections_access() -> PersonalAccess {
+    PersonalAccess::NoAccount
+}
+
+/// What a form does to the stored key.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PersonalKeyMode {
+    #[serde(rename = "keep")]
+    Keep,
+    #[serde(rename = "replace")]
+    Replace,
+    #[serde(rename = "clear")]
+    Clear,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// An editor's fields.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PersonalConnectionDraft {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub url: String,
+    #[serde(default = "default_personal_connection_draft_spec_type")]
+    pub spec_type: String,
+    #[serde(default)]
+    pub path: String,
+    #[serde(default)]
+    pub spec: String,
+    #[serde(default = "default_personal_connection_draft_auth_type")]
+    pub auth_type: String,
+    #[serde(default)]
+    pub key: String,
+    #[serde(default = "default_personal_connection_draft_key_mode")]
+    pub key_mode: PersonalKeyMode,
+    #[serde(default = "default_personal_connection_draft_enabled")]
+    pub enabled: bool,
+}
+
+impl Default for PersonalConnectionDraft {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            description: Default::default(),
+            url: Default::default(),
+            spec_type: default_personal_connection_draft_spec_type(),
+            path: Default::default(),
+            spec: Default::default(),
+            auth_type: default_personal_connection_draft_auth_type(),
+            key: Default::default(),
+            key_mode: default_personal_connection_draft_key_mode(),
+            enabled: default_personal_connection_draft_enabled(),
+        }
+    }
+}
+
+fn default_personal_connection_draft_spec_type() -> String {
+    "url".to_owned()
+}
+
+fn default_personal_connection_draft_auth_type() -> String {
+    "bearer".to_owned()
+}
+
+fn default_personal_connection_draft_key_mode() -> PersonalKeyMode {
+    PersonalKeyMode::Replace
+}
+
+fn default_personal_connection_draft_enabled() -> bool {
+    true
+}
+
+/// What `integrations.save` does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PersonalEditOp {
+    #[serde(rename = "add")]
+    Add,
+    #[serde(rename = "patch")]
+    Patch,
+    #[serde(rename = "remove")]
+    Remove,
+    #[serde(rename = "setEnabled")]
+    SetEnabled,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Params for `integrations.save`. `identity` names the entry for every
+/// `op` but `add`; `draft` carries the fields for `add` and `patch`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PersonalConnectionSave {
+    pub owner: String,
+    pub kind: PersonalKind,
+    pub op: PersonalEditOp,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identity: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub draft: Option<PersonalConnectionDraft>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+}
+
+/// Params for `integrations.test`: the form as it stands, for the entry
+/// `identity` names (its stored key is used when the form keeps it) or a
+/// new one.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PersonalConnectionTest {
+    pub owner: String,
+    pub kind: PersonalKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identity: Option<String>,
+    pub draft: PersonalConnectionDraft,
+}
+
+/// Why a test failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PersonalProbeFailure {
+    #[serde(rename = "invalidTarget")]
+    InvalidTarget,
+    #[serde(rename = "unsupportedAuth")]
+    UnsupportedAuth,
+    #[serde(rename = "unauthorized")]
+    Unauthorized,
+    #[serde(rename = "unreachable")]
+    Unreachable,
+    #[serde(rename = "invalidSpec")]
+    InvalidSpec,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Reply to `integrations.test`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PersonalConnectionTestResult {
+    #[serde(default)]
+    pub ok: bool,
+    /// Operations a tool server exposes; null for a terminal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub operation_count: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<PersonalProbeFailure>,
+}
+
 /// Params for `intents.ask`: Shortcuts' Ask Conduit, a question whose answer
 /// goes back to the shortcut as text.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -7743,6 +8724,37 @@ pub struct IntentChat {
 pub struct IntentChats {
     #[serde(default)]
     pub chats: Vec<IntentChat>,
+}
+
+/// Params for `intents.sendLink`: Shortcuts' Send Link to Conduit, a link
+/// put into a new chat for a summary or an analysis.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IntentLink {
+    pub url: String,
+}
+
+/// Reply to `intents.sendLink`: what the server read from the link, as the
+/// composer's Web Page attaches it, or why it read nothing.
+///
+/// The app opens a new chat either way, as the phone does: with the page's
+/// text (or the video's transcript) attached when there is one.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IntentLinkResult {
+    /// The link, trimmed.
+    pub url: String,
+    /// A YouTube video, whose transcript is read instead of the page.
+    #[serde(default)]
+    pub youtube: bool,
+    /// The page's text or the video's transcript, ready for the composer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attachment: Option<ContextAttachmentDto>,
+    /// Null with an attachment; else `invalidUrl` (not an http or https
+    /// link), `noContent` (nothing readable, no transcript) or `failed` (no
+    /// Open WebUI account to read it, or the server refused).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 /// What checking an address for a LibreChat server found.
@@ -8104,6 +9116,90 @@ pub struct LibreChatMemoryRef {
 #[serde(rename_all = "camelCase")]
 pub struct LibreChatMemoryToggle {
     pub enabled: bool,
+}
+
+/// What `location.command` asks the window's location services for: the
+/// core's location port, one method each (the phone's port asks its OS the
+/// same four things).
+///
+/// The daemon asks only for a request or a prompt that names
+/// `{{USER_LOCATION}}`, and only while the account's location setting is on
+/// (the core's `LocationLookupPolicy`); nothing else reaches the window.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum LocationCommandKind {
+    /// Whether location services are on, and what this app may do: answered
+    /// with `LocationReport.servicesEnabled` and `LocationReport.permission`.
+    /// Never asks the user anything.
+    #[serde(rename = "status")]
+    Status,
+    /// Asks for permission (the system's prompt, the first time): answered
+    /// with `LocationReport.permission` once the user chose.
+    #[serde(rename = "requestPermission")]
+    RequestPermission,
+    /// One position fix: answered with `LocationReport.latitude` and
+    /// `LocationReport.longitude`, or `ok` false.
+    #[serde(rename = "currentPosition")]
+    CurrentPosition,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Payload of `location.command`. Answered with `location.report` naming
+/// `id`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocationCommand {
+    pub id: i64,
+    pub kind: LocationCommandKind,
+}
+
+/// What the app may do with the location, as the core's port says it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum LocationPermission {
+    #[serde(rename = "denied")]
+    Denied,
+    #[serde(rename = "deniedForever")]
+    DeniedForever,
+    #[serde(rename = "whileInUse")]
+    WhileInUse,
+    #[serde(rename = "always")]
+    Always,
+    #[serde(rename = "unableToDetermine")]
+    UnableToDetermine,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Params for `location.report`: the window's answer to a command.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocationReport {
+    pub id: i64,
+    /// Whether the command was carried out; `error` says why not, for the
+    /// log.
+    #[serde(default = "default_location_report_ok")]
+    pub ok: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// `status`: whether location services are on for this Mac.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub services_enabled: Option<bool>,
+    /// `status` and `requestPermission`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub permission: Option<LocationPermission>,
+    /// `currentPosition`, in degrees.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub latitude: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub longitude: Option<f64>,
+}
+
+fn default_location_report_ok() -> bool {
+    true
 }
 
 /// How the app signs in to an MCP server.
@@ -9159,6 +10255,202 @@ pub struct NoteResult {
 #[serde(rename_all = "camelCase")]
 pub struct DeletedResult {
     pub deleted: bool,
+}
+
+/// The notification settings (`notifications.get`, `notifications.set`), as
+/// the phone's Notifications page shows them. `enabled`, `sound` and
+/// `soundAlways` are mirrored to the Open WebUI account when one is signed
+/// in (`synced`); the rest stay on this Mac.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NotificationSettingsDto {
+    /// The master toggle.
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default = "default_notification_settings_dto_sound")]
+    pub sound: bool,
+    /// The cue plays for every alert, the in-app banner's too.
+    #[serde(default)]
+    pub sound_always: bool,
+    #[serde(default = "default_notification_settings_dto_in_app_banner")]
+    pub in_app_banner: bool,
+    #[serde(default = "default_notification_settings_dto_system")]
+    pub system: bool,
+    /// An answer finished in a chat the user is not looking at.
+    #[serde(default = "default_notification_settings_dto_answers")]
+    pub answers: bool,
+    /// Someone else posted in a channel or a direct message.
+    #[serde(default = "default_notification_settings_dto_channels")]
+    pub channels: bool,
+    /// With `channels`, only mentions and direct messages alert.
+    #[serde(default)]
+    pub mentions_only: bool,
+    /// The first three are mirrored to an Open WebUI account.
+    #[serde(default)]
+    pub synced: bool,
+}
+
+impl Default for NotificationSettingsDto {
+    fn default() -> Self {
+        Self {
+            enabled: Default::default(),
+            sound: default_notification_settings_dto_sound(),
+            sound_always: Default::default(),
+            in_app_banner: default_notification_settings_dto_in_app_banner(),
+            system: default_notification_settings_dto_system(),
+            answers: default_notification_settings_dto_answers(),
+            channels: default_notification_settings_dto_channels(),
+            mentions_only: Default::default(),
+            synced: Default::default(),
+        }
+    }
+}
+
+fn default_notification_settings_dto_sound() -> bool {
+    true
+}
+
+fn default_notification_settings_dto_in_app_banner() -> bool {
+    true
+}
+
+fn default_notification_settings_dto_system() -> bool {
+    true
+}
+
+fn default_notification_settings_dto_answers() -> bool {
+    true
+}
+
+fn default_notification_settings_dto_channels() -> bool {
+    true
+}
+
+/// Params for `notifications.set`: only the fields given change.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct NotificationSettingsPatch {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sound: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sound_always: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub in_app_banner: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub system: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub answers: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub channels: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mentions_only: Option<bool>,
+}
+
+/// What a notification is about.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum NotifyKind {
+    /// An answer finished (or failed).
+    #[serde(rename = "answer")]
+    Answer,
+    /// Someone else posted in a channel or a direct message.
+    #[serde(rename = "channelMessage")]
+    ChannelMessage,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Where a notification goes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum NotifySurface {
+    #[serde(rename = "banner")]
+    Banner,
+    #[serde(rename = "system")]
+    System,
+    #[serde(rename = "silent")]
+    Silent,
+    #[serde(rename = "suppressed")]
+    Suppressed,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Params for `notifications.route`: one notification and what the window
+/// knows about it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NotificationRouteParams {
+    pub kind: NotifyKind,
+    /// The app is in front (active).
+    #[serde(default)]
+    pub foreground: bool,
+    /// The user is looking at the notification's chat or channel.
+    #[serde(default)]
+    pub viewing: bool,
+    /// A channel message alerts by its channel's own setting
+    /// (`ChannelPosted.alert`).
+    #[serde(default = "default_notification_route_params_alert")]
+    pub alert: bool,
+    /// A channel message mentions the user.
+    #[serde(default)]
+    pub mention: bool,
+    /// A channel message is a direct message.
+    #[serde(default)]
+    pub direct: bool,
+}
+
+fn default_notification_route_params_alert() -> bool {
+    true
+}
+
+/// `notifications.answered`: an Open WebUI answer this Mac did not run
+/// finished (on another device, or a scheduled task's run), as the
+/// phone's notification listener hears it on the server's socket
+/// (`chat:completion`, its last frame). The window routes it as it routes
+/// `turn.finished` (`notifications.route`, an answer).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnswerNotice {
+    pub chat_id: String,
+    /// The answer's message id, when the server names it.
+    #[serde(default)]
+    pub message_id: String,
+    /// The chat's title as the server sent it; may be empty.
+    #[serde(default)]
+    pub title: String,
+}
+
+/// Reply to `notifications.route`: the core's decision.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NotificationRoute {
+    #[serde(default = "default_notification_route_surface")]
+    pub surface: NotifySurface,
+    /// Play the notification cue.
+    #[serde(default)]
+    pub cue: bool,
+    /// The system notification makes its sound.
+    #[serde(default)]
+    pub system_sound: bool,
+}
+
+impl Default for NotificationRoute {
+    fn default() -> Self {
+        Self {
+            surface: default_notification_route_surface(),
+            cue: Default::default(),
+            system_sound: Default::default(),
+        }
+    }
+}
+
+fn default_notification_route_surface() -> NotifySurface {
+    NotifySurface::Suppressed
 }
 
 /// The signed-in Open WebUI account's profile, as Settings › Profile shows
@@ -12009,6 +13301,119 @@ pub struct WebSearchSettingsPatch {
     pub region: Option<String>,
 }
 
+/// One webhook destination of the account, as Open WebUI lists it. The
+/// server never returns the URL; `maskedUrl` is for display only.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebhookDto {
+    pub id: String,
+    #[serde(default = "default_webhook_dto_enabled")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub is_default: bool,
+    /// Subscribed event ids, kept verbatim.
+    #[serde(default)]
+    pub events: Vec<String>,
+    /// `away` or `always`, as the server sent it.
+    #[serde(default = "default_webhook_dto_delivery")]
+    pub delivery: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub masked_url: Option<String>,
+}
+
+fn default_webhook_dto_enabled() -> bool {
+    true
+}
+
+fn default_webhook_dto_delivery() -> String {
+    "away".to_owned()
+}
+
+/// One event a destination can subscribe to.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebhookEventDto {
+    pub event: String,
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+/// Reply to `webhooks.list` and every change: the destinations and the
+/// events they can subscribe to.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct WebhookList {
+    /// The account may manage destinations (the server has them on and the
+    /// account is an admin or holds `features.webhooks`).
+    #[serde(default)]
+    pub available: bool,
+    /// Names the account the list was read for. Every change sends it back,
+    /// and is refused once another account is signed in.
+    #[serde(default)]
+    pub owner: String,
+    #[serde(default)]
+    pub items: Vec<WebhookDto>,
+    #[serde(default)]
+    pub events: Vec<WebhookEventDto>,
+    /// A change went through, but reading the list back failed.
+    #[serde(default)]
+    pub stale: bool,
+    /// The list could not be read.
+    #[serde(default)]
+    pub failed: bool,
+}
+
+/// Params for `webhooks.create`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebhookCreate {
+    pub owner: String,
+    pub url: String,
+    /// The destination's name (its id); the server derives one when empty.
+    #[serde(default)]
+    pub name: String,
+    #[serde(default = "default_webhook_create_enabled")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub events: Vec<String>,
+    #[serde(default = "default_webhook_create_delivery")]
+    pub delivery: String,
+}
+
+fn default_webhook_create_enabled() -> bool {
+    true
+}
+
+fn default_webhook_create_delivery() -> String {
+    "away".to_owned()
+}
+
+/// Params for `webhooks.update`: only what changed. A URL goes out only as
+/// a replacement the user typed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebhookUpdate {
+    pub owner: String,
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub events: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delivery: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+}
+
+/// Params for `webhooks.makeDefault`, `webhooks.test` and `webhooks.delete`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebhookRef {
+    pub owner: String,
+    pub id: String,
+}
+
 /// The five sections of the workspace.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum WorkspaceKind {
@@ -12022,6 +13427,29 @@ pub enum WorkspaceKind {
     Tools,
     #[serde(rename = "skills")]
     Skills,
+    /// A value this build does not know, from a newer daemon. It decodes
+    /// only: it encodes as `"unknown"`, which the daemon refuses.
+    #[serde(other, rename = "unknown")]
+    Unknown,
+}
+
+/// Where a model's profile image comes from, by the address the model
+/// keeps (`WorkspaceModelDto.imageUrl`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum WorkspaceImageSource {
+    /// A `data:` URL: the picture is in the address itself.
+    #[serde(rename = "inline")]
+    Inline,
+    /// The model's server: the window loads it from the daemon's
+    /// `/files/{serverId}/models/{modelId}`, which asks the server with the
+    /// account's credential (the image the model keeps, or a picture at an
+    /// address on the server itself). None at all draws the model's initial.
+    #[serde(rename = "server")]
+    Server,
+    /// An address on another site: fetching it would tell that site the
+    /// user opened the model, so it is not loaded on its own.
+    #[serde(rename = "remote")]
+    Remote,
     /// A value this build does not know, from a newer daemon. It decodes
     /// only: it encodes as `"unknown"`, which the daemon refuses.
     #[serde(other, rename = "unknown")]
@@ -12186,6 +13614,10 @@ pub struct WorkspaceModelDto {
     pub description: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub image_url: Option<String>,
+    /// Where `imageUrl`'s picture comes from; output only (the daemon
+    /// decides it, and ignores it in a save).
+    #[serde(default = "default_workspace_model_dto_image_source")]
+    pub image_source: WorkspaceImageSource,
     #[serde(default)]
     pub tags: Vec<String>,
     #[serde(default)]
@@ -12215,6 +13647,11 @@ pub struct WorkspaceModelDto {
     /// The terminal chats with this model use, selected when the model is.
     #[serde(default)]
     pub terminal_id: String,
+    /// Open WebUI's built-in tools for the model, by name (`time`,
+    /// `memory`, `web_search`, ...): on or off, as its own editor keeps
+    /// them; empty for the server's defaults.
+    #[serde(default = "default_workspace_model_dto_builtin_tools")]
+    pub builtin_tools: serde_json::Value,
     #[serde(default = "default_workspace_model_dto_active")]
     pub active: bool,
     #[serde(default)]
@@ -12233,6 +13670,7 @@ impl Default for WorkspaceModelDto {
             base_model_id: None,
             description: Default::default(),
             image_url: None,
+            image_source: default_workspace_model_dto_image_source(),
             tags: Default::default(),
             system: Default::default(),
             stop: Default::default(),
@@ -12247,11 +13685,20 @@ impl Default for WorkspaceModelDto {
             default_feature_ids: Default::default(),
             tts_voice: Default::default(),
             terminal_id: Default::default(),
+            builtin_tools: default_workspace_model_dto_builtin_tools(),
             active: default_workspace_model_dto_active(),
             hidden: Default::default(),
             params: default_workspace_model_dto_params(),
         }
     }
+}
+
+fn default_workspace_model_dto_image_source() -> WorkspaceImageSource {
+    WorkspaceImageSource::Server
+}
+
+fn default_workspace_model_dto_builtin_tools() -> serde_json::Value {
+    serde_json::Value::Object(serde_json::Map::new())
 }
 
 fn default_workspace_model_dto_active() -> bool {
@@ -12893,12 +14340,36 @@ pub enum ErrorCode {
     TlsUntrusted,
     /// `net.serverError`
     ServerError,
+    /// `net.serverRedirect`
+    ServerRedirect,
     /// `auth.unauthenticated`
     Unauthenticated,
     /// `auth.invalidCredentials`
     InvalidCredentials,
     /// `auth.sessionExpired`
     SessionExpired,
+    /// `auth.signInFailed`
+    SignInFailed,
+    /// `auth.pendingApproval`
+    PendingApproval,
+    /// `auth.apiKeyNotSupported`
+    ApiKeyNotSupported,
+    /// `auth.apiKeyNoLongerSupported`
+    ApiKeyNoLongerSupported,
+    /// `auth.tokenTooShort`
+    TokenTooShort,
+    /// `auth.ldapNotEnabled`
+    LdapNotEnabled,
+    /// `auth.twoStepRequired`
+    TwoStepRequired,
+    /// `auth.twoStepInvalidCode`
+    TwoStepInvalidCode,
+    /// `auth.twoStepExpired`
+    TwoStepExpired,
+    /// `auth.twoStepTooManyAttempts`
+    TwoStepTooManyAttempts,
+    /// `auth.twoStepFailed`
+    TwoStepFailed,
     /// `resource.notFound`
     NotFound,
     /// `resource.conflict`
@@ -12927,9 +14398,21 @@ impl ErrorCode {
             Self::ConnectionFailed => "net.connectionFailed",
             Self::TlsUntrusted => "net.tlsUntrusted",
             Self::ServerError => "net.serverError",
+            Self::ServerRedirect => "net.serverRedirect",
             Self::Unauthenticated => "auth.unauthenticated",
             Self::InvalidCredentials => "auth.invalidCredentials",
             Self::SessionExpired => "auth.sessionExpired",
+            Self::SignInFailed => "auth.signInFailed",
+            Self::PendingApproval => "auth.pendingApproval",
+            Self::ApiKeyNotSupported => "auth.apiKeyNotSupported",
+            Self::ApiKeyNoLongerSupported => "auth.apiKeyNoLongerSupported",
+            Self::TokenTooShort => "auth.tokenTooShort",
+            Self::LdapNotEnabled => "auth.ldapNotEnabled",
+            Self::TwoStepRequired => "auth.twoStepRequired",
+            Self::TwoStepInvalidCode => "auth.twoStepInvalidCode",
+            Self::TwoStepExpired => "auth.twoStepExpired",
+            Self::TwoStepTooManyAttempts => "auth.twoStepTooManyAttempts",
+            Self::TwoStepFailed => "auth.twoStepFailed",
             Self::NotFound => "resource.notFound",
             Self::Conflict => "resource.conflict",
             Self::Unsupported => "capability.unsupported",
@@ -12954,9 +14437,21 @@ impl ErrorCode {
             "net.connectionFailed" => Self::ConnectionFailed,
             "net.tlsUntrusted" => Self::TlsUntrusted,
             "net.serverError" => Self::ServerError,
+            "net.serverRedirect" => Self::ServerRedirect,
             "auth.unauthenticated" => Self::Unauthenticated,
             "auth.invalidCredentials" => Self::InvalidCredentials,
             "auth.sessionExpired" => Self::SessionExpired,
+            "auth.signInFailed" => Self::SignInFailed,
+            "auth.pendingApproval" => Self::PendingApproval,
+            "auth.apiKeyNotSupported" => Self::ApiKeyNotSupported,
+            "auth.apiKeyNoLongerSupported" => Self::ApiKeyNoLongerSupported,
+            "auth.tokenTooShort" => Self::TokenTooShort,
+            "auth.ldapNotEnabled" => Self::LdapNotEnabled,
+            "auth.twoStepRequired" => Self::TwoStepRequired,
+            "auth.twoStepInvalidCode" => Self::TwoStepInvalidCode,
+            "auth.twoStepExpired" => Self::TwoStepExpired,
+            "auth.twoStepTooManyAttempts" => Self::TwoStepTooManyAttempts,
+            "auth.twoStepFailed" => Self::TwoStepFailed,
             "resource.notFound" => Self::NotFound,
             "resource.conflict" => Self::Conflict,
             "capability.unsupported" => Self::Unsupported,
@@ -13298,6 +14793,96 @@ pub mod methods {
         type Result = super::AuthSnapshot;
     }
 
+    /// What to add to an authenticator app for a two-step `enroll` step.
+    ///
+    /// `auth.twoStep.setup`: no params -> TwoStepSetup.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AuthTwoStepSetup;
+
+    impl RpcMethod for AuthTwoStepSetup {
+        const NAME: &'static str = "auth.twoStep.setup";
+        type Params = NoParams;
+        type Result = super::TwoStepSetup;
+    }
+
+    /// Answers a two-step `verify` or `enroll` step with a code (or, for
+    /// `verify`, a recovery code). Signs in, or moves to `recoveryCodes` when
+    /// the server issued new ones.
+    ///
+    /// `auth.twoStep.verify`: TwoStepCode -> AuthSnapshot.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AuthTwoStepVerify;
+
+    impl RpcMethod for AuthTwoStepVerify {
+        const NAME: &'static str = "auth.twoStep.verify";
+        type Params = super::TwoStepCode;
+        type Result = super::AuthSnapshot;
+    }
+
+    /// Redeems an administrator's recovery token for a `recover` step, which
+    /// moves to `enroll`.
+    ///
+    /// `auth.twoStep.redeem`: TwoStepResetToken -> AuthSnapshot.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AuthTwoStepRedeem;
+
+    impl RpcMethod for AuthTwoStepRedeem {
+        const NAME: &'static str = "auth.twoStep.redeem";
+        type Params = super::TwoStepResetToken;
+        type Result = super::AuthSnapshot;
+    }
+
+    /// Signs in once the new recovery codes were shown.
+    ///
+    /// `auth.twoStep.finish`: no params -> AuthSnapshot.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AuthTwoStepFinish;
+
+    impl RpcMethod for AuthTwoStepFinish {
+        const NAME: &'static str = "auth.twoStep.finish";
+        type Params = NoParams;
+        type Result = super::AuthSnapshot;
+    }
+
+    /// Leaves the second step, back to the sign-in form.
+    ///
+    /// `auth.twoStep.cancel`: no params -> AuthSnapshot.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AuthTwoStepCancel;
+
+    impl RpcMethod for AuthTwoStepCancel {
+        const NAME: &'static str = "auth.twoStep.cancel";
+        type Params = NoParams;
+        type Result = super::AuthSnapshot;
+    }
+
+    /// Checks the kept session again after a connection issue: the server is
+    /// asked again, or the saved sign-in tried when no session is kept.
+    ///
+    /// `auth.retry`: no params -> AuthSnapshot.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AuthRetry;
+
+    impl RpcMethod for AuthRetry {
+        const NAME: &'static str = "auth.retry";
+        type Params = NoParams;
+        type Result = super::AuthSnapshot;
+    }
+
+    /// Renews the active account's expired reverse-proxy session in place
+    /// with what a proxy sign-in window captured, keeping the account signed
+    /// in.
+    ///
+    /// `auth.renewProxy`: ExternalAuthCompletion -> AuthSnapshot.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AuthRenewProxy;
+
+    impl RpcMethod for AuthRenewProxy {
+        const NAME: &'static str = "auth.renewProxy";
+        type Params = super::ExternalAuthCompletion;
+        type Result = super::AuthSnapshot;
+    }
+
     /// Theme, palette and locale, as the daemon has them stored.
     ///
     /// `settings.getApp`: no params -> AppPreferences.
@@ -13561,6 +15146,155 @@ pub mod methods {
         type Result = super::MemoryList;
     }
 
+    /// The settings (`NotificationSettingsDto`).
+    ///
+    /// `notifications.get`: no params -> NotificationSettingsDto.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct NotificationsGet;
+
+    impl RpcMethod for NotificationsGet {
+        const NAME: &'static str = "notifications.get";
+        type Params = NoParams;
+        type Result = super::NotificationSettingsDto;
+    }
+
+    /// Changes them (`NotificationSettingsPatch`); replies with all of them.
+    ///
+    /// `notifications.set`: NotificationSettingsPatch -> NotificationSettingsDto.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct NotificationsSet;
+
+    impl RpcMethod for NotificationsSet {
+        const NAME: &'static str = "notifications.set";
+        type Params = super::NotificationSettingsPatch;
+        type Result = super::NotificationSettingsDto;
+    }
+
+    /// What one notification does (`NotificationRouteParams` →
+    /// `NotificationRoute`): the core's gating chain, given what the window
+    /// knows (in front, looking at it).
+    ///
+    /// `notifications.route`: NotificationRouteParams -> NotificationRoute.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct NotificationsRoute;
+
+    impl RpcMethod for NotificationsRoute {
+        const NAME: &'static str = "notifications.route";
+        type Params = super::NotificationRouteParams;
+        type Result = super::NotificationRoute;
+    }
+
+    /// `webhooks.list`: no params -> WebhookList.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct WebhooksList;
+
+    impl RpcMethod for WebhooksList {
+        const NAME: &'static str = "webhooks.list";
+        type Params = NoParams;
+        type Result = super::WebhookList;
+    }
+
+    /// `webhooks.create`: WebhookCreate -> WebhookList.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct WebhooksCreate;
+
+    impl RpcMethod for WebhooksCreate {
+        const NAME: &'static str = "webhooks.create";
+        type Params = super::WebhookCreate;
+        type Result = super::WebhookList;
+    }
+
+    /// `webhooks.update`: WebhookUpdate -> WebhookList.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct WebhooksUpdate;
+
+    impl RpcMethod for WebhooksUpdate {
+        const NAME: &'static str = "webhooks.update";
+        type Params = super::WebhookUpdate;
+        type Result = super::WebhookList;
+    }
+
+    /// `webhooks.makeDefault`: WebhookRef -> WebhookList.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct WebhooksMakeDefault;
+
+    impl RpcMethod for WebhooksMakeDefault {
+        const NAME: &'static str = "webhooks.makeDefault";
+        type Params = super::WebhookRef;
+        type Result = super::WebhookList;
+    }
+
+    /// Asks the server to deliver one real test notification.
+    ///
+    /// `webhooks.test`: WebhookRef -> WebhookList.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct WebhooksTest;
+
+    impl RpcMethod for WebhooksTest {
+        const NAME: &'static str = "webhooks.test";
+        type Params = super::WebhookRef;
+        type Result = super::WebhookList;
+    }
+
+    /// `webhooks.delete`: WebhookRef -> WebhookList.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct WebhooksDelete;
+
+    impl RpcMethod for WebhooksDelete {
+        const NAME: &'static str = "webhooks.delete";
+        type Params = super::WebhookRef;
+        type Result = super::WebhookList;
+    }
+
+    /// The connections (`PersonalConnections`).
+    ///
+    /// `integrations.list`: no params -> PersonalConnections.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct IntegrationsList;
+
+    impl RpcMethod for IntegrationsList {
+        const NAME: &'static str = "integrations.list";
+        type Params = NoParams;
+        type Result = super::PersonalConnections;
+    }
+
+    /// Adds, changes, switches or deletes one (`PersonalConnectionSave`).
+    ///
+    /// `integrations.save`: PersonalConnectionSave -> PersonalConnections.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct IntegrationsSave;
+
+    impl RpcMethod for IntegrationsSave {
+        const NAME: &'static str = "integrations.save";
+        type Params = super::PersonalConnectionSave;
+        type Result = super::PersonalConnections;
+    }
+
+    /// Reads the OpenAPI document, or checks the terminal, without saving
+    /// (`PersonalConnectionTest`).
+    ///
+    /// `integrations.test`: PersonalConnectionTest -> PersonalConnectionTestResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct IntegrationsTest;
+
+    impl RpcMethod for IntegrationsTest {
+        const NAME: &'static str = "integrations.test";
+        type Params = super::PersonalConnectionTest;
+        type Result = super::PersonalConnectionTestResult;
+    }
+
+    /// The cleared-selection notice was read.
+    ///
+    /// `integrations.clearNotice`: no params -> PersonalConnections.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct IntegrationsClearNotice;
+
+    impl RpcMethod for IntegrationsClearNotice {
+        const NAME: &'static str = "integrations.clearNotice";
+        type Params = NoParams;
+        type Result = super::PersonalConnections;
+    }
+
     /// At launch: whether the after-update banner shows, and its notes. Marks
     /// the version seen.
     ///
@@ -13707,6 +15441,20 @@ pub mod methods {
 
     impl RpcMethod for DataConnection {
         const NAME: &'static str = "data.connection";
+        type Params = NoParams;
+        type Result = super::ConnectionHealth;
+    }
+
+    /// Reconnects the realtime socket now, rather than at its next scheduled
+    /// try (the chat toolbar's Live Updates › Retry); answers its health
+    /// after the attempt.
+    ///
+    /// `data.reconnect`: no params -> ConnectionHealth.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct DataReconnect;
+
+    impl RpcMethod for DataReconnect {
+        const NAME: &'static str = "data.reconnect";
         type Params = NoParams;
         type Result = super::ConnectionHealth;
     }
@@ -15551,6 +17299,59 @@ pub mod methods {
         type Result = super::AutomationDraftState;
     }
 
+    /// Apple Intelligence on this Mac, as Settings shows it.
+    ///
+    /// `apple.status`: no params -> AppleModels.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AppleStatus;
+
+    impl RpcMethod for AppleStatus {
+        const NAME: &'static str = "apple.status";
+        type Params = NoParams;
+        type Result = super::AppleModels;
+    }
+
+    /// Asks the Mac again (Settings' Refresh); a model that became able to
+    /// answer is listed in the model picker.
+    ///
+    /// `apple.refresh`: no params -> AppleModels.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AppleRefresh;
+
+    impl RpcMethod for AppleRefresh {
+        const NAME: &'static str = "apple.refresh";
+        type Params = NoParams;
+        type Result = super::AppleModels;
+    }
+
+    /// The first-run chooser's Apple On-Device row: asks the Mac again, and
+    /// when the model answers, Direct is preferred with it (history kept on
+    /// this Mac unless a policy was chosen before). Answers with the model as
+    /// it is now; anything but available chose nothing.
+    ///
+    /// `apple.choose`: no params -> AppleModelStatus.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AppleChoose;
+
+    impl RpcMethod for AppleChoose {
+        const NAME: &'static str = "apple.choose";
+        type Params = NoParams;
+        type Result = super::AppleModelStatus;
+    }
+
+    /// The window's engine answers an `apple.command`, or says what a run
+    /// did.
+    ///
+    /// `apple.report`: AppleReport -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct AppleReport;
+
+    impl RpcMethod for AppleReport {
+        const NAME: &'static str = "apple.report";
+        type Params = super::AppleReport;
+        type Result = super::OkResult;
+    }
+
     /// Every note, or those matching a query; pinned first.
     ///
     /// `notes.list`: NoteQuery -> NoteList.
@@ -16311,13 +18112,13 @@ pub mod methods {
 
     /// Signs in to a desktop gateway in the system browser (native PKCE).
     ///
-    /// `hermes.signIn`: no params -> HermesSettings.
+    /// `hermes.signIn`: HermesSignInRequest -> HermesSettings.
     #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
     pub struct HermesSignIn;
 
     impl RpcMethod for HermesSignIn {
         const NAME: &'static str = "hermes.signIn";
-        type Params = NoParams;
+        type Params = super::HermesSignInRequest;
         type Result = super::HermesSettings;
     }
 
@@ -16611,6 +18412,81 @@ pub mod methods {
         const NAME: &'static str = "hermes.connections.setEnabled";
         type Params = super::HermesToggle;
         type Result = super::HermesConnections;
+    }
+
+    /// The profiles a Desktop Gateway offers a connection's form (sent with
+    /// the form's credentials, as the phone's Refresh Profiles).
+    ///
+    /// `hermes.connections.profiles`: HermesConnectionEdit -> HermesProfiles.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesConnectionsProfiles;
+
+    impl RpcMethod for HermesConnectionsProfiles {
+        const NAME: &'static str = "hermes.connections.profiles";
+        type Params = super::HermesConnectionEdit;
+        type Result = super::HermesProfiles;
+    }
+
+    /// Turns a toolset on or off for new sessions (a Desktop Gateway).
+    ///
+    /// `hermes.toolsets.set`: HermesToolsetToggle -> HermesCatalog.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesToolsetsSet;
+
+    impl RpcMethod for HermesToolsetsSet {
+        const NAME: &'static str = "hermes.toolsets.set";
+        type Params = super::HermesToolsetToggle;
+        type Result = super::HermesCatalog;
+    }
+
+    /// Has a Desktop Gateway read its skills again; answers the catalog.
+    ///
+    /// `hermes.skills.reload`: HermesConnectionRef -> HermesCatalog.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesSkillsReload;
+
+    impl RpcMethod for HermesSkillsReload {
+        const NAME: &'static str = "hermes.skills.reload";
+        type Params = super::HermesConnectionRef;
+        type Result = super::HermesCatalog;
+    }
+
+    /// Where a connection's dashboard sign-in opens.
+    ///
+    /// `hermes.dashboard.start`: HermesDashboardStart -> HermesDashboardPlan.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesDashboardStart;
+
+    impl RpcMethod for HermesDashboardStart {
+        const NAME: &'static str = "hermes.dashboard.start";
+        type Params = super::HermesDashboardStart;
+        type Result = super::HermesDashboardPlan;
+    }
+
+    /// Hands over the cookies of a page the sign-in window loaded; kept when
+    /// the dashboard accepts them as a signed-in session.
+    ///
+    /// `hermes.dashboard.complete`: HermesDashboardCookies -> HermesDashboardResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesDashboardComplete;
+
+    impl RpcMethod for HermesDashboardComplete {
+        const NAME: &'static str = "hermes.dashboard.complete";
+        type Params = super::HermesDashboardCookies;
+        type Result = super::HermesDashboardResult;
+    }
+
+    /// The sign-in window closed: its sign-in keeps nothing it has not kept
+    /// already.
+    ///
+    /// `hermes.dashboard.cancel`: HermesDashboardCancel -> CancelledResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct HermesDashboardCancel;
+
+    impl RpcMethod for HermesDashboardCancel {
+        const NAME: &'static str = "hermes.dashboard.cancel";
+        type Params = super::HermesDashboardCancel;
+        type Result = super::CancelledResult;
     }
 
     /// `hermes.mcp.list`: no params -> HermesMcpServers.
@@ -17494,6 +19370,31 @@ pub mod methods {
         type Params = super::IntentChatsQuery;
         type Result = super::IntentChats;
     }
+
+    /// What the server reads from a link (Send Link to Conduit): a web
+    /// page's text or a YouTube video's transcript, for a new chat.
+    ///
+    /// `intents.sendLink`: IntentLink -> IntentLinkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct IntentsSendLink;
+
+    impl RpcMethod for IntentsSendLink {
+        const NAME: &'static str = "intents.sendLink";
+        type Params = super::IntentLink;
+        type Result = super::IntentLinkResult;
+    }
+
+    /// The window answers a `location.command`.
+    ///
+    /// `location.report`: LocationReport -> OkResult.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+    pub struct LocationReport;
+
+    impl RpcMethod for LocationReport {
+        const NAME: &'static str = "location.report";
+        type Params = super::LocationReport;
+        type Result = super::OkResult;
+    }
 }
 
 /// Every method, with its params and result DTOs by name (`None` for none).
@@ -17619,6 +19520,41 @@ pub const METHODS: &[MethodSpec] = &[
         result: Some("AuthSnapshot"),
     },
     MethodSpec {
+        name: "auth.twoStep.setup",
+        params: None,
+        result: Some("TwoStepSetup"),
+    },
+    MethodSpec {
+        name: "auth.twoStep.verify",
+        params: Some("TwoStepCode"),
+        result: Some("AuthSnapshot"),
+    },
+    MethodSpec {
+        name: "auth.twoStep.redeem",
+        params: Some("TwoStepResetToken"),
+        result: Some("AuthSnapshot"),
+    },
+    MethodSpec {
+        name: "auth.twoStep.finish",
+        params: None,
+        result: Some("AuthSnapshot"),
+    },
+    MethodSpec {
+        name: "auth.twoStep.cancel",
+        params: None,
+        result: Some("AuthSnapshot"),
+    },
+    MethodSpec {
+        name: "auth.retry",
+        params: None,
+        result: Some("AuthSnapshot"),
+    },
+    MethodSpec {
+        name: "auth.renewProxy",
+        params: Some("ExternalAuthCompletion"),
+        result: Some("AuthSnapshot"),
+    },
+    MethodSpec {
         name: "settings.getApp",
         params: None,
         result: Some("AppPreferences"),
@@ -17734,6 +19670,71 @@ pub const METHODS: &[MethodSpec] = &[
         result: Some("MemoryList"),
     },
     MethodSpec {
+        name: "notifications.get",
+        params: None,
+        result: Some("NotificationSettingsDto"),
+    },
+    MethodSpec {
+        name: "notifications.set",
+        params: Some("NotificationSettingsPatch"),
+        result: Some("NotificationSettingsDto"),
+    },
+    MethodSpec {
+        name: "notifications.route",
+        params: Some("NotificationRouteParams"),
+        result: Some("NotificationRoute"),
+    },
+    MethodSpec {
+        name: "webhooks.list",
+        params: None,
+        result: Some("WebhookList"),
+    },
+    MethodSpec {
+        name: "webhooks.create",
+        params: Some("WebhookCreate"),
+        result: Some("WebhookList"),
+    },
+    MethodSpec {
+        name: "webhooks.update",
+        params: Some("WebhookUpdate"),
+        result: Some("WebhookList"),
+    },
+    MethodSpec {
+        name: "webhooks.makeDefault",
+        params: Some("WebhookRef"),
+        result: Some("WebhookList"),
+    },
+    MethodSpec {
+        name: "webhooks.test",
+        params: Some("WebhookRef"),
+        result: Some("WebhookList"),
+    },
+    MethodSpec {
+        name: "webhooks.delete",
+        params: Some("WebhookRef"),
+        result: Some("WebhookList"),
+    },
+    MethodSpec {
+        name: "integrations.list",
+        params: None,
+        result: Some("PersonalConnections"),
+    },
+    MethodSpec {
+        name: "integrations.save",
+        params: Some("PersonalConnectionSave"),
+        result: Some("PersonalConnections"),
+    },
+    MethodSpec {
+        name: "integrations.test",
+        params: Some("PersonalConnectionTest"),
+        result: Some("PersonalConnectionTestResult"),
+    },
+    MethodSpec {
+        name: "integrations.clearNotice",
+        params: None,
+        result: Some("PersonalConnections"),
+    },
+    MethodSpec {
         name: "releaseNotes.check",
         params: Some("ReleaseNotesQuery"),
         result: Some("ReleaseNotesState"),
@@ -17795,6 +19796,11 @@ pub const METHODS: &[MethodSpec] = &[
     },
     MethodSpec {
         name: "data.connection",
+        params: None,
+        result: Some("ConnectionHealth"),
+    },
+    MethodSpec {
+        name: "data.reconnect",
         params: None,
         result: Some("ConnectionHealth"),
     },
@@ -18549,6 +20555,26 @@ pub const METHODS: &[MethodSpec] = &[
         result: Some("AutomationDraftState"),
     },
     MethodSpec {
+        name: "apple.status",
+        params: None,
+        result: Some("AppleModels"),
+    },
+    MethodSpec {
+        name: "apple.refresh",
+        params: None,
+        result: Some("AppleModels"),
+    },
+    MethodSpec {
+        name: "apple.choose",
+        params: None,
+        result: Some("AppleModelStatus"),
+    },
+    MethodSpec {
+        name: "apple.report",
+        params: Some("AppleReport"),
+        result: Some("OkResult"),
+    },
+    MethodSpec {
         name: "notes.list",
         params: Some("NoteQuery"),
         result: Some("NoteList"),
@@ -18875,7 +20901,7 @@ pub const METHODS: &[MethodSpec] = &[
     },
     MethodSpec {
         name: "hermes.signIn",
-        params: None,
+        params: Some("HermesSignInRequest"),
         result: Some("HermesSettings"),
     },
     MethodSpec {
@@ -19002,6 +21028,36 @@ pub const METHODS: &[MethodSpec] = &[
         name: "hermes.connections.setEnabled",
         params: Some("HermesToggle"),
         result: Some("HermesConnections"),
+    },
+    MethodSpec {
+        name: "hermes.connections.profiles",
+        params: Some("HermesConnectionEdit"),
+        result: Some("HermesProfiles"),
+    },
+    MethodSpec {
+        name: "hermes.toolsets.set",
+        params: Some("HermesToolsetToggle"),
+        result: Some("HermesCatalog"),
+    },
+    MethodSpec {
+        name: "hermes.skills.reload",
+        params: Some("HermesConnectionRef"),
+        result: Some("HermesCatalog"),
+    },
+    MethodSpec {
+        name: "hermes.dashboard.start",
+        params: Some("HermesDashboardStart"),
+        result: Some("HermesDashboardPlan"),
+    },
+    MethodSpec {
+        name: "hermes.dashboard.complete",
+        params: Some("HermesDashboardCookies"),
+        result: Some("HermesDashboardResult"),
+    },
+    MethodSpec {
+        name: "hermes.dashboard.cancel",
+        params: Some("HermesDashboardCancel"),
+        result: Some("CancelledResult"),
     },
     MethodSpec {
         name: "hermes.mcp.list",
@@ -19378,6 +21434,16 @@ pub const METHODS: &[MethodSpec] = &[
         params: Some("IntentChatsQuery"),
         result: Some("IntentChats"),
     },
+    MethodSpec {
+        name: "intents.sendLink",
+        params: Some("IntentLink"),
+        result: Some("IntentLinkResult"),
+    },
+    MethodSpec {
+        name: "location.report",
+        params: Some("LocationReport"),
+        result: Some("OkResult"),
+    },
 ];
 
 /// The event names, for `events.subscribe`.
@@ -19451,6 +21517,11 @@ pub mod events {
     pub const WORKSPACE_CHANGED: &str = "workspace.changed";
     /// Hermes's settings, sessions or jobs changed. No payload.
     pub const HERMES_CHANGED: &str = "hermes.changed";
+    /// The active account's session changed in a way the account list does
+    /// not show: a second step began or moved on, or a kept session became a
+    /// connection issue (a sign-in proxy turning it away). No payload; ask
+    /// `auth.status` again.
+    pub const AUTH_CHANGED: &str = "auth.changed";
     /// The whisper models changed: a download moved, finished or failed, or
     /// one was deleted. Payload `VoiceModels`.
     pub const VOICE_CHANGED: &str = "voice.changed";
@@ -19463,6 +21534,12 @@ pub mod events {
     /// Core's `AppSettings` changed, from any window or the daemon itself.
     /// No payload; `settings.get` says what they are now.
     pub const SETTINGS_CHANGED: &str = "settings.changed";
+    /// The notification settings changed (`notifications.get` says how), from
+    /// any window, the server's mirror or the daemon itself. No payload.
+    pub const NOTIFICATIONS_CHANGED: &str = "notifications.changed";
+    /// An Open WebUI answer this Mac did not run finished (another device, a
+    /// scheduled task): the window notifies as for its own (`AnswerNotice`).
+    pub const NOTIFICATIONS_ANSWERED: &str = "notifications.answered";
     /// A chat's queued messages changed. Payload `QueueState`, scoped to the
     /// chat.
     pub const QUEUE_CHANGED: &str = "queue.changed";
@@ -19512,6 +21589,14 @@ pub mod events {
     /// The Group Chats listed changed: one was made, renamed or disbanded,
     /// or one had news. Payload `HermesRooms`.
     pub const HERMES_ROOMS_LIST_CHANGED: &str = "hermes.rooms.listChanged";
+    /// The daemon asks the window's Foundation Models engine for a model's
+    /// status, to start or stop a run, or answers a tool call. Payload
+    /// `AppleCommand`; answered with `apple.report`.
+    pub const APPLE_COMMAND: &str = "apple.command";
+    /// The daemon asks the window's location services whether they are on, for
+    /// permission, or for a position fix (`{{USER_LOCATION}}`). Payload
+    /// `LocationCommand`; answered with `location.report`.
+    pub const LOCATION_COMMAND: &str = "location.command";
 }
 
 /// Every event, with its payload DTO by name and whether it is scoped.
@@ -19642,6 +21727,11 @@ pub const EVENTS: &[EventSpec] = &[
         scoped: false,
     },
     EventSpec {
+        name: "auth.changed",
+        payload: None,
+        scoped: false,
+    },
+    EventSpec {
         name: "voice.changed",
         payload: Some("VoiceModels"),
         scoped: false,
@@ -19659,6 +21749,16 @@ pub const EVENTS: &[EventSpec] = &[
     EventSpec {
         name: "settings.changed",
         payload: None,
+        scoped: false,
+    },
+    EventSpec {
+        name: "notifications.changed",
+        payload: None,
+        scoped: false,
+    },
+    EventSpec {
+        name: "notifications.answered",
+        payload: Some("AnswerNotice"),
         scoped: false,
     },
     EventSpec {
@@ -19739,6 +21839,16 @@ pub const EVENTS: &[EventSpec] = &[
     EventSpec {
         name: "hermes.rooms.listChanged",
         payload: Some("HermesRooms"),
+        scoped: false,
+    },
+    EventSpec {
+        name: "apple.command",
+        payload: Some("AppleCommand"),
+        scoped: false,
+    },
+    EventSpec {
+        name: "location.command",
+        payload: Some("LocationCommand"),
         scoped: false,
     },
 ];
@@ -19860,6 +21970,13 @@ pub enum Event {
     ///
     /// `hermes.changed`.
     HermesChanged(HermesChanged),
+    /// The active account's session changed in a way the account list does
+    /// not show: a second step began or moved on, or a kept session became a
+    /// connection issue (a sign-in proxy turning it away). No payload; ask
+    /// `auth.status` again.
+    ///
+    /// `auth.changed`.
+    AuthChanged,
     /// The whisper models changed: a download moved, finished or failed, or
     /// one was deleted. Payload `VoiceModels`.
     ///
@@ -19880,6 +21997,16 @@ pub enum Event {
     ///
     /// `settings.changed`.
     SettingsChanged,
+    /// The notification settings changed (`notifications.get` says how), from
+    /// any window, the server's mirror or the daemon itself. No payload.
+    ///
+    /// `notifications.changed`.
+    NotificationsChanged,
+    /// An Open WebUI answer this Mac did not run finished (another device, a
+    /// scheduled task): the window notifies as for its own (`AnswerNotice`).
+    ///
+    /// `notifications.answered`.
+    NotificationsAnswered(AnswerNotice),
     /// A chat's queued messages changed. Payload `QueueState`, scoped to the
     /// chat.
     ///
@@ -19961,6 +22088,18 @@ pub enum Event {
     ///
     /// `hermes.rooms.listChanged`.
     HermesRoomsListChanged(HermesRooms),
+    /// The daemon asks the window's Foundation Models engine for a model's
+    /// status, to start or stop a run, or answers a tool call. Payload
+    /// `AppleCommand`; answered with `apple.report`.
+    ///
+    /// `apple.command`.
+    AppleCommand(AppleCommand),
+    /// The daemon asks the window's location services whether they are on, for
+    /// permission, or for a position fix (`{{USER_LOCATION}}`). Payload
+    /// `LocationCommand`; answered with `location.report`.
+    ///
+    /// `location.command`.
+    LocationCommand(LocationCommand),
     /// An event this build does not know, from a newer daemon, kept as it came.
     Unknown {
         name: String,
@@ -20001,12 +22140,17 @@ impl Event {
             events::OPEN_URL => Self::OpenUrl(serde_json::from_value(payload)?),
             events::WORKSPACE_CHANGED => Self::WorkspaceChanged(serde_json::from_value(payload)?),
             events::HERMES_CHANGED => Self::HermesChanged(serde_json::from_value(payload)?),
+            events::AUTH_CHANGED => Self::AuthChanged,
             events::VOICE_CHANGED => Self::VoiceChanged(serde_json::from_value(payload)?),
             events::TERMINAL_DISPLAY_FILE => {
                 Self::TerminalDisplayFile(serde_json::from_value(payload)?)
             }
             events::TERMINAL_CHANGED => Self::TerminalChanged(serde_json::from_value(payload)?),
             events::SETTINGS_CHANGED => Self::SettingsChanged,
+            events::NOTIFICATIONS_CHANGED => Self::NotificationsChanged,
+            events::NOTIFICATIONS_ANSWERED => {
+                Self::NotificationsAnswered(serde_json::from_value(payload)?)
+            }
             events::QUEUE_CHANGED => Self::QueueChanged(serde_json::from_value(payload)?),
             events::MESSAGES_MERGE => Self::MessagesMerge(serde_json::from_value(payload)?),
             events::HANDOFF_REQUESTED => Self::HandoffRequested(serde_json::from_value(payload)?),
@@ -20033,6 +22177,8 @@ impl Event {
             events::HERMES_ROOMS_LIST_CHANGED => {
                 Self::HermesRoomsListChanged(serde_json::from_value(payload)?)
             }
+            events::APPLE_COMMAND => Self::AppleCommand(serde_json::from_value(payload)?),
+            events::LOCATION_COMMAND => Self::LocationCommand(serde_json::from_value(payload)?),
             _ => Self::Unknown {
                 name: name.to_owned(),
                 payload,
@@ -20068,10 +22214,13 @@ impl Event {
             Self::OpenUrl(_) => events::OPEN_URL,
             Self::WorkspaceChanged(_) => events::WORKSPACE_CHANGED,
             Self::HermesChanged(_) => events::HERMES_CHANGED,
+            Self::AuthChanged => events::AUTH_CHANGED,
             Self::VoiceChanged(_) => events::VOICE_CHANGED,
             Self::TerminalDisplayFile(_) => events::TERMINAL_DISPLAY_FILE,
             Self::TerminalChanged(_) => events::TERMINAL_CHANGED,
             Self::SettingsChanged => events::SETTINGS_CHANGED,
+            Self::NotificationsChanged => events::NOTIFICATIONS_CHANGED,
+            Self::NotificationsAnswered(_) => events::NOTIFICATIONS_ANSWERED,
             Self::QueueChanged(_) => events::QUEUE_CHANGED,
             Self::MessagesMerge(_) => events::MESSAGES_MERGE,
             Self::HandoffRequested(_) => events::HANDOFF_REQUESTED,
@@ -20088,6 +22237,8 @@ impl Event {
             Self::AutomationsRunProgress(_) => events::AUTOMATIONS_RUN_PROGRESS,
             Self::HermesRoomsChanged(_) => events::HERMES_ROOMS_CHANGED,
             Self::HermesRoomsListChanged(_) => events::HERMES_ROOMS_LIST_CHANGED,
+            Self::AppleCommand(_) => events::APPLE_COMMAND,
+            Self::LocationCommand(_) => events::LOCATION_COMMAND,
             Self::Unknown { name, .. } => name,
         }
     }
@@ -20119,6 +22270,7 @@ impl Event {
             Self::VoiceChanged(payload) => serde_json::to_value(payload),
             Self::TerminalDisplayFile(payload) => serde_json::to_value(payload),
             Self::TerminalChanged(payload) => serde_json::to_value(payload),
+            Self::NotificationsAnswered(payload) => serde_json::to_value(payload),
             Self::QueueChanged(payload) => serde_json::to_value(payload),
             Self::MessagesMerge(payload) => serde_json::to_value(payload),
             Self::HandoffRequested(payload) => serde_json::to_value(payload),
@@ -20133,11 +22285,15 @@ impl Event {
             Self::AutomationsRunProgress(payload) => serde_json::to_value(payload),
             Self::HermesRoomsChanged(payload) => serde_json::to_value(payload),
             Self::HermesRoomsListChanged(payload) => serde_json::to_value(payload),
+            Self::AppleCommand(payload) => serde_json::to_value(payload),
+            Self::LocationCommand(payload) => serde_json::to_value(payload),
             Self::ChannelsChanged
             | Self::SocketHealth
             | Self::CapabilitiesChanged
             | Self::ModelsChanged
+            | Self::AuthChanged
             | Self::SettingsChanged
+            | Self::NotificationsChanged
             | Self::CalendarChanged
             | Self::AutomationsChanged => Ok(serde_json::Value::Object(serde_json::Map::new())),
             Self::Unknown { payload, .. } => Ok(payload.clone()),
@@ -20175,11 +22331,20 @@ pub mod conformance {
         "AccountUser",
         "AccountsChanged",
         "AddAccount",
+        "AnswerNotice",
         "ApiKeyLogin",
         "AppPreferences",
         "AppPreferencesPatch",
         "AppSettingsDto",
         "AppSettingsPatch",
+        "AppleCommand",
+        "AppleEngineStatus",
+        "AppleGeneration",
+        "AppleMessage",
+        "AppleModelStatus",
+        "AppleModels",
+        "AppleReport",
+        "AppleToolDefinition",
         "ArchivedVisibility",
         "AttachmentAvailability",
         "AuthSnapshot",
@@ -20379,6 +22544,7 @@ pub mod conformance {
         "HandoffSettled",
         "HandshakeRequest",
         "HandshakeResponse",
+        "HermesAccessHeaderEdit",
         "HermesBotAvatar",
         "HermesBotDto",
         "HermesBotRef",
@@ -20393,12 +22559,19 @@ pub mod conformance {
         "HermesCompactResultDto",
         "HermesConnectionDto",
         "HermesConnectionEdit",
+        "HermesConnectionRef",
         "HermesConnectionTestResult",
         "HermesConnections",
         "HermesContextCategoryDto",
         "HermesContextRef",
         "HermesContextReportDto",
         "HermesContinue",
+        "HermesCookieDto",
+        "HermesDashboardCancel",
+        "HermesDashboardCookies",
+        "HermesDashboardPlan",
+        "HermesDashboardResult",
+        "HermesDashboardStart",
         "HermesDecisionAnswer",
         "HermesDecisionResult",
         "HermesDeliveryOptions",
@@ -20426,6 +22599,7 @@ pub mod conformance {
         "HermesProcessDto",
         "HermesProcessKill",
         "HermesProcessRef",
+        "HermesProfiles",
         "HermesProviderPlanDto",
         "HermesRef",
         "HermesRename",
@@ -20451,6 +22625,7 @@ pub mod conformance {
         "HermesSessions",
         "HermesSettings",
         "HermesSettingsEdit",
+        "HermesSignInRequest",
         "HermesSkillDto",
         "HermesStatus",
         "HermesSteerSubagent",
@@ -20461,6 +22636,7 @@ pub mod conformance {
         "HermesToggle",
         "HermesTokenTotalsDto",
         "HermesToolsetDto",
+        "HermesToolsetToggle",
         "HermesUsageBarDto",
         "HermesUsageBarsDto",
         "HermesWork",
@@ -20471,6 +22647,8 @@ pub mod conformance {
         "IntentChat",
         "IntentChats",
         "IntentChatsQuery",
+        "IntentLink",
+        "IntentLinkResult",
         "KnowledgeList",
         "KnowledgeQuery",
         "KnowledgeSummary",
@@ -20494,6 +22672,8 @@ pub mod conformance {
         "LibreChatSsoProviderDto",
         "LibreChatSsoStart",
         "LibreChatVerify",
+        "LocationCommand",
+        "LocationReport",
         "MarkUnread",
         "McpAppContext",
         "McpAppDto",
@@ -20563,6 +22743,10 @@ pub mod conformance {
         "NoteTitle",
         "NotesChanged",
         "Notice",
+        "NotificationRoute",
+        "NotificationRouteParams",
+        "NotificationSettingsDto",
+        "NotificationSettingsPatch",
         "OkResult",
         "OllamaModelAction",
         "OllamaModelList",
@@ -20571,6 +22755,12 @@ pub mod conformance {
         "PasswordChange",
         "PasswordChangeResult",
         "PasswordLogin",
+        "PersonalConnectionDraft",
+        "PersonalConnectionDto",
+        "PersonalConnectionSave",
+        "PersonalConnectionTest",
+        "PersonalConnectionTestResult",
+        "PersonalConnections",
         "PongResult",
         "ProfileDto",
         "ProfileEdit",
@@ -20672,6 +22862,10 @@ pub mod conformance {
         "TurnFailed",
         "TurnFinished",
         "TurnStarted",
+        "TwoStepChallenge",
+        "TwoStepCode",
+        "TwoStepResetToken",
+        "TwoStepSetup",
         "UiInputOption",
         "UiRequest",
         "UiResponse",
@@ -20701,6 +22895,12 @@ pub mod conformance {
         "WebSearchRegionDto",
         "WebSearchSettings",
         "WebSearchSettingsPatch",
+        "WebhookCreate",
+        "WebhookDto",
+        "WebhookEventDto",
+        "WebhookList",
+        "WebhookRef",
+        "WebhookUpdate",
         "WorkspaceAccess",
         "WorkspaceAccessEdit",
         "WorkspaceChanged",
@@ -20780,11 +22980,20 @@ pub mod conformance {
             "AccountUser" => roundtrip::<super::AccountUser>(json),
             "AccountsChanged" => roundtrip::<super::AccountsChanged>(json),
             "AddAccount" => roundtrip::<super::AddAccount>(json),
+            "AnswerNotice" => roundtrip::<super::AnswerNotice>(json),
             "ApiKeyLogin" => roundtrip::<super::ApiKeyLogin>(json),
             "AppPreferences" => roundtrip::<super::AppPreferences>(json),
             "AppPreferencesPatch" => roundtrip::<super::AppPreferencesPatch>(json),
             "AppSettingsDto" => roundtrip::<super::AppSettingsDto>(json),
             "AppSettingsPatch" => roundtrip::<super::AppSettingsPatch>(json),
+            "AppleCommand" => roundtrip::<super::AppleCommand>(json),
+            "AppleEngineStatus" => roundtrip::<super::AppleEngineStatus>(json),
+            "AppleGeneration" => roundtrip::<super::AppleGeneration>(json),
+            "AppleMessage" => roundtrip::<super::AppleMessage>(json),
+            "AppleModelStatus" => roundtrip::<super::AppleModelStatus>(json),
+            "AppleModels" => roundtrip::<super::AppleModels>(json),
+            "AppleReport" => roundtrip::<super::AppleReport>(json),
+            "AppleToolDefinition" => roundtrip::<super::AppleToolDefinition>(json),
             "ArchivedVisibility" => roundtrip::<super::ArchivedVisibility>(json),
             "AttachmentAvailability" => roundtrip::<super::AttachmentAvailability>(json),
             "AuthSnapshot" => roundtrip::<super::AuthSnapshot>(json),
@@ -20984,6 +23193,7 @@ pub mod conformance {
             "HandoffSettled" => roundtrip::<super::HandoffSettled>(json),
             "HandshakeRequest" => roundtrip::<super::HandshakeRequest>(json),
             "HandshakeResponse" => roundtrip::<super::HandshakeResponse>(json),
+            "HermesAccessHeaderEdit" => roundtrip::<super::HermesAccessHeaderEdit>(json),
             "HermesBotAvatar" => roundtrip::<super::HermesBotAvatar>(json),
             "HermesBotDto" => roundtrip::<super::HermesBotDto>(json),
             "HermesBotRef" => roundtrip::<super::HermesBotRef>(json),
@@ -20998,12 +23208,19 @@ pub mod conformance {
             "HermesCompactResultDto" => roundtrip::<super::HermesCompactResultDto>(json),
             "HermesConnectionDto" => roundtrip::<super::HermesConnectionDto>(json),
             "HermesConnectionEdit" => roundtrip::<super::HermesConnectionEdit>(json),
+            "HermesConnectionRef" => roundtrip::<super::HermesConnectionRef>(json),
             "HermesConnectionTestResult" => roundtrip::<super::HermesConnectionTestResult>(json),
             "HermesConnections" => roundtrip::<super::HermesConnections>(json),
             "HermesContextCategoryDto" => roundtrip::<super::HermesContextCategoryDto>(json),
             "HermesContextRef" => roundtrip::<super::HermesContextRef>(json),
             "HermesContextReportDto" => roundtrip::<super::HermesContextReportDto>(json),
             "HermesContinue" => roundtrip::<super::HermesContinue>(json),
+            "HermesCookieDto" => roundtrip::<super::HermesCookieDto>(json),
+            "HermesDashboardCancel" => roundtrip::<super::HermesDashboardCancel>(json),
+            "HermesDashboardCookies" => roundtrip::<super::HermesDashboardCookies>(json),
+            "HermesDashboardPlan" => roundtrip::<super::HermesDashboardPlan>(json),
+            "HermesDashboardResult" => roundtrip::<super::HermesDashboardResult>(json),
+            "HermesDashboardStart" => roundtrip::<super::HermesDashboardStart>(json),
             "HermesDecisionAnswer" => roundtrip::<super::HermesDecisionAnswer>(json),
             "HermesDecisionResult" => roundtrip::<super::HermesDecisionResult>(json),
             "HermesDeliveryOptions" => roundtrip::<super::HermesDeliveryOptions>(json),
@@ -21031,6 +23248,7 @@ pub mod conformance {
             "HermesProcessDto" => roundtrip::<super::HermesProcessDto>(json),
             "HermesProcessKill" => roundtrip::<super::HermesProcessKill>(json),
             "HermesProcessRef" => roundtrip::<super::HermesProcessRef>(json),
+            "HermesProfiles" => roundtrip::<super::HermesProfiles>(json),
             "HermesProviderPlanDto" => roundtrip::<super::HermesProviderPlanDto>(json),
             "HermesRef" => roundtrip::<super::HermesRef>(json),
             "HermesRename" => roundtrip::<super::HermesRename>(json),
@@ -21056,6 +23274,7 @@ pub mod conformance {
             "HermesSessions" => roundtrip::<super::HermesSessions>(json),
             "HermesSettings" => roundtrip::<super::HermesSettings>(json),
             "HermesSettingsEdit" => roundtrip::<super::HermesSettingsEdit>(json),
+            "HermesSignInRequest" => roundtrip::<super::HermesSignInRequest>(json),
             "HermesSkillDto" => roundtrip::<super::HermesSkillDto>(json),
             "HermesStatus" => roundtrip::<super::HermesStatus>(json),
             "HermesSteerSubagent" => roundtrip::<super::HermesSteerSubagent>(json),
@@ -21066,6 +23285,7 @@ pub mod conformance {
             "HermesToggle" => roundtrip::<super::HermesToggle>(json),
             "HermesTokenTotalsDto" => roundtrip::<super::HermesTokenTotalsDto>(json),
             "HermesToolsetDto" => roundtrip::<super::HermesToolsetDto>(json),
+            "HermesToolsetToggle" => roundtrip::<super::HermesToolsetToggle>(json),
             "HermesUsageBarDto" => roundtrip::<super::HermesUsageBarDto>(json),
             "HermesUsageBarsDto" => roundtrip::<super::HermesUsageBarsDto>(json),
             "HermesWork" => roundtrip::<super::HermesWork>(json),
@@ -21076,6 +23296,8 @@ pub mod conformance {
             "IntentChat" => roundtrip::<super::IntentChat>(json),
             "IntentChats" => roundtrip::<super::IntentChats>(json),
             "IntentChatsQuery" => roundtrip::<super::IntentChatsQuery>(json),
+            "IntentLink" => roundtrip::<super::IntentLink>(json),
+            "IntentLinkResult" => roundtrip::<super::IntentLinkResult>(json),
             "KnowledgeList" => roundtrip::<super::KnowledgeList>(json),
             "KnowledgeQuery" => roundtrip::<super::KnowledgeQuery>(json),
             "KnowledgeSummary" => roundtrip::<super::KnowledgeSummary>(json),
@@ -21099,6 +23321,8 @@ pub mod conformance {
             "LibreChatSsoProviderDto" => roundtrip::<super::LibreChatSsoProviderDto>(json),
             "LibreChatSsoStart" => roundtrip::<super::LibreChatSsoStart>(json),
             "LibreChatVerify" => roundtrip::<super::LibreChatVerify>(json),
+            "LocationCommand" => roundtrip::<super::LocationCommand>(json),
+            "LocationReport" => roundtrip::<super::LocationReport>(json),
             "MarkUnread" => roundtrip::<super::MarkUnread>(json),
             "McpAppContext" => roundtrip::<super::McpAppContext>(json),
             "McpAppDto" => roundtrip::<super::McpAppDto>(json),
@@ -21168,6 +23392,10 @@ pub mod conformance {
             "NoteTitle" => roundtrip::<super::NoteTitle>(json),
             "NotesChanged" => roundtrip::<super::NotesChanged>(json),
             "Notice" => roundtrip::<super::Notice>(json),
+            "NotificationRoute" => roundtrip::<super::NotificationRoute>(json),
+            "NotificationRouteParams" => roundtrip::<super::NotificationRouteParams>(json),
+            "NotificationSettingsDto" => roundtrip::<super::NotificationSettingsDto>(json),
+            "NotificationSettingsPatch" => roundtrip::<super::NotificationSettingsPatch>(json),
             "OkResult" => roundtrip::<super::OkResult>(json),
             "OllamaModelAction" => roundtrip::<super::OllamaModelAction>(json),
             "OllamaModelList" => roundtrip::<super::OllamaModelList>(json),
@@ -21176,6 +23404,14 @@ pub mod conformance {
             "PasswordChange" => roundtrip::<super::PasswordChange>(json),
             "PasswordChangeResult" => roundtrip::<super::PasswordChangeResult>(json),
             "PasswordLogin" => roundtrip::<super::PasswordLogin>(json),
+            "PersonalConnectionDraft" => roundtrip::<super::PersonalConnectionDraft>(json),
+            "PersonalConnectionDto" => roundtrip::<super::PersonalConnectionDto>(json),
+            "PersonalConnectionSave" => roundtrip::<super::PersonalConnectionSave>(json),
+            "PersonalConnectionTest" => roundtrip::<super::PersonalConnectionTest>(json),
+            "PersonalConnectionTestResult" => {
+                roundtrip::<super::PersonalConnectionTestResult>(json)
+            }
+            "PersonalConnections" => roundtrip::<super::PersonalConnections>(json),
             "PongResult" => roundtrip::<super::PongResult>(json),
             "ProfileDto" => roundtrip::<super::ProfileDto>(json),
             "ProfileEdit" => roundtrip::<super::ProfileEdit>(json),
@@ -21277,6 +23513,10 @@ pub mod conformance {
             "TurnFailed" => roundtrip::<super::TurnFailed>(json),
             "TurnFinished" => roundtrip::<super::TurnFinished>(json),
             "TurnStarted" => roundtrip::<super::TurnStarted>(json),
+            "TwoStepChallenge" => roundtrip::<super::TwoStepChallenge>(json),
+            "TwoStepCode" => roundtrip::<super::TwoStepCode>(json),
+            "TwoStepResetToken" => roundtrip::<super::TwoStepResetToken>(json),
+            "TwoStepSetup" => roundtrip::<super::TwoStepSetup>(json),
             "UiInputOption" => roundtrip::<super::UiInputOption>(json),
             "UiRequest" => roundtrip::<super::UiRequest>(json),
             "UiResponse" => roundtrip::<super::UiResponse>(json),
@@ -21306,6 +23546,12 @@ pub mod conformance {
             "WebSearchRegionDto" => roundtrip::<super::WebSearchRegionDto>(json),
             "WebSearchSettings" => roundtrip::<super::WebSearchSettings>(json),
             "WebSearchSettingsPatch" => roundtrip::<super::WebSearchSettingsPatch>(json),
+            "WebhookCreate" => roundtrip::<super::WebhookCreate>(json),
+            "WebhookDto" => roundtrip::<super::WebhookDto>(json),
+            "WebhookEventDto" => roundtrip::<super::WebhookEventDto>(json),
+            "WebhookList" => roundtrip::<super::WebhookList>(json),
+            "WebhookRef" => roundtrip::<super::WebhookRef>(json),
+            "WebhookUpdate" => roundtrip::<super::WebhookUpdate>(json),
             "WorkspaceAccess" => roundtrip::<super::WorkspaceAccess>(json),
             "WorkspaceAccessEdit" => roundtrip::<super::WorkspaceAccessEdit>(json),
             "WorkspaceChanged" => roundtrip::<super::WorkspaceChanged>(json),

@@ -7,7 +7,7 @@
 const Map<String, String> protocolGoldens = <String, String>{
   'handshakeRequest': r'''
 {
-  "protocolVersion": "1.64.0",
+  "protocolVersion": "1.67.0",
   "clientName": "conduit-desktop-ui",
   "clientVersion": "0.1.0",
   "windowKind": "main",
@@ -16,7 +16,7 @@ const Map<String, String> protocolGoldens = <String, String>{
 
   'handshakeResponse': r'''
 {
-  "protocolVersion": "1.64.0",
+  "protocolVersion": "1.67.0",
   "daemonVersion": "0.1.0",
   "sessionId": "0f9d1c2e-4b6a-4d8f-9a1b-2c3d4e5f6071",
   "capabilities": {
@@ -478,7 +478,8 @@ const Map<String, String> protocolGoldens = <String, String>{
   "isLoading": false,
   "hasToken": false,
   "errorArgs": {},
-  "isReviewerMode": false
+  "isReviewerMode": false,
+  "canRenewProxy": false
 }''',
 
   'authSnapshotSignedIn': r'''
@@ -495,7 +496,8 @@ const Map<String, String> protocolGoldens = <String, String>{
     "avatarUrl": "/api/v1/users/c3a1b2d4/avatar"
   },
   "errorArgs": {},
-  "isReviewerMode": false
+  "isReviewerMode": false,
+  "canRenewProxy": false
 }''',
 
   'authSnapshotError': r'''
@@ -508,13 +510,77 @@ const Map<String, String> protocolGoldens = <String, String>{
   "errorArgs": {
     "attempt": "3"
   },
-  "isReviewerMode": false
+  "isReviewerMode": false,
+  "canRenewProxy": false
+}''',
+
+  'authSnapshotTwoStep': r'''
+{
+  "phase": "unauthenticated",
+  "isAuthenticated": false,
+  "isLoading": false,
+  "hasToken": false,
+  "errorArgs": {},
+  "isReviewerMode": false,
+  "twoStep": {
+    "stage": "verify",
+    "account": "ada@example.com",
+    "expiresInSeconds": 300,
+    "recoveryCodes": []
+  },
+  "canRenewProxy": false
+}''',
+
+  'authSnapshotConnectionIssue': r'''
+{
+  "phase": "error",
+  "isAuthenticated": false,
+  "isLoading": false,
+  "hasToken": true,
+  "errorCode": "net.connectionFailed",
+  "errorArgs": {},
+  "isReviewerMode": false,
+  "canRenewProxy": true
 }''',
 
   'authUser': r'''
 {
   "id": "c3a1b2d4-5e6f-4708-9a1b-2c3d4e5f6071",
   "name": "Ada Lovelace"
+}''',
+
+  'twoStepChallengeCodes': r'''
+{
+  "stage": "recoveryCodes",
+  "account": "ada@example.com",
+  "expiresInSeconds": 0,
+  "recoveryCodes": [
+    "0f1e2d3c4b5a69788796a5b4c3d2e1f0"
+  ]
+}''',
+
+  'twoStepSetup': r'''
+{
+  "manualKey": "MFRGGZDFMZTWQ2LK",
+  "qrSvg": "<svg></svg>",
+  "authenticatorUri": "otpauth://totp/Open%20WebUI:ada%40example.com?secret=MFRGGZDFMZTWQ2LK&issuer=Open%20WebUI"
+}''',
+
+  'twoStepCode': r'''
+{
+  "code": "123456",
+  "recovery": false
+}''',
+
+  'twoStepRecoveryCode': r'''
+{
+  "code": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+  "recovery": true
+}''',
+
+  'twoStepResetToken': r'''
+{
+  "resetToken": "not-a-real-recovery-token"
 }''',
 
   'passwordLogin': r'''
@@ -2037,6 +2103,7 @@ const Map<String, String> protocolGoldens = <String, String>{
   "name": "Helper",
   "baseModelId": "gemma3:1b",
   "description": "Answers briefly",
+  "imageSource": "inline",
   "tags": [
     "short"
   ],
@@ -2077,6 +2144,10 @@ const Map<String, String> protocolGoldens = <String, String>{
   ],
   "ttsVoice": "alloy",
   "terminalId": "http://127.0.0.1:8000",
+  "builtinTools": {
+    "time": true,
+    "memory": false
+  },
   "active": true,
   "hidden": true,
   "params": {
@@ -3285,6 +3356,11 @@ const Map<String, String> protocolGoldens = <String, String>{
   "connection": "0a1b2c3d:2"
 }''',
 
+  'hermesSignInRequest': r'''
+{
+  "connection": "0a1b2c3d:2"
+}''',
+
   'hermesSkillDto': r'''
 {
   "name": "review",
@@ -3430,7 +3506,13 @@ const Map<String, String> protocolGoldens = <String, String>{
   "plainHttp": true,
   "hasApiKey": true,
   "hasLegacyToken": true,
-  "desktopSignedIn": true
+  "desktopSignedIn": true,
+  "accessHeaderNames": [
+    "CF-Access-Client-Id",
+    "CF-Access-Client-Secret"
+  ],
+  "hasMemoryKey": true,
+  "dashboardSignedIn": true
 }''',
 
   'hermesConnections': r'''
@@ -3450,7 +3532,10 @@ const Map<String, String> protocolGoldens = <String, String>{
       "plainHttp": false,
       "hasApiKey": false,
       "hasLegacyToken": false,
-      "desktopSignedIn": false
+      "desktopSignedIn": false,
+      "accessHeaderNames": [],
+      "hasMemoryKey": false,
+      "dashboardSignedIn": false
     }
   ],
   "canAdd": false,
@@ -3469,7 +3554,104 @@ const Map<String, String> protocolGoldens = <String, String>{
   "apiKey": "sk-demo",
   "legacyToken": "demo-token",
   "allowSelfSignedCertificates": true,
-  "allowPlainHttp": true
+  "allowPlainHttp": true,
+  "accessHeaders": [
+    {
+      "name": "CF-Access-Client-Id",
+      "value": "demo.access"
+    },
+    {
+      "name": "X-Gate",
+      "savedName": "X-Old-Gate"
+    }
+  ],
+  "memoryKey": "demo-memory"
+}''',
+
+  'hermesAccessHeaderEdit': r'''
+{
+  "name": "X-Gate",
+  "value": "demo-value",
+  "savedName": "X-Old-Gate"
+}''',
+
+  'hermesProfiles': r'''
+{
+  "profiles": [
+    "default",
+    "writer"
+  ],
+  "selected": "writer",
+  "issue": "signInFirst"
+}''',
+
+  'hermesToolsetToggle': r'''
+{
+  "name": "web",
+  "enabled": false,
+  "connection": "0a1b2c3d:2"
+}''',
+
+  'hermesConnectionRef': r'''
+{
+  "connection": "0a1b2c3d:2"
+}''',
+
+  'hermesDashboardStart': r'''
+{
+  "id": "c1",
+  "connection": "0a1b2c3d:2"
+}''',
+
+  'hermesDashboardPlan': r'''
+{
+  "loginUrl": "https://agent.example.test/login",
+  "origin": "https://agent.example.test",
+  "supported": false
+}''',
+
+  'hermesCookieDto': r'''
+{
+  "name": "hermes_session_at",
+  "value": "demo-session",
+  "domain": "agent.example.test",
+  "path": "/",
+  "secure": true,
+  "httpOnly": true,
+  "expiresMs": 1794490018000
+}''',
+
+  'hermesDashboardCookies': r'''
+{
+  "id": "c1",
+  "cookies": [
+    {
+      "name": "hermes_session_rt",
+      "value": "r",
+      "domain": ".example.test",
+      "path": "/",
+      "secure": false,
+      "httpOnly": false
+    }
+  ],
+  "connection": "0a1b2c3d:2",
+  "attempt": "dashboard-1"
+}''',
+
+  'hermesDashboardCancel': r'''
+{
+  "attempt": "dashboard-1"
+}''',
+
+  'hermesDashboardResult': r'''
+{
+  "signedIn": true,
+  "connections": {
+    "enabled": false,
+    "activeId": "c1",
+    "connections": [],
+    "canAdd": true
+  }
 }''',
 
   'hermesConnectionTestResult': r'''
@@ -4008,6 +4190,60 @@ const Map<String, String> protocolGoldens = <String, String>{
       "pinned": true
     }
   ]
+}''',
+
+  'intentLink': r'''
+{
+  "url": "https://example.com/tide-tables"
+}''',
+
+  'intentLinkResult': r'''
+{
+  "url": "https://example.com/tide-tables",
+  "youtube": false,
+  "attachment": {
+    "id": "ctx-7",
+    "kind": "web",
+    "name": "Tide tables for Port Wren",
+    "url": "https://example.com/tide-tables",
+    "content": "High water at 06:12 and 18:40."
+  }
+}''',
+
+  'intentLinkResultFailed': r'''
+{
+  "url": "https://youtu.be/abc123",
+  "youtube": true,
+  "error": "noContent"
+}''',
+
+  'locationCommand': r'''
+{
+  "id": 5,
+  "kind": "currentPosition"
+}''',
+
+  'locationReportStatus': r'''
+{
+  "id": 4,
+  "ok": true,
+  "servicesEnabled": true,
+  "permission": "whileInUse"
+}''',
+
+  'locationReportFix': r'''
+{
+  "id": 5,
+  "ok": true,
+  "latitude": 51.5014,
+  "longitude": -0.1419
+}''',
+
+  'locationReportFailed': r'''
+{
+  "id": 6,
+  "ok": false,
+  "error": "no fix"
 }''',
 
   'terminalDisplayFile': r'''
@@ -5929,6 +6165,213 @@ const Map<String, String> protocolGoldens = <String, String>{
   "enabled": false
 }''',
 
+  'notificationSettingsDto': r'''
+{
+  "enabled": true,
+  "sound": true,
+  "soundAlways": true,
+  "inAppBanner": true,
+  "system": true,
+  "answers": true,
+  "channels": true,
+  "mentionsOnly": true,
+  "synced": true
+}''',
+
+  'notificationSettingsPatch': r'''
+{
+  "inAppBanner": false,
+  "channels": true
+}''',
+
+  'notificationRouteParams': r'''
+{
+  "kind": "channelMessage",
+  "foreground": true,
+  "viewing": false,
+  "alert": true,
+  "mention": true,
+  "direct": false
+}''',
+
+  'notificationRoute': r'''
+{
+  "surface": "banner",
+  "cue": true,
+  "systemSound": false
+}''',
+
+  'answerNotice': r'''
+{
+  "chatId": "tide-tables",
+  "messageId": "reply-7",
+  "title": "Tide tables"
+}''',
+
+  'webhookDto': r'''
+{
+  "id": "harbour-hooks",
+  "enabled": true,
+  "isDefault": true,
+  "events": [
+    "chat.finished",
+    "channel.message"
+  ],
+  "delivery": "always",
+  "maskedUrl": "http://127.0.0.1:19341/...ook"
+}''',
+
+  'webhookEventDto': r'''
+{
+  "event": "chat.finished",
+  "label": "Chat finished",
+  "description": "A response finished."
+}''',
+
+  'webhookList': r'''
+{
+  "available": true,
+  "owner": "w1",
+  "items": [
+    {
+      "id": "ferry-desk",
+      "enabled": false,
+      "isDefault": false,
+      "events": [],
+      "delivery": "away"
+    }
+  ],
+  "events": [
+    {
+      "event": "channel.message",
+      "label": "Channel message"
+    }
+  ],
+  "stale": true,
+  "failed": false
+}''',
+
+  'webhookCreate': r'''
+{
+  "owner": "w1",
+  "url": "https://hooks.example.org/tide",
+  "name": "tide-board",
+  "enabled": true,
+  "events": [
+    "chat.finished"
+  ],
+  "delivery": "away"
+}''',
+
+  'webhookUpdate': r'''
+{
+  "owner": "w1",
+  "id": "tide-board",
+  "enabled": false,
+  "delivery": "always"
+}''',
+
+  'webhookRef': r'''
+{
+  "owner": "w1",
+  "id": "tide-board"
+}''',
+
+  'personalConnectionDto': r'''
+{
+  "kind": "toolServer",
+  "identity": "conduit-0a1b",
+  "name": "Buoy Readings",
+  "endpoint": "http://127.0.0.1:19341/personal",
+  "enabled": true,
+  "editable": true,
+  "description": "Synthetic buoy data.",
+  "url": "http://127.0.0.1:19341/personal",
+  "specType": "url",
+  "path": "openapi.json",
+  "spec": "",
+  "authType": "bearer",
+  "hasKey": true
+}''',
+
+  'personalConnections': r'''
+{
+  "access": "allowed",
+  "owner": "p1",
+  "accountName": "Harbour Admin",
+  "serverName": "Local",
+  "toolServers": [],
+  "terminals": [
+    {
+      "kind": "terminal",
+      "identity": "http://127.0.0.1:9100",
+      "name": "Dock Shell",
+      "endpoint": "",
+      "enabled": false,
+      "editable": true,
+      "description": "",
+      "url": "",
+      "specType": "url",
+      "path": "",
+      "spec": "",
+      "authType": "bearer",
+      "hasKey": false
+    }
+  ],
+  "cleared": [
+    "Old Gauge"
+  ],
+  "failed": false,
+  "savedForPreviousAccount": false
+}''',
+
+  'personalConnectionDraft': r'''
+{
+  "name": "Buoy Readings",
+  "description": "",
+  "url": "http://127.0.0.1:19341/personal",
+  "specType": "url",
+  "path": "openapi.json",
+  "spec": "",
+  "authType": "none",
+  "key": "",
+  "keyMode": "keep",
+  "enabled": true
+}''',
+
+  'personalConnectionSave': r'''
+{
+  "owner": "p1",
+  "kind": "toolServer",
+  "op": "setEnabled",
+  "identity": "conduit-0a1b",
+  "enabled": false
+}''',
+
+  'personalConnectionTest': r'''
+{
+  "owner": "p1",
+  "kind": "terminal",
+  "draft": {
+    "name": "",
+    "description": "",
+    "url": "http://127.0.0.1:9100",
+    "specType": "url",
+    "path": "",
+    "spec": "",
+    "authType": "bearer",
+    "key": "",
+    "keyMode": "replace",
+    "enabled": true
+  }
+}''',
+
+  'personalConnectionTestResult': r'''
+{
+  "ok": false,
+  "failure": "unauthorized"
+}''',
+
   'releaseNoteBullet': r'''
 {
   "text": "Settings has every page the phone has.",
@@ -7402,6 +7845,146 @@ const Map<String, String> protocolGoldens = <String, String>{
   "positionMs": 800
 }''',
 
+  'appleEngineStatus': r'''
+{
+  "availability": "available",
+  "contextSize": 4096,
+  "supportsCurrentLocale": true
+}''',
+
+  'appleModelStatus': r'''
+{
+  "model": "onDevice",
+  "availability": "unavailable",
+  "reason": "modelNotReady",
+  "supportsCurrentLocale": true
+}''',
+
+  'appleModels': r'''
+{
+  "models": [
+    {
+      "model": "onDevice",
+      "availability": "available",
+      "contextSize": 4096,
+      "supportsCurrentLocale": true
+    }
+  ]
+}''',
+
+  'appleMessage': r'''
+{
+  "role": "user",
+  "content": "Name three hardy herbs for a windowsill."
+}''',
+
+  'appleToolDefinition': r'''
+{
+  "name": "garden_lookup",
+  "description": "Looks up a plant in the garden notebook.",
+  "inputSchemaJson": "{}"
+}''',
+
+  'appleGeneration': r'''
+{
+  "runId": "run-5c1e",
+  "model": "onDevice",
+  "messages": [
+    {
+      "role": "system",
+      "content": "Answer briefly."
+    },
+    {
+      "role": "user",
+      "content": "Name three hardy herbs for a windowsill."
+    }
+  ],
+  "tools": [],
+  "temperature": 0.4,
+  "maximumResponseTokens": 512
+}''',
+
+  'appleCommandStart': r'''
+{
+  "id": 3,
+  "kind": "start",
+  "request": {
+    "runId": "run-5c1e",
+    "model": "onDevice",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Is thyme hardy?"
+      }
+    ],
+    "tools": []
+  },
+  "toolCancelled": false
+}''',
+
+  'appleCommandToolResult': r'''
+{
+  "id": 4,
+  "kind": "toolResult",
+  "runId": "run-5c1e",
+  "callId": "call-1",
+  "toolContent": "Thyme survives frost.",
+  "toolCancelled": false
+}''',
+
+  'appleReportStatus': r'''
+{
+  "id": 2,
+  "ok": true,
+  "runs": [],
+  "status": {
+    "availability": "unavailable",
+    "reason": "appleIntelligenceNotEnabled"
+  }
+}''',
+
+  'appleReportReady': r'''
+{
+  "ok": true,
+  "kind": "ready",
+  "supported": true,
+  "runs": [
+    "run-5c1e"
+  ]
+}''',
+
+  'appleReportContent': r'''
+{
+  "ok": true,
+  "kind": "content",
+  "runs": [],
+  "runId": "run-5c1e",
+  "seq": 1,
+  "content": "Thyme, rosemary and sage."
+}''',
+
+  'appleReportFailed': r'''
+{
+  "ok": true,
+  "kind": "failed",
+  "runs": [],
+  "runId": "run-5c1e",
+  "seq": 2,
+  "failure": "contextExceeded"
+}''',
+
+  'appleReportToolCall': r'''
+{
+  "ok": true,
+  "kind": "toolCall",
+  "runs": [],
+  "runId": "run-5c1e",
+  "seq": 1,
+  "callId": "call-1",
+  "toolName": "garden_lookup",
+  "argumentsJson": "{}"
+}''',
+
   'hermesWorkWatch': r'''
 {
   "chatId": "local:hermes_s-4f2a",
@@ -7968,6 +8551,15 @@ const Map<String, String> protocolGoldens = <String, String>{
   "listen": 0,
   "continuous": false,
   "path": "/calls/call-7"
+}''',
+
+  'callCommandWebRtc': r'''
+{
+  "id": 6,
+  "kind": "webRtcStart",
+  "listen": 0,
+  "continuous": false,
+  "path": "/calls/call-8"
 }''',
 
   'callReportWords': r'''

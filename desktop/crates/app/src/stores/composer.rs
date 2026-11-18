@@ -505,6 +505,18 @@ pub struct ComposerStore {
     _draft: Option<Task<()>>,
 }
 
+/// Which composition an async result belongs to: the account scope and
+/// the draft round when it started ([`ComposerStore::ticket`]). A result
+/// that lands after either moved on (another account, another draft or
+/// chat, a fresh composition: [`ComposerStore::start_over`]) writes nothing
+/// into, and navigates nothing away from, the composition shown then
+/// ([`ComposerStore::holds`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CompositionTicket {
+    scope: u64,
+    round: u64,
+}
+
 /// Which list a search fills.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Search {
@@ -999,6 +1011,23 @@ impl ComposerStore {
             || self
                 .selected_model()
                 .is_some_and(|m| m.id.starts_with("hermes:"))
+    }
+
+    /// The agent's skills were read again (Reload Skills) on
+    /// `hermes_connection`, the one in use: a Hermes chat's `/` list is read
+    /// again now, so a menu that is open shows them.
+    pub fn reload_hermes_prompts(
+        &mut self,
+        hermes_connection: Option<String>,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.prompts_hermes {
+            return;
+        }
+        self.prompts = None;
+        if self.is_hermes() {
+            self.load_prompts(hermes_connection, cx);
+        }
     }
 
     /// What `/` lists, once (and again after `reset`, or when the chat
@@ -1759,6 +1788,25 @@ impl ComposerStore {
         self.draft.as_ref()
     }
 
+    /// Which composition of the draft this is: it moves on whenever the
+    /// draft starts over ([`Self::start_over`], another draft or account).
+    pub fn draft_round(&self) -> u64 {
+        self.draft_round
+    }
+
+    /// This composition's ticket, for an async result to carry.
+    pub fn ticket(&self) -> CompositionTicket {
+        CompositionTicket {
+            scope: self.scope,
+            round: self.draft_round,
+        }
+    }
+
+    /// Whether `ticket`'s composition is still the one shown.
+    pub fn holds(&self, ticket: CompositionTicket) -> bool {
+        self.ticket() == ticket
+    }
+
     /// Another chat opened: `text` (what the composer held) is kept for the
     /// chat it held it for, and the new chat's draft is read (it arrives as
     /// [`ComposerEvent::DraftLoaded`]). `None`: a chat that keeps none (a
@@ -1836,11 +1884,12 @@ impl ComposerStore {
             chat_id: key.chat_id.clone(),
             folder_id: key.folder_id.clone(),
         });
+        let ticket = self.ticket();
         self._draft = Some(
             cx.spawn(async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
                 let draft = call.await;
                 let _ = this.update(cx, |s, cx| {
-                    if s.draft.as_ref() != Some(&key) {
+                    if s.draft.as_ref() != Some(&key) || !s.holds(ticket) {
                         return;
                     }
                     let text = draft.map(|d: Draft| d.text).unwrap_or_default();
@@ -2251,9 +2300,16 @@ pub fn mentions_in(
 /// comes from one.
 pub fn model_label(model: &ModelSummary) -> String {
     match &model.connection {
-        Some(c) => format!("{} \u{b7} {c}", model.name),
-        None => model.name.clone(),
+        // Apple On-Device's connection is named as the model is.
+        Some(c) if c != &model.name => format!("{} \u{b7} {c}", model.name),
+        _ => model.name.clone(),
     }
+}
+
+/// Whether `model` is Apple's on-device model: a Direct model the daemon's
+/// Apple adapter lists (`apple_on_device` among its capabilities).
+pub fn is_apple_on_device(model: &ModelSummary) -> bool {
+    model.connection.is_some() && model.capabilities.iter().any(|c| c == "apple_on_device")
 }
 
 /// One row of the model picker's list.
@@ -2604,6 +2660,19 @@ mod tests {
         let mut direct = model("d", "Llama");
         direct.connection = Some("Local".into());
         assert_eq!(model_label(&direct), "Llama \u{b7} Local");
+        assert!(!is_apple_on_device(&direct));
+        // Apple's model and its connection share a name: said once.
+        let mut apple = model(
+            "direct:apple-on-device:system-language-model",
+            "Apple On-Device",
+        );
+        apple.connection = Some("Apple On-Device".into());
+        apple.capabilities = vec!["apple_on_device".into(), "structured_outputs".into()];
+        assert_eq!(model_label(&apple), "Apple On-Device");
+        assert!(is_apple_on_device(&apple));
+        // A server's model cannot claim to be Apple's: it has no connection.
+        apple.connection = None;
+        assert!(!is_apple_on_device(&apple));
 
         let prompts = vec![
             prompt("/translate", "Summarize in French"),
