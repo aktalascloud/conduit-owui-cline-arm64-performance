@@ -285,10 +285,10 @@ index 0000000000000000000000000000000000000000..0bf5e90cac691b999d4a35044f97167d
 \ No newline at end of file
 diff --git a/.avx1/measurements/onnx-qualified-reference.json b/.avx1/measurements/onnx-qualified-reference.json
 new file mode 100644
-index 0000000000000000000000000000000000000000..50f14839666e3198a7ed67f2461a740fafe10bea
+index 0000000000000000000000000000000000000000..7b288202d8e1a6fc4558ee9feedd0ff396b095e7
 --- /dev/null
 +++ b/.avx1/measurements/onnx-qualified-reference.json
-@@ -0,0 +1,27 @@
+@@ -0,0 +1,28 @@
 +{
 +  "schema": 1,
 +  "run_id": 40821699974,
@@ -312,9 +312,10 @@ index 0000000000000000000000000000000000000000..50f14839666e3198a7ed67f2461a740f
 +    "upstream_commit": "7a5391a34721bff7bc22c1eda05538f88d6404bb"
 +  },
 +  "compatible_lockfile_sha256": [
-+    "57ec9e526636d78758d4102863e5b3fe2a4c4296b9227baca5195ca7661f5992"
++    "57ec9e526636d78758d4102863e5b3fe2a4c4296b9227baca5195ca7661f5992",
++    "31a66ab61a9c1ca5efd3458de034c4ddcd40a035826007c0209f6ba6c9e25288"
 +  ],
-+  "compatible_lockfile_scope": "2026-11-16 workspace additions; Android native package versions and hashes, queried compiler and native recipes remain unchanged."
++  "compatible_lockfile_scope": "2026-11-16 workspace additions and 2026-11-19 removal of asn1lib, dartssh2, pinenacl and pointycastle. Every other lockfile byte is unchanged; ONNX/JNI/SQLite/vad, native source, toolchain, compiler, compile commands, flags and binary SHA256 remain subject to the exact reuse gate."
 +}
 diff --git a/.avx1/native-arm64.json b/.avx1/native-arm64.json
 new file mode 100644

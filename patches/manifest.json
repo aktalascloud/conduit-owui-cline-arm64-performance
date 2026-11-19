@@ -4,8 +4,8 @@
   "ownership": "applied-downstream-only",
   "project": "conduit",
   "upstream": "c1372fc9",
-  "snapshot_source": "0592bfe64b8540c994af24bae2b6e520a318bacc",
-  "downstream_tree_without_patches": "b3a6dba6e18d0bf7e23ee68c3239ad3a364c437d",
+  "snapshot_source": "4dad00862c62560ce54cc04b111bbcfd1bba77d4",
+  "downstream_tree_without_patches": "44a0665215f9f4cd822edb9488156553e7825abf",
   "groups": [
     {
       "patch": "01-backend-navigation.patch",
@@ -118,7 +118,7 @@
         ".avx1/test_native_sqlite.py",
         ".avx1/test_terminal.py"
       ],
-      "sha256": "3ab33cffc6ae667acba8b878fe04fc53d8019765576f08a41a0342747ed54228"
+      "sha256": "70fddce5aeddb73f43f8f04ba1cf147e550afe7693a6fef694f47fd50a74a4c2"
     },
     {
       "patch": "07-android-package.patch",
@@ -201,7 +201,7 @@
     "03-provider-compatibility.patch": "2f579a997fe23e6723576b3684e1289b6216f1335462d1e0a1b3d087c4b7ed74",
     "04-chat-persistence.patch": "8038d84f8606bc60a755585286a647efc786dcd0e36cb13e9c1277cafadef7a5",
     "05-localization.patch": "47c248d21688f178787aedb452ae3c57564731024b4a65ae290353214d832f8b",
-    "06-arm64-native.patch": "3ab33cffc6ae667acba8b878fe04fc53d8019765576f08a41a0342747ed54228",
+    "06-arm64-native.patch": "70fddce5aeddb73f43f8f04ba1cf147e550afe7693a6fef694f47fd50a74a4c2",
     "07-android-package.patch": "ee00286a194d4b6516e7e07060b6d1eb159b265eeb7034c4844e5d3e47a932e3",
     "08-portable-install.patch": "a5f4c34a7c7c47f8f56c4bebdee4b03422237c66a6b0445f57c1f5d3aceeb4c9",
     "09-ci-build.patch": "be17b49224c5555e4fdb804254aae0ea06c2591acceb33db9c983eee83995c7f",
@@ -211,6 +211,6 @@
     "13-build.patch": "14b477974a5d3d9d888d1318c877370903eb26a46aebabd39f612bf08238f523",
     ".gitattributes": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",
     "series": "8b6e801ffda78ea6b71ec820e2504b4e80cc1c0eff9ebd2217297e1cded01505",
-    "README.md": "a2cfcca9589451679893b0aa5f51ab1cbf667873ca846998fdabb8f1949e0543"
+    "README.md": "5a20f86d3bdb572f06d68c5d7e1e1daa2927b79da881e46c3cc79258199cb9e4"
   }
 }
