@@ -1,0 +1,28 @@
+diff --git a/lib/features/settings/settings_controller.dart b/lib/features/settings/settings_controller.dart
+index 6beda05dcdd2f695e96ef8c81d20562705a72e72..2e999e2fefe9f4604e6b9a209a591a85a18a4884 100644
+--- a/lib/features/settings/settings_controller.dart
++++ b/lib/features/settings/settings_controller.dart
+@@ -423,6 +423,11 @@ class SettingsController {
+         return;
+       }
+ 
++      if (event.id == NativeSheetRoutes.clineRemote && value == true) {
++        unawaited(NavigationService.router.pushNamed<void>(RouteNames.clineRemote));
++        return;
++      }
++
+       if (await _handleNativeAccountAction(event.id, value)) return;
+ 
+       if (event.id.startsWith('tts-voice-pick:')) {
+diff --git a/packages/conduit_core/lib/features/terminal/models/terminal_agent_model.dart b/packages/conduit_core/lib/features/terminal/models/terminal_agent_model.dart
+index 26420c5a2e47abd68599d6d444d9698758bb4411..7d875572954da12fe903f5e76d925ec8fb4d4177 100644
+--- a/packages/conduit_core/lib/features/terminal/models/terminal_agent_model.dart
++++ b/packages/conduit_core/lib/features/terminal/models/terminal_agent_model.dart
+@@ -66,7 +66,6 @@ bool anyTerminalAgentModelId(Iterable<String?> modelIds) =>
+ /// agent not listed here keeps the id Open WebUI gives it.
+ const Map<String, String> _agentNames = {
+   'claude-code': 'Claude Code',
+-  'cline': 'Cline',
+   'codex': 'Codex',
+   'cursor': 'Cursor',
+   'gemini': 'Gemini CLI',

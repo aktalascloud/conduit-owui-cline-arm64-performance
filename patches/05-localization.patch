@@ -1,11 +1,11 @@
 diff --git a/.avx1/locale-allowlist.json b/.avx1/locale-allowlist.json
 new file mode 100644
-index 0000000000000000000000000000000000000000..59bb612ac9a991b381a87877139d490ad6fe5af3
+index 0000000000000000000000000000000000000000..ded11db934cca67d64599dcfc865ca0f35b201eb
 --- /dev/null
 +++ b/.avx1/locale-allowlist.json
 @@ -0,0 +1,51 @@
 +{
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
 +  "githubSponsorsTitle": "GitHub Sponsors",
 +  "buyMeACoffeeTitle": "Buy Me a Coffee",
 +  "requiredFieldLabel": "{label} *",
@@ -97,38 +97,38 @@ index 0000000000000000000000000000000000000000..c08ce8b6cabbd90f797e706467133345
 +    checked+=1
 +print('RUSSIAN_LOCALE_KEYS_AND_PARAMETERS_VERIFIED='+str(checked))
 diff --git a/lib/l10n/app_cs.arb b/lib/l10n/app_cs.arb
-index 9151a40473b434b3a69817b8c5e08092d37dc1d1..66045e8a0239bf6166acf45ad4f37af57576cd18 100644
+index 9151a40473b434b3a69817b8c5e08092d37dc1d1..d10ca7e6912a1b84cd8be7fa8fa055ff2be28f86 100644
 --- a/lib/l10n/app_cs.arb
 +++ b/lib/l10n/app_cs.arb
 @@ -1,6 +1,6 @@
  {
    "@@locale": "cs",
 -  "appTitle": "Conduit",
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
    "serverIncompatibleTitle": "Server není podporován",
    "serverIncompatibleMessage": "Tento server používá Open WebUI {serverVersion}, což je novější verze, než tato aplikace podporuje (maximálně {maxVersion}).",
    "serverIncompatibleResolution": "Chcete-li pokračovat, snižte verzi serveru na {maxVersion} nebo nižší, nebo počkejte na aktualizaci aplikace, která podporu doplní.",
 diff --git a/lib/l10n/app_de.arb b/lib/l10n/app_de.arb
-index 6f5dc893907906806edb9288ffa3a9e728755764..b49ae57bd322e8681cfa722c8b57ded082bc118b 100644
+index 6f5dc893907906806edb9288ffa3a9e728755764..329007f2aa76372f34c8f587995aec636fe54ce5 100644
 --- a/lib/l10n/app_de.arb
 +++ b/lib/l10n/app_de.arb
 @@ -1,6 +1,6 @@
  {
    "@@locale": "de",
 -  "appTitle": "Conduit",
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
    "serverIncompatibleTitle": "Server nicht unterstützt",
    "serverIncompatibleMessage": "Auf diesem Server läuft Open WebUI {serverVersion}, was neuer ist, als diese App unterstützt (bis {maxVersion}).",
    "serverIncompatibleResolution": "Um fortzufahren, stufe deinen Server auf {maxVersion} oder älter zurück oder warte auf ein App-Update, das diese Version unterstützt.",
 diff --git a/lib/l10n/app_en.arb b/lib/l10n/app_en.arb
-index 37981da8c8fc35fddc21c26205169592401298fd..1360765a32c34a6e53d7842137ac811cd5966732 100644
+index 37981da8c8fc35fddc21c26205169592401298fd..965dad415a77b9df473c9e5427f45956549ee731 100644
 --- a/lib/l10n/app_en.arb
 +++ b/lib/l10n/app_en.arb
 @@ -1,6 +1,6 @@
  {
    "@@locale": "en",
 -  "appTitle": "Conduit",
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
    "@appTitle": {
      "description": "Application name displayed in the app and OS UI."
    },
@@ -4214,182 +4214,99 @@ index 37981da8c8fc35fddc21c26205169592401298fd..1360765a32c34a6e53d7842137ac811c
    "libreChatTemporaryChatOff": "LibreChat saves every chat. Turn off Temporary Chat to send.",
    "@libreChatTemporaryChatOff": {
      "description": "Shown when a new LibreChat chat is not sent because temporary chat is on: LibreChat saves every chat."
-@@ -11634,5 +13347,93 @@
+@@ -11634,5 +13347,10 @@
    "settingsAddAction": "Add",
    "@settingsAddAction": {
      "description": "Read aloud for the plus button in a Settings page's bar that adds an item, such as a calendar event."
 -  }
 +  },
-+  "clineRemoteTitle": "Cline via SSH",
-+  "clineRemoteDescription": "Connect to your PC through an encrypted SSH tunnel. Agent sessions and project files stay on the PC. Import the private connection document created there.",
-+  "clineImportConnection": "Import connection",
-+  "clineHost": "PC address or DNS name",
-+  "clineSshPort": "SSH port",
-+  "clineAccessSecret": "Tunnel access secret",
-+  "clineHostKey": "Server key fingerprint (SHA256)",
-+  "clineDashboardSecret": "Cline API access secret",
-+  "clineProjectPath": "Project folder on the PC (optional)",
-+  "clineProjectHint": "This folder applies to new sessions. Existing sessions keep their own project. Tool approvals remain in Cline.",
-+  "clineConnect": "Connect to Cline",
-+  "clineForgetConnection": "Forget connection",
-+  "clineInvalidProfile": "Invalid connection document or settings. Check the address, ports, secrets and server fingerprint.",
-+  "clineStorageError": "Secure storage is unavailable. The connection was not saved in plaintext.",
-+  "clineHostKeyMismatch": "The server key does not match. Connection blocked. Verify the fingerprint on your PC.",
-+  "clineAuthenticationFailed": "Tunnel access was rejected. Check the private connection document.",
-+  "clineLocalPortBusy": "The local connection port is busy. Close the previous Cline connection and try again.",
-+  "clineNetworkError": "Cannot connect to the PC. Check its address, SSH port, firewall and router forwarding.",
-+  "clineDisconnected": "Connection lost. Reconnecting automatically; no commands are replayed.",
-+  "clinePasteConnection": "Paste connection",
-+  "clineUploadFile": "Attach image or document",
-+  "clineUploadFailed": "Upload failed. Maximum: 64 MiB per file, 4 attachments per message. Check the connection and available inbox space.",
-+  "clineFilesReady": "Ready for your next message",
-+  "clineClearAttachments": "Remove pending attachments",
-+  "clineChooserSubtitle": "PC agent sessions and projects; no Open WebUI or Hermes account required.",
-+  "clineNativeConnectFailed": "Cannot open the native Cline connection. Check SSH, the access codes and the PC service.",
-+  "clineWaitForTurn": "Wait for this turn or stop it first.",
-+  "clineExistingContext": "This session keeps its PC folder and model. Create a new chat to choose another.",
-+  "clinePayloadLimit": "The message is too large. Transfer large content as a document.",
-+  "clineFileChanged": "The file changed during transfer. Select it again.",
-+  "clineSessions": "Cline sessions",
-+  "clineProjects": "PC projects",
-+  "clineUseProject": "New chat in this folder",
-+  "clineModels": "Model",
-+  "clineNewChat": "New Cline chat",
-+  "clineNoSessions": "No saved sessions yet",
-+  "clineDisconnect": "Disconnect",
-+  "clineDisconnectWarning": "The PC session is not deleted. Pending approvals owned by this connection may be rejected when it closes.",
-+  "clineConnectionSettings": "Connection settings",
-+  "clineOtherBackends": "Accounts and backends",
-+  "clineDismiss": "Dismiss",
-+  "clineUncertainResult": "Check the restored session history before sending this uncertain message again. Reconnection never repeats a command.",
-+  "clineRestoreDraft": "Restore draft",
-+  "clineHistoryChecked": "History checked",
-+  "clineNativeWelcome": "Choose a session from the sidebar or start a new chat in your PC project.",
-+  "clinePlan": "Plan",
-+  "clineAct": "Act",
-+  "clineChooseMode": "Choose Plan or Act before sending to an existing session.",
-+  "clineMessageHint": "Message Cline…",
-+  "clineStop": "Stop the PC turn",
-+  "clineSend": "Send",
-+  "clineApprovalRequired": "Tool permission required",
-+  "clineDeny": "Deny",
-+  "clineAllowOnce": "Allow once",
-+  "clineReasonNone": "Reasoning off",
-+  "clineReasonLow": "Low reasoning",
-+  "clineReasonMedium": "Medium reasoning",
-+  "clineReasonHigh": "High reasoning",
-+  "clineReasoning": "Reasoning",
-+  "clineReasoningHidden": "Reasoning is hidden by the provider.",
-+  "clineCopy": "Copy",
-+  "clineToolRunning": "Running",
-+  "clineToolFailed": "Failed",
-+  "clineToolCompleted": "Completed",
-+  "clineProtocolError": "The PC returned an unsupported Cline response. Reconnect or update the gateway.",
-+  "clineAttachment": "Attachment",
-+  "clineInspect": "View full details",
-+  "clineOpenLink": "Open link",
-+  "clineExternalLink": "Open in the browser?",
-+  "clineRename": "Rename session",
-+  "clineDeleteSession": "Delete session",
-+  "clineDeleteWarning": "Delete this saved session on the PC? Project files are not deleted.",
-+  "clineForkSession": "Fork session",
-+  "clineVoiceUnavailable": "Voice calls are not available for this Cline connection. Use the native text chat.",
-+  "clineReturnToChat": "Return to Cline chat",
 +  "voiceAvatar": "Voice avatar",
 +  "voiceAvatarUnavailable": "Avatar unavailable. The voice call continues.",
-+  "clineReconnecting": "Reconnecting…",
-+  "@clineReconnecting": {
-+    "description": "One notice while restoring an existing SSH connection; commands are never replayed."
-+  },
-+  "clineSelectionUnavailable": "The previous model or provider is unavailable. Choose a model; no default was substituted.",
-+  "@clineSelectionUnavailable": {
-+    "description": "Reconnect preserved an explicit model choice which is no longer in the server catalog; sending stays blocked."
-+  },
 +  "voiceAvatarZoomIn": "Zoom in",
 +  "voiceAvatarZoomOut": "Zoom out",
 +  "voiceAvatarResetView": "Reset view"
  }
 diff --git a/lib/l10n/app_es.arb b/lib/l10n/app_es.arb
-index 21ffda81dbb0d0a8bc3ca23d036871f21b97511d..bd88045058ad6e7f8bcdd59ffe7d937b83ce5f44 100644
+index 21ffda81dbb0d0a8bc3ca23d036871f21b97511d..238658fd7335d88c7c2eee4ae46e75c72df3e573 100644
 --- a/lib/l10n/app_es.arb
 +++ b/lib/l10n/app_es.arb
 @@ -1,6 +1,6 @@
  {
    "@@locale": "es",
 -  "appTitle": "Conduit",
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
    "serverIncompatibleTitle": "Servidor no compatible",
    "serverIncompatibleMessage": "Este servidor ejecuta Open WebUI {serverVersion}, que es más reciente de lo que admite esta app (hasta {maxVersion}).",
    "serverIncompatibleResolution": "Para continuar, baja la versión de tu servidor a {maxVersion} o anterior, o espera a una actualización de la app que añada compatibilidad.",
 diff --git a/lib/l10n/app_fr.arb b/lib/l10n/app_fr.arb
-index f0dc41550431944da86bf15833928957f1a6ef59..ba5236ff171c3a83967c1b90e0753b037b9c196e 100644
+index f0dc41550431944da86bf15833928957f1a6ef59..2c9e6e59035bc9ab7abe3abdd54451ed1adaa59f 100644
 --- a/lib/l10n/app_fr.arb
 +++ b/lib/l10n/app_fr.arb
 @@ -1,6 +1,6 @@
  {
    "@@locale": "fr",
 -  "appTitle": "Conduit",
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
    "serverIncompatibleTitle": "Serveur non pris en charge",
    "serverIncompatibleMessage": "Ce serveur exécute Open WebUI {serverVersion}, une version plus récente que celle prise en charge par cette application (jusqu'à {maxVersion}).",
    "serverIncompatibleResolution": "Pour continuer, rétrogradez votre serveur vers la version {maxVersion} ou une version antérieure, ou attendez une mise à jour de l'application qui ajoute la prise en charge.",
 diff --git a/lib/l10n/app_it.arb b/lib/l10n/app_it.arb
-index 94f9fc4f02afa10fd6b61369aac151e91c4d6251..64ea6cf6c49b1ed0d95f666a6c89b953f9ac83ea 100644
+index 94f9fc4f02afa10fd6b61369aac151e91c4d6251..12e76750f61a2875f3a3b100222cac41eb23d68d 100644
 --- a/lib/l10n/app_it.arb
 +++ b/lib/l10n/app_it.arb
 @@ -1,6 +1,6 @@
  {
    "@@locale": "it",
 -  "appTitle": "Conduit",
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
    "serverIncompatibleTitle": "Server non supportato",
    "serverIncompatibleMessage": "Questo server esegue Open WebUI {serverVersion}, una versione più recente di quella supportata da questa app (fino alla {maxVersion}).",
    "serverIncompatibleResolution": "Per continuare, riporta il server alla versione {maxVersion} o precedente, oppure attendi un aggiornamento dell'app che ne aggiunga il supporto.",
 diff --git a/lib/l10n/app_ja.arb b/lib/l10n/app_ja.arb
-index 2dd86a18ceb3528a5630ab129392f381eae85e5e..19b6f44cf54d199527810d364c09c26ecbb711a6 100644
+index 2dd86a18ceb3528a5630ab129392f381eae85e5e..ec5989ba380a3197fde08a14534f165e5afe8f68 100644
 --- a/lib/l10n/app_ja.arb
 +++ b/lib/l10n/app_ja.arb
 @@ -1,6 +1,6 @@
  {
    "@@locale": "ja",
 -  "appTitle": "Conduit",
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
    "serverIncompatibleTitle": "サーバーは未対応です",
    "serverIncompatibleMessage": "このサーバーは Open WebUI {serverVersion} を実行しており、このアプリが対応するバージョン（{maxVersion} まで）よりも新しいバージョンです。",
    "serverIncompatibleResolution": "続行するには、サーバーを {maxVersion} 以前にダウングレードするか、対応を追加するアプリの更新をお待ちください。",
 diff --git a/lib/l10n/app_ko.arb b/lib/l10n/app_ko.arb
-index 2693b84b4a4bb5f5bd71767cb7a42cb3c61f5a4f..d4f503388ddaefc1d87d3b75f8f00907c71bf879 100644
+index 2693b84b4a4bb5f5bd71767cb7a42cb3c61f5a4f..4545ed97c2a8290a3f1f953c56cc8efe2980ccd8 100644
 --- a/lib/l10n/app_ko.arb
 +++ b/lib/l10n/app_ko.arb
 @@ -1,6 +1,6 @@
  {
    "@@locale": "ko",
 -  "appTitle": "Conduit",
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
    "serverIncompatibleTitle": "지원되지 않는 서버",
    "serverIncompatibleMessage": "이 서버는 Open WebUI {serverVersion} 버전을 사용 중이며, 이는 이 앱이 지원하는 버전({maxVersion} 이하)보다 최신입니다.",
    "serverIncompatibleResolution": "계속하려면 서버를 {maxVersion} 이하 버전으로 다운그레이드하거나, 해당 버전을 지원하는 앱 업데이트를 기다리세요.",
 diff --git a/lib/l10n/app_nl.arb b/lib/l10n/app_nl.arb
-index 776e7a362fa5e55213d74821c1cea323b9cb5a4c..593ceae173b470999ca1b3a3b357939fa52d6b8f 100644
+index 776e7a362fa5e55213d74821c1cea323b9cb5a4c..b12fb5896c6a8d28ed664d1cbbf1e08335696721 100644
 --- a/lib/l10n/app_nl.arb
 +++ b/lib/l10n/app_nl.arb
 @@ -1,6 +1,6 @@
  {
    "@@locale": "nl",
 -  "appTitle": "Conduit",
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
    "serverIncompatibleTitle": "Server niet ondersteund",
    "serverIncompatibleMessage": "Deze server draait Open WebUI {serverVersion}, wat nieuwer is dan deze app ondersteunt (tot {maxVersion}).",
    "serverIncompatibleResolution": "Om door te gaan, zet je je server terug naar {maxVersion} of eerder, of wacht je op een app-update die ondersteuning toevoegt.",
 diff --git a/lib/l10n/app_pl.arb b/lib/l10n/app_pl.arb
-index 42c574eda5c4ecf6b5cda06870b5f6b6b7231adb..e76d6ae86157591fcddb6d03df679fc6bb95dff6 100644
+index 42c574eda5c4ecf6b5cda06870b5f6b6b7231adb..b452969eaf8e281e533b46dc2d89d9eeddddebbe 100644
 --- a/lib/l10n/app_pl.arb
 +++ b/lib/l10n/app_pl.arb
 @@ -1,6 +1,6 @@
  {
    "@@locale": "pl",
 -  "appTitle": "Conduit",
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
    "@appTitle": {
      "description": "Application name displayed in the app and OS UI."
    },
@@ -5094,104 +5011,27 @@ index 42c574eda5c4ecf6b5cda06870b5f6b6b7231adb..e76d6ae86157591fcddb6d03df679fc6
    "hermesConnectionModeTitle": "Tryb połączenia",
    "hermesModeResponsesApi": "Responses API",
    "hermesProfilesNeedUrl": "Najpierw wpisz adres URL serwera Hermes.",
-@@ -9448,5 +9764,87 @@
+@@ -9448,5 +9764,10 @@
    "settingsAddAction": "Dodaj",
    "@settingsAddAction": {
      "description": "Read aloud for the plus button in a Settings page's bar that adds an item, such as a calendar event."
 -  }
 +  },
-+  "clineRemoteTitle": "Cline przez SSH",
-+  "clineRemoteDescription": "Connect to your PC through an encrypted SSH tunnel. Agent sessions and project files stay on the PC. Import the private connection document created there.",
-+  "clineImportConnection": "Import connection",
-+  "clineHost": "PC address or DNS name",
-+  "clineSshPort": "SSH port",
-+  "clineAccessSecret": "Tunnel access secret",
-+  "clineHostKey": "Server key fingerprint (SHA256)",
-+  "clineDashboardSecret": "Cline API access secret",
-+  "clineProjectPath": "Project folder on the PC (optional)",
-+  "clineProjectHint": "This folder applies to new sessions. Existing sessions keep their own project. Tool approvals remain in Cline.",
-+  "clineConnect": "Connect to Cline",
-+  "clineForgetConnection": "Forget connection",
-+  "clineInvalidProfile": "Invalid connection document or settings. Check the address, ports, secrets and server fingerprint.",
-+  "clineStorageError": "Secure storage is unavailable. The connection was not saved in plaintext.",
-+  "clineHostKeyMismatch": "The server key does not match. Connection blocked. Verify the fingerprint on your PC.",
-+  "clineAuthenticationFailed": "Tunnel access was rejected. Check the private connection document.",
-+  "clineLocalPortBusy": "The local connection port is busy. Close the previous Cline connection and try again.",
-+  "clineNetworkError": "Cannot connect to the PC. Check its address, SSH port, firewall and router forwarding.",
-+  "clineDisconnected": "The connection closed. Return and reconnect. No messages were resent automatically; agent sessions remain on the PC.",
-+  "clinePasteConnection": "Paste connection",
-+  "clineUploadFile": "Dołącz obraz lub dokument",
-+  "clineUploadFailed": "Przesyłanie nie powiodło się. Maksymalnie: 64 MiB na plik, 4 załączniki na wiadomość. Sprawdź połączenie i wolne miejsce.",
-+  "clineFilesReady": "Załączniki do następnej wiadomości",
-+  "clineClearAttachments": "Usuń oczekujące załączniki",
-+  "clineChooserSubtitle": "Sesje agenta i projekty na komputerze. Konto Open WebUI ani Hermes nie jest wymagane.",
-+  "clineNativeConnectFailed": "Cannot open the native Cline connection. Check SSH, the access codes and the PC service.",
-+  "clineWaitForTurn": "Wait for this turn or stop it first.",
-+  "clineExistingContext": "This session keeps its PC folder and model. Create a new chat to choose another.",
-+  "clinePayloadLimit": "The message is too large. Transfer large content as a document.",
-+  "clineFileChanged": "The file changed during transfer. Select it again.",
-+  "clineSessions": "Cline sessions",
-+  "clineProjects": "PC projects",
-+  "clineUseProject": "New chat in this folder",
-+  "clineModels": "Model",
-+  "clineNewChat": "New Cline chat",
-+  "clineNoSessions": "No saved sessions yet",
-+  "clineDisconnect": "Disconnect",
-+  "clineDisconnectWarning": "The PC session is not deleted. Pending approvals owned by this connection may be rejected when it closes.",
-+  "clineConnectionSettings": "Connection settings",
-+  "clineOtherBackends": "Accounts and backends",
-+  "clineDismiss": "Dismiss",
-+  "clineUncertainResult": "The previous send has an unknown outcome. Reconnect and check the PC history before sending it again. Nothing is replayed automatically.",
-+  "clineRestoreDraft": "Restore draft",
-+  "clineHistoryChecked": "History checked",
-+  "clineNativeWelcome": "Choose a session from the sidebar or start a new chat in your PC project.",
-+  "clinePlan": "Plan",
-+  "clineAct": "Act",
-+  "clineChooseMode": "Choose Plan or Act before sending to an existing session.",
-+  "clineMessageHint": "Message Cline…",
-+  "clineStop": "Stop the PC turn",
-+  "clineSend": "Send",
-+  "clineApprovalRequired": "Tool permission required",
-+  "clineDeny": "Deny",
-+  "clineAllowOnce": "Allow once",
-+  "clineReasonNone": "Reasoning off",
-+  "clineReasonLow": "Low reasoning",
-+  "clineReasonMedium": "Medium reasoning",
-+  "clineReasonHigh": "High reasoning",
-+  "clineReasoning": "Reasoning",
-+  "clineReasoningHidden": "Reasoning is hidden by the provider.",
-+  "clineCopy": "Copy",
-+  "clineToolRunning": "Running",
-+  "clineToolFailed": "Failed",
-+  "clineToolCompleted": "Completed",
-+  "clineProtocolError": "The PC returned an unsupported Cline response. Reconnect or update the gateway.",
-+  "clineAttachment": "Attachment",
-+  "clineInspect": "View full details",
-+  "clineOpenLink": "Open link",
-+  "clineExternalLink": "Open in the browser?",
-+  "clineRename": "Rename session",
-+  "clineDeleteSession": "Delete session",
-+  "clineDeleteWarning": "Delete this saved session on the PC? Project files are not deleted.",
-+  "clineForkSession": "Fork session",
-+  "clineVoiceUnavailable": "Voice calls are not available for this Cline connection. Use the native text chat.",
-+  "clineReturnToChat": "Return to Cline chat",
 +  "voiceAvatar": "Awatar głosowy",
 +  "voiceAvatarUnavailable": "Awatar niedostępny. Rozmowa głosowa trwa dalej.",
-+  "clineReconnecting": "Ponowne łączenie…",
-+  "clineSelectionUnavailable": "Poprzedni model lub dostawca jest niedostępny. Wybierz model; nie podstawiono domyślnego.",
 +  "voiceAvatarZoomIn": "Przybliż",
 +  "voiceAvatarZoomOut": "Oddal",
 +  "voiceAvatarResetView": "Zresetuj widok"
  }
 diff --git a/lib/l10n/app_ru.arb b/lib/l10n/app_ru.arb
-index eaaf95e2d7e9e4f2f2bfde153b5b690f2ac01632..a279379bdc261de58705a7a58e2297d886c9f2dd 100644
+index eaaf95e2d7e9e4f2f2bfde153b5b690f2ac01632..ad0ec706c4afd2d2c4cbf74b99224e423143ab6c 100644
 --- a/lib/l10n/app_ru.arb
 +++ b/lib/l10n/app_ru.arb
 @@ -1,6 +1,6 @@
  {
    "@@locale": "ru",
 -  "appTitle": "Conduit",
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
    "serverIncompatibleTitle": "Сервер не поддерживается",
    "serverIncompatibleMessage": "На этом сервере установлена версия Open WebUI {serverVersion}, которая новее, чем поддерживает это приложение (до {maxVersion}).",
    "serverIncompatibleResolution": "Чтобы продолжить, понизьте версию сервера до {maxVersion} или более ранней либо дождитесь обновления приложения с поддержкой новой версии.",
@@ -6417,7 +6257,7 @@ index eaaf95e2d7e9e4f2f2bfde153b5b690f2ac01632..a279379bdc261de58705a7a58e2297d8
    "pushFallbackBody": "Новое уведомление",
    "pushReplyTitle": "Новый ответ",
    "pushReplyFailedTitle": "Ошибка ответа",
-@@ -5097,5 +5683,1072 @@
+@@ -5097,5 +5683,995 @@
    "settingsAddAction": "Добавить",
    "@settingsAddAction": {
      "description": "Read aloud for the plus button in a Settings page's bar that adds an item, such as a calendar event."
@@ -7304,81 +7144,6 @@ index eaaf95e2d7e9e4f2f2bfde153b5b690f2ac01632..a279379bdc261de58705a7a58e2297d8
 +      }
 +    }
 +  },
-+  "clineRemoteTitle": "Cline через SSH",
-+  "clineRemoteDescription": "Подключение к ПК через зашифрованный SSH-туннель. Агентские сессии и файлы проектов остаются на ПК. Импортируйте созданный на нём закрытый файл подключения.",
-+  "clineImportConnection": "Импортировать подключение",
-+  "clineHost": "Адрес ПК или DNS-имя",
-+  "clineSshPort": "Порт SSH",
-+  "clineAccessSecret": "Код входа в туннель",
-+  "clineHostKey": "Отпечаток ключа сервера (SHA256)",
-+  "clineDashboardSecret": "Код доступа к Cline API",
-+  "clineProjectPath": "Папка проекта на ПК (необязательно)",
-+  "clineProjectHint": "Папка применяется к новым сессиям. Существующие сессии сохраняют свой проект. Подтверждения действий остаются в Cline.",
-+  "clineConnect": "Подключиться к Cline",
-+  "clineForgetConnection": "Забыть подключение",
-+  "clineInvalidProfile": "Неверный файл или параметры подключения. Проверьте адрес, порты, коды доступа и отпечаток сервера.",
-+  "clineStorageError": "Защищённое хранилище недоступно. Подключение не сохраняется в открытом виде.",
-+  "clineHostKeyMismatch": "Ключ сервера не совпадает. Подключение заблокировано. Сверьте отпечаток на ПК.",
-+  "clineAuthenticationFailed": "Доступ к туннелю отклонён. Проверьте закрытый файл подключения.",
-+  "clineLocalPortBusy": "Локальный порт занят. Закройте предыдущее подключение к Cline и повторите попытку.",
-+  "clineNetworkError": "Не удалось подключиться к ПК. Проверьте адрес, порт SSH, брандмауэр и проброс порта на роутере.",
-+  "clineDisconnected": "Связь потеряна. Переподключаемся автоматически; команды повторно не отправляются.",
-+  "clinePasteConnection": "Вставить данные подключения",
-+  "clineUploadFile": "Прикрепить изображение или документ",
-+  "clineUploadFailed": "Не удалось передать файл. Максимум: 64 МиБ на файл, 4 вложения на сообщение. Проверьте соединение и место в папке приёма.",
-+  "clineFilesReady": "Вложения для следующего сообщения",
-+  "clineClearAttachments": "Убрать ожидающие вложения",
-+  "clineChooserSubtitle": "Сессии агента и проекты на ПК. Учётная запись Open WebUI или Hermes не требуется.",
-+  "clineNativeConnectFailed": "Не удалось подключиться к Cline. Проверьте SSH, коды доступа и службу на ПК.",
-+  "clineWaitForTurn": "Дождитесь завершения ответа или сначала остановите его.",
-+  "clineExistingContext": "Папка и модель этой сессии сохранены на ПК. Для смены создайте новый чат.",
-+  "clinePayloadLimit": "Сообщение слишком большое. Передайте большой текст документом.",
-+  "clineFileChanged": "Файл изменился во время передачи. Выберите его заново.",
-+  "clineSessions": "Сессии Cline",
-+  "clineProjects": "Проекты на ПК",
-+  "clineUseProject": "Новый чат в этой папке",
-+  "clineModels": "Модель",
-+  "clineNewChat": "Новый чат Cline",
-+  "clineNoSessions": "Сохранённых сессий пока нет",
-+  "clineDisconnect": "Отключиться",
-+  "clineDisconnectWarning": "Сессия на ПК не удаляется. Ожидающие подтверждения этого подключения могут быть отклонены после отключения.",
-+  "clineConnectionSettings": "Настройки подключения",
-+  "clineOtherBackends": "Аккаунты и подключения",
-+  "clineDismiss": "Скрыть",
-+  "clineUncertainResult": "Проверьте восстановленную историю сессии перед повторной отправкой. Переподключение не повторяет команды.",
-+  "clineRestoreDraft": "Вернуть в черновик",
-+  "clineHistoryChecked": "Историю проверила",
-+  "clineNativeWelcome": "Выберите сессию в боковом меню или начните новый чат в проекте на ПК.",
-+  "clinePlan": "План",
-+  "clineAct": "Действие",
-+  "clineChooseMode": "Выберите «План» или «Действие» перед отправкой в существующую сессию.",
-+  "clineMessageHint": "Сообщение Cline…",
-+  "clineStop": "Остановить ответ на ПК",
-+  "clineSend": "Отправить",
-+  "clineApprovalRequired": "Нужно подтверждение инструмента",
-+  "clineDeny": "Запретить",
-+  "clineAllowOnce": "Разрешить один раз",
-+  "clineReasonNone": "Без размышлений",
-+  "clineReasonLow": "Мало размышлений",
-+  "clineReasonMedium": "Средние размышления",
-+  "clineReasonHigh": "Много размышлений",
-+  "clineReasoning": "Размышления",
-+  "clineReasoningHidden": "Провайдер скрыл текст размышлений.",
-+  "clineCopy": "Копировать",
-+  "clineToolRunning": "Выполняется",
-+  "clineToolFailed": "Ошибка",
-+  "clineToolCompleted": "Завершено",
-+  "clineProtocolError": "ПК вернул неподдерживаемый ответ Cline. Переподключитесь или обновите шлюз.",
-+  "clineAttachment": "Вложение",
-+  "clineInspect": "Посмотреть полностью",
-+  "clineOpenLink": "Открыть ссылку",
-+  "clineExternalLink": "Открыть в браузере?",
-+  "clineRename": "Переименовать сессию",
-+  "clineDeleteSession": "Удалить сессию",
-+  "clineDeleteWarning": "Удалить эту сохранённую сессию на ПК? Файлы проекта не удаляются.",
-+  "clineForkSession": "Создать ветку сессии",
-+  "clineVoiceUnavailable": "Голосовые звонки для подключения Cline пока недоступны. Используйте нативный текстовый чат.",
-+  "clineReturnToChat": "Вернуться в чат Cline",
 +  "@chatHandoffPromptTitle": {
 +    "placeholders": {
 +      "model": {
@@ -7397,8 +7162,6 @@ index eaaf95e2d7e9e4f2f2bfde153b5b690f2ac01632..a279379bdc261de58705a7a58e2297d8
 +  },
 +  "voiceAvatar": "Голосовой аватар",
 +  "voiceAvatarUnavailable": "Аватар недоступен. Голосовой звонок продолжается.",
-+  "clineReconnecting": "Переподключение…",
-+  "clineSelectionUnavailable": "Прежняя модель или провайдер недоступны. Выберите модель; автоматической подмены не было.",
 +  "voiceAvatarZoomIn": "Увеличить",
 +  "voiceAvatarZoomOut": "Уменьшить",
 +  "voiceAvatarResetView": "Сбросить ракурс",
@@ -7491,38 +7254,38 @@ index eaaf95e2d7e9e4f2f2bfde153b5b690f2ac01632..a279379bdc261de58705a7a58e2297d8
    }
  }
 diff --git a/lib/l10n/app_sk.arb b/lib/l10n/app_sk.arb
-index b2a6e9c0ead4fb1db22d295ef1b0c44c2c536630..acee5cc894507478314dd05c9a8d48aa8205daa0 100644
+index b2a6e9c0ead4fb1db22d295ef1b0c44c2c536630..395771ce40fe01fee530d718452e132d92fda2b0 100644
 --- a/lib/l10n/app_sk.arb
 +++ b/lib/l10n/app_sk.arb
 @@ -1,6 +1,6 @@
  {
    "@@locale": "sk",
 -  "appTitle": "Conduit",
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
    "serverIncompatibleTitle": "Server nie je podporovaný",
    "serverIncompatibleMessage": "Tento server používa Open WebUI {serverVersion}, čo je novšia verzia, než akú táto aplikácia podporuje (maximálne {maxVersion}).",
    "serverIncompatibleResolution": "Ak chcete pokračovať, znížte verziu servera na {maxVersion} alebo staršiu, alebo počkajte na aktualizáciu aplikácie, ktorá pridá podporu.",
 diff --git a/lib/l10n/app_zh.arb b/lib/l10n/app_zh.arb
-index 06c8792129090de1f06a51d3d62f7daba948004e..2e4a9e6ad9a4cfe48907a2e7e59a0fe4b4d6bf87 100644
+index 06c8792129090de1f06a51d3d62f7daba948004e..72c84ffa2e5d4837443a7ffca32afaaf4e726162 100644
 --- a/lib/l10n/app_zh.arb
 +++ b/lib/l10n/app_zh.arb
 @@ -1,6 +1,6 @@
  {
    "@@locale": "zh",
 -  "appTitle": "Conduit",
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
    "serverIncompatibleTitle": "不支持该服务器",
    "serverIncompatibleMessage": "此服务器运行的 Open WebUI 版本为 {serverVersion}，高于本应用支持的版本（最高 {maxVersion}）。",
    "serverIncompatibleResolution": "若要继续，请将服务器降级到 {maxVersion} 或更早版本，或等待新增支持的应用更新。",
 diff --git a/lib/l10n/app_zh_Hant.arb b/lib/l10n/app_zh_Hant.arb
-index cf6f46e7b26cbecdef8ffe985f7466ea70f71401..c42e4e7d4f9b4a9c2414ed0880fabdaaa161ae40 100644
+index cf6f46e7b26cbecdef8ffe985f7466ea70f71401..36b4acdee7f7bec7f7120ee0574dd538b741ccea 100644
 --- a/lib/l10n/app_zh_Hant.arb
 +++ b/lib/l10n/app_zh_Hant.arb
 @@ -1,6 +1,6 @@
  {
    "@@locale": "zh_Hant",
 -  "appTitle": "Conduit",
-+  "appTitle": "Conduit · OWUI + Cline",
++  "appTitle": "Conduit · OWUI",
    "serverIncompatibleTitle": "不支援此伺服器",
    "serverIncompatibleMessage": "此伺服器執行的 Open WebUI 版本為 {serverVersion}，比此應用程式所支援的版本（最高 {maxVersion}）還要新。",
    "serverIncompatibleResolution": "若要繼續，請將您的伺服器降級至 {maxVersion} 或更舊的版本，或等待應用程式更新以新增支援。",

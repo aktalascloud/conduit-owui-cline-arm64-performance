@@ -5,7 +5,7 @@ Only currently applied maintainer differences from the exact official baseline a
 Mainstream-only commits, rejected proposals and reverted experiments are excluded.
 Коммиты самого mainstream, неприменённые предложения и отменённые эксперименты исключены.
 
-Official baseline: `397b45e8a518b90ba7ff352171914990f2e2c333`. Downstream snapshot: `209acae3b8b9dca13a946f43ed226eb1a78dabac`.
+Official baseline: `c1372fc9eead16c5cf2f2f2d5f508fae81f2552e`. Downstream snapshot: `28040e730bb7e456b0b5fc43384904012a83ee60`.
 Patches are already applied in this fork. Apply `series` only to a clean checkout of that exact baseline.
 В этом форке патчи уже применены. `series` предназначен только для чистого checkout указанной базы.
 Apply the numbered patches in the order listed in `series`. Each row describes one topic.
@@ -16,17 +16,16 @@ Native Cline with pinned bounded SSH transport, account-isolated VRM/cache/call 
 
 | Order | Patch | Description | Files |
 |---:|---|---|---:|
-| 1 | [01-cline-ssh-gateway.patch](01-cline-ssh-gateway.patch) | Pin SSH identity and handle reconnects, session listing and file uploads through the Windows gateway / Закрепляет идентификатор SSH, поддерживает переподключение, список сессий и загрузку файлов через Windows-шлюз. | 18 |
-| 2 | [02-cline-client.patch](02-cline-client.patch) | Add native Cline client and models for messages, sessions and tool approvals / Добавляет клиент и модели Cline для сообщений, сессий и разрешений инструментов. | 8 |
-| 3 | [03-cline-navigation.patch](03-cline-navigation.patch) | Add the Cline workspace route and retain sidebar search, drafts and selection / Добавляет маршрут рабочего пространства Cline и сохраняет поиск, черновики и выбор в панели. | 23 |
-| 4 | [04-voice-vrm.patch](04-voice-vrm.patch) | Bind avatars to account and file identity, bound textures and cache, and adapt voice controls / Привязывает VRM к аккаунту и файлу, ограничивает текстуры и кэш и адаптирует голосовые кнопки. | 26 |
-| 5 | [05-provider-compatibility.patch](05-provider-compatibility.patch) | Adapt direct-provider profiles, MiniMax transport and default-model handling / Адаптирует профили прямых провайдеров, транспорт MiniMax и выбор модели по умолчанию. | 11 |
-| 6 | [06-chat-persistence.patch](06-chat-persistence.patch) | Adapt chat payloads, outbox and sync to Open WebUI persistence / Адаптирует сообщения, очередь отправки и синхронизацию к хранению Open WebUI. | 14 |
-| 7 | [07-localization.patch](07-localization.patch) | Translate Cline and other fork UI labels / Переводит подписи Cline и других функций форка. | 16 |
-| 8 | [08-arm64-native.patch](08-arm64-native.patch) | Qualify ARM64 native libraries, toolchains, cache and binary verification / Проверяет ARM64-библиотеки, инструменты, кэш и свойства бинарников. | 11 |
-| 9 | [09-android-package.patch](09-android-package.patch) | Configure signed ARM64 Android package, manifests and Dart dependency locks / Настраивает подпись и сборку ARM64 APK, манифесты и фиксированные Dart-зависимости. | 7 |
-| 10 | [10-portable-install.patch](10-portable-install.patch) | Provide portable build commands and the fork installer / Добавляет команды переносимой сборки и установщик. | 4 |
-| 11 | [11-ci-build.patch](11-ci-build.patch) | Pin toolchains and package inputs, and run the fork build and publication checks / Закрепляет инструменты и входы сборки, запускает проверки пакетов и публикации. | 11 |
-| 12 | [12-project-docs.patch](12-project-docs.patch) | Document fork setup, support and license terms / Описывает установку, поддержку и условия лицензирования форка. | 1 |
-| 13 | [13-fork-records.patch](13-fork-records.patch) | Record fork changes, upstream reviews and qualification measurements / Хранит журнал изменений, разбор upstream и результаты проверок. | 2 |
-| 14 | [14-runtime.patch](14-runtime.patch) | Local runtime, integration, security, dependency and platform adaptations / Наши изменения работы, интеграций, безопасности и платформ. | 1 |
+| 1 | [01-cline-navigation.patch](01-cline-navigation.patch) | Add the Cline workspace route and retain sidebar search, drafts and selection / Добавляет маршрут рабочего пространства Cline и сохраняет поиск, черновики и выбор в панели. | 1 |
+| 2 | [02-voice-vrm.patch](02-voice-vrm.patch) | Bind avatars to account and file identity, bound textures and cache, and adapt voice controls / Привязывает VRM к аккаунту и файлу, ограничивает текстуры и кэш и адаптирует голосовые кнопки. | 22 |
+| 3 | [03-provider-compatibility.patch](03-provider-compatibility.patch) | Adapt direct-provider profiles, MiniMax transport and default-model handling / Адаптирует профили прямых провайдеров, транспорт MiniMax и выбор модели по умолчанию. | 10 |
+| 4 | [04-chat-persistence.patch](04-chat-persistence.patch) | Adapt chat payloads, outbox and sync to Open WebUI persistence / Адаптирует сообщения, очередь отправки и синхронизацию к хранению Open WebUI. | 11 |
+| 5 | [05-localization.patch](05-localization.patch) | Translate Cline and other fork UI labels / Переводит подписи Cline и других функций форка. | 16 |
+| 6 | [06-arm64-native.patch](06-arm64-native.patch) | Qualify ARM64 native libraries, toolchains, cache and binary verification / Проверяет ARM64-библиотеки, инструменты, кэш и свойства бинарников. | 11 |
+| 7 | [07-android-package.patch](07-android-package.patch) | Configure signed ARM64 Android package, manifests and Dart dependency locks / Настраивает подпись и сборку ARM64 APK, манифесты и фиксированные Dart-зависимости. | 5 |
+| 8 | [08-portable-install.patch](08-portable-install.patch) | Provide portable build commands and the fork installer / Добавляет команды переносимой сборки и установщик. | 4 |
+| 9 | [09-ci-build.patch](09-ci-build.patch) | Pin toolchains and package inputs, and run the fork build and publication checks / Закрепляет инструменты и входы сборки, запускает проверки пакетов и публикации. | 11 |
+| 10 | [10-project-docs.patch](10-project-docs.patch) | Document fork setup, support and license terms / Описывает установку, поддержку и условия лицензирования форка. | 1 |
+| 11 | [11-fork-records.patch](11-fork-records.patch) | Record fork changes, upstream reviews and qualification measurements / Хранит журнал изменений, разбор upstream и результаты проверок. | 2 |
+| 12 | [12-runtime.patch](12-runtime.patch) | Local runtime, integration, security, dependency and platform adaptations / Наши изменения работы, интеграций, безопасности и платформ. | 2 |
+| 13 | [13-build.patch](13-build.patch) | Our reproducible build, toolchain and CI recipes / Наши сборочные рецепты, toolchain и CI. | 1 |

@@ -1,0 +1,18 @@
+diff --git a/test/core/providers/backend_mode_providers_test.dart b/test/core/providers/backend_mode_providers_test.dart
+index b443c1d1e3e3f3790a3c0ee62ed6fffac1363b91..e649a3e7c92ee1573491c04e9ebdc2afb70f7443 100644
+--- a/test/core/providers/backend_mode_providers_test.dart
++++ b/test/core/providers/backend_mode_providers_test.dart
+@@ -27,6 +27,13 @@ void main() {
+   }
+ 
+   group('preferredBackendProvider', () {
++    test('a retired backend preference returns to normal account routing', () async {
++      await PreferencesStore.put(PreferenceKeys.preferredBackend, 'cline');
++      final container = makeContainer();
++      check(container.read(preferredBackendProvider))
++          .equals(PreferredBackend.unset);
++    });
++
+     test('defaults to unset when nothing is persisted', () {
+       final container = makeContainer();
+       check(container.read(preferredBackendProvider))

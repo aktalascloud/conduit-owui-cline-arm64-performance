@@ -489,36 +489,6 @@ index 06a745a52a6f76f0d4ee227024242bc5e1996187..6d63261cfc7e8937c0b5cef36a0acf8f
  /// The Responses API takes the effort as `reasoning.effort`; the top-level
  /// `reasoning_effort` shorthand belongs to Chat Completions.
  void _nestResponsesReasoningEffort(Map<String, dynamic> body) {
-diff --git a/packages/conduit_core/lib/providers/app_providers_default_model.dart b/packages/conduit_core/lib/providers/app_providers_default_model.dart
-index eb92f08c75a60a74f21af6c9562c839483a83ed9..1f88d02274d8d7018973f1c6354bbb56f93fb33a 100644
---- a/packages/conduit_core/lib/providers/app_providers_default_model.dart
-+++ b/packages/conduit_core/lib/providers/app_providers_default_model.dart
-@@ -654,7 +654,7 @@ Model? _modelForPreferredBackend(
-       models.where(isLocallyMintedDirectModel).firstOrNull,
-     PreferredBackend.hermes => models.where(isHermesModel).firstOrNull,
-     PreferredBackend.libreChat => models.where(isLibreChatModel).firstOrNull,
--    PreferredBackend.owui || PreferredBackend.unset => null,
-+    PreferredBackend.owui || PreferredBackend.unset || PreferredBackend.cline => null,
-   };
- }
- 
-@@ -722,7 +722,7 @@ Model? _accountlessSelection({
-         PreferredBackend.unset => available.firstOrNull,
-         PreferredBackend.direct ||
-         PreferredBackend.hermes ||
--        PreferredBackend.libreChat => null,
-+        PreferredBackend.libreChat || PreferredBackend.cline => null,
-       };
- }
- 
-@@ -730,6 +730,7 @@ bool _matchesPreferredBackend(Model model, PreferredBackend preferredBackend) =>
-     switch (preferredBackend) {
-       PreferredBackend.direct => isLocallyMintedDirectModel(model),
-       PreferredBackend.hermes => isHermesModel(model),
-+      PreferredBackend.cline => false,
-       PreferredBackend.libreChat => isLibreChatModel(model),
-       PreferredBackend.owui || PreferredBackend.unset =>
-         isLocallyMintedDirectModel(model) || isHermesModel(model),
 diff --git a/packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart b/packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart
 new file mode 100644
 index 0000000000000000000000000000000000000000..cebd41b3450da87dd0ad376fb9ef6f3e4cc382e3

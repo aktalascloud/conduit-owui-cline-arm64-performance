@@ -29,7 +29,7 @@ index 0af1af6b4bdbc89450c6189d58c17c5678196a75..1692eb68e054ef068b279340ebc34197
                  storePassword = keystoreProperties["storePassword"] as String
                  keyAlias = keystoreProperties["keyAlias"] as String
 diff --git a/android/app/src/main/AndroidManifest.xml b/android/app/src/main/AndroidManifest.xml
-index 5e91bb18d0ae529e7060e02741623d351548760a..4e3c96fb88546bf3195dd95ee521c15442c4b016 100644
+index 5e91bb18d0ae529e7060e02741623d351548760a..a7209a95b39def7dbd1c56ac277316f709900213 100644
 --- a/android/app/src/main/AndroidManifest.xml
 +++ b/android/app/src/main/AndroidManifest.xml
 @@ -51,7 +51,7 @@
@@ -37,7 +37,7 @@ index 5e91bb18d0ae529e7060e02741623d351548760a..4e3c96fb88546bf3195dd95ee521c154
           any foreground service attempts to use them. -->
      <application
 -        android:label="Conduit"
-+        android:label="Conduit · OWUI + Cline"
++        android:label="Conduit · OWUI"
          android:name=".ConduitApplication"
          android:icon="@mipmap/ic_launcher"
          android:allowBackup="false"
@@ -46,7 +46,7 @@ index 5e91bb18d0ae529e7060e02741623d351548760a..4e3c96fb88546bf3195dd95ee521c154
              android:name=".ProcessTextActivity"
              android:exported="true"
 -            android:label="Ask Conduit"
-+            android:label="Conduit · OWUI + Cline"
++            android:label="Conduit · OWUI"
              android:noHistory="true">
              <intent-filter>
                  <action android:name="android.intent.action.PROCESS_TEXT" />
@@ -70,65 +70,11 @@ index 89176ef44e8c7931fa32322d576e7f3f54d225c9..c67cbc82edb270afa207410814b6caf9
  allprojects {
      repositories {
          google()
-diff --git a/packages/conduit_core/lib/features/release_notes/release_notes_coordination.dart b/packages/conduit_core/lib/features/release_notes/release_notes_coordination.dart
-index d29757fbde007f71bec207becfb1a29429ffc536..b70a189b8e767062c1a5e57cd54d7e9a546ea957 100644
---- a/packages/conduit_core/lib/features/release_notes/release_notes_coordination.dart
-+++ b/packages/conduit_core/lib/features/release_notes/release_notes_coordination.dart
-@@ -18,6 +18,7 @@ bool canPresentReleaseNotes(
-     return true;
-   }
-   return switch (preferredBackend) {
-+    PreferredBackend.cline => true,
-     PreferredBackend.direct =>
-       PreferencesStore.getBool(PreferenceKeys.directConnectionsConfigured) ==
-           true,
-diff --git a/packages/conduit_core/pubspec.yaml b/packages/conduit_core/pubspec.yaml
-index bd5081b8a3328b3db7fb06ec54475f32a64ec27c..b0ee3f3eb457e8435b3735f1d8a50e417e4d65b9 100644
---- a/packages/conduit_core/pubspec.yaml
-+++ b/packages/conduit_core/pubspec.yaml
-@@ -11,6 +11,7 @@ environment:
-   sdk: ">=3.13.0 <4.0.0"
- 
- dependencies:
-+  dartssh2: 4.1.0
-   # `QueryExecutor` is part of the DatabaseOpener port's signature. The core
-   # owns the schema, so drift belongs here rather than in the front-ends.
-   archive: ^4.6.0
 diff --git a/pubspec.lock b/pubspec.lock
-index 9234d8dff7dddef63cb63d2050131276537d243e..c97c9a14c98645e7c025723d76743df9cc816622 100644
+index 9234d8dff7dddef63cb63d2050131276537d243e..f9878f2eff6da075020a3064ff4640105115608e 100644
 --- a/pubspec.lock
 +++ b/pubspec.lock
-@@ -73,6 +73,14 @@ packages:
-       url: "https://pub.dev"
-     source: hosted
-     version: "2.7.0"
-+  asn1lib:
-+    dependency: transitive
-+    description:
-+      name: asn1lib
-+      sha256: "9a8f69025044eb466b9b60ef3bc3ac99b4dc6c158ae9c56d25eeccf5bc56d024"
-+      url: "https://pub.dev"
-+    source: hosted
-+    version: "1.6.5"
-   async:
-     dependency: transitive
-     description:
-@@ -345,6 +353,14 @@ packages:
-       url: "https://pub.dev"
-     source: hosted
-     version: "1.8.2"
-+  dartssh2:
-+    dependency: transitive
-+    description:
-+      name: dartssh2
-+      sha256: "39359aceafcf5940b868249e3c9c6d86e4e0f989eec7417d033c943157c84c51"
-+      url: "https://pub.dev"
-+    source: hosted
-+    version: "4.1.0"
-   dbus:
-     dependency: transitive
-     description:
-@@ -861,10 +877,10 @@ packages:
+@@ -861,10 +861,10 @@ packages:
      dependency: "direct main"
      description:
        name: flutter_webrtc
@@ -141,7 +87,7 @@ index 9234d8dff7dddef63cb63d2050131276537d243e..c97c9a14c98645e7c025723d76743df9
    freezed:
      dependency: "direct dev"
      description:
-@@ -1167,21 +1183,21 @@ packages:
+@@ -1167,21 +1167,21 @@ packages:
      source: hosted
      version: "0.6.2"
    jni:
@@ -169,7 +115,7 @@ index 9234d8dff7dddef63cb63d2050131276537d243e..c97c9a14c98645e7c025723d76743df9
    jni_util:
      dependency: transitive
      description:
-@@ -1564,37 +1580,37 @@ packages:
+@@ -1564,37 +1564,37 @@ packages:
      source: hosted
      version: "2.3.0"
    pdfium_dart:
@@ -218,37 +164,7 @@ index 9234d8dff7dddef63cb63d2050131276537d243e..c97c9a14c98645e7c025723d76743df9
    permission_handler:
      dependency: "direct main"
      description:
-@@ -1651,6 +1667,14 @@ packages:
-       url: "https://pub.dev"
-     source: hosted
-     version: "7.1.0"
-+  pinenacl:
-+    dependency: transitive
-+    description:
-+      name: pinenacl
-+      sha256: "57e907beaacbc3c024a098910b6240758e899674de07d6949a67b52fd984cbdf"
-+      url: "https://pub.dev"
-+    source: hosted
-+    version: "0.6.0"
-   platform:
-     dependency: transitive
-     description:
-@@ -1667,6 +1691,14 @@ packages:
-       url: "https://pub.dev"
-     source: hosted
-     version: "2.1.8"
-+  pointycastle:
-+    dependency: transitive
-+    description:
-+      name: pointycastle
-+      sha256: "92aa3841d083cc4b0f4709b5c74fd6409a3e6ba833ffc7dc6a8fee096366acf5"
-+      url: "https://pub.dev"
-+    source: hosted
-+    version: "4.0.0"
-   pool:
-     dependency: transitive
-     description:
-@@ -1916,13 +1948,13 @@ packages:
+@@ -1916,13 +1916,13 @@ packages:
      source: hosted
      version: "2.5.6"
    shared_preferences_android:
@@ -265,7 +181,7 @@ index 9234d8dff7dddef63cb63d2050131276537d243e..c97c9a14c98645e7c025723d76743df9
    shared_preferences_foundation:
      dependency: transitive
      description:
-@@ -2105,13 +2137,13 @@ packages:
+@@ -2105,13 +2105,13 @@ packages:
      source: hosted
      version: "0.7.0+eol"
    sqlite3:
@@ -283,13 +199,13 @@ index 9234d8dff7dddef63cb63d2050131276537d243e..c97c9a14c98645e7c025723d76743df9
      dependency: transitive
      description:
 diff --git a/pubspec.yaml b/pubspec.yaml
-index 758c701db5d40093e88e5ad334830ac73f86aaed..162f4b3ff60fd2f5f7a9f2598b25bad0fd1d3570 100644
+index 758c701db5d40093e88e5ad334830ac73f86aaed..fd594765e3503c188cd06a56c7809f84c0b1919e 100644
 --- a/pubspec.yaml
 +++ b/pubspec.yaml
 @@ -1,5 +1,5 @@
  name: conduit
 -description: Open-source mobile client for Open-WebUI
-+description: Unofficial OWUI + Cline mobile client with secure remote sessions
++description: Open WebUI mobile client with voice avatars and optimized ARM64 libraries
  version: 4.3.1+155
  publish_to: 'none'
  

@@ -1,10 +1,10 @@
 diff --git a/README.md b/README.md
-index 8725a352d5214db044df9bdb396fe9a0fb1501c5..8f56aa228a03b7d13f43e4128128b08e5ae2a16d 100644
+index 8725a352d5214db044df9bdb396fe9a0fb1501c5..165642685bea913d64af11ee14a4a992ed10eb0d 100644
 --- a/README.md
 +++ b/README.md
 @@ -1,391 +1,9 @@
 -<h1 align="center">Conduit</h1>
-+# Conduit OWUI + Cline ARM64
++# Conduit OWUI ARM64
  
 -<p align="center">
 -  <img
@@ -19,7 +19,7 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..8f56aa228a03b7d13f43e4128128b08e
 -<p align="center">
 -  <strong>A native mobile client for Open WebUI, your own model endpoints, and self-hosted agents.</strong>
 -</p>
-+Build with Python 3.12+, Git and GitHub CLI: `Build.cmd status`, then `Build.cmd build`. CI and checks are in `.avx1/`. Keep user data, model weights and credentials outside the source checkout.
++Build with Python 3.12+, Git and GitHub CLI. Run `Build.cmd status`, then `Build.cmd build`. CI and checks are in `.avx1/`.
  
 -<p align="center">
 -  <img
@@ -35,7 +35,7 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..8f56aa228a03b7d13f43e4128128b08e
 -    src="https://img.shields.io/badge/License-GPL%203.0-16A34A"
 -  />
 -</p>
-+Cline через SSH с проверкой ключа, русский интерфейс, VRM и дополнительные провайдеры. Инструкции шлюза — [remote](remote/README.md). APK проверен в CI, физический телефон проверяется отдельно.
++Клиент Open WebUI с русским интерфейсом, голосовыми VRM и дополнительными провайдерами. ARM64 release AOT, SQLite/dartjni/ONNX с O3 и ThinLTO. Данные и ключи храните вне исходников. Подпись и ID APK сохраняются для обновления установленного приложения.
  
 -<p align="center">
 -  <a href="https://play.google.com/store/apps/details?id=app.cogwheel.conduit">

@@ -57,56 +57,6 @@ index f09f1bb3c69dfa85164d944e819f824d3c30a514..16f101ab7034d2407a3909eec7a30cdc
            );
          }
          return const _CoalesceDecision(insert: true);
-diff --git a/packages/conduit_core/lib/features/chat/providers/chat_providers.dart b/packages/conduit_core/lib/features/chat/providers/chat_providers.dart
-index 3f3ecc17702634a1bbc9c4edf157ed431a966f5f..da1f31325f12094c4db445e1da971bed2e501230 100644
---- a/packages/conduit_core/lib/features/chat/providers/chat_providers.dart
-+++ b/packages/conduit_core/lib/features/chat/providers/chat_providers.dart
-@@ -13,6 +13,9 @@
- /// privacy intact and keep every importer's path unchanged.
- library;
- 
-+import 'package:conduit_core/features/cline/providers/cline_backend_providers.dart';
-+import 'package:conduit_core/providers/backend_mode_providers.dart';
-+
- import 'dart:async';
- import 'dart:collection';
- import 'dart:convert';
-diff --git a/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart b/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart
-index f183945fc39e6f845a6aabcb4250336cc02c3378..b18e7742c68a6f36e249df5e2b3bdf3c490357e6 100644
---- a/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart
-+++ b/packages/conduit_core/lib/features/chat/providers/chat_send_message.dart
-@@ -12,6 +12,15 @@ Future<void> _sendMessageInternal(
-   ChatSendVoiceContext? voice,
-   void Function()? onTurnStarted,
- ]) async {
-+  if (ref.read(preferredBackendProvider) == PreferredBackend.cline) {
-+    final client=ref.read(clineBackendClientProvider);
-+    if (client==null || !client.state.canSend) throw StateError('Cline is not ready. Open its native chat first.');
-+    if ((attachments?.isNotEmpty ?? false) || isVoiceMode || voice!=null) {
-+      throw StateError('Use the attachment controls in the native Cline chat.');
-+    }
-+    client.sendMessage(message);
-+    return;
-+  }
-   final libreChatSelected = ref.read(selectedModelProvider) as Model?;
-   final libreChatActive = ref.read(activeConversationProvider) as Conversation?;
-   if (libreChatSelected != null && isLibreChatModel(libreChatSelected)) {
-diff --git a/packages/conduit_core/lib/features/chat/providers/chat_session_lifecycle.dart b/packages/conduit_core/lib/features/chat/providers/chat_session_lifecycle.dart
-index 2335964d6bec24f3565c804c823bfb2e75cb9bff..28b791eb330bac82a3f7ae11668b781f31b0ba8b 100644
---- a/packages/conduit_core/lib/features/chat/providers/chat_session_lifecycle.dart
-+++ b/packages/conduit_core/lib/features/chat/providers/chat_session_lifecycle.dart
-@@ -46,6 +46,11 @@ List<String> selectedFilterIdsForModel(dynamic ref, Model model) {
- 
- // Start a new chat (unified function for both "New Chat" button and home screen)
- void startNewChat(dynamic ref, {Model? modelForNewConversation}) {
-+  if (ref.read(preferredBackendProvider) == PreferredBackend.cline) {
-+    final client=ref.read(clineBackendClientProvider);
-+    if(client==null) throw StateError('Cline is not connected.');
-+    client.newChat();return;
-+  }
-   resetHermesForNewChat(ref);
-   resetDirectRunsForNewChat(ref);
-   clearSelectedFiltersForConversationBoundary(ref);
 diff --git a/packages/conduit_core/lib/services/api_service_chats.dart b/packages/conduit_core/lib/services/api_service_chats.dart
 index 66a8e9218da37ef3f8442f297874bb007b212a3b..bd3ac688b630b202f25131f9729f7636778a747c 100644
 --- a/packages/conduit_core/lib/services/api_service_chats.dart
