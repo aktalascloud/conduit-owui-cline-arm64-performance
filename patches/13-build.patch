@@ -1,6 +1,6 @@
 diff --git a/.avx1/check_removed_integration.py b/.avx1/check_removed_integration.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..ee10a38f44bfa19c7ef45bcab78123765f1422fd
+index 0000000000000000000000000000000000000000..d268b42817ef1b4580b5a6250b431f4d41548edf
 --- /dev/null
 +++ b/.avx1/check_removed_integration.py
 @@ -0,0 +1,31 @@
@@ -22,7 +22,7 @@ index 0000000000000000000000000000000000000000..ee10a38f44bfa19c7ef45bcab7812376
 +            if '/features/cline/' in relative:
 +                raise RuntimeError('Retired agent source remains: ' + relative)
 +            if path.suffix in {'.dart', '.yaml', '.arb'} and re.search(
-+                r'PreferredBackend\.cline|features/cline/|\bCline(?:Remote|Workspace|Native)|"@?cline\w*"\s*:',
++                r'PreferredBackend\.cline|features/cline/|\bcline[A-Z_]|\bCline\b|\bCline[A-Z]|"@?cline\w*"\s*:',
 +                path.read_text(encoding='utf-8')):
 +                raise RuntimeError('Retired agent reference remains: ' + relative)
 +        if relative.startswith('remote/'):

@@ -5,7 +5,7 @@ Only currently applied maintainer differences from the exact official baseline a
 Mainstream-only commits, rejected proposals and reverted experiments are excluded.
 Коммиты самого mainstream, неприменённые предложения и отменённые эксперименты исключены.
 
-Official baseline: `c1372fc9`. Downstream snapshot: `f423f1fe20ea15ced7aadc2df3807e697550eea8`.
+Official baseline: `c1372fc9`. Downstream snapshot: `0592bfe64b8540c994af24bae2b6e520a318bacc`.
 Patches are already applied in this fork. Apply `series` only to a clean checkout of that exact baseline.
 В этом форке патчи уже применены. `series` предназначен только для чистого checkout указанной базы.
 Apply the numbered patches in the order listed in `series`. Each row describes one topic.
@@ -27,5 +27,5 @@ Open WebUI client with account-isolated VRM/cache/call controls, provider and pe
 | 9 | [09-ci-build.patch](09-ci-build.patch) | Pin toolchains and package inputs, and run the fork build and publication checks / Закрепляет инструменты и входы сборки, запускает проверки пакетов и публикации. | 11 |
 | 10 | [10-project-docs.patch](10-project-docs.patch) | Document fork setup, support and license terms / Описывает установку, поддержку и условия лицензирования форка. | 1 |
 | 11 | [11-fork-records.patch](11-fork-records.patch) | Record fork changes, upstream reviews and qualification measurements / Хранит журнал изменений, разбор upstream и результаты проверок. | 2 |
-| 12 | [12-runtime.patch](12-runtime.patch) | Local runtime, integration, security, dependency and platform adaptations / Наши изменения работы, интеграций, безопасности и платформ. | 2 |
+| 12 | [12-runtime.patch](12-runtime.patch) | Local runtime, integration, security, dependency and platform adaptations / Наши изменения работы, интеграций, безопасности и платформ. | 1 |
 | 13 | [13-build.patch](13-build.patch) | Our reproducible build, toolchain and CI recipes / Наши сборочные рецепты, toolchain и CI. | 1 |

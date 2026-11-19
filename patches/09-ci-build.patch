@@ -1,9 +1,9 @@
 diff --git a/.avx1/build.py b/.avx1/build.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..4012baafc71c06d3e4d17b69348cfcc5fbef714e
+index 0000000000000000000000000000000000000000..92dad8a75e518a0e993eb49fc6ed65c968df3e3e
 --- /dev/null
 +++ b/.avx1/build.py
-@@ -0,0 +1,322 @@
+@@ -0,0 +1,323 @@
 +"""Build one exact source revision. Outputs contain no local configuration."""
 +from __future__ import annotations
 +import base64
@@ -189,6 +189,7 @@ index 0000000000000000000000000000000000000000..4012baafc71c06d3e4d17b69348cfcc5
 +        run(flutter, 'analyze', '--no-pub', '--no-fatal-infos', '--no-fatal-warnings',
 +            'lib/core/router/app_router.dart', 'lib/features/navigation',
 +            'lib/features/auth/views/backend_chooser_page.dart',
++            'lib/features/settings/settings_controller.dart',
 +            'lib/core/services/media_upload_controller.dart', 'lib/core/utils/native_sheet_utils.dart',
 +            'lib/features/chat/voice_call/presentation/voice_call_launcher.dart',
 +            'packages/conduit_core/lib/providers/backend_mode_providers.dart',
