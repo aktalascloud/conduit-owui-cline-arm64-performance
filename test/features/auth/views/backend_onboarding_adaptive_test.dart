@@ -6,7 +6,6 @@ import 'package:conduit_core/models/server_config.dart';
 import 'package:conduit_core/features/direct_connections/services/apple_pcc_host.dart';
 import 'package:conduit/shared/services/navigation_service.dart';
 import 'package:conduit/features/auth/views/backend_chooser_page.dart';
-import 'package:conduit/features/cline/views/cline_remote_page.dart';
 import 'package:conduit/features/auth/widgets/auth_grouped_form.dart';
 import 'package:conduit_core/features/direct_connections/models/direct_connection_profile.dart';
 import 'package:conduit/shared/widgets/utility_components.dart';
@@ -41,37 +40,6 @@ PlatformPccStatus _appleStatus(PlatformPccAvailability availability) =>
     );
 
 void main() {
-  testWidgets(
-    'fresh Android chooser opens Russian Cline SSH without another backend',
-    (tester) async {
-      usePhoneViewport(tester);
-      await initializeBackendOnboardingStorage();
-      final harness = BackendOnboardingHarness(
-        platform: TargetPlatform.android,
-      );
-      addTearDown(harness.dispose);
-      await tester.pumpWidget(
-        harness.build(
-          initialLocation: Routes.backendChooser,
-          locale: const Locale('ru'),
-        ),
-      );
-      await tester.pumpAndSettle();
-      final entry = find.byKey(const Key('choose-cline-ssh'));
-      await tester.ensureVisible(entry);
-      expect(find.text('Cline через SSH'), findsOneWidget);
-      await tester.tap(entry);
-      await tester.pumpAndSettle();
-      expect(harness.router.canPop(), isTrue);
-      expect(find.byType(ClineRemotePage), findsOneWidget);
-      expect(find.byType(BackendChooserPage), findsNothing);
-      expect(tester.takeException(), isNull);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(find.byType(BackendChooserPage), findsOneWidget);
-      await harness.unmount(tester);
-    },
-  );
   testWidgets('backend chooser groups available backends with clear copy', (
     tester,
   ) async {

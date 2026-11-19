@@ -5,7 +5,6 @@ import '../../../shared/services/navigation_service.dart';
 import '../../channels/widgets/channel_list_tab.dart';
 import '../../hermes/widgets/hermes_sessions_tab.dart';
 import '../../notes/widgets/notes_list_tab.dart';
-import '../../cline/views/cline_workspace_page.dart';
 import '../../terminal/widgets/terminal_tab.dart';
 import '../../terminal/controllers/terminal_sidebar_tab_behavior.dart';
 import '../controllers/sidebar_tab_behavior.dart';
@@ -84,7 +83,6 @@ final class SidebarTabDescriptor {
     SidebarTabId.notes => Routes.notes,
     SidebarTabId.terminal => Routes.terminal,
     SidebarTabId.channels => Routes.channels,
-    SidebarTabId.cline => Routes.clineSidebar,
   };
 
   String label(AppLocalizations l10n) => labelBuilder(l10n);
@@ -99,7 +97,6 @@ String _hermesLabel(AppLocalizations l10n) => l10n.sidebarHermesTab;
 String _notesLabel(AppLocalizations l10n) => l10n.sidebarNotesTab;
 String _terminalLabel(AppLocalizations l10n) => l10n.sidebarTerminalTab;
 String _channelsLabel(AppLocalizations l10n) => l10n.sidebarChannelsTab;
-String _clineLabel(AppLocalizations l10n) => 'Cline';
 String _conversationSearchHint(AppLocalizations l10n) =>
     l10n.searchConversations;
 String _notesSearchHint(AppLocalizations l10n) => l10n.searchNotes;
@@ -135,12 +132,6 @@ Widget _channelsBody({
   required bool active,
   TextEditingController? searchController,
 }) => ChannelListTab(searchController: searchController);
-
-Widget _clineBody({required bool showBottomNavigation, required bool active, TextEditingController? searchController}) =>
-    ClineSidebarTab(active: active);
-
-bool _clineVisible(SidebarTabAvailability availability) =>
-    isSidebarTabVisible(SidebarTabId.cline, availability);
 
 // The rule lives in the core, where the Mac's source list reads it too.
 bool _chatsVisible(SidebarTabAvailability availability) =>
@@ -212,17 +203,6 @@ const sidebarTabRegistry = <SidebarTabDescriptor>[
     behavior: terminalSidebarTabBehavior,
   ),
   SidebarTabDescriptor(
-    id: SidebarTabId.cline,
-    labelBuilder: _clineLabel,
-    searchHintBuilder: _clineLabel,
-    bodyBuilder: _clineBody,
-    materialIcon: Icons.code_outlined,
-    selectedMaterialIcon: Icons.code,
-    sfSymbol: 'chevron.left.forwardslash.chevron.right',
-    selectedSfSymbol: 'chevron.left.forwardslash.chevron.right',
-    isVisible: _clineVisible,
-  ),
-  SidebarTabDescriptor(
     id: SidebarTabId.channels,
     labelBuilder: _channelsLabel,
     searchHintBuilder: _channelsSearchHint,
@@ -248,9 +228,6 @@ List<SidebarTabId> visibleSidebarTabIds(SidebarTabAvailability availability) =>
 /// Maps collection and detail routes to their navigation destination.
 SidebarTabId sidebarTabForLocation(String location) {
   final path = Uri.tryParse(location)?.path ?? location;
-  if (path == Routes.clineSidebar || path.startsWith('${Routes.clineSidebar}/')) {
-    return SidebarTabId.cline;
-  }
   if (path == Routes.notes || path.startsWith('${Routes.notes}/')) {
     return SidebarTabId.notes;
   }

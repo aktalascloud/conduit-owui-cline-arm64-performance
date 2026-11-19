@@ -11,7 +11,6 @@ import 'package:conduit_core/services/settings_service.dart';
 import 'package:conduit_core/features/navigation/models/sidebar_navigation_model.dart';
 
 import 'package:conduit_core/sync/sync_engine.dart';
-import 'package:conduit_core/features/navigation/models/sidebar_navigation_model.dart';
 
 import '../../../core/services/haptic_service.dart';
 import '../../../shared/services/navigation_service.dart';
@@ -452,14 +451,13 @@ class _SidebarPageState extends ConsumerState<SidebarPage>
 
     final createAction = activeTab.createAction;
     return [
-      if (activeTab.id != SidebarTabId.cline)
-        AdaptiveAppBarAction(
-          iosSymbol: 'magnifyingglass',
-          icon: Icons.search,
-          semanticLabel: MaterialLocalizations.of(context).searchFieldLabel,
-          tintColor: defaultTint,
-          onPressed: () => openSidebarSearch(ref),
-        ),
+      AdaptiveAppBarAction(
+        iosSymbol: 'magnifyingglass',
+        icon: Icons.search,
+        semanticLabel: MaterialLocalizations.of(context).searchFieldLabel,
+        tintColor: defaultTint,
+        onPressed: () => openSidebarSearch(ref),
+      ),
       ...contextualActions,
       if (createAction != null)
         AdaptiveAppBarAction(
@@ -567,9 +565,7 @@ class _SidebarPageState extends ConsumerState<SidebarPage>
     );
 
     final conduitTheme = context.conduitTheme;
-    final isSearchExpanded =
-        ref.watch(sidebarHeaderSearchExpandedProvider) &&
-        navigation.selectedTab != SidebarTabId.cline;
+    final isSearchExpanded = ref.watch(sidebarHeaderSearchExpandedProvider);
     final useNativeIos26Chrome = PlatformInfo.isIOS26OrHigher();
     final composeNativeIos26Chrome = DrawerChromeCompositionScope.shouldCompose(
       context,
@@ -673,9 +669,7 @@ class _SidebarPageState extends ConsumerState<SidebarPage>
           }
 
           return AdaptiveScaffold(
-            appBar: navigation.selectedTab == SidebarTabId.cline
-                ? null
-                : AdaptiveAppBar(
+            appBar: AdaptiveAppBar(
               useNativeToolbar: true,
               leading: adaptiveAppBarLeading,
               titleWidget: appBarMiddle,
@@ -690,11 +684,7 @@ class _SidebarPageState extends ConsumerState<SidebarPage>
               ),
             ),
             bottomNavigationBar: bottomNavigationBar,
-            body: SafeArea(
-              top: navigation.selectedTab == SidebarTabId.cline,
-              bottom: false,
-              child: sidebarBody,
-            ),
+            body: sidebarBody,
           );
         },
       ),
@@ -712,10 +702,7 @@ void _selectSlidingSidebarTab(BuildContext context, WidgetRef ref, int index) {
     selected.behavior.onSelected(ref);
   }
   ref.read(sidebarActiveTabProvider.notifier).set(selected.id);
-  // Cline has its own UI; returning must retain the OWUI history search/draft.
-  if (navigation.selectedTab != SidebarTabId.cline && selected.id != SidebarTabId.cline) {
-    closeSidebarSearch(ref);
-  }
+  closeSidebarSearch(ref);
   NavigationService.router.go(selected.location);
   closeSidebarDrawerIfOverlay(context);
 }

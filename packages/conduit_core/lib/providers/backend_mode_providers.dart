@@ -10,7 +10,7 @@ import '../persistence/preferences_store.dart';
 /// [owui] and [libreChat] are the two account backends: whichever one is
 /// preferred owns the Chats tab. LibreChat is not wired up yet, so until it is
 /// it routes and gates exactly like an Open WebUI install with no session.
-enum PreferredBackend { unset, owui, direct, hermes, libreChat, cline }
+enum PreferredBackend { unset, owui, direct, hermes, libreChat }
 
 /// Synchronous, persisted preferred-backend signal. Read by the router.
 ///
@@ -31,7 +31,6 @@ class PreferredBackendController extends Notifier<PreferredBackend> {
     'owui' => PreferredBackend.owui,
     'direct' => PreferredBackend.direct,
     'hermes' => PreferredBackend.hermes,
-    'cline' => PreferredBackend.cline,
     'libreChat' => PreferredBackend.libreChat,
     _ => PreferredBackend.unset,
   };

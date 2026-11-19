@@ -114,12 +114,6 @@ Future<AsyncValue<ServerConfig?>> _refreshing(ServerConfig server) async {
 }
 
 void main() {
-  test('Cline connection setup remains available without an OWUI account', () {
-    check(resolveRouteRedirect(Routes.clineRemote, _reader(
-      activeServer: const AsyncLoading(),
-      auth: AuthNavigationState.needsLogin,
-    ))).isNull();
-  });
   test('a change of the primary account cut short holds the splash until '
       'startup settles it', () {
     // Open WebUI parked by a switch to LibreChat that never finished.

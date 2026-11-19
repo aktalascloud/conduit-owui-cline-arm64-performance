@@ -49,15 +49,6 @@ class BackendChooserPage extends ConsumerWidget {
             subtitle: l10n.backendChooserOpenWebUISubtitle,
             onTap: () => context.go(Routes.serverConnection),
           ),
-          _BackendOption(
-            key: const Key('choose-cline-ssh'),
-            tile: AuthIconTile(
-              icon: cupertino ? CupertinoIcons.desktopcomputer : Icons.computer_outlined,
-            ),
-            title: l10n.clineRemoteTitle,
-            subtitle: l10n.clineChooserSubtitle,
-            onTap: () => context.push(Routes.clineRemote),
-          ),
           if (ref.watch(libreChatBackendEnabledProvider))
             _BackendOption(
               key: const Key('backend-chooser-librechat'),

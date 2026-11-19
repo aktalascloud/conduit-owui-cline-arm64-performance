@@ -1,7 +1,7 @@
 import 'package:meta/meta.dart';
 
 /// Stable, persistence-safe identity for a sidebar destination.
-enum SidebarTabId { chats, hermes, terminal, notes, channels, cline }
+enum SidebarTabId { chats, hermes, terminal, notes, channels }
 
 /// Data-only capability snapshot used to decide which destinations exist.
 @immutable
@@ -50,7 +50,6 @@ const List<SidebarTabId> sidebarTabOrder = <SidebarTabId>[
   SidebarTabId.hermes,
   SidebarTabId.notes,
   SidebarTabId.terminal,
-  SidebarTabId.cline,
   SidebarTabId.channels,
 ];
 
@@ -70,7 +69,6 @@ bool isSidebarTabVisible(
       availability.hermesOnly || availability.hermesEnabled,
     SidebarTabId.notes => openWebUi && availability.notesEnabled,
     SidebarTabId.terminal => openWebUi && availability.terminalEnabled,
-    SidebarTabId.cline => openWebUi,
     SidebarTabId.channels => openWebUi && availability.channelsEnabled,
   };
 }

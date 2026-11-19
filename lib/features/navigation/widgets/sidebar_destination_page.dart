@@ -154,12 +154,6 @@ class _SidebarDestinationPageState
       return const SizedBox.shrink();
     }
     final tab = sidebarTabDescriptor(widget.destination);
-    if (widget.destination == SidebarTabId.cline) {
-      return ChatListBackScope(
-        fallback: Routes.chat,
-        child: SafeArea(bottom: false, child: tab.bodyBuilder(showBottomNavigation: false, active: active)),
-      );
-    }
     final l10n = AppLocalizations.of(context)!;
     final color = context.conduitTheme.textPrimary;
     final contextualActions = _searchExpanded

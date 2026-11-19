@@ -43,8 +43,6 @@ import '../../features/settings/views/settings_page_view.dart';
 import '../../features/settings/views/settings_root_page.dart';
 import '../services/native_sheet_bridge.dart' show NativeSheetRoutes;
 import '../utils/native_sheet_utils.dart' show nativeAccountsDetailId;
-import '../../features/cline/views/cline_remote_page.dart';
-import '../../features/cline/views/cline_workspace_page.dart';
 import '../../features/workspace/workspace_navigation.dart';
 
 import 'package:conduit_core/features/direct_connections/controllers/direct_connection_editor_draft.dart';
@@ -364,22 +362,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                 detailId: state.pathParameters['id']!,
                 reopened: state.extra is SettingsPageReopened,
               ),
-      ),
-    ),
-    GoRoute(
-      path: Routes.clineWorkspace,
-      name: RouteNames.clineWorkspace,
-      pageBuilder: (context, state) =>
-          _buildPlatformPage(state: state, child: const ClineWorkspacePage()),
-    ),
-    GoRoute(
-      path: Routes.clineRemote,
-      name: RouteNames.clineRemote,
-      pageBuilder: (context, state) => _buildPlatformPage(
-        state: state,
-        child: ClineRemotePage(
-          embedded: state.uri.queryParameters['embedded'] == '1',
-        ),
       ),
     ),
     GoRoute(
