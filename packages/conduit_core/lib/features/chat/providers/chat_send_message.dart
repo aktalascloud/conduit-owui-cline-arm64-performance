@@ -12,15 +12,6 @@ Future<void> _sendMessageInternal(
   ChatSendVoiceContext? voice,
   void Function()? onTurnStarted,
 ]) async {
-  if (ref.read(preferredBackendProvider) == PreferredBackend.cline) {
-    final client=ref.read(clineBackendClientProvider);
-    if (client==null || !client.state.canSend) throw StateError('Cline is not ready. Open its native chat first.');
-    if ((attachments?.isNotEmpty ?? false) || isVoiceMode || voice!=null) {
-      throw StateError('Use the attachment controls in the native Cline chat.');
-    }
-    client.sendMessage(message);
-    return;
-  }
   final libreChatSelected = ref.read(selectedModelProvider) as Model?;
   final libreChatActive = ref.read(activeConversationProvider) as Conversation?;
   if (libreChatSelected != null && isLibreChatModel(libreChatSelected)) {

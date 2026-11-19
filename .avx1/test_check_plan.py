@@ -12,15 +12,15 @@ class CheckSelection(unittest.TestCase):
         self.root = Path(self.temp.name)
         for p in ['test/core/providers/backend_mode_providers_test.dart',
                   'test/core/providers/chat_entry_readiness_providers_test.dart',
-                  'test/features/cline/client_test.dart', 'lib/features/cline/client.dart']:
+                  'test/features/navigation/widgets/client_test.dart', 'lib/features/navigation/widgets/client.dart']:
             path = self.root / p
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text('', encoding='utf-8')
 
-    def test_native_cline_change_keeps_the_whole_feature_suite(self):
-        mode, tests, _, _ = select(['lib/features/cline/client.dart'], self.root)
+    def test_navigation_change_keeps_the_whole_feature_suite(self):
+        mode, tests, _, _ = select(['lib/features/navigation/widgets/client.dart'], self.root)
         self.assertEqual(mode, 'targeted')
-        self.assertIn('test/features/cline', tests)
+        self.assertIn('test/features/navigation', tests)
         self.assertIn('test/core/providers/backend_mode_providers_test.dart', tests)
 
     def test_changed_shared_or_unknown_inputs_force_full_suite(self):
@@ -50,7 +50,7 @@ class CheckSelection(unittest.TestCase):
         self.assertEqual(select(['.avx1/build.py'], self.root, recipe_allowed=True)[0], 'targeted')
 
     def test_deleted_test_requires_full_suite(self):
-        self.assertEqual(select(['test/features/cline/deleted_test.dart'], self.root)[0], 'full')
+        self.assertEqual(select(['test/features/navigation/widgets/deleted_test.dart'], self.root)[0], 'full')
 
     def test_docs_do_not_expand_runtime_coverage(self):
         mode, tests, _, _ = select(['README.md', '.avx1/measurements/receipt.json'], self.root)
@@ -69,10 +69,10 @@ class CheckSelection(unittest.TestCase):
         self.assertEqual(select(['pubspec.yaml'], self.root)[0], 'full')
 
     def test_feature_folder_does_not_run_its_changed_test_twice(self):
-        mode, tests, _, _ = select(['lib/features/cline/client.dart', 'test/features/cline/client_test.dart'], self.root)
+        mode, tests, _, _ = select(['lib/features/navigation/widgets/client.dart', 'test/features/navigation/widgets/client_test.dart'], self.root)
         self.assertEqual(mode, 'targeted')
-        self.assertIn('test/features/cline', tests)
-        self.assertNotIn('test/features/cline/client_test.dart', tests)
+        self.assertIn('test/features/navigation', tests)
+        self.assertNotIn('test/features/navigation/widgets/client_test.dart', tests)
 
 
 if __name__ == '__main__':

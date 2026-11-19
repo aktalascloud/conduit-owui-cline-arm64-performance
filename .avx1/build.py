@@ -135,13 +135,7 @@ def build_conduit(package, manifest, channel):
     # Build tools and downloaded dependency code never receive the signing secrets.
     signing_material = os.environ.pop("CONDUIT_KEYSTORE_BASE64")
     password = os.environ.pop("CONDUIT_KEYSTORE_PASSWORD")
-    run('node', ROOT / '.avx1/test_cline_contract.mjs')
-    run(sys.executable, '-m', 'pip', 'install', '-r', ROOT / 'remote/requirements.txt')
-    run(sys.executable, '-m', 'pip', 'install', 'pip-audit==2.10.1')
-    run(sys.executable, '-m', 'pip_audit', '--strict', '-r', ROOT / 'remote/requirements.txt',
-        '--format', 'json', '--output', WORK / 'gateway-audit.json')
-    run(sys.executable, '-B', '-m', 'unittest', 'discover', '-s', ROOT / 'remote', '-q')
-    os.environ['CONDUIT_SSH_TEST_PYTHON'] = sys.executable
+    run(sys.executable, ROOT / '.avx1/check_removed_integration.py')
     os.environ['PUB_CACHE'] = str(WORK/'pub-cache')
     toolchains = json.loads((ROOT / ".avx1/toolchains.json").read_text("utf-8"))
     flutter_root = WORK / "flutter"
@@ -171,21 +165,31 @@ def build_conduit(package, manifest, channel):
     run(dart, "run", "build_runner", "build", "--delete-conflicting-outputs")
     fast = os.environ.get('AVX1_FAST_CHECKS') == 'true'
     if fast:
-        tests = ['test/features/cline']
+        tests = ['test/core/providers/backend_mode_providers_test.dart', 'test/core/providers/chat_entry_readiness_providers_test.dart']
         navigation_tests = [
-            'test/features/navigation/widgets/cline_sidebar_mainstream_test.dart',
-            'test/features/navigation/widgets/sidebar_workspace_tabs_test.dart',
+            'test/features/navigation',
+            'test/features/auth/views/backend_onboarding_adaptive_test.dart',
+            'packages/conduit_core/test/navigation/route_redirect_test.dart',
+            'test/features/chat/voice_mode',
         ]
         checks = {
             'mode': 'targeted',
             'tests': tests,
             'extra_navigation_tests': navigation_tests,
-            'reason': 'Fast release requested: Cline transport, client and navigation checks',
+            'reason': 'Backend readiness and sidebar navigation checks',
             'full_suite': 'not run',
             'selected_checks': 'passed',
         }
+        run(flutter, 'analyze', '--no-pub', '--no-fatal-infos', '--no-fatal-warnings',
+            'lib/core/router/app_router.dart', 'lib/features/navigation',
+            'lib/features/auth/views/backend_chooser_page.dart',
+            'lib/core/services/media_upload_controller.dart', 'lib/core/utils/native_sheet_utils.dart',
+            'lib/features/chat/voice_call/presentation/voice_call_launcher.dart',
+            'packages/conduit_core/lib/providers/backend_mode_providers.dart',
+            'packages/conduit_core/lib/features/chat/providers/chat_providers.dart',
+            'packages/conduit_core/lib/features/release_notes/release_notes_coordination.dart')
         run(flutter, 'test', '--no-pub', *tests)
-        run(flutter, 'test', '--no-pub', *navigation_tests, '--plain-name', 'Cline')
+        run(flutter, 'test', '--no-pub', *navigation_tests)
         manifest['check_scope'] = checks
         write_json(WORK / 'check-plan.json', checks)
     else:
@@ -198,8 +202,6 @@ def build_conduit(package, manifest, channel):
         # Catch native-view fixture lifecycle failures before the full shared-core suite.
         if checks['mode'] == 'full':
             run(flutter, "test", "--no-pub", "test/shared/widgets/platform_ui/settings_switch_semantics_test.dart")
-            run(flutter, "test", "--no-pub", "test/features/navigation/widgets/cline_sidebar_mainstream_test.dart",
-                "test/features/navigation/widgets/sidebar_workspace_tabs_test.dart", "--plain-name", "Cline")
         run(flutter, "test", "--no-pub", *checks['tests'])
         run(flutter, "test", "--no-pub", "packages/conduit_core/test/features/direct_connections/minimax_transport_test.dart")
         persistence_tests = [
@@ -252,16 +254,9 @@ def build_conduit(package, manifest, channel):
     shutil.copy2(apk, package / f"conduit-{channel}-arm64-v8a.apk")
     manifest["optimization_scope"] = "Flutter release AOT, ARM64, R8/tree shaking; SQLite/dartjni/ONNX Runtime+JNI rebuilt with O3 ARMv8-A ThinLTO; remaining vendor libraries explicitly inventoried"
     manifest["security"] = {"flutter_tests": checks["mode"] + " checks passed", "apk_signature": "verified",
-                            "dependency_review": ("pinned lockfile and gateway audit" if fast else "outdated report; not a complete vulnerability audit")}
+                            "dependency_review": ("pinned lockfile and APK/native provenance checks" if fast else "outdated report; not a complete vulnerability audit")}
     manifest["application_id"] = "io.github.aktalascloud.conduit"
-    manifest['cline_integration'] = {'transport':'pinned SSH and typed native Cline JSON',
-        'ui':'native Flutter with Conduit Markdown','webview':False,'native_client_tests':'passed',
-        'native_client_tests_scope':('current full suite' if checks['mode']=='full' else 'current selected suite' if 'test/features/cline' in checks['tests'] else 'inherited from qualified '+checks['baseline_source']+'; Cline inputs unchanged'),
-        'host_key_verification':'mandatory Ed25519 SHA256 pin','gateway_security_tests':'passed',
-        'gateway_dependency_audit':'passed; no unresolved advisories',
-        'pinned_cline_protocol_contract':'passed','dart_ssh_interoperability':'included in passed Flutter suite',
-        'shell':False,'sftp':False,'arbitrary_tcp_forwarding':False,'automatic_command_replay':False,
-        'file_transfer':'fixed upload RPC; SHA256, 64 MiB/file, 1 GiB inbox, 4 attachments/message; user-triggered sends only'}
+    manifest['cline_removed'] = True
     manifest["device_performance"] = "Not measured on a physical Android device"
 
 

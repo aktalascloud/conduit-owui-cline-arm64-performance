@@ -32,7 +32,6 @@ import 'package:conduit_core/models/file_info.dart';
 import 'package:conduit_core/models/model.dart';
 
 import 'package:conduit_core/providers/app_providers.dart';
-import 'package:conduit_core/providers/backend_mode_providers.dart';
 
 import 'package:conduit_core/utils/debug_logger.dart';
 
@@ -524,7 +523,6 @@ class MediaUploadController {
     String? mimeType,
     String? checksum,
   }) {
-    if (_ref.read(preferredBackendProvider)==PreferredBackend.cline) throw const NativeShareDurableOwnershipUnavailable();
     return _startUpload(
       filePath: filePath,
       fileName: fileName,
@@ -550,7 +548,6 @@ class MediaUploadController {
     String? checksum,
     LocalAttachment? publishAttachment,
   }) async {
-    if (_ref.read(preferredBackendProvider)==PreferredBackend.cline) throw const NativeShareDurableOwnershipUnavailable();
     await _enqueueUploadOwned(
       filePath: filePath,
       fileName: fileName,
@@ -574,7 +571,6 @@ class MediaUploadController {
     String? checksum,
     LocalAttachment? publishAttachment,
   }) async {
-    if (_ref.read(preferredBackendProvider)==PreferredBackend.cline) throw const NativeShareDurableOwnershipUnavailable();
     final inflight = await _enqueueUploadOwned(
       filePath: filePath,
       fileName: fileName,

@@ -656,15 +656,6 @@ NativeSheetDetailConfig buildNativeAccountsDetail(
         items: [
           // Hermes Agent's own page of Settings.
           NativeSheetItemConfig(
-            id: 'accounts-cline',
-            title: l10n.clineRemoteTitle,
-            subtitle: l10n.clineChooserSubtitle,
-            sfSymbol: 'desktopcomputer',
-            dismissOnSelect: true,
-            actionId: NativeSheetRoutes.clineRemote,
-            actionValue: true,
-          ),
-          NativeSheetItemConfig(
             id: hermesSettingsPageId,
             title: l10n.hermesAgentSettingsTitle,
             sfSymbol: 'sparkles',

@@ -27,6 +27,13 @@ void main() {
   }
 
   group('preferredBackendProvider', () {
+    test('a retired backend preference returns to normal account routing', () async {
+      await PreferencesStore.put(PreferenceKeys.preferredBackend, 'cline');
+      final container = makeContainer();
+      check(container.read(preferredBackendProvider))
+          .equals(PreferredBackend.unset);
+    });
+
     test('defaults to unset when nothing is persisted', () {
       final container = makeContainer();
       check(container.read(preferredBackendProvider))

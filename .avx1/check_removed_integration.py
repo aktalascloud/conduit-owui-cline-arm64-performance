@@ -1,0 +1,31 @@
+"""Verify the retired standalone agent integration stays out of this client."""
+import re
+import subprocess
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def check():
+    paths = subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).decode().split('\0')
+    for relative in paths:
+        path = ROOT / relative
+        if not relative or not path.is_file() or relative.startswith('patches/'):
+            continue
+        if relative.startswith(('lib/', 'packages/conduit_core/')):
+            if '/features/cline/' in relative:
+                raise RuntimeError('Retired agent source remains: ' + relative)
+            if path.suffix in {'.dart', '.yaml', '.arb'} and re.search(
+                r'PreferredBackend\.cline|features/cline/|\bCline(?:Remote|Workspace|Native)|"@?cline\w*"\s*:',
+                path.read_text(encoding='utf-8')):
+                raise RuntimeError('Retired agent reference remains: ' + relative)
+        if relative.startswith('remote/'):
+            raise RuntimeError('Retired standalone gateway remains: ' + relative)
+    lock = (ROOT / 'pubspec.lock').read_text(encoding='utf-8')
+    if re.search(r'^  (dartssh2|pinenacl|pointycastle|asn1lib):', lock, re.M):
+        raise RuntimeError('Retired SSH dependency remains')
+    print('Retired standalone agent sources and SSH dependencies are absent')
+
+
+if __name__ == '__main__':
+    check()

@@ -18,7 +18,6 @@ bool canPresentReleaseNotes(
     return true;
   }
   return switch (preferredBackend) {
-    PreferredBackend.cline => true,
     PreferredBackend.direct =>
       PreferencesStore.getBool(PreferenceKeys.directConnectionsConfigured) ==
           true,

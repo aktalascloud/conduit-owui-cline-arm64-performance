@@ -66,7 +66,6 @@ bool anyTerminalAgentModelId(Iterable<String?> modelIds) =>
 /// agent not listed here keeps the id Open WebUI gives it.
 const Map<String, String> _agentNames = {
   'claude-code': 'Claude Code',
-  'cline': 'Cline',
   'codex': 'Codex',
   'cursor': 'Cursor',
   'gemini': 'Gemini CLI',

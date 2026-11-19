@@ -654,7 +654,7 @@ Model? _modelForPreferredBackend(
       models.where(isLocallyMintedDirectModel).firstOrNull,
     PreferredBackend.hermes => models.where(isHermesModel).firstOrNull,
     PreferredBackend.libreChat => models.where(isLibreChatModel).firstOrNull,
-    PreferredBackend.owui || PreferredBackend.unset || PreferredBackend.cline => null,
+    PreferredBackend.owui || PreferredBackend.unset => null,
   };
 }
 
@@ -722,7 +722,7 @@ Model? _accountlessSelection({
         PreferredBackend.unset => available.firstOrNull,
         PreferredBackend.direct ||
         PreferredBackend.hermes ||
-        PreferredBackend.libreChat || PreferredBackend.cline => null,
+        PreferredBackend.libreChat => null,
       };
 }
 
@@ -730,7 +730,6 @@ bool _matchesPreferredBackend(Model model, PreferredBackend preferredBackend) =>
     switch (preferredBackend) {
       PreferredBackend.direct => isLocallyMintedDirectModel(model),
       PreferredBackend.hermes => isHermesModel(model),
-      PreferredBackend.cline => false,
       PreferredBackend.libreChat => isLibreChatModel(model),
       PreferredBackend.owui || PreferredBackend.unset =>
         isLocallyMintedDirectModel(model) || isHermesModel(model),

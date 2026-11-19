@@ -7,7 +7,7 @@ on:
         required: true
         type: string
       fast_checks:
-        description: Run focused Cline checks plus APK release checks
+        description: Run focused backend and navigation checks plus APK release checks
         type: boolean
         default: false
 permissions:

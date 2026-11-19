@@ -3,8 +3,6 @@ import 'dart:async';
 import 'package:riverpod/riverpod.dart';
 
 import 'package:conduit_core/providers/app_providers.dart';
-import 'package:conduit_core/providers/backend_mode_providers.dart';
-import '../../../../l10n/app_localizations.dart';
 
 import '../../../../shared/services/navigation_service.dart';
 import '../../voice_mode/chat_voice_mode_controller.dart';
@@ -30,10 +28,6 @@ class VoiceCallLauncher {
   final Ref _ref;
 
   Future<void> launch({required bool startNewConversation}) async {
-    if (_ref.read(preferredBackendProvider)==PreferredBackend.cline) {
-      final context=NavigationService.context;
-      throw VoiceCallStartException(kind:null,message:context==null?'Cline voice calls are unavailable.':AppLocalizations.of(context)!.clineVoiceUnavailable);
-    }
     _refuseOpenLibreChatChat(startNewConversation);
     final eligibility = await resolveVoiceCallEligibility(_ref);
     if (!eligibility.canStart) {

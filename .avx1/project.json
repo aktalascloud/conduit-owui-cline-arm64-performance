@@ -4,10 +4,10 @@
   "upstream": "cogwheel0/conduit",
   "development": "main",
   "runner": "ubuntu-24.04",
-  "description": "Conduit for OWUI + Cline: signed ARM64 APK, SSH access to Cline sessions/projects, O3 ThinLTO native libraries; extended Russian UI / дополненный русский перевод.",
+  "description": "Conduit for Open WebUI: signed ARM64 APK, voice avatars, O3 ThinLTO native libraries / русский интерфейс, голосовые аватары.",
   "repository": "aktalascloud/conduit-owui-cline-arm64-performance",
   "channel": "latest",
-  "upstream_commit": "397b45e8a518b90ba7ff352171914990f2e2c333",
+  "upstream_commit": "c1372fc9eead16c5cf2f2f2d5f508fae81f2552e",
   "stable_tag": "v4.3.1",
   "distribution": "single unified latest"
 }

@@ -20,7 +20,7 @@ def select(changed, root, *, recipe_allowed=False, avatar_assets_only=False, rev
         if path in {'lib/features/chat/widgets/chat_timeline_viewport.dart',
                     'lib/shared/widgets/markdown/renderer/chunked_block_column.dart',
                     'lib/shared/widgets/markdown/streaming_markdown_widget.dart'}:
-            targets.update(['test/features/chat/widgets', 'test/shared/widgets/markdown', 'test/features/cline'])
+            targets.update(['test/features/chat/widgets', 'test/shared/widgets/markdown', 'test/features/navigation/widgets'])
             analysis.add(path)
             continue
         if path == '.gitignore':

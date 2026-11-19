@@ -51,7 +51,7 @@
          ForegroundServiceDidNotStartInTimeException. This ensures channels exist before
          any foreground service attempts to use them. -->
     <application
-        android:label="Conduit · OWUI + Cline"
+        android:label="Conduit · OWUI"
         android:name=".ConduitApplication"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
@@ -139,7 +139,7 @@
         <activity
             android:name=".ProcessTextActivity"
             android:exported="true"
-            android:label="Conduit · OWUI + Cline"
+            android:label="Conduit · OWUI"
             android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.PROCESS_TEXT" />
