@@ -45,6 +45,7 @@ pub mod librechat_memories;
 pub mod notifications;
 pub mod personalization;
 pub mod profile;
+pub mod server_sheet;
 pub mod webhook_editor;
 
 use std::rc::Rc;
@@ -57,7 +58,8 @@ use conduit_components::views::focus::{
     ControlExt as _, RadioGroupExt as _, Ring, radio_option_id,
 };
 use conduit_components::views::kit::{
-    Button, IconButton, Segment, Segmented, SelectHandler, Switch, setting_row, warning_row,
+    Button, IconButton, Segment, Segmented, SelectHandler, Switch, grouped, setting_row,
+    warning_row,
 };
 use conduit_components::views::settings::{
     PaletteChoice, SchemeTile, SettingsTab, SettingsWindow, palette_picker_with, scheme_tiles,
@@ -67,8 +69,8 @@ use conduit_components::views::shortcut_field::ShortcutField;
 use gpui_kit::component::native_menu::NativeMenu;
 use gpui_kit::prelude::*;
 use gpui_kit::{
-    AnyElement, App, Context, Entity, FocusHandle, Focusable, Role, SharedString, Subscription,
-    Window, div, px,
+    AnyElement, App, Context, Entity, FocusHandle, Focusable, FontWeight, Role, SharedString,
+    Subscription, Window, div, px,
 };
 
 use crate::actions::{RemoveAccount, SetLocale, SettingsChoice};
@@ -96,6 +98,10 @@ use crate::views::status::diagnostics_state;
 pub const SETTINGS_SIDEBAR: f32 = 210.;
 /// The Settings window's size.
 pub const SETTINGS_SIZE: (f32, f32) = (860., 760.);
+
+/// The `SettingsChoice` menu an account row's Server Settings… sends (the
+/// server's id).
+pub const SERVER_SETTINGS_MENU: &str = "server-settings";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tab {
@@ -287,6 +293,16 @@ pub fn shortcut_label(action: ShortcutAction, l10n: &L10n) -> String {
     }
 }
 
+/// Two sentences as one footer: a space between them, none after a
+/// full-width stop (Chinese, Japanese).
+pub fn join_sentences(first: &str, second: &str) -> String {
+    if first.ends_with('。') {
+        format!("{first}{second}")
+    } else {
+        format!("{first} {second}")
+    }
+}
+
 /// A fixed command's name in Settings › Keyboard (the menu item's, where it
 /// reads alone).
 pub fn fixed_label(command: FixedCommand, l10n: &L10n) -> String {
@@ -318,6 +334,8 @@ pub fn fixed_label(command: FixedCommand, l10n: &L10n) -> String {
         F::Back => l10n.desktop_menu_back(),
         F::Forward => l10n.desktop_menu_forward(),
         F::GoToSection(_) => l10n.desktop_keyboard_go_to_section(),
+        F::NextArea => l10n.desktop_menu_next_area(),
+        F::PreviousArea => l10n.desktop_menu_previous_area(),
     }
 }
 
@@ -583,6 +601,12 @@ impl SettingsView {
             {
                 p.update(cx, |p, cx| p.refresh(cx));
             }
+            // A read that failed is tried again when its tab is shown.
+            if tab == Tab::Notifications
+                && let Some(p) = &self.notifications
+            {
+                p.update(cx, |p, cx| p.shown(cx));
+            }
         }
     }
 
@@ -617,6 +641,27 @@ impl SettingsView {
             window,
             |this, _, event: &ServerFormEvent, window, cx| {
                 this.close_add_sheet(window, cx);
+                // A Hermes connection or a provider: its editor, once the
+                // sheet has gone (AppKit hangs one sheet at a time).
+                match event {
+                    ServerFormEvent::AddHermes => {
+                        this.show_tab(Tab::Hermes, cx);
+                        let stores = this.stores.clone();
+                        cx.defer_in(window, move |_, window, cx| {
+                            crate::views::hermes_connection::open(&stores, None, window, cx)
+                        });
+                        return;
+                    }
+                    ServerFormEvent::AddDirect => {
+                        this.show_tab(Tab::Direct, cx);
+                        let pane = this.direct_pane(window, cx);
+                        cx.defer_in(window, move |_, window, cx| {
+                            pane.update(cx, |p, cx| p.open_editor(None, false, window, cx))
+                        });
+                        return;
+                    }
+                    _ => {}
+                }
                 if matches!(event, ServerFormEvent::Connected) {
                     // Sign-in for the new account is next, in the setup
                     // window, which comes forward.
@@ -643,6 +688,13 @@ impl SettingsView {
                     .detach();
             }
         }
+    }
+
+    /// A saved Open WebUI server's sheet: its accounts and addresses.
+    pub fn open_server(&mut self, server_id: &str, window: &mut Window, cx: &mut Context<Self>) {
+        self.tab = Tab::Accounts;
+        cx.notify();
+        server_sheet::open(&self.stores, server_id, window, cx);
     }
 
     fn close_add_sheet(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -761,6 +813,7 @@ impl SettingsView {
             hermes::MCP_MENU | hermes::CATALOG_MENU => {
                 hermes::choose(&self.stores, menu, value, window, cx)
             }
+            SERVER_SETTINGS_MENU => self.open_server(value, window, cx),
             menu if menu.starts_with("audio-") => {
                 if let Some(p) = &self.audio {
                     p.update(cx, |p, cx| p.choose(menu, value, window, cx));
@@ -1096,7 +1149,17 @@ impl SettingsView {
                 KeyGroup::Workspace => Some(l10n.desktop_keyboard_workspace_footer().into()),
                 KeyGroup::Calendar => Some(l10n.desktop_keyboard_calendar_footer().into()),
                 KeyGroup::ScheduledTasks => Some(l10n.desktop_keyboard_tasks_footer().into()),
-                KeyGroup::Terminal => Some(l10n.desktop_keyboard_terminal_footer().into()),
+                // And the way out of it, whose Tab is the shell's.
+                KeyGroup::Terminal => {
+                    let (next, _) = crate::views::terminal::console::leave_keys();
+                    Some(
+                        join_sentences(
+                            &l10n.desktop_keyboard_terminal_footer(),
+                            &l10n.desktop_terminal_leave_hint(&next),
+                        )
+                        .into(),
+                    )
+                }
                 KeyGroup::HermesRooms => Some(l10n.desktop_keyboard_rooms_footer().into()),
                 KeyGroup::HermesJobs => Some(l10n.desktop_keyboard_hermes_jobs_footer().into()),
                 _ => None,
@@ -1517,16 +1580,35 @@ impl SettingsView {
                 let Some(name) = name else {
                     return;
                 };
+                // An Open WebUI account's server has a sheet of its own.
+                let server = stores
+                    .accounts
+                    .read(cx)
+                    .accounts()
+                    .iter()
+                    .find(|a| a.id == id)
+                    .map(|a| a.server_id.clone());
                 let l10n = cx.l10n().clone();
                 let name = privacy::name(&name, cx);
-                NativeMenu::new()
-                    .menu(
-                        l10n.desktop_sign_out_of(&name),
-                        Box::new(RemoveAccount {
-                            account_id: id.to_string(),
-                        }),
-                    )
-                    .show(window.mouse_position(), window, cx);
+                let mut menu = NativeMenu::new();
+                if let Some(server_id) = server {
+                    menu = menu
+                        .menu(
+                            l10n.desktop_server_settings_ellipsis(),
+                            Box::new(SettingsChoice {
+                                menu: SERVER_SETTINGS_MENU.into(),
+                                value: server_id,
+                            }),
+                        )
+                        .separator();
+                }
+                menu.menu(
+                    l10n.desktop_sign_out_of(&name),
+                    Box::new(RemoveAccount {
+                        account_id: id.to_string(),
+                    }),
+                )
+                .show(window.mouse_position(), window, cx);
             })
         };
         let mut sections = accounts_sections(&self.stores, add, more, cx).into_iter();
@@ -1546,8 +1628,112 @@ impl SettingsView {
             settings_section(SharedString::default(), footer, vec![list], cx).into_any_element(),
         ];
         out.extend(sections);
+        out.extend(self.servers_section(cx));
         out.extend(self.sign_out_section(cx));
         out
+    }
+
+    /// Accounts › Servers: each saved Open WebUI server, opening its sheet
+    /// (as the phone's Accounts page heads each server's accounts with a
+    /// row to its page).
+    fn servers_section(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let l10n = cx.l10n().clone();
+        let t = cx.conduit().clone();
+        let r = t.roles;
+        let store = self.stores.accounts.read(cx);
+        // One row per server, in the order its first account is listed;
+        // its address in use is the active account's (else the first's).
+        let mut servers: Vec<(String, String, String)> = vec![];
+        for a in store.accounts() {
+            match servers.iter_mut().find(|(id, _, _)| *id == a.server_id) {
+                Some(row) if a.is_active => row.2 = a.connection.url.clone(),
+                Some(_) => {}
+                None => servers.push((
+                    a.server_id.clone(),
+                    a.connection.name.clone(),
+                    a.connection.url.clone(),
+                )),
+            }
+        }
+        if servers.is_empty() {
+            return None;
+        }
+        let hover = r.hover;
+        let pressed = conduit_components::views::focus::pressed_fill(r.hover, &t);
+        let rows: Vec<AnyElement> = servers
+            .into_iter()
+            .enumerate()
+            .map(|(i, (id, name, url))| {
+                let view = cx.entity().downgrade();
+                let name = privacy::name(&name, cx);
+                let host = privacy::host(&forms::host_of(&url), cx);
+                div()
+                    .id(SharedString::from(format!("server-row-{i}")))
+                    .role(Role::Button)
+                    .aria_label(SharedString::from(format!(
+                        "{name}, {}",
+                        l10n.desktop_server_settings_ellipsis()
+                    )))
+                    .w_full()
+                    .px(px(12.))
+                    .py(px(9.))
+                    .flex()
+                    .items_center()
+                    .gap(px(10.))
+                    .cursor_pointer()
+                    .hover(move |s| s.bg(hover))
+                    .active(move |s| s.bg(pressed))
+                    .when(i > 0, |d| d.border_t_1().border_color(r.divider))
+                    .keyboard_shadow(cx)
+                    .tip(l10n.desktop_server_settings_ellipsis(), None)
+                    .on_click(move |_, window, cx| {
+                        let _ = view.update(cx, |v, cx| v.open_server(&id, window, cx));
+                    })
+                    .child(conduit_components::assets::icon(
+                        IconName::Server,
+                        15.,
+                        r.text_subtle,
+                    ))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .flex()
+                            .flex_col()
+                            .gap(px(1.))
+                            .child(
+                                div()
+                                    .truncate()
+                                    .text_size(px(t.metrics.control))
+                                    .font_weight(FontWeight::MEDIUM)
+                                    .text_color(r.text)
+                                    .child(name),
+                            )
+                            .child(
+                                div()
+                                    .truncate()
+                                    .text_size(px(t.metrics.small))
+                                    .text_color(r.text_subtle)
+                                    .child(host),
+                            ),
+                    )
+                    .child(conduit_components::assets::icon(
+                        IconName::ChevronRight,
+                        13.,
+                        r.text_faint,
+                    ))
+                    .into_any_element()
+            })
+            .collect();
+        Some(
+            settings_section(
+                l10n.desktop_servers_section(),
+                None,
+                vec![grouped(rows, cx).into_any_element()],
+                cx,
+            )
+            .into_any_element(),
+        )
     }
 
     /// Accounts › Sign Out, as the phone's Settings ends: the account in
@@ -2320,6 +2506,13 @@ mod tests {
     }
 
     #[test]
+    fn footers_join_sentences_as_each_language_does() {
+        use super::join_sentences;
+        assert_eq!(join_sentences("One.", "Two."), "One. Two.");
+        assert_eq!(join_sentences("一。", "二。"), "一。二。");
+    }
+
+    #[test]
     fn long_paths_lose_their_middle_not_their_end() {
         let path = "~/Library/Application Support/Example/profiles/run-0042/userdata";
         let short = middle_truncate(path, 44);
@@ -2414,6 +2607,50 @@ mod language_tests {
             );
             assert!(v.profile.is_none());
         });
+    }
+
+    /// Settings › Notifications couldn't read the settings: showing the tab
+    /// again reads them again (as the pane opening does), not only a
+    /// reconnect.
+    #[gpui_kit::test]
+    fn a_failed_notification_settings_read_is_tried_again_when_the_tab_shows(
+        cx: &mut TestAppContext,
+    ) {
+        use conduit_protocol::methods;
+        let daemon = FakeDaemon::new();
+        daemon.on::<methods::NotificationsGet>(|_| {
+            Err(conduit_daemon::protocol::error(
+                conduit_daemon::protocol::codes::INTERNAL,
+                "unreadable",
+            ))
+        });
+        let scratch =
+            std::env::temp_dir().join(format!("conduit-notify-tab-{}", std::process::id()));
+        let stores = cx.update(|cx| {
+            crate::views::test_globals(cx);
+            Stores::for_test(daemon.rpc(), &scratch, cx)
+        });
+        stores.notifications.update(cx, |s, cx| s.refresh(cx));
+        cx.run_until_parked();
+        let settings =
+            cx.new(|_| SettingsStore::load(scratch.join("prefs.json"), false, vec!["en".into()]));
+        let s = stores.clone();
+        let (view, vcx) = cx.add_window_view(move |window, cx| {
+            SettingsView::new(settings, s, Tab::Notifications, window, cx)
+        });
+        view.update_in(vcx, |v, window, cx| {
+            v.notifications_pane(window, cx);
+        });
+        vcx.run_until_parked();
+        let reads = || daemon.calls::<methods::NotificationsGet>().len();
+        let before = reads();
+        assert!(stores.notifications.read_with(vcx, |s, _| s.load_failed));
+        view.update(vcx, |v, cx| {
+            v.show_tab(Tab::Language, cx);
+            v.show_tab(Tab::Notifications, cx);
+        });
+        vcx.run_until_parked();
+        assert_eq!(reads(), before + 1, "showing the tab again read nothing");
     }
 
     #[gpui_kit::test]

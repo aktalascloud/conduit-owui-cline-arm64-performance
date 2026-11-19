@@ -7,7 +7,7 @@
 const Map<String, String> protocolGoldens = <String, String>{
   'handshakeRequest': r'''
 {
-  "protocolVersion": "1.67.0",
+  "protocolVersion": "1.70.0",
   "clientName": "conduit-desktop-ui",
   "clientVersion": "0.1.0",
   "windowKind": "main",
@@ -16,7 +16,7 @@ const Map<String, String> protocolGoldens = <String, String>{
 
   'handshakeResponse': r'''
 {
-  "protocolVersion": "1.67.0",
+  "protocolVersion": "1.70.0",
   "daemonVersion": "0.1.0",
   "sessionId": "0f9d1c2e-4b6a-4d8f-9a1b-2c3d4e5f6071",
   "capabilities": {
@@ -349,6 +349,165 @@ const Map<String, String> protocolGoldens = <String, String>{
   }
 }''',
 
+  'serverAddressDto': r'''
+{
+  "id": "f0e1d2c3-b4a5-4697-8879-6a5b4c3d2e1f",
+  "url": "https://chat.example.com",
+  "label": "Home network",
+  "inUse": true,
+  "allowSelfSignedCertificates": true,
+  "customHeaderNames": [
+    "X-Conduit-Tenant"
+  ],
+  "hasMutualTlsCredentials": true,
+  "mtlsCertificateLabel": "home-client.pem",
+  "mtlsPrivateKeyLabel": "home-client-key.pem",
+  "hasPrivateKeyPassword": true
+}''',
+
+  'serverAddresses': r'''
+{
+  "serverId": "b5e2c4d6-7f80-4a1b-9c2d-3e4f5a6b7c8d",
+  "name": "Home",
+  "addresses": [
+    {
+      "id": "f0e1d2c3-b4a5-4697-8879-6a5b4c3d2e1f",
+      "url": "https://chat.example.com",
+      "inUse": true,
+      "allowSelfSignedCertificates": false,
+      "customHeaderNames": [],
+      "hasMutualTlsCredentials": false,
+      "hasPrivateKeyPassword": false
+    },
+    {
+      "id": "0a1b2c3d-4e5f-4607-8819-2a3b4c5d6e7f",
+      "url": "http://chat.home.example.net:8080",
+      "label": "Tailnet",
+      "inUse": false,
+      "allowSelfSignedCertificates": false,
+      "customHeaderNames": [],
+      "hasMutualTlsCredentials": false,
+      "hasPrivateKeyPassword": false
+    }
+  ],
+  "removable": true
+}''',
+
+  'serverRef': r'''
+{
+  "serverId": "b5e2c4d6-7f80-4a1b-9c2d-3e4f5a6b7c8d"
+}''',
+
+  'serverAddressHeader': r'''
+{
+  "name": "X-Conduit-Tenant",
+  "value": "acme"
+}''',
+
+  'serverAddressForm': r'''
+{
+  "url": "chat.home.example.net:8080",
+  "label": "Tailnet",
+  "allowSelfSignedCertificates": true,
+  "headers": [
+    {
+      "name": "X-Conduit-Tenant"
+    },
+    {
+      "name": "X-Region",
+      "value": "north"
+    }
+  ],
+  "mtlsCertificateLabel": "home-client.pem",
+  "clearMutualTls": true
+}''',
+
+  'serverAddressCheckRequest': r'''
+{
+  "serverId": "b5e2c4d6-7f80-4a1b-9c2d-3e4f5a6b7c8d",
+  "endpointId": "f0e1d2c3-b4a5-4697-8879-6a5b4c3d2e1f",
+  "form": {
+    "url": "https://chat.example.com",
+    "label": "",
+    "allowSelfSignedCertificates": false,
+    "headers": [],
+    "clearMutualTls": false
+  }
+}''',
+
+  'serverAddressCheckAnswered': r'''
+{
+  "outcome": "answered",
+  "checkId": "5d4c3b2a-1908-4f7e-a6d5-c4b3a2918070",
+  "url": "http://chat.home.example.net:8080"
+}''',
+
+  'serverAddressCheckUnusable': r'''
+{
+  "outcome": "unusable",
+  "problem": "headerNameReserved",
+  "headerName": "Authorization"
+}''',
+
+  'serverAddressSaveRequest': r'''
+{
+  "checkId": "5d4c3b2a-1908-4f7e-a6d5-c4b3a2918070",
+  "sendSessionConfirmed": true,
+  "stopReplies": true,
+  "proxy": {
+    "origin": "https://chat.example.com",
+    "cookies": {
+      "_oauth2_proxy": "synthetic-cookie"
+    }
+  }
+}''',
+
+  'serverAddressSaveAsks': r'''
+{
+  "outcome": "needsConfirmation",
+  "confirmation": "sendSession",
+  "host": "chat.home.example.net:8080"
+}''',
+
+  'serverAddressSaveRefused': r'''
+{
+  "outcome": "notSaved",
+  "problem": "differentServer"
+}''',
+
+  'serverAddressRemoveRequest': r'''
+{
+  "serverId": "b5e2c4d6-7f80-4a1b-9c2d-3e4f5a6b7c8d",
+  "endpointId": "f0e1d2c3-b4a5-4697-8879-6a5b4c3d2e1f",
+  "stopReplies": true
+}''',
+
+  'serverAddressReorderRequest': r'''
+{
+  "serverId": "b5e2c4d6-7f80-4a1b-9c2d-3e4f5a6b7c8d",
+  "order": [
+    "0a1b2c3d-4e5f-4607-8819-2a3b4c5d6e7f",
+    "f0e1d2c3-b4a5-4697-8879-6a5b4c3d2e1f"
+  ]
+}''',
+
+  'serverAddressEditResult': r'''
+{
+  "outcome": "needsConfirmation",
+  "confirmation": "replyInProgress",
+  "addresses": {
+    "serverId": "b5e2c4d6-7f80-4a1b-9c2d-3e4f5a6b7c8d",
+    "name": "Home",
+    "addresses": [],
+    "removable": false
+  }
+}''',
+
+  'serversChanged': r'''
+{
+  "serverId": "b5e2c4d6-7f80-4a1b-9c2d-3e4f5a6b7c8d"
+}''',
+
   'accountUser': r'''
 {
   "name": "Ada Lovelace",
@@ -434,6 +593,18 @@ const Map<String, String> protocolGoldens = <String, String>{
     "clearMutualTls": false
   },
   "force": true
+}''',
+
+  'addAccountOnServer': r'''
+{
+  "server": {
+    "name": "Home",
+    "url": "https://chat.example.com",
+    "allowSelfSignedCertificates": false,
+    "clearMutualTls": false
+  },
+  "serverId": "b5e2c4d6-7f80-4a1b-9c2d-3e4f5a6b7c8d",
+  "force": false
 }''',
 
   'accountRef': r'''
@@ -3291,7 +3462,12 @@ const Map<String, String> protocolGoldens = <String, String>{
   "name": "Morning brief",
   "prompt": "Summarise the news",
   "schedule": "0 8 * * *",
-  "scheduleText": "At 08:00",
+  "scheduleText": "Every day at 8:00 AM",
+  "cadence": {
+    "kind": "daily",
+    "hour": 8,
+    "minute": 0
+  },
   "enabled": false,
   "lastStatus": "ok",
   "lastError": "none",
@@ -3334,6 +3510,21 @@ const Map<String, String> protocolGoldens = <String, String>{
   "notices": [],
   "savedId": "j3",
   "listFailed": true
+}''',
+
+  'hermesCadenceDto': r'''
+{
+  "kind": "everyHours",
+  "every": 6,
+  "minute": 30
+}''',
+
+  'hermesCadenceDtoWeekly': r'''
+{
+  "kind": "weekly",
+  "hour": 17,
+  "minute": 45,
+  "weekday": 4
 }''',
 
   'hermesJobEdit': r'''
@@ -5108,9 +5299,23 @@ const Map<String, String> protocolGoldens = <String, String>{
 
   'messageStatus': r'''
 {
-  "description": "Searching Knowledge",
+  "description": "Searching Knowledge for “tide tables”",
+  "phrase": "knowledgeSearch",
+  "query": "tide tables",
   "action": "knowledge_search",
   "done": false,
+  "queries": [],
+  "links": [],
+  "details": []
+}''',
+
+  'messageStatusSources': r'''
+{
+  "description": "Retrieved 3 sources",
+  "phrase": "sourcesRetrieved",
+  "count": 3,
+  "action": "sources_retrieved",
+  "done": true,
   "queries": [],
   "links": [],
   "details": []
@@ -6291,7 +6496,8 @@ const Map<String, String> protocolGoldens = <String, String>{
   "path": "openapi.json",
   "spec": "",
   "authType": "bearer",
-  "hasKey": true
+  "hasKey": true,
+  "fingerprint": ""
 }''',
 
   'personalConnections': r'''
@@ -6315,7 +6521,8 @@ const Map<String, String> protocolGoldens = <String, String>{
       "path": "",
       "spec": "",
       "authType": "bearer",
-      "hasKey": false
+      "hasKey": false,
+      "fingerprint": ""
     }
   ],
   "cleared": [
@@ -8507,6 +8714,22 @@ const Map<String, String> protocolGoldens = <String, String>{
   "error": "Call permission denied",
   "notice": "replyIncomplete",
   "noticeCount": 1
+}''',
+
+  'callStateRefused': r'''
+{
+  "phase": "error",
+  "call": 0,
+  "transcript": "",
+  "reply": "",
+  "level": 0.0,
+  "muted": false,
+  "canPause": false,
+  "canResume": false,
+  "errorKind": "message",
+  "error": "Sign in to start a voice call.",
+  "noticeCount": 0,
+  "refusal": "signInRequired"
 }''',
 
   'callStateIdle': r'''
