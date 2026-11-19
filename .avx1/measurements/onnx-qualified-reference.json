@@ -21,7 +21,8 @@
     "upstream_commit": "7a5391a34721bff7bc22c1eda05538f88d6404bb"
   },
   "compatible_lockfile_sha256": [
-    "57ec9e526636d78758d4102863e5b3fe2a4c4296b9227baca5195ca7661f5992"
+    "57ec9e526636d78758d4102863e5b3fe2a4c4296b9227baca5195ca7661f5992",
+    "31a66ab61a9c1ca5efd3458de034c4ddcd40a035826007c0209f6ba6c9e25288"
   ],
-  "compatible_lockfile_scope": "2026-11-16 workspace additions; Android native package versions and hashes, queried compiler and native recipes remain unchanged."
+  "compatible_lockfile_scope": "2026-11-16 workspace additions and 2026-11-19 removal of asn1lib, dartssh2, pinenacl and pointycastle. Every other lockfile byte is unchanged; ONNX/JNI/SQLite/vad, native source, toolchain, compiler, compile commands, flags and binary SHA256 remain subject to the exact reuse gate."
 }
