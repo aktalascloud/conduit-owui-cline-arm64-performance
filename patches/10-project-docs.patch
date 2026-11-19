@@ -1,10 +1,10 @@
 diff --git a/README.md b/README.md
-index 8725a352d5214db044df9bdb396fe9a0fb1501c5..165642685bea913d64af11ee14a4a992ed10eb0d 100644
+index 8725a352d5214db044df9bdb396fe9a0fb1501c5..30468c8210acd5484d424346e759e54df05d69bf 100644
 --- a/README.md
 +++ b/README.md
-@@ -1,391 +1,9 @@
+@@ -1,391 +1,13 @@
 -<h1 align="center">Conduit</h1>
-+# Conduit OWUI ARM64
++# Conduit · Open WebUI · ARM64
  
 -<p align="center">
 -  <img
@@ -14,12 +14,12 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..165642685bea913d64af11ee14a4a992
 -    height="96"
 -  />
 -</p>
-+[Upstream](https://github.com/cogwheel0/conduit) · [signed ARM64 APK](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Applied patches](patches/README.md)
++[Русский](#русский) · [Release / Скачать](https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/releases/latest) · [Applied patches / Патчи](patches/README.md) · [Upstream](https://github.com/cogwheel0/conduit)
  
 -<p align="center">
 -  <strong>A native mobile client for Open WebUI, your own model endpoints, and self-hosted agents.</strong>
 -</p>
-+Build with Python 3.12+, Git and GitHub CLI. Run `Build.cmd status`, then `Build.cmd build`. CI and checks are in `.avx1/`.
++Open WebUI client with Russian localization, voice avatars and optimized native Android libraries. Install the signed ARM64 APK and connect to your server. Build with Python 3.12+, Git and GitHub CLI using `Build.cmd status` and `Build.cmd build`.
  
 -<p align="center">
 -  <img
@@ -35,7 +35,7 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..165642685bea913d64af11ee14a4a992
 -    src="https://img.shields.io/badge/License-GPL%203.0-16A34A"
 -  />
 -</p>
-+Клиент Open WebUI с русским интерфейсом, голосовыми VRM и дополнительными провайдерами. ARM64 release AOT, SQLite/dartjni/ONNX с O3 и ThinLTO. Данные и ключи храните вне исходников. Подпись и ID APK сохраняются для обновления установленного приложения.
++Flutter release AOT and R8. SQLite, dartjni and ONNX Runtime/JNI use O3 ARMv8-A ThinLTO. Application ID and signing identity support upgrades. Keep credentials and model weights outside this checkout. Phone speed is unmeasured.
  
 -<p align="center">
 -  <a href="https://play.google.com/store/apps/details?id=app.cogwheel.conduit">
@@ -55,7 +55,8 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..165642685bea913d64af11ee14a4a992
 -    />
 -  </a>
 -</p>
--
++## Русский
+ 
 -<p align="center">
 -  <a href="https://vercel.com/blog/vercel-open-source-program-fall-2025-cohort#conduit">
 -    <img
@@ -81,7 +82,8 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..165642685bea913d64af11ee14a4a992
 -    />
 -  </a>
 -</p>
--
++Клиент Open WebUI с русским интерфейсом, голосовыми VRM и дополнительными провайдерами. Установите подписанный APK ARM64 и подключитесь к своему серверу. Для сборки нужны Python 3.12+, Git и GitHub CLI. Выполните `Build.cmd status` и `Build.cmd build`.
+ 
 -<p align="center">
 -  <a href="#ways-to-connect">Connect</a> ·
 -  <a href="#screenshots">Screenshots</a> ·
@@ -398,4 +400,4 @@ index 8725a352d5214db044df9bdb396fe9a0fb1501c5..165642685bea913d64af11ee14a4a992
 -Released under the [GPL-3.0 License](LICENSE).
 -
 -Conduit is an independent client and is not affiliated with Open WebUI.
-+[Checks and measurements](.avx1/measurements/latest.json)
++Flutter release AOT и R8. SQLite, dartjni и ONNX Runtime/JNI собраны с O3 ARMv8-A ThinLTO. ID и подпись APK сохраняются для обновления приложения. Данные и ключи храните отдельно. Скорость на телефоне не измерена.
