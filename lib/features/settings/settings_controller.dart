@@ -423,11 +423,6 @@ class SettingsController {
         return;
       }
 
-      if (event.id == NativeSheetRoutes.clineRemote && value == true) {
-        unawaited(NavigationService.router.pushNamed<void>(RouteNames.clineRemote));
-        return;
-      }
-
       if (await _handleNativeAccountAction(event.id, value)) return;
 
       if (event.id.startsWith('tts-voice-pick:')) {

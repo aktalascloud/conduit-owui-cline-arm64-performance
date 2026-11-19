@@ -16,7 +16,7 @@ def check():
             if '/features/cline/' in relative:
                 raise RuntimeError('Retired agent source remains: ' + relative)
             if path.suffix in {'.dart', '.yaml', '.arb'} and re.search(
-                r'PreferredBackend\.cline|features/cline/|\bCline(?:Remote|Workspace|Native)|"@?cline\w*"\s*:',
+                r'PreferredBackend\.cline|features/cline/|\bcline[A-Z_]|\bCline\b|\bCline[A-Z]|"@?cline\w*"\s*:',
                 path.read_text(encoding='utf-8')):
                 raise RuntimeError('Retired agent reference remains: ' + relative)
         if relative.startswith('remote/'):

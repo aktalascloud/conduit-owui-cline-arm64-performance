@@ -183,6 +183,7 @@ def build_conduit(package, manifest, channel):
         run(flutter, 'analyze', '--no-pub', '--no-fatal-infos', '--no-fatal-warnings',
             'lib/core/router/app_router.dart', 'lib/features/navigation',
             'lib/features/auth/views/backend_chooser_page.dart',
+            'lib/features/settings/settings_controller.dart',
             'lib/core/services/media_upload_controller.dart', 'lib/core/utils/native_sheet_utils.dart',
             'lib/features/chat/voice_call/presentation/voice_call_launcher.dart',
             'packages/conduit_core/lib/providers/backend_mode_providers.dart',
