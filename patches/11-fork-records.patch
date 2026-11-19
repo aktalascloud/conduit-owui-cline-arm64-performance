@@ -140,12 +140,35 @@ index 0000000000000000000000000000000000000000..b8a5314b39db60efd205b42a51ffb927
 +]
 diff --git a/.avx1/measurements/latest.json b/.avx1/measurements/latest.json
 new file mode 100644
-index 0000000000000000000000000000000000000000..87ea693cc86686ee5c26c82b59af94a259bd1a07
+index 0000000000000000000000000000000000000000..e9462b7877d276f6db23a5efff57f943830f953e
 --- /dev/null
 +++ b/.avx1/measurements/latest.json
-@@ -0,0 +1,5 @@
+@@ -0,0 +1,28 @@
 +{
-+  "scope": "current selected checks; final package and deployment receipts are recorded after CI",
++  "source_commit": "c226db0b3a9616f710b4f6dc83c65472f5e5f326",
++  "upstream_commit": "c1372fc9eead16c5cf2f2f2d5f508fae81f2552e",
++  "ci_run": "https://github.com/aktalascloud/conduit-owui-cline-arm64-performance/actions/runs/44455316473",
++  "check_scope": "targeted Flutter, static analysis, source removal guard, APK signing/native inventory/ABI/exports/16KiB",
++  "flutter_tests_passed": 485,
++  "standalone_agent_removed": true,
++  "removed_dependencies": [
++    "dartssh2",
++    "asn1lib",
++    "pinenacl",
++    "pointycastle"
++  ],
++  "optimization_scope": "Flutter release AOT, ARM64, R8/tree shaking; SQLite/dartjni/ONNX Runtime+JNI rebuilt with O3 ARMv8-A ThinLTO; remaining vendor libraries explicitly inventoried",
++  "onnx_qualified_binary_cache": {
++    "status": "reused",
++    "reference_run": 40821699974,
++    "reference_source": "11cae6e436e48b51fde41efdaaca015c63866d57",
++    "reference_sha256": "fe2b019e51090a43a374f30f1bc8245cc7cfae22b32209e8e55fbcff0705db58",
++    "scope": "Exact source/toolchain/flags/recipe/compiler/commands and both binary SHA256; ABI/exports/ELF/package gates still run"
++  },
++  "apk_bytes": 98874408,
++  "apk_sha256": "8c3b030786d949574d5a24a98016eea45c1c24a8ae3a52a5b4fd37bf339bda08",
++  "application_id": "io.github.aktalascloud.conduit",
++  "phone_verification": "deferred_by_user",
 +  "inference_speedup_percent": null,
 +  "model_required_for_build": false
 +}
