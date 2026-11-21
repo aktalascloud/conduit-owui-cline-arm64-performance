@@ -171,12 +171,14 @@ def build_conduit(package, manifest, channel):
             'test/features/auth/views/backend_onboarding_adaptive_test.dart',
             'packages/conduit_core/test/navigation/route_redirect_test.dart',
             'test/features/chat/voice_mode',
+            'test/features/chat/widgets/chat_timeline_viewport_test.dart',
+            'test/shared/widgets/markdown/markdown_compile_service_test.dart',
         ]
         checks = {
             'mode': 'targeted',
             'tests': tests,
             'extra_navigation_tests': navigation_tests,
-            'reason': 'Backend readiness and sidebar navigation checks',
+            'reason': 'Backend readiness, navigation, voice, timeline and Markdown checks',
             'full_suite': 'not run',
             'selected_checks': 'passed',
         }
