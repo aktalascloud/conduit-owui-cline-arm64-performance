@@ -1,9 +1,9 @@
 diff --git a/.avx1/build.py b/.avx1/build.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..92dad8a75e518a0e993eb49fc6ed65c968df3e3e
+index 0000000000000000000000000000000000000000..37d2c8bb3827358838f390b1a37b801a93b1b3d5
 --- /dev/null
 +++ b/.avx1/build.py
-@@ -0,0 +1,323 @@
+@@ -0,0 +1,325 @@
 +"""Build one exact source revision. Outputs contain no local configuration."""
 +from __future__ import annotations
 +import base64
@@ -177,12 +177,14 @@ index 0000000000000000000000000000000000000000..92dad8a75e518a0e993eb49fc6ed65c9
 +            'test/features/auth/views/backend_onboarding_adaptive_test.dart',
 +            'packages/conduit_core/test/navigation/route_redirect_test.dart',
 +            'test/features/chat/voice_mode',
++            'test/features/chat/widgets/chat_timeline_viewport_test.dart',
++            'test/shared/widgets/markdown/markdown_compile_service_test.dart',
 +        ]
 +        checks = {
 +            'mode': 'targeted',
 +            'tests': tests,
 +            'extra_navigation_tests': navigation_tests,
-+            'reason': 'Backend readiness and sidebar navigation checks',
++            'reason': 'Backend readiness, navigation, voice, timeline and Markdown checks',
 +            'full_suite': 'not run',
 +            'selected_checks': 'passed',
 +        }

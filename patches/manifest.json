@@ -3,12 +3,23 @@
   "grouping_version": 3,
   "ownership": "applied-downstream-only",
   "project": "conduit",
-  "upstream": "c1372fc9",
-  "snapshot_source": "1391e2c38704b7fd3ba1f301c2dec9a01c150715",
-  "downstream_tree_without_patches": "b446c49301cfe2b540b8bb7eb2ce7751255cdf43",
+  "upstream": "c1372fc9eead16c5cf2f2f2d5f508fae81f2552e",
+  "snapshot_source": "d8cd391b436f1bd82142335599a0a28ec0fbc592",
+  "downstream_tree_without_patches": "a74585cd0aa2169fa155faebed01470ef1feabc4",
   "groups": [
     {
-      "patch": "01-backend-navigation.patch",
+      "patch": "01-long-chat-rendering.patch",
+      "description": "Reuse measured row heights and prepared Markdown on remount / Повторно использует высоты строк и подготовленный Markdown при прокрутке длинного чата.",
+      "paths": [
+        "lib/features/chat/widgets/chat_timeline_viewport.dart",
+        "lib/shared/widgets/markdown/markdown_compile_service.dart",
+        "test/features/chat/widgets/chat_timeline_viewport_test.dart",
+        "test/shared/widgets/markdown/markdown_compile_service_test.dart"
+      ],
+      "sha256": "0d1d0fdf81fcbf95800856862b43e561d74a15be66e91253b0ee1abe5b502df7"
+    },
+    {
+      "patch": "02-backend-navigation.patch",
       "description": "Preserve normal account routing after retiring the standalone backend / Сохраняет штатный выбор аккаунта после удаления отдельного backend.",
       "paths": [
         "test/core/providers/backend_mode_providers_test.dart"
@@ -16,7 +27,7 @@
       "sha256": "a5697cde2d6ea0c8afffa4a5c8dbac6e96463384e71862e32cfe033db97c59f6"
     },
     {
-      "patch": "02-voice-vrm.patch",
+      "patch": "03-voice-vrm.patch",
       "description": "Bind avatars to account and file identity, bound textures and cache, and adapt voice controls / Привязывает VRM к аккаунту и файлу, ограничивает текстуры и кэш и адаптирует голосовые кнопки.",
       "paths": [
         "assets/voice_avatar/LICENSES.txt",
@@ -45,7 +56,7 @@
       "sha256": "cbc5bd4f2354afd3bf0d5f335e6c71c522a36beb841658fea4772b71391df121"
     },
     {
-      "patch": "03-provider-compatibility.patch",
+      "patch": "04-provider-compatibility.patch",
       "description": "Adapt direct-provider profiles, MiniMax transport and default-model handling / Адаптирует профили прямых провайдеров, транспорт MiniMax и выбор модели по умолчанию.",
       "paths": [
         "lib/features/direct_connections/controllers/direct_connection_editor_form.dart",
@@ -62,7 +73,7 @@
       "sha256": "2f579a997fe23e6723576b3684e1289b6216f1335462d1e0a1b3d087c4b7ed74"
     },
     {
-      "patch": "04-chat-persistence.patch",
+      "patch": "05-chat-persistence.patch",
       "description": "Adapt chat payloads, outbox and sync to Open WebUI persistence / Адаптирует сообщения, очередь отправки и синхронизацию к хранению Open WebUI.",
       "paths": [
         "packages/conduit_core/lib/database/daos/outbox_dao.dart",
@@ -80,7 +91,7 @@
       "sha256": "8038d84f8606bc60a755585286a647efc786dcd0e36cb13e9c1277cafadef7a5"
     },
     {
-      "patch": "05-localization.patch",
+      "patch": "06-localization.patch",
       "description": "Translate fork UI labels / Переводит подписи интерфейса форка.",
       "paths": [
         ".avx1/locale-allowlist.json",
@@ -103,7 +114,7 @@
       "sha256": "47c248d21688f178787aedb452ae3c57564731024b4a65ae290353214d832f8b"
     },
     {
-      "patch": "06-arm64-native.patch",
+      "patch": "07-arm64-native.patch",
       "description": "Qualify ARM64 native libraries, toolchains, cache and binary verification / Проверяет ARM64-библиотеки, инструменты, кэш и свойства бинарников.",
       "paths": [
         ".avx1/android_sdk.py",
@@ -121,7 +132,7 @@
       "sha256": "70fddce5aeddb73f43f8f04ba1cf147e550afe7693a6fef694f47fd50a74a4c2"
     },
     {
-      "patch": "07-android-package.patch",
+      "patch": "08-android-package.patch",
       "description": "Configure signed ARM64 Android package, manifests and Dart dependency locks / Настраивает подпись и сборку ARM64 APK, манифесты и фиксированные Dart-зависимости.",
       "paths": [
         "android/app/build.gradle.kts",
@@ -133,7 +144,7 @@
       "sha256": "ee00286a194d4b6516e7e07060b6d1eb159b265eeb7034c4844e5d3e47a932e3"
     },
     {
-      "patch": "08-portable-install.patch",
+      "patch": "09-portable-install.patch",
       "description": "Provide portable build commands and the fork installer / Добавляет команды переносимой сборки и установщик.",
       "paths": [
         ".avx1/Install.cmd",
@@ -144,7 +155,7 @@
       "sha256": "a5f4c34a7c7c47f8f56c4bebdee4b03422237c66a6b0445f57c1f5d3aceeb4c9"
     },
     {
-      "patch": "09-ci-build.patch",
+      "patch": "10-ci-build.patch",
       "description": "Pin toolchains and package inputs, and run the fork build and publication checks / Закрепляет инструменты и входы сборки, запускает проверки пакетов и публикации.",
       "paths": [
         ".avx1/build.py",
@@ -159,10 +170,10 @@
         ".github/workflows/avx1-build.yml",
         ".gitignore"
       ],
-      "sha256": "be17b49224c5555e4fdb804254aae0ea06c2591acceb33db9c983eee83995c7f"
+      "sha256": "0c63f81e0a39bc20cef2124326687db8524cd00ec39e4febd5f276e3197a087d"
     },
     {
-      "patch": "10-project-docs.patch",
+      "patch": "11-project-docs.patch",
       "description": "Document fork setup, support and license terms / Описывает установку, поддержку и условия лицензирования форка.",
       "paths": [
         "README.md"
@@ -170,7 +181,7 @@
       "sha256": "7585cb75b88908bc301e5982a401a877077b74628ecc1c5aeebe3fb0ef9e3616"
     },
     {
-      "patch": "11-fork-records.patch",
+      "patch": "12-fork-records.patch",
       "description": "Record fork changes, upstream reviews and qualification measurements / Хранит журнал изменений, разбор upstream и результаты проверок.",
       "paths": [
         ".avx1/PATCHES.json",
@@ -179,7 +190,7 @@
       "sha256": "21675249de974028c1087012f21eed8cb83fa6122565d493426f5739fcc361c3"
     },
     {
-      "patch": "12-runtime.patch",
+      "patch": "13-runtime.patch",
       "description": "Local runtime, integration, security, dependency and platform adaptations / Наши изменения работы, интеграций, безопасности и платформ.",
       "paths": [
         "packages/conduit_core/lib/features/terminal/models/terminal_agent_model.dart"
@@ -187,7 +198,7 @@
       "sha256": "d2466b6b24dfe5ae2b2d0d55b179896c62e4336123915d1c3df83cc5a381b7ed"
     },
     {
-      "patch": "13-build.patch",
+      "patch": "14-build.patch",
       "description": "Our reproducible build, toolchain and CI recipes / Наши сборочные рецепты, toolchain и CI.",
       "paths": [
         ".avx1/check_removed_integration.py"
@@ -196,21 +207,22 @@
     }
   ],
   "files": {
-    "01-backend-navigation.patch": "a5697cde2d6ea0c8afffa4a5c8dbac6e96463384e71862e32cfe033db97c59f6",
-    "02-voice-vrm.patch": "cbc5bd4f2354afd3bf0d5f335e6c71c522a36beb841658fea4772b71391df121",
-    "03-provider-compatibility.patch": "2f579a997fe23e6723576b3684e1289b6216f1335462d1e0a1b3d087c4b7ed74",
-    "04-chat-persistence.patch": "8038d84f8606bc60a755585286a647efc786dcd0e36cb13e9c1277cafadef7a5",
-    "05-localization.patch": "47c248d21688f178787aedb452ae3c57564731024b4a65ae290353214d832f8b",
-    "06-arm64-native.patch": "70fddce5aeddb73f43f8f04ba1cf147e550afe7693a6fef694f47fd50a74a4c2",
-    "07-android-package.patch": "ee00286a194d4b6516e7e07060b6d1eb159b265eeb7034c4844e5d3e47a932e3",
-    "08-portable-install.patch": "a5f4c34a7c7c47f8f56c4bebdee4b03422237c66a6b0445f57c1f5d3aceeb4c9",
-    "09-ci-build.patch": "be17b49224c5555e4fdb804254aae0ea06c2591acceb33db9c983eee83995c7f",
-    "10-project-docs.patch": "7585cb75b88908bc301e5982a401a877077b74628ecc1c5aeebe3fb0ef9e3616",
-    "11-fork-records.patch": "21675249de974028c1087012f21eed8cb83fa6122565d493426f5739fcc361c3",
-    "12-runtime.patch": "d2466b6b24dfe5ae2b2d0d55b179896c62e4336123915d1c3df83cc5a381b7ed",
-    "13-build.patch": "14b477974a5d3d9d888d1318c877370903eb26a46aebabd39f612bf08238f523",
+    "01-long-chat-rendering.patch": "0d1d0fdf81fcbf95800856862b43e561d74a15be66e91253b0ee1abe5b502df7",
+    "02-backend-navigation.patch": "a5697cde2d6ea0c8afffa4a5c8dbac6e96463384e71862e32cfe033db97c59f6",
+    "03-voice-vrm.patch": "cbc5bd4f2354afd3bf0d5f335e6c71c522a36beb841658fea4772b71391df121",
+    "04-provider-compatibility.patch": "2f579a997fe23e6723576b3684e1289b6216f1335462d1e0a1b3d087c4b7ed74",
+    "05-chat-persistence.patch": "8038d84f8606bc60a755585286a647efc786dcd0e36cb13e9c1277cafadef7a5",
+    "06-localization.patch": "47c248d21688f178787aedb452ae3c57564731024b4a65ae290353214d832f8b",
+    "07-arm64-native.patch": "70fddce5aeddb73f43f8f04ba1cf147e550afe7693a6fef694f47fd50a74a4c2",
+    "08-android-package.patch": "ee00286a194d4b6516e7e07060b6d1eb159b265eeb7034c4844e5d3e47a932e3",
+    "09-portable-install.patch": "a5f4c34a7c7c47f8f56c4bebdee4b03422237c66a6b0445f57c1f5d3aceeb4c9",
+    "10-ci-build.patch": "0c63f81e0a39bc20cef2124326687db8524cd00ec39e4febd5f276e3197a087d",
+    "11-project-docs.patch": "7585cb75b88908bc301e5982a401a877077b74628ecc1c5aeebe3fb0ef9e3616",
+    "12-fork-records.patch": "21675249de974028c1087012f21eed8cb83fa6122565d493426f5739fcc361c3",
+    "13-runtime.patch": "d2466b6b24dfe5ae2b2d0d55b179896c62e4336123915d1c3df83cc5a381b7ed",
+    "14-build.patch": "14b477974a5d3d9d888d1318c877370903eb26a46aebabd39f612bf08238f523",
     ".gitattributes": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",
-    "series": "8b6e801ffda78ea6b71ec820e2504b4e80cc1c0eff9ebd2217297e1cded01505",
-    "README.md": "28e6fefd2460838653efc4e72df12fa8117093ed35542544fd66e7c4b92ca249"
+    "series": "21832ffdba73139d0169cbba65908c659838841e19ce573b9d9415ffdd937a5b",
+    "README.md": "9297e599a08bf8f96900dc0523786b8f90addb297443f9a41d64fe2f24bf350a"
   }
 }
